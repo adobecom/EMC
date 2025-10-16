@@ -4,14 +4,18 @@
 
 import 'core-js/stable'
 import 'regenerator-runtime/runtime'
+import React from 'react'
 import ReactDOM from 'react-dom'
 
 import Runtime, { init } from '@adobe/exc-app'
 
 import App from './components/App'
 import './index.css'
+import { Runtime as RuntimeType, IMS } from './types'
 
-window.React = require('react')
+// @ts-ignore - React needs to be available globally for some Adobe packages
+window.React = React
+
 /* Here you can bootstrap your application and configure the integration with the Adobe Experience Cloud Shell */
 try {
   // attempt to load the Experience Cloud Runtime
@@ -24,10 +28,13 @@ try {
   bootstrapRaw()
 }
 
-function bootstrapRaw () {
+function bootstrapRaw(): void {
   /* **here you can mock the exc runtime and ims objects** */
-  const mockRuntime = { on: () => {} }
-  const mockIms = {}
+  const mockRuntime: RuntimeType = { 
+    on: () => {},
+    done: () => {}
+  }
+  const mockIms: IMS = {}
 
   // render the actual react application and pass along the runtime object to make it available to the App
   ReactDOM.render(
@@ -36,9 +43,9 @@ function bootstrapRaw () {
   )
 }
 
-function bootstrapInExcShell () {
+function bootstrapInExcShell(): void {
   // get the Experience Cloud Runtime object
-  const runtime = Runtime()
+  const runtime = Runtime() as unknown as RuntimeType
 
   // use this to set a favicon
   // runtime.favicon = 'url-to-favicon'
@@ -47,11 +54,11 @@ function bootstrapInExcShell () {
   // runtime.heroClick = () => window.alert('Did I ever tell you you\'re my hero?')
 
   // ready event brings in authentication/user info
-  runtime.on('ready', ({ imsOrg, imsToken, imsProfile, locale }) => {
+  runtime.on('ready', ({ imsOrg, imsToken, imsProfile }) => {
     // tell the exc-runtime object we are done
     runtime.done()
     console.log('Ready! received imsProfile:', imsProfile)
-    const ims = {
+    const ims: IMS = {
       profile: imsProfile,
       org: imsOrg,
       token: imsToken
@@ -71,3 +78,4 @@ function bootstrapInExcShell () {
   }
   runtime.title = 'EMC'
 }
+

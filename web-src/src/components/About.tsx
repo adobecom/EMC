@@ -4,7 +4,8 @@
 
 import React from 'react'
 import { Heading, View, Content, Link } from '@adobe/react-spectrum'
-export const About = () => (
+
+export const About: React.FC = () => (
   <View width="size-6000">
     <Heading level={1}>Useful documentation for your app</Heading>
     <Content>
@@ -41,3 +42,4 @@ export const About = () => (
     </Content>
   </View>
 )
+

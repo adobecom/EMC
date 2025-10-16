@@ -10,8 +10,14 @@ import SideBar from './SideBar'
 import ActionsForm from './ActionsForm'
 import { Home } from './Home'
 import { About } from './About'
+import { Runtime, IMS } from '../types'
 
-function App (props) {
+interface AppProps {
+  runtime: Runtime
+  ims: IMS
+}
+
+const App: React.FC<AppProps> = (props) => {
   console.log('runtime object:', props.runtime)
   console.log('ims object:', props.ims)
 
@@ -24,6 +30,23 @@ function App (props) {
   props.runtime.on('history', ({ type, path }) => {
     console.log('history change', { type, path })
   })
+
+  // error handler on UI rendering failure
+  const onError = (_e: Error, _componentStack: string) => {
+    // Handle error
+  }
+
+  // component to show if UI fails rendering
+  const fallbackComponent = ({ componentStack, error }: { componentStack?: string; error?: Error }) => {
+    return (
+      <React.Fragment>
+        <h1 style={{ textAlign: 'center', marginTop: '20px' }}>
+          Something went wrong :(
+        </h1>
+        <pre>{(componentStack || '') + '\n' + (error?.message || '')}</pre>
+      </React.Fragment>
+    )
+  }
 
   return (
     <ErrorBoundary onError={onError} FallbackComponent={fallbackComponent}>
@@ -41,7 +64,7 @@ function App (props) {
               backgroundColor='gray-200'
               padding='size-200'
             >
-              <SideBar></SideBar>
+              <SideBar />
             </View>
             <View gridArea='content' padding='size-200'>
               <Routes>
@@ -55,23 +78,7 @@ function App (props) {
       </Router>
     </ErrorBoundary>
   )
-
-  // Methods
-
-  // error handler on UI rendering failure
-  function onError (e, componentStack) { }
-
-  // component to show if UI fails rendering
-  function fallbackComponent ({ componentStack, error }) {
-    return (
-      <React.Fragment>
-        <h1 style={{ textAlign: 'center', marginTop: '20px' }}>
-          Something went wrong :(
-        </h1>
-        <pre>{componentStack + '\n' + error.message}</pre>
-      </React.Fragment>
-    )
-  }
 }
 
 export default App
+
