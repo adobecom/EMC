@@ -12,7 +12,6 @@ import {
   DatePicker,
   NumberField,
   Switch,
-  Flex,
   StatusLight,
   Heading,
   Divider
@@ -22,7 +21,7 @@ import { EventFormData, Series, Organization } from '../types/domain'
 import { apiService } from '../services/api'
 import { IMS } from '../types'
 import { FormWizard, WizardStep, LoadingSpinner } from './shared'
-import { parseDate, parseDateTime } from '@internationalized/date'
+import { parseDateTime } from '@internationalized/date'
 
 interface EventFormProps {
   ims: IMS

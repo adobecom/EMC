@@ -300,7 +300,7 @@ export const RegistrationDashboard: React.FC<RegistrationDashboardProps> = ({ im
         isOpen={!!itemToDelete}
         onOpenChange={(isOpen) => !isOpen && setItemToDelete(null)}
       >
-        <Button />
+        <Button variant="primary" />
         {(close) => (
           <AlertDialog
             title="Confirm Delete"

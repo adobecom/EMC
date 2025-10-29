@@ -241,7 +241,7 @@ export const ResourcesDashboard: React.FC<ResourcesDashboardProps> = ({ ims }) =
   return (
     <View width="100%">
       <Flex justifyContent="space-between" alignItems="center" marginBottom="size-300">
-        <Heading level={1}>Resources Dashboard</Heading>
+        <Heading level={1}>Dashboard</Heading>
       </Flex>
 
       <Divider size="M" marginBottom="size-400" />
@@ -310,7 +310,7 @@ export const ResourcesDashboard: React.FC<ResourcesDashboardProps> = ({ ims }) =
         isOpen={!!itemToDelete}
         onOpenChange={(isOpen) => !isOpen && setItemToDelete(null)}
       >
-        <Button />
+        <Button variant="primary" />
         {(close) => (
           <AlertDialog
             title="Confirm Delete"

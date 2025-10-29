@@ -345,7 +345,7 @@ export const OrgTeamManagement: React.FC<OrgTeamManagementProps> = ({ ims }) => 
 
       {/* Delete confirmation dialog */}
       <DialogTrigger isOpen={!!itemToDelete} onOpenChange={(isOpen) => !isOpen && setItemToDelete(null)}>
-        <Button />
+        <Button variant="primary" />
         {(close) => (
           <AlertDialog
             title="Confirm Delete"

@@ -14,14 +14,15 @@ import {
   ActionButton,
   Text
 } from '@adobe/react-spectrum'
+import type { Selection } from '@adobe/react-spectrum'
 import Edit from '@spectrum-icons/workflow/Edit'
 import Delete from '@spectrum-icons/workflow/Delete'
-import View from '@spectrum-icons/workflow/View'
+import ViewDetail from '@spectrum-icons/workflow/ViewDetail'
 
 export interface TableColumn<T> {
   key: string
   name: string
-  width?: number | string
+  width?: number
   render?: (item: T) => React.ReactNode
 }
 
@@ -35,7 +36,7 @@ interface DataTableProps<T> {
   columns: TableColumn<T>[]
   data: T[]
   actions?: TableAction<T>[]
-  onSelectionChange?: (keys: Set<React.Key>) => void
+  onSelectionChange?: (keys: Selection) => void
   selectionMode?: 'none' | 'single' | 'multiple'
   emptyState?: React.ReactNode
   isLoading?: boolean
@@ -43,7 +44,7 @@ interface DataTableProps<T> {
 }
 
 const iconMap = {
-  view: View,
+  view: ViewDetail,
   edit: Edit,
   delete: Delete
 }
@@ -98,6 +99,14 @@ export function DataTable<T extends Record<string, any>>({
     )
   }
 
+  const allColumns = React.useMemo(() => {
+    const cols = [...columns]
+    if (actions && actions.length > 0) {
+      cols.push({ key: 'actions', name: 'Actions', width: 100 })
+    }
+    return cols
+  }, [columns, actions])
+
   return (
     <TableView
       aria-label="Data table"
@@ -107,24 +116,19 @@ export function DataTable<T extends Record<string, any>>({
       height="100%"
       overflowMode="wrap"
     >
-      <TableHeader>
-        {columns.map((column) => (
-          <Column key={column.key} width={column.width}>
+      <TableHeader columns={allColumns}>
+        {(column) => (
+          <Column key={column.key} width={column.width} align={column.key === 'actions' ? 'end' : 'start'}>
             {column.name}
-          </Column>
-        ))}
-        {actions && actions.length > 0 && (
-          <Column key="actions" width={100} align="end">
-            Actions
           </Column>
         )}
       </TableHeader>
-      <TableBody>
-        {data.map((item) => (
+      <TableBody items={data}>
+        {(item) => (
           <Row key={getItemKey(item)}>
             {(columnKey) => <Cell>{renderCell(item, columnKey)}</Cell>}
           </Row>
-        ))}
+        )}
       </TableBody>
     </TableView>
   )
