@@ -22,6 +22,42 @@ const SideBar: React.FC = () => {
         <NavLink
           className={({ isActive }) => `SideNav-itemLink ${isActive ? 'is-selected' : ''}`}
           aria-current="page"
+          to="/profile"
+        >
+          User Profile
+        </NavLink>
+      </li>
+      <li className="SideNav-item">
+        <NavLink
+          className={({ isActive }) => `SideNav-itemLink ${isActive ? 'is-selected' : ''}`}
+          aria-current="page"
+          to="/organizations"
+        >
+          Organizations & Teams
+        </NavLink>
+      </li>
+      <li className="SideNav-item">
+        <NavLink
+          className={({ isActive }) => `SideNav-itemLink ${isActive ? 'is-selected' : ''}`}
+          aria-current="page"
+          to="/resources"
+        >
+          Resources Dashboard
+        </NavLink>
+      </li>
+      <li className="SideNav-item">
+        <NavLink
+          className={({ isActive }) => `SideNav-itemLink ${isActive ? 'is-selected' : ''}`}
+          aria-current="page"
+          to="/registrations"
+        >
+          Event Registrations
+        </NavLink>
+      </li>
+      <li className="SideNav-item">
+        <NavLink
+          className={({ isActive }) => `SideNav-itemLink ${isActive ? 'is-selected' : ''}`}
+          aria-current="page"
           to="/actions"
         >
           Your App Actions

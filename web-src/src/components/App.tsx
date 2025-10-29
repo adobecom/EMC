@@ -10,6 +10,12 @@ import SideBar from './SideBar'
 import ActionsForm from './ActionsForm'
 import { Home } from './Home'
 import { About } from './About'
+import { UserProfile } from './UserProfile'
+import { OrgTeamManagement } from './OrgTeamManagement'
+import { ResourcesDashboard } from './ResourcesDashboard'
+import { SeriesForm } from './SeriesForm'
+import { EventForm } from './EventForm'
+import { RegistrationDashboard } from './RegistrationDashboard'
 import { Runtime, IMS } from '../types'
 
 interface AppProps {
@@ -69,6 +75,15 @@ const App: React.FC<AppProps> = (props) => {
             <View gridArea='content' padding='size-200'>
               <Routes>
                 <Route path='/' element={<Home />} />
+                <Route path='/profile' element={<UserProfile ims={props.ims} />} />
+                <Route path='/organizations' element={<OrgTeamManagement ims={props.ims} />} />
+                <Route path='/resources' element={<ResourcesDashboard ims={props.ims} />} />
+                <Route path='/series/new' element={<SeriesForm ims={props.ims} />} />
+                <Route path='/series/edit/:id' element={<SeriesForm ims={props.ims} />} />
+                <Route path='/events/new' element={<EventForm ims={props.ims} />} />
+                <Route path='/events/edit/:id' element={<EventForm ims={props.ims} />} />
+                <Route path='/registrations' element={<RegistrationDashboard ims={props.ims} />} />
+                <Route path='/registrations/:eventId' element={<RegistrationDashboard ims={props.ims} />} />
                 <Route path='/actions' element={<ActionsForm runtime={props.runtime} ims={props.ims} />}/>
                 <Route path='/about' element={<About />}/>
               </Routes>
