@@ -2,6 +2,12 @@
 
 Welcome to my Adobe I/O Application!
 
+## Documentation
+
+- [Architecture Guide](docs/ARCHITECTURE.md) - System architecture and design patterns
+- [Frontend Guide](docs/FRONTEND_GUIDE.md) - Frontend development guide
+- [Scaffolding Summary](docs/SCAFFOLDING_SUMMARY.md) - Project scaffolding details
+
 ## Setup
 
 - Populate the `.env` file in the project root and fill it as shown [below](#env)
