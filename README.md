@@ -1,12 +1,22 @@
-# EMC
+# EMC - Event Management Cloud
 
-Welcome to my Adobe I/O Application!
+Welcome to the Event Management Cloud Adobe Experience Cloud application!
 
 ## Documentation
 
-- [Architecture Guide](docs/ARCHITECTURE.md) - System architecture and design patterns
-- [Frontend Guide](docs/FRONTEND_GUIDE.md) - Frontend development guide
-- [Scaffolding Summary](docs/SCAFFOLDING_SUMMARY.md) - Project scaffolding details
+### 📖 Core Documentation
+- [Project Overview](docs/PROJECT_OVERVIEW.md) - Quick start, structure, and commands
+- [Frontend Guide](docs/FRONTEND.md) - React/TypeScript development guide
+- [Backend Guide](docs/BACKEND.md) - Adobe I/O Runtime actions guide
+- [API Integration](docs/API_INTEGRATION.md) - Connecting frontend to backend
+- [Testing Guide](docs/TESTING.md) - Unit and E2E testing patterns
+
+### 🚀 Quick Links
+- **New to the project?** Start with [Project Overview](docs/PROJECT_OVERVIEW.md)
+- **Building UI?** Read [Frontend Guide](docs/FRONTEND.md)
+- **Creating actions?** Read [Backend Guide](docs/BACKEND.md)
+- **Connecting them?** Read [API Integration](docs/API_INTEGRATION.md)
+- **Writing tests?** Read [Testing Guide](docs/TESTING.md)
 
 ## Setup
 
