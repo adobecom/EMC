@@ -48,6 +48,12 @@ export const RegistrationDashboard: React.FC<RegistrationDashboardProps> = ({ im
 
   const loadEvents = async () => {
     try {
+      // Check if IMS data is available
+      if (!ims.token || !ims.org) {
+        console.warn('IMS authentication not available yet')
+        return
+      }
+
       apiService.setAuthHeaders(ims.token, ims.org)
       const response = await apiService.getEvents()
       if (response.success && response.data) {
@@ -65,6 +71,13 @@ export const RegistrationDashboard: React.FC<RegistrationDashboardProps> = ({ im
   const loadRegistrations = async (eventId: string) => {
     setIsLoading(true)
     try {
+      // Check if IMS data is available
+      if (!ims.token || !ims.org) {
+        console.warn('IMS authentication not available yet')
+        setIsLoading(false)
+        return
+      }
+
       const response = await apiService.getRegistrations(eventId)
       if (response.success && response.data) {
         setRegistrations(response.data)

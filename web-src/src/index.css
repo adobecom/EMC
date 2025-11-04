@@ -2,48 +2,69 @@
 * <license header>
 */
 
-
+/** Global Font Settings **/
 html,
 body {
   margin: 0;
+  font-family: --spectrum-global-font-family-base;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
-/** Custom Sidebar Styling **/
-.SideNav {
-  list-style-type: none;
-  margin: 0;
-  margin-bottom: 0px;
-  padding: 0;
-  outline: none;
-  height: 100%;
+/** Top Navigation Styling **/
+.top-nav {
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.1);
 }
 
-.SideNav-item {
-  list-style-type: none;
-  margin: var(--spectrum-global-dimension-size-50) 0;
+.nav-links {
+  display: flex;
+  align-items: center;
+  gap: 0;
 }
 
-.SideNav-itemLink {
+.nav-link {
   position: relative;
   display: inline-flex;
   align-items: center;
-  justify-content: start;
+  justify-content: center;
   box-sizing: border-box;
-  width: 100%;
-  min-height: var(--spectrum-alias-single-line-height, var(--spectrum-global-dimension-size-400));
-  padding: var(--spectrum-global-dimension-size-65) var(--spectrum-global-dimension-size-150);
-  border-radius: var(--spectrum-alias-border-radius-regular, var(--spectrum-global-dimension-size-50));
-  font-size: var(--spectrum-alias-font-size-default, var(--spectrum-global-dimension-font-size-100));
-  font-weight: var(--spectrum-global-font-weight-regular, 400);
-  font-style: normal;
+  height: 56px;
+  padding: 0 20px;
+  font-size: 14px;
+  font-weight: 500;
   text-decoration: none;
-  word-break: break-word;
+  color: var(--spectrum-global-color-gray-700);
   cursor: pointer;
-  background-color: var(--spectrum-alias-background-color-transparent,transparent);
-  color: var(--spectrum-alias-text-color,var(--spectrum-global-color-gray-800));
+  transition: all 0.2s ease;
+  border-bottom: 3px solid transparent;
 }
 
-.SideNav-itemLink.is-selected {
-  color: var(--spectrum-alias-text-color-hover,var(--spectrum-global-color-gray-900));
-  background-color: var(--spectrum-alias-highlight-hover);
+.nav-link:hover {
+  color: var(--spectrum-global-color-gray-900);
+  background-color: var(--spectrum-global-color-gray-200);
+}
+
+.nav-link.is-selected {
+  color: var(--spectrum-global-color-blue-600);
+  border-bottom-color: var(--spectrum-global-color-blue-600);
+  background-color: var(--spectrum-global-color-gray-75);
+}
+
+/** User Panel Styling **/
+.user-panel {
+  border: 1px solid var(--spectrum-global-color-gray-300);
+  transition: box-shadow 0.2s ease;
+}
+
+.user-panel:hover {
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+}
+
+.user-panel-compact {
+  border-radius: 6px;
+  transition: background-color 0.2s ease;
+}
+
+.user-panel-compact:hover {
+  background-color: var(--spectrum-global-color-gray-200);
 }

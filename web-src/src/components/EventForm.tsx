@@ -61,6 +61,12 @@ export const EventForm: React.FC<EventFormProps> = ({ ims }) => {
 
   const loadData = async () => {
     try {
+      // Check if IMS data is available
+      if (!ims.token || !ims.org) {
+        console.warn('IMS authentication not available yet')
+        return
+      }
+
       apiService.setAuthHeaders(ims.token, ims.org)
       const [seriesResponse, orgsResponse] = await Promise.all([
         apiService.getSeries(),

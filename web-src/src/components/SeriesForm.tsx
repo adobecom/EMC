@@ -58,6 +58,12 @@ export const SeriesForm: React.FC<SeriesFormProps> = ({ ims }) => {
 
   const loadOrganizations = async () => {
     try {
+      // Check if IMS data is available
+      if (!ims.token || !ims.org) {
+        console.warn('IMS authentication not available yet')
+        return
+      }
+
       apiService.setAuthHeaders(ims.token, ims.org)
       const response = await apiService.getOrganizations()
       if (response.success && response.data) {

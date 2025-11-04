@@ -47,6 +47,13 @@ export const ResourcesDashboard: React.FC<ResourcesDashboardProps> = ({ ims }) =
   const loadData = async () => {
     setIsLoading(true)
     try {
+      // Check if IMS data is available
+      if (!ims.token || !ims.org) {
+        console.warn('IMS authentication not available yet')
+        setIsLoading(false)
+        return
+      }
+
       apiService.setAuthHeaders(ims.token, ims.org)
       const [seriesResponse, eventsResponse, sessionsResponse] = await Promise.all([
         apiService.getSeries(),
@@ -65,6 +72,7 @@ export const ResourcesDashboard: React.FC<ResourcesDashboardProps> = ({ ims }) =
       }
     } catch (error) {
       console.error('Failed to load resources:', error)
+      // Set loading to false even on error
     } finally {
       setIsLoading(false)
     }
@@ -246,7 +254,7 @@ export const ResourcesDashboard: React.FC<ResourcesDashboardProps> = ({ ims }) =
 
       <Divider size="M" marginBottom="size-400" />
 
-      <Tabs selectedKey={selectedTab} onSelectionChange={setSelectedTab}>
+      <Tabs selectedKey={selectedTab} onSelectionChange={setSelectedTab as any}>
         <TabList>
           <Item key="series">Series ({series.length})</Item>
           <Item key="events">Events ({events.length})</Item>

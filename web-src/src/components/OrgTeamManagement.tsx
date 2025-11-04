@@ -65,6 +65,13 @@ export const OrgTeamManagement: React.FC<OrgTeamManagementProps> = ({ ims }) => 
   const loadData = async () => {
     setIsLoading(true)
     try {
+      // Check if IMS data is available
+      if (!ims.token || !ims.org) {
+        console.warn('IMS authentication not available yet')
+        setIsLoading(false)
+        return
+      }
+
       apiService.setAuthHeaders(ims.token, ims.org)
       const [orgsResponse, teamsResponse] = await Promise.all([
         apiService.getOrganizations(),
@@ -79,6 +86,7 @@ export const OrgTeamManagement: React.FC<OrgTeamManagementProps> = ({ ims }) => 
       }
     } catch (error) {
       console.error('Failed to load data:', error)
+      // Set loading to false even on error
     } finally {
       setIsLoading(false)
     }
@@ -216,7 +224,7 @@ export const OrgTeamManagement: React.FC<OrgTeamManagementProps> = ({ ims }) => 
 
       <Divider size="M" marginBottom="size-400" />
 
-      <Tabs selectedKey={selectedTab} onSelectionChange={setSelectedTab}>
+      <Tabs selectedKey={selectedTab} onSelectionChange={setSelectedTab as any}>
         <TabList>
           <Item key="organizations">Organizations</Item>
           <Item key="teams">Teams</Item>

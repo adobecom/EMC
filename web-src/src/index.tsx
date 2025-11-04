@@ -34,7 +34,32 @@ function bootstrapRaw(): void {
     on: () => {},
     done: () => {}
   }
-  const mockIms: IMS = {}
+  
+  // Check for dev tokens in localStorage (see docs/LOCAL_DEV_WITH_IMS.md)
+  const devToken = localStorage.getItem('dev_ims_token')
+  const devOrg = localStorage.getItem('dev_ims_org')
+  
+  const mockIms: IMS = {
+    profile: devToken ? {
+      userId: 'dev-user@AdobeID',
+      name: 'Dev User',
+      email: 'dev.user@example.com',
+      first_name: 'Dev',
+      last_name: 'User'
+    } : undefined,
+    org: devOrg || undefined,
+    token: devToken || undefined
+  }
+
+  console.log('🔧 Dev Mode - IMS Token Available:', !!devToken)
+  if (!devToken) {
+    console.log('💡 To use real IMS authentication in local dev:')
+    console.log('   1. Get token from ExC Shell: https://experience.adobe.com')
+    console.log('   2. In console: localStorage.setItem("dev_ims_token", "YOUR_TOKEN")')
+    console.log('   3. In console: localStorage.setItem("dev_ims_org", "YOUR_ORG@AdobeOrg")')
+    console.log('   4. Reload page')
+    console.log('   See docs/LOCAL_DEV_WITH_IMS.md for details')
+  }
 
   // render the actual react application and pass along the runtime object to make it available to the App
   ReactDOM.render(

@@ -6,7 +6,7 @@ import React from 'react'
 import { Provider, defaultTheme, Grid, View } from '@adobe/react-spectrum'
 import ErrorBoundary from 'react-error-boundary'
 import { HashRouter as Router, Routes, Route } from 'react-router-dom'
-import SideBar from './SideBar'
+import TopNav from './TopNav'
 import ActionsForm from './ActionsForm'
 import { Home } from './Home'
 import { About } from './About'
@@ -59,20 +59,20 @@ const App: React.FC<AppProps> = (props) => {
       <Router>
         <Provider theme={defaultTheme} colorScheme={'light'}>
           <Grid
-            areas={['sidebar content']}
-            columns={['256px', '3fr']}
-            rows={['auto']}
+            areas={['header', 'content']}
+            columns={['1fr']}
+            rows={['auto', '1fr']}
             height='100vh'
-            gap='size-100'
+            gap='size-0'
           >
-            <View
-              gridArea='sidebar'
-              backgroundColor='gray-200'
-              padding='size-200'
-            >
-              <SideBar />
+            <View gridArea='header'>
+              <TopNav ims={props.ims} />
             </View>
-            <View gridArea='content' padding='size-200'>
+            <View 
+              gridArea='content' 
+              padding='size-300'
+              UNSAFE_style={{ overflowY: 'auto' }}
+            >
               <Routes>
                 <Route path='/' element={<Home />} />
                 <Route path='/profile' element={<UserProfile ims={props.ims} />} />
