@@ -36,11 +36,12 @@ EMC/
 ├── test/                # Unit tests
 ├── e2e/                 # End-to-end tests
 └── docs/                # Documentation
-    ├── PROJECT_OVERVIEW.md    # This file
-    ├── FRONTEND.md            # Frontend development guide
-    ├── BACKEND.md             # Backend actions guide
-    ├── API_INTEGRATION.md     # Frontend-backend integration
-    └── TESTING.md             # Testing guide
+    ├── PROJECT_OVERVIEW.md      # This file
+    ├── DEVELOPMENT_WORKFLOW.md  # Official Adobe development workflow
+    ├── FRONTEND.md              # Frontend development guide
+    ├── BACKEND.md               # Backend actions guide
+    ├── API_INTEGRATION.md       # Frontend-backend integration
+    └── TESTING.md               # Testing guide
 ```
 
 ## Domain Model
@@ -189,6 +190,14 @@ aio rt activation get <id> # Get activation details
 - Use `--local` flag to run actions locally
 - TypeScript is used only in frontend (`web-src/`)
 - Backend actions use JavaScript (Node.js)
+
+## Next Steps
+
+- **Read the [Development Workflow](./DEVELOPMENT_WORKFLOW.md)** - Learn the official Adobe way to develop ⭐
+- See [Frontend Guide](./FRONTEND.md) for React/TypeScript patterns
+- See [Backend Guide](./BACKEND.md) for Adobe I/O Runtime actions
+- See [API Integration](./API_INTEGRATION.md) for frontend-backend communication
+- See [Testing Guide](./TESTING.md) for unit and E2E testing
 
 ## Resources
 

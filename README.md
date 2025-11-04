@@ -6,6 +6,7 @@ Welcome to the Event Management Cloud Adobe Experience Cloud application!
 
 ### 📖 Core Documentation
 - [Project Overview](docs/PROJECT_OVERVIEW.md) - Quick start, structure, and commands
+- [Development Workflow](docs/DEVELOPMENT_WORKFLOW.md) - **Official Adobe development workflow**
 - [Frontend Guide](docs/FRONTEND.md) - React/TypeScript development guide
 - [Backend Guide](docs/BACKEND.md) - Adobe I/O Runtime actions guide
 - [API Integration](docs/API_INTEGRATION.md) - Connecting frontend to backend
@@ -13,6 +14,7 @@ Welcome to the Event Management Cloud Adobe Experience Cloud application!
 
 ### 🚀 Quick Links
 - **New to the project?** Start with [Project Overview](docs/PROJECT_OVERVIEW.md)
+- **How to develop?** Read [Development Workflow](docs/DEVELOPMENT_WORKFLOW.md) ⭐
 - **Building UI?** Read [Frontend Guide](docs/FRONTEND.md)
 - **Creating actions?** Read [Backend Guide](docs/BACKEND.md)
 - **Connecting them?** Read [API Integration](docs/API_INTEGRATION.md)
