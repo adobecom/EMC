@@ -50,6 +50,112 @@ export interface SeriesFormData {
   metadata?: Record<string, any>
 }
 
+// Series API Response types (from backend)
+export interface TargetCms {
+  provider: string
+  instance: string
+  code: string
+}
+
+export interface SeriesApiResponse {
+  seriesId: string
+  seriesName: string
+  seriesDescription?: string
+  seriesStatus: 'published' | 'draft' | 'archived'
+  cloudType: string
+  targetCms: TargetCms
+  templateId: string
+  externalThemeId?: string
+  relatedDomain?: string
+  creationTime: number
+  modificationTime: number
+}
+
+// Event API Response types (from backend)
+export interface EventApiResponse {
+  eventId: string
+  enTitle?: string
+  seriesId?: string
+  cloudType?: string
+  eventType?: string
+  published: boolean
+  startDate?: string
+  endDate?: string
+  localStartDate?: string
+  localEndDate?: string
+  localStartTime?: string
+  localEndTime?: string
+  timezone?: string
+  duration?: number
+  attendeeLimit?: number
+  attendeeCount?: number
+  waitlistAttendeeCount?: number
+  hostEmail?: string
+  isPrivate?: boolean
+  allowWaitlisting?: boolean
+  allowGuestRegistration?: boolean
+  tags?: string
+  topics?: string[]
+  detailPagePath?: string
+  externalEventId?: string
+  creationTime?: number
+  modificationTime?: number
+  localizationOverrides?: Record<string, any>
+  localizations?: Record<string, any>
+  venue?: Record<string, any>
+  agenda?: any[]
+  rsvpFormFields?: Record<string, any>
+  video?: Record<string, any>
+  marketoIntegration?: Record<string, any>
+  liveUpdate?: boolean
+  forceSpWrite?: boolean
+  defaultLocale?: string
+  showSponsors?: boolean
+  showAgendaPostEvent?: boolean
+  showVenuePostEvent?: boolean
+  showVenueAdditionalInfoPostEvent?: boolean
+  gmtOffset?: number
+  localStartTimeMillis?: number
+  localEndTimeMillis?: number
+  // Add any other fields as optional
+  [key: string]: any
+}
+
+// Enhanced Event type for dashboard display
+export interface EventDashboardItem {
+  eventId: string
+  eventName: string
+  seriesId?: string
+  cloudType?: string
+  eventType?: string
+  published: boolean
+  startDate?: string
+  localStartDate?: string
+  localStartTime?: string
+  timezone?: string
+  attendeeLimit?: number
+  attendeeCount?: number
+  hostEmail?: string
+  creationTime?: number
+  modificationTime?: number
+  createdBy?: string
+  modifiedBy?: string
+}
+
+// Enhanced Series type for dashboard display
+export interface SeriesDashboardItem {
+  seriesId: string
+  seriesName: string
+  seriesDescription?: string
+  seriesStatus: 'published' | 'draft' | 'archived' | 'unknown'
+  cloudType: string
+  creationTime: number
+  modificationTime: number
+  createdBy?: string
+  modifiedBy?: string
+  eventCount?: number
+}
+
 // Event types
 export interface Event {
   id: string

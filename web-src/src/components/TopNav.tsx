@@ -67,9 +67,15 @@ const TopNav: React.FC<TopNavProps> = ({ ims }) => {
           </NavLink>
           <NavLink
             className={({ isActive }) => `nav-link ${isActive ? 'is-selected' : ''}`}
-            to="/resources"
+            to="/series"
           >
-            Dashboard
+            Series
+          </NavLink>
+          <NavLink
+            className={({ isActive }) => `nav-link ${isActive ? 'is-selected' : ''}`}
+            to="/events"
+          >
+            Events
           </NavLink>
           <NavLink
             className={({ isActive }) => `nav-link ${isActive ? 'is-selected' : ''}`}

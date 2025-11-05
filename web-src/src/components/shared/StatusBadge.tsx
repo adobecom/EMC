@@ -22,6 +22,7 @@ const statusMap: Record<string, { variant: StatusVariant; label: string }> = {
   archived: { variant: 'neutral', label: 'Archived' },
   cancelled: { variant: 'negative', label: 'Cancelled' },
   scheduled: { variant: 'notice', label: 'Scheduled' },
+  unknown: { variant: 'neutral', label: 'Unknown' },
   
   // Registration statuses
   confirmed: { variant: 'positive', label: 'Confirmed' },

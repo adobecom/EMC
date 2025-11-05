@@ -8,13 +8,18 @@ import {
   Team,
   Series,
   SeriesFormData,
+  SeriesApiResponse,
+  SeriesDashboardItem,
   Event,
   EventFormData,
+  EventApiResponse,
+  EventDashboardItem,
   Session,
   Registration,
   ApiResponse,
   ApiListResponse
 } from '../types/domain'
+import { getSeriesListMock, getEventsListMock } from '../mocks'
 
 /**
  * API Service Layer
@@ -139,9 +144,69 @@ class ApiService {
     return this.callAction<ApiResponse<void>>('deleteSeries', { id })
   }
 
+  /**
+   * Get series list from backend API
+   * Currently uses mock data for development
+   * 
+   * TODO: Replace with actual API call when backend is ready:
+   * return this.callAction<SeriesApiResponse[]>('getSeriesList')
+   */
+  async getSeriesList(): Promise<SeriesApiResponse[]> {
+    try {
+      // Use mock data module (simulates API with promise)
+      const data = await getSeriesListMock()
+      console.log('Successfully loaded series data:', data.length, 'items')
+      return data
+    } catch (error) {
+      console.error('Error fetching series list:', error)
+      // Return empty array as fallback
+      return []
+    }
+  }
+
+  /**
+   * Get series details with event count
+   * This will be used to fetch individual series details including created/modified by
+   */
+  async getSeriesDetails(seriesId: string): Promise<SeriesDashboardItem | null> {
+    // TODO: Implement when backend endpoint is ready
+    console.log('getSeriesDetails not yet implemented for:', seriesId)
+    return null
+  }
+
   // Event APIs
   async getEvents(seriesId?: string, organizationId?: string): Promise<ApiListResponse<Event>> {
     return this.callAction<ApiListResponse<Event>>('getEvents', { seriesId, organizationId })
+  }
+
+  /**
+   * Get events list from backend API
+   * Currently uses mock data for development
+   * 
+   * TODO: Replace with actual API call when backend is ready:
+   * return this.callAction<EventApiResponse[]>('getEventsList')
+   */
+  async getEventsList(): Promise<EventApiResponse[]> {
+    try {
+      // Use mock data module (simulates API with promise)
+      const data = await getEventsListMock()
+      console.log('Successfully loaded events data:', data.length, 'items')
+      return data
+    } catch (error) {
+      console.error('Error fetching events list:', error)
+      // Return empty array as fallback
+      return []
+    }
+  }
+
+  /**
+   * Get event details
+   * This will be used to fetch individual event details including created/modified by
+   */
+  async getEventDetails(eventId: string): Promise<EventDashboardItem | null> {
+    // TODO: Implement when backend endpoint is ready
+    console.log('getEventDetails not yet implemented for:', eventId)
+    return null
   }
 
   async getEvent(id: string): Promise<ApiResponse<Event>> {
