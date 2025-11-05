@@ -2,7 +2,7 @@
 * <license header>
 */
 
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useState, useMemo, useCallback } from 'react'
 import { Flex, Text } from '@adobe/react-spectrum'
 import { TableColumn } from './shared/DataTable'
 import { StatusBadge, ResourceDashboardLayout } from './shared'
@@ -54,7 +54,7 @@ export const SeriesDashboard: React.FC<SeriesDashboardProps> = () => {
     loadSeriesData()
   }, [])
 
-  const formatDate = (timestamp: number): string => {
+  const formatDate = useCallback((timestamp: number): string => {
     const date = new Date(timestamp)
     return date.toLocaleDateString('en-US', {
       year: 'numeric',
@@ -63,13 +63,14 @@ export const SeriesDashboard: React.FC<SeriesDashboardProps> = () => {
       hour: '2-digit',
       minute: '2-digit'
     })
-  }
+  }, [])
 
-  const columns: TableColumn<SeriesDashboardItem>[] = [
+  const columns = useMemo<TableColumn<SeriesDashboardItem>[]>(() => [
     {
       key: 'seriesName',
       name: 'Series Name',
       width: 250,
+      sortable: true,
       render: (item) => (
         <Flex direction="column" gap="size-50">
           <Text><strong>{item.seriesName}</strong></Text>
@@ -87,30 +88,35 @@ export const SeriesDashboard: React.FC<SeriesDashboardProps> = () => {
       key: 'seriesStatus',
       name: 'Status',
       width: 120,
+      sortable: true,
       render: (item) => <StatusBadge status={item.seriesStatus} />
     },
     {
       key: 'cloudType',
       name: 'Cloud Type',
       width: 150,
+      sortable: true,
       render: (item) => <Text>{item.cloudType}</Text>
     },
     {
       key: 'modificationTime',
       name: 'Last Modified',
       width: 180,
+      sortable: true,
       render: (item) => <Text>{formatDate(item.modificationTime)}</Text>
     },
     {
       key: 'creationTime',
       name: 'Created',
       width: 180,
+      sortable: true,
       render: (item) => <Text>{formatDate(item.creationTime)}</Text>
     },
     {
       key: 'createdBy',
       name: 'Created By',
       width: 150,
+      sortable: true,
       render: (item) => (
         <Text UNSAFE_style={{ color: 'var(--spectrum-global-color-gray-600)' }}>
           {item.createdBy || 'N/A'}
@@ -121,6 +127,7 @@ export const SeriesDashboard: React.FC<SeriesDashboardProps> = () => {
       key: 'modifiedBy',
       name: 'Modified By',
       width: 150,
+      sortable: true,
       render: (item) => (
         <Text UNSAFE_style={{ color: 'var(--spectrum-global-color-gray-600)' }}>
           {item.modifiedBy || 'N/A'}
@@ -131,13 +138,20 @@ export const SeriesDashboard: React.FC<SeriesDashboardProps> = () => {
       key: 'eventCount',
       name: 'Events',
       width: 100,
+      sortable: true,
+      sortFn: (a, b) => {
+        // Sort undefined/null to end
+        const aCount = a.eventCount ?? -1
+        const bCount = b.eventCount ?? -1
+        return aCount - bCount
+      },
       render: (item) => (
         <Text UNSAFE_style={{ textAlign: 'center', display: 'block' }}>
           {item.eventCount !== undefined ? item.eventCount : '-'}
         </Text>
       )
     }
-  ]
+  ], [formatDate])
 
   const handleCreateSeries = () => {
     // Navigate to create series form

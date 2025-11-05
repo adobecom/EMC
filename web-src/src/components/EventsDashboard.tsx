@@ -2,7 +2,7 @@
 * <license header>
 */
 
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useState, useMemo, useCallback } from 'react'
 import { Flex, Text } from '@adobe/react-spectrum'
 import { TableColumn } from './shared/DataTable'
 import { StatusBadge, ResourceDashboardLayout } from './shared'
@@ -61,7 +61,7 @@ export const EventsDashboard: React.FC<EventsDashboardProps> = () => {
     loadEventsData()
   }, [])
 
-  const formatDate = (timestamp?: number): string => {
+  const formatDate = useCallback((timestamp?: number): string => {
     if (!timestamp) return 'N/A'
     const date = new Date(timestamp)
     return date.toLocaleDateString('en-US', {
@@ -71,19 +71,20 @@ export const EventsDashboard: React.FC<EventsDashboardProps> = () => {
       hour: '2-digit',
       minute: '2-digit'
     })
-  }
+  }, [])
 
-  const formatLocalDateTime = (date?: string, time?: string): string => {
+  const formatLocalDateTime = useCallback((date?: string, time?: string): string => {
     if (!date) return 'N/A'
     if (!time) return date
     return `${date} ${time}`
-  }
+  }, [])
 
-  const columns: TableColumn<EventDashboardItem>[] = [
+  const columns = useMemo<TableColumn<EventDashboardItem>[]>(() => [
     {
       key: 'eventName',
       name: 'Event Name',
       width: 250,
+      sortable: true,
       render: (item) => (
         <Text><strong>{item.eventName}</strong></Text>
       )
@@ -92,24 +93,38 @@ export const EventsDashboard: React.FC<EventsDashboardProps> = () => {
       key: 'published',
       name: 'Status',
       width: 120,
+      sortable: true,
+      sortFn: (a, b) => {
+        // Sort published first, then draft
+        return (b.published ? 1 : 0) - (a.published ? 1 : 0)
+      },
       render: (item) => <StatusBadge status={item.published ? 'published' : 'draft'} />
     },
     {
       key: 'eventType',
       name: 'Type',
       width: 120,
+      sortable: true,
       render: (item) => <Text>{item.eventType || 'N/A'}</Text>
     },
     {
       key: 'cloudType',
       name: 'Cloud Type',
       width: 150,
+      sortable: true,
       render: (item) => <Text>{item.cloudType || 'N/A'}</Text>
     },
     {
       key: 'localStartDate',
       name: 'Start Date/Time',
       width: 200,
+      sortable: true,
+      sortFn: (a, b) => {
+        // Sort by date string
+        const aDate = a.localStartDate || ''
+        const bDate = b.localStartDate || ''
+        return aDate.localeCompare(bDate)
+      },
       render: (item) => (
         <Flex direction="column" gap="size-25">
           <Text>{formatLocalDateTime(item.localStartDate, item.localStartTime)}</Text>
@@ -125,6 +140,13 @@ export const EventsDashboard: React.FC<EventsDashboardProps> = () => {
       key: 'attendees',
       name: 'Attendees',
       width: 120,
+      sortable: true,
+      sortFn: (a, b) => {
+        // Sort by attendee count
+        const aCount = a.attendeeCount ?? 0
+        const bCount = b.attendeeCount ?? 0
+        return aCount - bCount
+      },
       render: (item) => (
         <Text>
           {item.attendeeCount !== undefined ? item.attendeeCount : 0} / {item.attendeeLimit !== undefined ? item.attendeeLimit : '-'}
@@ -135,19 +157,21 @@ export const EventsDashboard: React.FC<EventsDashboardProps> = () => {
       key: 'modificationTime',
       name: 'Last Modified',
       width: 180,
+      sortable: true,
       render: (item) => <Text>{formatDate(item.modificationTime)}</Text>
     },
     {
       key: 'createdBy',
       name: 'Created By',
       width: 150,
+      sortable: true,
       render: (item) => (
         <Text UNSAFE_style={{ color: 'var(--spectrum-global-color-gray-600)' }}>
           {item.createdBy || 'N/A'}
         </Text>
       )
     }
-  ]
+  ], [formatDate, formatLocalDateTime])
 
   const handleCreateEvent = () => {
     // Navigate to create event form
