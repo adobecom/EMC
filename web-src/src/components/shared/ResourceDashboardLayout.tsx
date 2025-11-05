@@ -9,7 +9,6 @@ import {
   View,
   Text,
   ActionButton,
-  ButtonGroup,
   SearchField
 } from '@adobe/react-spectrum'
 import Add from '@spectrum-icons/workflow/Add'
@@ -20,7 +19,7 @@ import { LoadingSpinner } from './LoadingSpinner'
 interface ResourceDashboardLayoutProps<T> {
   // Header props
   title: string
-  description: string
+  description?: string // deprecated - no longer displayed
   totalCount: number
   
   // State
@@ -53,7 +52,6 @@ interface ResourceDashboardLayoutProps<T> {
 
 export function ResourceDashboardLayout<T extends Record<string, any>>({
   title,
-  description,
   totalCount,
   isLoading,
   error,
@@ -141,20 +139,17 @@ export function ResourceDashboardLayout<T extends Record<string, any>>({
       <Flex direction="column" gap="size-150" height="100%">
         {/* Header */}
         <Flex direction="row" justifyContent="space-between" alignItems="center">
-          <Flex direction="column" gap="size-100">
-            <Heading level={2}>{title}</Heading>
-            <Flex direction="row" gap="size-50" alignItems="center">
-              <Text>{description}</Text>
-              {debouncedQuery ? (
-                <Text>
-                  Showing: <strong>{displayCount}</strong> of {totalCount}
-                </Text>
-              ) : (
-                <Text>
-                  Total: <strong>{totalCount}</strong>
-                </Text>
-              )}
-            </Flex>
+          <Flex direction="row" gap="size-100" alignItems="baseline">
+            <Heading level={2} marginBottom="size-0">{title}</Heading>
+            {debouncedQuery ? (
+              <Text UNSAFE_style={{ fontSize: '14px', color: 'var(--spectrum-global-color-gray-700)' }}>
+                (Showing {displayCount} of {totalCount})
+              </Text>
+            ) : (
+              <Text UNSAFE_style={{ fontSize: '14px', color: 'var(--spectrum-global-color-gray-700)' }}>
+                ({totalCount} {totalCount === 1 ? 'item' : 'items'})
+              </Text>
+            )}
           </Flex>
           <Flex direction="row" gap="size-150" alignItems="center">
             <SearchField
@@ -165,10 +160,9 @@ export function ResourceDashboardLayout<T extends Record<string, any>>({
               width="size-3000"
               aria-label="Search"
             />
-            <ButtonGroup>
+            <Flex direction="row" gap="size-150">
               <ActionButton onPress={onRefresh} isQuiet>
                 <Refresh />
-                <Text>Refresh</Text>
               </ActionButton>
               {onCreate && (
                 <ActionButton onPress={onCreate}>
@@ -176,7 +170,7 @@ export function ResourceDashboardLayout<T extends Record<string, any>>({
                   <Text>{createLabel}</Text>
                 </ActionButton>
               )}
-            </ButtonGroup>
+            </Flex>
           </Flex>
         </Flex>
 

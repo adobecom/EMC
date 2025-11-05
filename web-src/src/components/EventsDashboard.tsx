@@ -197,8 +197,7 @@ export const EventsDashboard: React.FC<EventsDashboardProps> = () => {
 
   return (
     <ResourceDashboardLayout
-      title="Events Management"
-      description="Manage your events."
+      title="All Events"
       totalCount={events.length}
       isLoading={isLoading}
       error={error}

@@ -177,8 +177,7 @@ export const SeriesDashboard: React.FC<SeriesDashboardProps> = () => {
 
   return (
     <ResourceDashboardLayout
-      title="Series Management"
-      description="Manage your event series."
+      title="All Series"
       totalCount={series.length}
       isLoading={isLoading}
       error={error}
