@@ -19,6 +19,10 @@ export { SeriesForm } from './SeriesForm'
 export { EventForm } from './EventForm'
 export { RegistrationDashboard } from './RegistrationDashboard'
 
+// Dev components
+export { DevTokenButton } from './DevTokenButton'
+export { DevTokenDialog } from './DevTokenDialog'
+
 // Shared components
 export * from './shared'
 

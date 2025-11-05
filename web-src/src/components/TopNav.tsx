@@ -7,6 +7,7 @@ import { NavLink } from 'react-router-dom'
 import { Flex, View } from '@adobe/react-spectrum'
 import { IMS } from '../types'
 import { UserPanel } from './UserPanel'
+import { DevTokenButton } from './DevTokenButton'
 
 interface TopNavProps {
   ims: IMS
@@ -97,10 +98,11 @@ const TopNav: React.FC<TopNavProps> = ({ ims }) => {
           </NavLink>
         </Flex>
 
-        {/* Right: User Panel */}
-        <View>
+        {/* Right: Dev Token Button and User Panel */}
+        <Flex direction="row" alignItems="center" gap="size-100">
+          <DevTokenButton />
           <UserPanel ims={ims} compact />
-        </View>
+        </Flex>
       </Flex>
     </View>
   )
