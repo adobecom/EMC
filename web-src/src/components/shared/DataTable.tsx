@@ -4,17 +4,10 @@
 
 import React, { useState, useMemo, useCallback } from 'react'
 import {
-  TableView,
-  TableHeader,
-  TableBody,
-  Column,
-  Row,
-  Cell,
   Flex,
   ActionButton,
   Text
 } from '@adobe/react-spectrum'
-import type { Selection } from '@adobe/react-spectrum'
 import Edit from '@spectrum-icons/workflow/Edit'
 import Delete from '@spectrum-icons/workflow/Delete'
 import ViewDetail from '@spectrum-icons/workflow/ViewDetail'
@@ -40,8 +33,6 @@ interface DataTableProps<T> {
   columns: TableColumn<T>[]
   data: T[]
   actions?: TableAction<T>[]
-  onSelectionChange?: (keys: Selection) => void
-  selectionMode?: 'none' | 'single' | 'multiple'
   emptyState?: React.ReactNode
   isLoading?: boolean
   getItemKey: (item: T) => string
@@ -58,8 +49,6 @@ export function DataTable<T extends Record<string, any>>({
   columns,
   data,
   actions,
-  onSelectionChange,
-  selectionMode = 'none',
   emptyState,
   isLoading = false,
   getItemKey,
@@ -182,35 +171,12 @@ export function DataTable<T extends Record<string, any>>({
     }
   }, [handlePageInputBlur])
 
-  const renderCell = (item: T, columnKey: React.Key) => {
-    if (columnKey === 'actions' && actions) {
-      return (
-        <Flex gap="size-100" justifyContent="end">
-          {actions.map((action, idx) => {
-            const Icon = iconMap[action.icon]
-            return (
-              <ActionButton
-                key={idx}
-                isQuiet
-                onPress={() => action.onAction(item)}
-                aria-label={action.label}
-              >
-                <Icon />
-              </ActionButton>
-            )
-          })}
-        </Flex>
-      )
-    }
-
-    const column = columns.find((col) => col.key === columnKey)
-    if (!column) return null
-
+  const renderCell = (item: T, column: TableColumn<T>) => {
     if (column.render) {
       return column.render(item)
     }
 
-    const value = item[columnKey as string]
+    const value = item[column.key]
     return <Text>{value != null ? String(value) : '-'}</Text>
   }
 
@@ -225,84 +191,87 @@ export function DataTable<T extends Record<string, any>>({
   const allColumns = React.useMemo(() => {
     const cols = [...columns]
     if (actions && actions.length > 0) {
-      cols.push({ key: 'actions', name: 'Actions', width: 100, sortable: false })
+      cols.push({ key: 'actions', name: 'Actions', sortable: false })
     }
     return cols
   }, [columns, actions])
 
   return (
-    <Flex direction="column" gap="size-150" height="100%">
-      <TableView
-        key={`table-${sortColumn}-${sortDirection}`}
-        aria-label="Data table"
-        selectionMode={selectionMode}
-        onSelectionChange={onSelectionChange}
-        width="100%"
-        flex="1"
-        overflowMode="wrap"
-      >
-        <TableHeader columns={allColumns}>
-          {(column) => {
-            const isSortable = column.sortable !== false && column.key !== 'actions'
-            const isSorted = sortColumn === column.key
-            
-            return (
-              <Column 
-                key={column.key} 
-                width={column.width} 
-                align={column.key === 'actions' ? 'end' : 'start'}
-              >
-                <div 
-                  onClick={() => handleSort(column.key as string)}
-                  style={{ 
-                    cursor: isSortable ? 'pointer' : 'default',
-                    height: '80px',
-                    display: 'flex',
-                    alignItems: 'center'
-                  }}
-                >
-                  <Flex 
-                    direction="row" 
-                    alignItems="center" 
-                    gap="size-75"
-                    UNSAFE_style={{ 
-                      userSelect: 'none',
-                      width: '100%'
-                    }}
+    <Flex direction="column" gap="size-150" height="100%" width="100%">
+      <div className="custom-data-table">
+        <table>
+          <thead>
+            <tr>
+              {allColumns.map((column) => {
+                const isSortable = column.sortable !== false && column.key !== 'actions'
+                const isSorted = sortColumn === column.key
+                
+                return (
+                  <th 
+                    key={column.key}
+                    onClick={() => isSortable && handleSort(column.key)}
+                    className={isSortable ? 'sortable' : ''}
+                    style={{ textAlign: column.key === 'actions' ? 'right' : 'left' }}
                   >
-                    <Text UNSAFE_style={{ fontWeight: isSorted ? 600 : 400 }}>
-                      {column.name}
-                    </Text>
-                    {isSortable && (
-                      <span style={{ 
-                        opacity: isSorted ? 1 : 0.3,
-                        display: 'flex',
-                        alignItems: 'center',
-                        fontSize: '12px'
-                      }}>
-                        {isSorted ? (sortDirection === 'asc' ? '↑' : '↓') : '↕'}
-                      </span>
+                    <Flex 
+                      direction="row" 
+                      alignItems="center" 
+                      gap="size-75"
+                      justifyContent={column.key === 'actions' ? 'end' : 'start'}
+                    >
+                      <Text UNSAFE_style={{ fontWeight: isSorted ? 600 : 400 }}>
+                        {column.name}
+                      </Text>
+                      {isSortable && (
+                        <span style={{ 
+                          opacity: isSorted ? 1 : 0.3,
+                          display: 'flex',
+                          alignItems: 'center',
+                          fontSize: '12px'
+                        }}>
+                          {isSorted ? (sortDirection === 'asc' ? '↑' : '↓') : '↕'}
+                        </span>
+                      )}
+                    </Flex>
+                  </th>
+                )
+              })}
+            </tr>
+          </thead>
+          <tbody>
+            {paginatedData.map((item) => (
+              <tr key={getItemKey(item)}>
+                {allColumns.map((column) => (
+                  <td 
+                    key={column.key}
+                    style={{ textAlign: column.key === 'actions' ? 'right' : 'left' }}
+                  >
+                    {column.key === 'actions' && actions ? (
+                      <Flex gap="size-100" justifyContent="end">
+                        {actions.map((action, idx) => {
+                          const Icon = iconMap[action.icon]
+                          return (
+                            <ActionButton
+                              key={idx}
+                              isQuiet
+                              onPress={() => action.onAction(item)}
+                              aria-label={action.label}
+                            >
+                              <Icon />
+                            </ActionButton>
+                          )
+                        })}
+                      </Flex>
+                    ) : (
+                      renderCell(item, column)
                     )}
-                  </Flex>
-                </div>
-              </Column>
-            )
-          }}
-        </TableHeader>
-        <TableBody items={paginatedData}>
-          {(item) => (
-            <Row key={getItemKey(item)}>
-              {(columnKey) => (
-                <Cell>
-                  <div style={{ minHeight: '100px', minWidth: '132px', display: 'flex', alignItems: 'center' }}>
-                    {renderCell(item, columnKey)}
-                  </div>
-                </Cell>
-              )}
-            </Row>
-          )}
-        </TableBody>
-      </TableView>
+                  </td>
+                ))}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
       
       {/* Pagination */}
       {totalPages > 1 && (
@@ -355,4 +324,3 @@ export function DataTable<T extends Record<string, any>>({
     </Flex>
   )
 }
-

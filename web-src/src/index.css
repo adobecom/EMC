@@ -9,17 +9,11 @@ body {
   font-family: --spectrum-global-font-family-base;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  background-color: #FFFFFF !important;
+  background-color: #FFFFFF;
 }
 
 #root {
-  background-color: #FFFFFF !important;
-}
-
-/* Force white background on all Spectrum containers */
-.spectrum-Grid,
-.spectrum-Flex {
-  background-color: transparent !important;
+  background-color: #FFFFFF;
 }
 
 /** Top Navigation Styling **/
@@ -67,42 +61,65 @@ body {
   background-color: #FFFFFF;
 }
 
-/** Force White Backgrounds for Spectrum Components **/
-.spectrum-Table,
-.spectrum-Table-body,
-.spectrum-Table-head,
-.spectrum-Table-headCell,
-.spectrum-Table-cell,
-.spectrum-Table-row {
-  background-color: #FFFFFF !important;
+/** Custom Data Table Styling **/
+.custom-data-table {
+  width: 100%;
+  overflow-x: auto;
 }
 
-/* Override Spectrum's default gray backgrounds */
-[class*="spectrum-Table"] {
-  background-color: #FFFFFF !important;
+.custom-data-table table {
+  width: 100%;
+  border-collapse: collapse;
+  background-color: #FFFFFF;
+  table-layout: fixed;
 }
 
-/* Force white background for View components */
-.spectrum-View {
-  background-color: #FFFFFF !important;
+.custom-data-table thead tr {
+  border-bottom: 2px solid var(--spectrum-global-color-gray-300);
 }
 
-/* Remove any default backgrounds from Spectrum containers */
-[class*="spectrum-Body"],
-[class*="spectrum-Content"] {
-  background-color: transparent !important;
+.custom-data-table th {
+  height: 80px;
+  padding: 0 16px;
+  text-align: left;
+  font-weight: 500;
+  background-color: #FFFFFF;
+  position: sticky;
+  top: 0;
+  z-index: 1;
 }
 
-/* Override any remaining gray backgrounds from Spectrum */
-.spectrum-Provider,
-[class*="spectrum-Provider"] {
-  background-color: #FFFFFF !important;
+.custom-data-table th.sortable {
+  cursor: pointer;
+  user-select: none;
 }
 
-/* Ensure dividers don't add gray backgrounds */
-.spectrum-Divider {
-  background-color: var(--spectrum-global-color-gray-300) !important;
+.custom-data-table th.sortable:hover {
+  background-color: var(--spectrum-global-color-gray-75);
 }
+
+.custom-data-table tbody tr {
+  border-bottom: 1px solid var(--spectrum-global-color-gray-200);
+}
+
+.custom-data-table tbody tr:hover {
+  background-color: var(--spectrum-global-color-gray-75);
+}
+
+.custom-data-table td {
+  min-height: 100px;
+  padding: 16px;
+  vertical-align: middle;
+  background-color: #FFFFFF;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.custom-data-table th,
+.custom-data-table td {
+  overflow: hidden;
+}
+
 
 /** User Panel Styling **/
 .user-panel-compact {
