@@ -36,6 +36,16 @@ function bootstrapRaw(): void {
   }
   const mockIms: IMS = {}
 
+  console.log('⚠️  Running in standalone mode without Adobe Experience Cloud Shell')
+  console.log('ℹ️  For proper IMS authentication, use one of these methods:')
+  console.log('   1. Deploy and access via ExC Shell with devMode:')
+  console.log('      aio app deploy')
+  console.log('      https://experience.adobe.com/?devMode=true#/@org/app-id')
+  console.log('   2. Run with local actions:')
+  console.log('      aio app run --local')
+  console.log('')
+  console.log('📖 See: https://developer.adobe.com/app-builder/docs/getting_started/')
+
   // render the actual react application and pass along the runtime object to make it available to the App
   ReactDOM.render(
     <App runtime={mockRuntime} ims={mockIms} />,

@@ -16,7 +16,7 @@
 
 const fetch = require('node-fetch')
 const { Core } = require('@adobe/aio-sdk')
-const { errorResponse, getBearerToken, stringParameters, checkMissingRequestInputs } = require('../utils')
+const { errorResponse, stringParameters, checkMissingRequestInputs } = require('../utils')
 
 // main function that will be executed by Adobe I/O Runtime
 async function main (params) {
@@ -39,8 +39,8 @@ async function main (params) {
       return errorResponse(400, errorMessage, logger)
     }
 
-    // extract the user Bearer token from the Authorization header
-    const token = getBearerToken(params)
+    // extract the user Bearer token from the Authorization header if needed
+    // const token = getBearerToken(params)
 
     // replace this with the api you want to access
     const apiEndpoint = 'https://adobeioruntime.net/api/v1'
