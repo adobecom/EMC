@@ -22,7 +22,7 @@ import {
 import { getSeriesListMock, getEventsListMock } from '../mocks'
 import { tokenStorage } from './tokenStorage'
 import { constructRequestHeaders, safeFetch } from './requestHelpers'
-import { getCurrentEnvironment, getApiHost, ENVIRONMENTS } from '../config/constants'
+import { getCurrentEnvironment, getApiHost } from '../config/constants'
 
 /**
  * API Service Layer
@@ -175,7 +175,7 @@ class ApiService {
       const env = getCurrentEnvironment()
       console.log(`🔄 Fetching series from real API (${env} environment)...`)
       
-      const headers = constructRequestHeaders(token)
+      const headers = constructRequestHeaders(token, 'GET')
       const host = getApiHost('esp', env)
       const url = `${host}/v1/series`
 
@@ -254,7 +254,7 @@ class ApiService {
       const env = getCurrentEnvironment()
       console.log(`🔄 Fetching events from real API (${env} environment)...`)
       
-      const headers = constructRequestHeaders(token)
+      const headers = constructRequestHeaders(token, 'GET')
       const host = getApiHost('esp', env)
       const url = `${host}/v1/events`
 

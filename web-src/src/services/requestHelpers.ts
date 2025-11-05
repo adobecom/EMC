@@ -39,14 +39,21 @@ export interface RequestHeaders {
   'x-client-identity': string
 }
 
-export function constructRequestHeaders(authToken: string): RequestHeaders {
-  return {
+export function constructRequestHeaders(authToken: string, method: string = 'GET'): RequestHeaders {
+  const headers: any = {
     'Authorization': `Bearer ${authToken}`,
     'x-api-key': 'acom_event_service',
-    'content-type': 'application/json',
     'x-request-id': generateUUID(),
     'x-client-identity': getClientIdentity()
   }
+  
+  // Only add content-type for requests with a body (not GET/HEAD/DELETE)
+  // Some cluster gateways reject content-type on GET requests
+  if (method !== 'GET' && method !== 'HEAD' && method !== 'DELETE') {
+    headers['content-type'] = 'application/json'
+  }
+  
+  return headers as RequestHeaders
 }
 
 /**
@@ -78,6 +85,7 @@ export function isValidUrl(urlString: string): boolean {
 /**
  * Safe fetch wrapper
  * Based on safeFetch from old app
+ * Properly configured for CORS requests to external APIs
  */
 export async function safeFetch(
   url: string,
@@ -104,7 +112,15 @@ export async function safeFetch(
   }
 
   try {
-    const response = await fetch(url, options)
+    // Configure fetch with proper CORS settings
+    const fetchOptions: RequestInit = {
+      ...options,
+      mode: 'cors',           // Explicitly enable CORS
+      credentials: 'omit',    // Don't send cookies/credentials cross-origin
+      cache: 'no-cache',      // Don't cache responses
+    }
+    
+    const response = await fetch(url, fetchOptions)
     
     const contentType = response.headers.get('content-type')
     if (contentType && 
