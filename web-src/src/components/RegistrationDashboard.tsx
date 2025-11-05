@@ -9,7 +9,6 @@ import {
   Flex,
   Picker,
   Item,
-  Divider,
   Button,
   Content,
   Text,
@@ -200,8 +199,6 @@ export const RegistrationDashboard: React.FC<RegistrationDashboardProps> = ({ im
         <Heading level={1}>Event Registrations</Heading>
       </Flex>
 
-      <Divider size="M" marginBottom="size-400" />
-
       {/* Event Selector */}
       <Flex direction="row" gap="size-300" marginBottom="size-300" alignItems="end">
         <View flex>
@@ -254,9 +251,7 @@ export const RegistrationDashboard: React.FC<RegistrationDashboardProps> = ({ im
             )}
           </Flex>
 
-          <Divider size="S" marginTop="size-200" marginBottom="size-200" />
-
-          <Heading level={4} marginBottom="size-200">
+          <Heading level={4} marginTop="size-200" marginBottom="size-200">
             Registration Statistics
           </Heading>
           <Flex direction="row" gap="size-400" wrap>
@@ -313,7 +308,7 @@ export const RegistrationDashboard: React.FC<RegistrationDashboardProps> = ({ im
         isOpen={!!itemToDelete}
         onOpenChange={(isOpen) => !isOpen && setItemToDelete(null)}
       >
-        <Button variant="primary" />
+        <div style={{ display: 'none' }} />
         {(close) => (
           <AlertDialog
             title="Confirm Delete"

@@ -12,7 +12,6 @@ import {
   TabPanels,
   Item,
   Tabs,
-  Divider,
   Content,
   AlertDialog,
   DialogTrigger
@@ -252,8 +251,6 @@ export const ResourcesDashboard: React.FC<ResourcesDashboardProps> = ({ ims }) =
         <Heading level={1}>Dashboard</Heading>
       </Flex>
 
-      <Divider size="M" marginBottom="size-400" />
-
       <Tabs selectedKey={selectedTab} onSelectionChange={setSelectedTab as any}>
         <TabList>
           <Item key="series">Series ({series.length})</Item>
@@ -262,28 +259,29 @@ export const ResourcesDashboard: React.FC<ResourcesDashboardProps> = ({ ims }) =
         </TabList>
         <TabPanels>
           <Item key="series">
-            <Flex direction="column" gap="size-300">
-              <Flex justifyContent="end">
-                <Button variant="cta" onPress={handleCreateSeries}>
-                  <Add />
-                  Create Series
-                </Button>
+            <View paddingTop="size-300" paddingBottom="size-300">
+              <Flex direction="column" gap="size-300">
+                <Flex justifyContent="end">
+                  <Button variant="accent" onPress={handleCreateSeries}>
+                    <Add />
+                    Create Series
+                  </Button>
+                </Flex>
+                <DataTable
+                  columns={seriesColumns}
+                  data={series}
+                  actions={seriesActions}
+                  getItemKey={(item) => item.id}
+                  emptyState={<Content>No series found. Create your first series!</Content>}
+                />
               </Flex>
-
-              <DataTable
-                columns={seriesColumns}
-                data={series}
-                actions={seriesActions}
-                getItemKey={(item) => item.id}
-                emptyState={<Content>No series found. Create your first series!</Content>}
-              />
-            </Flex>
+            </View>
           </Item>
 
           <Item key="events">
             <Flex direction="column" gap="size-300">
               <Flex justifyContent="end">
-                <Button variant="cta" onPress={handleCreateEvent}>
+                <Button variant="accent" onPress={handleCreateEvent}>
                   <Add />
                   Create Event
                 </Button>
@@ -318,7 +316,7 @@ export const ResourcesDashboard: React.FC<ResourcesDashboardProps> = ({ ims }) =
         isOpen={!!itemToDelete}
         onOpenChange={(isOpen) => !isOpen && setItemToDelete(null)}
       >
-        <Button variant="primary" />
+        <div style={{ display: 'none' }} />
         {(close) => (
           <AlertDialog
             title="Confirm Delete"

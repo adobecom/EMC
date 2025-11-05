@@ -1,0 +1,338 @@
+[
+  {
+      "relatedDomain": "https://www.adobe.com",
+      "seriesDescription": "DMe Community Event Series for Ask me anything, virtual invite only session",
+      "seriesName": "Ask me anything",
+      "cloudType": "CreativeCloud",
+      "seriesStatus": "published",
+      "targetCms": {
+          "provider": "sharepoint",
+          "instance": "acom",
+          "code": "sp-acom"
+      },
+      "externalThemeId": "1228478",
+      "templateId": "/events/fragments/event-templates/dme/simple",
+      "seriesId": "f69a42a6-d393-4734-b868-4ea91e5a52e2",
+      "creationTime": 1753219416683,
+      "modificationTime": 1760379841615
+  },
+  {
+      "seriesDescription": "series for rayyans birthday",
+      "seriesName": "Birthday-Series",
+      "cloudType": "CreativeCloud",
+      "seriesStatus": "draft",
+      "targetCms": {
+          "provider": "sharepoint",
+          "instance": "acom",
+          "code": "sp-acom"
+      },
+      "externalThemeId": "1228478",
+      "templateId": "/events/fragments/event-templates/dme/simple",
+      "seriesId": "cda916a4-f8e7-4b5c-bfb8-2d958a7d2ddd",
+      "creationTime": 1737061927179,
+      "modificationTime": 1760379842936
+  },
+  {
+      "seriesDescription": "series for rayyans birthday",
+      "seriesName": "Birthday-Series - copy",
+      "cloudType": "CreativeCloud",
+      "seriesStatus": "draft",
+      "targetCms": {
+          "provider": "sharepoint",
+          "instance": "acom",
+          "code": "sp-acom"
+      },
+      "externalThemeId": "1228478",
+      "templateId": "/events/fragments/event-templates/dme/simple",
+      "seriesId": "3bc82803-5e8f-4df2-92d3-4cf1a122135f",
+      "creationTime": 1737061939745,
+      "modificationTime": 1760379844232
+  },
+  {
+      "relatedDomain": "https://www.adobe.com",
+      "cloudType": "CreativeCloud",
+      "seriesName": "Create Now",
+      "seriesStatus": "published",
+      "targetCms": {
+          "provider": "sharepoint",
+          "instance": "acom",
+          "code": "sp-acom"
+      },
+      "templateId": "/events/fragments/event-templates/dme/simple",
+      "externalThemeId": "1228478",
+      "seriesId": "f51fe370-eca3-456c-a9d3-6831893373db",
+      "creationTime": 1723147005295,
+      "modificationTime": 1760379845515
+  },
+  {
+      "relatedDomain": "https://www.adobe.com",
+      "seriesDescription": "Community events for NextGen",
+      "seriesName": "Creative Cafe",
+      "cloudType": "CreativeCloud",
+      "seriesStatus": "published",
+      "targetCms": {
+          "provider": "sharepoint",
+          "instance": "acom",
+          "code": "sp-acom"
+      },
+      "externalThemeId": "1228478",
+      "templateId": "/events/fragments/event-templates/dme/simple",
+      "seriesId": "ed4abdd1-571c-4866-9a74-a99b358f77a1",
+      "creationTime": 1743127956376,
+      "modificationTime": 1760379846829
+  },
+  {
+      "relatedDomain": "https://www.adobe.com",
+      "seriesDescription": "DMe Event Series for Creative Cloud Workshop",
+      "seriesName": "Creative Cloud Workshop",
+      "cloudType": "CreativeCloud",
+      "seriesStatus": "published",
+      "targetCms": {
+          "provider": "sharepoint",
+          "instance": "acom",
+          "code": "sp-acom"
+      },
+      "externalThemeId": "1228478",
+      "templateId": "/events/fragments/event-templates/dme/simple",
+      "seriesId": "aec47aea-3dd9-4602-b0c1-731c46dae4ee",
+      "creationTime": 1753219342732,
+      "modificationTime": 1760379848127
+  },
+  {
+      "relatedDomain": "https://www.adobe.com",
+      "cloudType": "CreativeCloud",
+      "seriesName": "Creative Jam",
+      "seriesStatus": "published",
+      "targetCms": {
+          "provider": "sharepoint",
+          "instance": "acom",
+          "code": "sp-acom"
+      },
+      "templateId": "/events/fragments/event-templates/dme/simple",
+      "externalThemeId": "1228478",
+      "seriesId": "1e297c0b-bcee-482b-a839-577ccf451559",
+      "creationTime": 1723749325182,
+      "modificationTime": 1760379849414
+  },
+  {
+      "seriesDescription": "DX-NA/ROW-RED-FMCOE-Live Event",
+      "seriesName": "DX-NA/ROW-RED-FMCOE-Live",
+      "cloudType": "ExperienceCloud",
+      "seriesStatus": "published",
+      "targetCms": {
+          "provider": "sharepoint",
+          "instance": "acom",
+          "code": "sp-acom"
+      },
+      "externalThemeId": "1228740",
+      "templateId": "/events/fragments/event-templates/dx/simple-in-person/simple",
+      "seriesId": "41ed6b29-e487-428c-872a-16f4fa5daa53",
+      "creationTime": 1750369329050,
+      "modificationTime": 1760379850709
+  },
+  {
+      "relatedDomain": "https://www.adobe.com",
+      "cloudType": "CreativeCloud",
+      "seriesName": "Experience Makers Connect",
+      "seriesStatus": "draft",
+      "targetCms": {
+          "provider": "sharepoint",
+          "instance": "acom",
+          "code": "sp-acom"
+      },
+      "templateId": "/events/fragments/event-templates/dx/simple",
+      "externalThemeId": "1228478",
+      "seriesId": "422b31c5-1448-4a0b-93fb-209790daba6c",
+      "creationTime": 1731855468288,
+      "modificationTime": 1760379852015
+  },
+  {
+      "seriesName": "Experience Makers Connect",
+      "cloudType": "ExperienceCloud",
+      "seriesStatus": "draft",
+      "targetCms": {
+          "provider": "sharepoint",
+          "instance": "acom",
+          "code": "sp-acom"
+      },
+      "externalThemeId": "1228478",
+      "templateId": "/events/fragments/event-templates/dme/simple",
+      "seriesId": "0b48c803-08a3-4883-8fb1-b556336a67cd",
+      "creationTime": 1741296600085,
+      "modificationTime": 1760379853301
+  },
+  {
+      "relatedDomain": "https://www.adobe.com",
+      "seriesDescription": "DMe Community Series for Adobe Express Events",
+      "seriesName": "Express Events",
+      "cloudType": "CreativeCloud",
+      "seriesStatus": "published",
+      "targetCms": {
+          "provider": "sharepoint",
+          "instance": "acom",
+          "code": "sp-acom"
+      },
+      "externalThemeId": "1228478",
+      "templateId": "/events/fragments/event-templates/dme/simple",
+      "seriesId": "14ae5da2-97a3-42c5-8b3e-4ecc1606abf4",
+      "creationTime": 1753199426134,
+      "modificationTime": 1760379854580
+  },
+  {
+      "relatedDomain": "https://www.adobe.com",
+      "seriesDescription": "Live, In-person Events for FMCOE",
+      "seriesName": "Live",
+      "cloudType": "ExperienceCloud",
+      "seriesStatus": "published",
+      "targetCms": {
+          "provider": "sharepoint",
+          "instance": "acom",
+          "code": "sp-acom"
+      },
+      "externalThemeId": "1228932",
+      "templateId": "/events/fragments/event-templates/dx/simple-in-person/simple",
+      "seriesId": "c833c24d-565b-4de2-8cec-ba9edeaa0d0f",
+      "creationTime": 1756227532238,
+      "modificationTime": 1760379855860
+  },
+  {
+      "seriesStatus": "draft",
+      "targetCms": {
+          "provider": "sharepoint",
+          "instance": "acom",
+          "code": "sp-acom"
+      },
+      "templateId": "/events/fragments/event-templates/dx/simple-webinar/template",
+      "seriesName": "TEST- DX webinar",
+      "cloudType": "ExperienceCloud",
+      "seriesId": "fb8c7ba8-738d-43b3-a860-6dcd9642cf54",
+      "creationTime": 1747266279442,
+      "modificationTime": 1760379857143
+  },
+  {
+      "seriesDescription": "webinar testing",
+      "seriesName": "TEST-Webinar",
+      "cloudType": "ExperienceCloud",
+      "seriesStatus": "published",
+      "targetCms": {
+          "provider": "sharepoint",
+          "instance": "acom",
+          "code": "sp-acom"
+      },
+      "templateId": "/events/fragments/event-templates/webinars/marketo-form-in-marquee/template",
+      "seriesId": "ddb10f4e-19ea-44af-b937-f4edbadfd1e4",
+      "creationTime": 1752696553048,
+      "modificationTime": 1760379858425
+  },
+  {
+      "seriesDescription": "TESTProduction11/13 updated",
+      "cloudType": "CreativeCloud",
+      "seriesName": "TESTProduction11/13",
+      "seriesStatus": "archived",
+      "targetCms": {
+          "provider": "sharepoint",
+          "code": "sp-acom",
+          "instance": "acom"
+      },
+      "templateId": "/events/fragments/event-templates/dme/simple",
+      "seriesId": "97727250-4c80-4f7b-a1db-9083efcde42b",
+      "creationTime": 1760384091198,
+      "modificationTime": 1760384141155
+  },
+  {
+      "relatedDomain": "https://www.adobe.com",
+      "seriesDescription": "DMe Online Events series with integration to Splash. Uses Webinar Form with basic form RSVP",
+      "seriesName": "Virtual Learn Events",
+      "cloudType": "CreativeCloud",
+      "seriesStatus": "published",
+      "targetCms": {
+          "provider": "sharepoint",
+          "instance": "acom",
+          "code": "sp-acom"
+      },
+      "externalThemeId": "1228478",
+      "templateId": "/events/fragments/event-templates/dme-online-event/simple",
+      "seriesId": "4900f535-7537-4b5f-98a3-f036e07de92a",
+      "creationTime": 1758058227193,
+      "modificationTime": 1760379859707
+  },
+  {
+      "relatedDomain": "https://www.adobe.com",
+      "seriesName": "automationTestDme",
+      "cloudType": "CreativeCloud",
+      "seriesStatus": "published",
+      "targetCms": {
+          "provider": "sharepoint",
+          "instance": "acom",
+          "code": "sp-acom"
+      },
+      "externalThemeId": "1228478",
+      "templateId": "/events/fragments/event-templates/dme/simple",
+      "seriesId": "23678aee-e43e-448f-9c4e-2322ed9604a6",
+      "creationTime": 1755707984805,
+      "modificationTime": 1760379860996
+  },
+  {
+      "seriesDescription": "automationTestDx",
+      "seriesName": "automationTestDx",
+      "cloudType": "ExperienceCloud",
+      "seriesStatus": "published",
+      "targetCms": {
+          "provider": "sharepoint",
+          "instance": "acom",
+          "code": "sp-acom"
+      },
+      "externalThemeId": "1228740",
+      "templateId": "/events/fragments/event-templates/dx/simple-in-person/simple",
+      "seriesId": "55093c69-8667-47b5-af42-6f6edf384b99",
+      "creationTime": 1755708112440,
+      "modificationTime": 1760379862278
+  },
+  {
+      "seriesDescription": "automationTestWebinar",
+      "seriesName": "automationTestWebinar",
+      "cloudType": "ExperienceCloud",
+      "seriesStatus": "published",
+      "targetCms": {
+          "provider": "sharepoint",
+          "instance": "acom",
+          "code": "sp-acom"
+      },
+      "templateId": "/events/fragments/event-templates/webinars/marketo-form-in-marquee/template",
+      "seriesId": "4fbfda37-6f4f-40fd-8890-815a370875c5",
+      "creationTime": 1755708240961,
+      "modificationTime": 1760379863552
+  },
+  {
+      "relatedDomain": "https://www.adobe.com",
+      "seriesName": "automationseriestest111",
+      "cloudType": "CreativeCloud",
+      "seriesStatus": "draft",
+      "targetCms": {
+          "provider": "sharepoint",
+          "instance": "acom",
+          "code": "sp-acom"
+      },
+      "externalThemeId": "1228478",
+      "templateId": "/events/fragments/event-templates/dme/simple",
+      "seriesId": "55835ba9-ef45-40a9-8004-52569800b3de",
+      "creationTime": 1739023424866,
+      "modificationTime": 1760379864834
+  },
+  {
+      "relatedDomain": "https://www.adobe.com",
+      "seriesDescription": "Qiyun Testing",
+      "cloudType": "ExperienceCloud",
+      "seriesName": "test-q",
+      "seriesStatus": "published",
+      "targetCms": {
+          "provider": "sharepoint",
+          "instance": "acom",
+          "code": "sp-acom"
+      },
+      "templateId": "/events/fragments/event-templates/dme/simple",
+      "seriesId": "ffc9a60f-f44b-49a6-98bf-a2f594bf162b",
+      "creationTime": 1757383174903,
+      "modificationTime": 1760379866118
+  }
+]

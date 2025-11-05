@@ -10,8 +10,7 @@ import {
   ButtonGroup,
   ProgressBar,
   Heading,
-  Text,
-  Divider
+  Text
 } from '@adobe/react-spectrum'
 
 export interface WizardStep {
@@ -83,12 +82,8 @@ export const FormWizard: React.FC<FormWizardProps> = ({
         )}
       </View>
 
-      <Divider size="S" marginBottom="size-300" />
-
       {/* Step content */}
-      <View marginBottom="size-400">{currentStep.component}</View>
-
-      <Divider size="S" marginBottom="size-300" />
+      <View marginTop="size-300" marginBottom="size-400">{currentStep.component}</View>
 
       {/* Navigation buttons */}
       <Flex justifyContent="space-between">
@@ -105,7 +100,7 @@ export const FormWizard: React.FC<FormWizardProps> = ({
           )}
         </ButtonGroup>
         <Button
-          variant="cta"
+          variant="accent"
           onPress={handleNext}
           isDisabled={currentStep.isValid === false || isSubmitting}
         >

@@ -50,16 +50,12 @@ body {
   background-color: var(--spectrum-global-color-gray-75);
 }
 
+/** Content Area Styling **/
+.content-area {
+  overflow-y: auto;
+}
+
 /** User Panel Styling **/
-.user-panel {
-  border: 1px solid var(--spectrum-global-color-gray-300);
-  transition: box-shadow 0.2s ease;
-}
-
-.user-panel:hover {
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
-}
-
 .user-panel-compact {
   border-radius: 6px;
   transition: background-color 0.2s ease;
@@ -67,4 +63,76 @@ body {
 
 .user-panel-compact:hover {
   background-color: var(--spectrum-global-color-gray-200);
+}
+
+.user-panel-button,
+.user-panel-button-compact {
+  width: 100%;
+  justify-content: flex-start;
+  min-height: auto;
+}
+
+.user-panel-button-compact {
+  padding: 4px 8px;
+}
+
+.user-panel-button {
+  padding: 0;
+}
+
+.user-avatar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.user-initials {
+  color: white;
+  font-weight: bold;
+  font-size: 14px;
+  line-height: 1;
+}
+
+.user-initials-compact {
+  color: white;
+  font-weight: bold;
+  font-size: 12px;
+  line-height: 1;
+}
+
+.user-info-container {
+  min-width: 0;
+}
+
+.user-name {
+  font-weight: bold;
+  font-size: 13px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.user-email {
+  font-size: 11px;
+  color: var(--spectrum-global-color-gray-600);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.org-label {
+  font-size: 10px;
+  color: var(--spectrum-global-color-gray-600);
+  text-transform: uppercase;
+  font-weight: bold;
+}
+
+.org-value {
+  font-size: 11px;
+  color: var(--spectrum-global-color-gray-700);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex: 1;
 }

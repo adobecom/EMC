@@ -13,8 +13,7 @@ import {
   NumberField,
   Switch,
   StatusLight,
-  Heading,
-  Divider
+  Heading
 } from '@adobe/react-spectrum'
 import { useNavigate, useParams } from 'react-router-dom'
 import { EventFormData, Series, Organization } from '../types/domain'
@@ -296,8 +295,6 @@ export const EventForm: React.FC<EventFormProps> = ({ ims }) => {
       <Heading level={1} marginBottom="size-300">
         {isEditMode ? 'Edit Event' : 'Create New Event'}
       </Heading>
-
-      <Divider size="M" marginBottom="size-400" />
 
       {error && (
         <View marginBottom="size-300">

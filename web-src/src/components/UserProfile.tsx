@@ -8,7 +8,6 @@ import {
   Heading,
   Flex,
   Text,
-  Divider,
   Content,
   IllustratedMessage
 } from '@adobe/react-spectrum'
@@ -57,13 +56,11 @@ export const UserProfile: React.FC<UserProfileProps> = ({ ims }) => {
 
   return (
     <View width="size-6000">
-      <Heading level={1} marginBottom="size-300">
+      <Heading level={1} marginBottom="size-200">
         User Profile
       </Heading>
 
-      <Divider size="M" marginBottom="size-300" />
-
-      <Flex direction="column" gap="size-200">
+      <Flex direction="column" gap="size-200" marginTop="size-200">
         {allRows.map((row, index) => (
           <Flex key={index} direction="row" gap="size-400" alignItems="center">
             <View width="size-2000">
@@ -77,8 +74,6 @@ export const UserProfile: React.FC<UserProfileProps> = ({ ims }) => {
           </Flex>
         ))}
       </Flex>
-
-      <Divider size="M" marginTop="size-400" marginBottom="size-300" />
 
       <View marginTop="size-300">
         <Heading level={3} marginBottom="size-200">

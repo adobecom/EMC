@@ -71,7 +71,7 @@ const App: React.FC<AppProps> = (props) => {
             <View 
               gridArea='content' 
               padding='size-300'
-              UNSAFE_style={{ overflowY: 'auto' }}
+              UNSAFE_className='content-area'
             >
               <Routes>
                 <Route path='/' element={<Home />} />
