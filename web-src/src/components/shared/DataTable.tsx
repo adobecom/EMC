@@ -12,7 +12,8 @@ import {
   Cell,
   Flex,
   ActionButton,
-  Text
+  Text,
+  TextField
 } from '@adobe/react-spectrum'
 import type { Selection } from '@adobe/react-spectrum'
 import Edit from '@spectrum-icons/workflow/Edit'
@@ -20,6 +21,8 @@ import Delete from '@spectrum-icons/workflow/Delete'
 import ViewDetail from '@spectrum-icons/workflow/ViewDetail'
 import ChevronUp from '@spectrum-icons/workflow/ChevronUp'
 import ChevronDown from '@spectrum-icons/workflow/ChevronDown'
+import ChevronLeft from '@spectrum-icons/workflow/ChevronLeft'
+import ChevronRight from '@spectrum-icons/workflow/ChevronRight'
 
 export interface TableColumn<T> {
   key: string
@@ -45,6 +48,7 @@ interface DataTableProps<T> {
   emptyState?: React.ReactNode
   isLoading?: boolean
   getItemKey: (item: T) => string
+  pageSize?: number
 }
 
 const iconMap = {
@@ -61,24 +65,16 @@ export function DataTable<T extends Record<string, any>>({
   selectionMode = 'none',
   emptyState,
   isLoading = false,
-  getItemKey
+  getItemKey,
+  pageSize = 20
 }: DataTableProps<T>): React.ReactElement {
   const [sortColumn, setSortColumn] = useState<string | null>(null)
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc')
-  
-  React.useEffect(() => {
-    console.log('🔄 DataTable MOUNTED')
-    return () => console.log('❌ DataTable UNMOUNTED')
-  }, [])
-  
-  React.useEffect(() => {
-    console.log('📊 State changed:', { sortColumn, sortDirection })
-  }, [sortColumn, sortDirection])
+  const [currentPage, setCurrentPage] = useState(1)
+  const [pageInputValue, setPageInputValue] = useState('1')
 
   // Handle column header click for sorting
   const handleSort = useCallback((columnKey: string) => {
-    console.log('🔍 handleSort called for column:', columnKey)
-    
     const column = columns.find(col => col.key === columnKey)
     if (!column?.sortable) return
 
@@ -87,14 +83,11 @@ export function DataTable<T extends Record<string, any>>({
       if (prevColumn === columnKey) {
         // Same column - toggle direction
         setSortDirection(prevDirection => {
-          const newDir = prevDirection === 'asc' ? 'desc' : 'asc'
-          console.log('🔄 Same column, toggling direction to:', newDir)
-          return newDir
+          return prevDirection === 'asc' ? 'desc' : 'asc'
         })
         return prevColumn
       } else {
         // Different column - set to ascending
-        console.log('✨ New column, setting to asc')
         setSortDirection('asc')
         return columnKey
       }
@@ -138,6 +131,59 @@ export function DataTable<T extends Record<string, any>>({
 
     return sortDirection === 'desc' ? sorted.reverse() : sorted
   }, [data, sortColumn, sortDirection, columns])
+
+  // Calculate pagination
+  const totalPages = Math.ceil(sortedData.length / pageSize)
+  
+  // Paginated data
+  const paginatedData = useMemo(() => {
+    const startIndex = (currentPage - 1) * pageSize
+    const endIndex = startIndex + pageSize
+    return sortedData.slice(startIndex, endIndex)
+  }, [sortedData, currentPage, pageSize])
+
+  // Reset to page 1 when data changes
+  React.useEffect(() => {
+    setCurrentPage(1)
+    setPageInputValue('1')
+  }, [data.length])
+
+  // Pagination handlers
+  const handlePrevPage = useCallback(() => {
+    if (currentPage > 1) {
+      const newPage = currentPage - 1
+      setCurrentPage(newPage)
+      setPageInputValue(String(newPage))
+    }
+  }, [currentPage])
+
+  const handleNextPage = useCallback(() => {
+    if (currentPage < totalPages) {
+      const newPage = currentPage + 1
+      setCurrentPage(newPage)
+      setPageInputValue(String(newPage))
+    }
+  }, [currentPage, totalPages])
+
+  const handlePageInputChange = useCallback((value: string) => {
+    setPageInputValue(value)
+  }, [])
+
+  const handlePageInputBlur = useCallback(() => {
+    const pageNum = parseInt(pageInputValue, 10)
+    if (!isNaN(pageNum) && pageNum >= 1 && pageNum <= totalPages) {
+      setCurrentPage(pageNum)
+    } else {
+      // Reset to current page if invalid
+      setPageInputValue(String(currentPage))
+    }
+  }, [pageInputValue, totalPages, currentPage])
+
+  const handlePageInputKeyDown = useCallback((e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      handlePageInputBlur()
+    }
+  }, [handlePageInputBlur])
 
   const renderCell = (item: T, columnKey: React.Key) => {
     if (columnKey === 'actions' && actions) {
@@ -187,70 +233,133 @@ export function DataTable<T extends Record<string, any>>({
     return cols
   }, [columns, actions])
 
-  const renderColumnHeader = (column: TableColumn<T>) => {
-    const isSortable = column.sortable !== false && column.key !== 'actions'
-    const isSorted = sortColumn === column.key
-
-    return (
-      <Flex 
-        direction="row" 
-        alignItems="center" 
-        gap="size-75"
-        UNSAFE_style={{ 
-          userSelect: 'none',
-          width: '100%'
-        }}
-      >
-        <Text UNSAFE_style={{ fontWeight: isSorted ? 600 : 400 }}>
-          {column.name}
-        </Text>
-        {isSortable && (
-          <span style={{ 
-            opacity: isSorted ? 1 : 0.3,
-            display: 'flex',
-            alignItems: 'center',
-            fontSize: '12px'
-          }}>
-            {isSorted ? (sortDirection === 'asc' ? '↑' : '↓') : '↕'}
-          </span>
-        )}
-      </Flex>
-    )
-  }
-
   return (
-    <TableView
-      aria-label="Data table"
-      selectionMode={selectionMode}
-      onSelectionChange={onSelectionChange}
-      width="100%"
-      height="100%"
-      overflowMode="wrap"
-    >
-      <TableHeader columns={allColumns}>
-        {(column) => (
-          <Column 
-            key={column.key} 
-            width={column.width} 
-            align={column.key === 'actions' ? 'end' : 'start'}
+    <Flex direction="column" gap="size-200" height="100%">
+      <TableView
+        key={`table-${sortColumn}-${sortDirection}`}
+        aria-label="Data table"
+        selectionMode={selectionMode}
+        onSelectionChange={onSelectionChange}
+        width="100%"
+        flex="1"
+        overflowMode="wrap"
+        UNSAFE_style={{
+          '--spectrum-table-header-row-height': '80px',
+          '--spectrum-table-row-height': '156px'
+        } as React.CSSProperties}
+      >
+        <TableHeader columns={allColumns}>
+          {(column) => {
+            const isSortable = column.sortable !== false && column.key !== 'actions'
+            const isSorted = sortColumn === column.key
+            
+            return (
+              <Column 
+                key={column.key} 
+                width={column.width} 
+                align={column.key === 'actions' ? 'end' : 'start'}
+              >
+                <div 
+                  onClick={() => handleSort(column.key as string)}
+                  style={{ 
+                    cursor: isSortable ? 'pointer' : 'default',
+                    height: '80px',
+                    display: 'flex',
+                    alignItems: 'center'
+                  }}
+                >
+                  <Flex 
+                    direction="row" 
+                    alignItems="center" 
+                    gap="size-75"
+                    UNSAFE_style={{ 
+                      userSelect: 'none',
+                      width: '100%'
+                    }}
+                  >
+                    <Text UNSAFE_style={{ fontWeight: isSorted ? 600 : 400 }}>
+                      {column.name}
+                    </Text>
+                    {isSortable && (
+                      <span style={{ 
+                        opacity: isSorted ? 1 : 0.3,
+                        display: 'flex',
+                        alignItems: 'center',
+                        fontSize: '12px'
+                      }}>
+                        {isSorted ? (sortDirection === 'asc' ? '↑' : '↓') : '↕'}
+                      </span>
+                    )}
+                  </Flex>
+                </div>
+              </Column>
+            )
+          }}
+        </TableHeader>
+        <TableBody items={paginatedData}>
+          {(item) => (
+            <Row key={getItemKey(item)}>
+              {(columnKey) => (
+                <Cell>
+                  <div style={{ minHeight: '156px', minWidth: '132px', display: 'flex', alignItems: 'center' }}>
+                    {renderCell(item, columnKey)}
+                  </div>
+                </Cell>
+              )}
+            </Row>
+          )}
+        </TableBody>
+      </TableView>
+      
+      {/* Pagination */}
+      {totalPages > 1 && (
+        <Flex 
+          direction="row" 
+          gap="size-200" 
+          alignItems="center" 
+          justifyContent="center"
+          UNSAFE_style={{ padding: '16px 0' }}
+        >
+          <ActionButton
+            onPress={handlePrevPage}
+            isDisabled={currentPage === 1}
+            isQuiet
+            aria-label="Previous page"
           >
-            <div 
-              onClick={() => handleSort(column.key as string)}
-              style={{ cursor: (column.sortable !== false && column.key !== 'actions') ? 'pointer' : 'default' }}
-            >
-              {renderColumnHeader(column)}
-            </div>
-          </Column>
-        )}
-      </TableHeader>
-      <TableBody items={sortedData}>
-        {(item) => (
-          <Row key={getItemKey(item)}>
-            {(columnKey) => <Cell>{renderCell(item, columnKey)}</Cell>}
-          </Row>
-        )}
-      </TableBody>
-    </TableView>
+            <ChevronLeft />
+          </ActionButton>
+          
+          <Flex direction="row" gap="size-100" alignItems="center">
+            <input
+              type="text"
+              value={pageInputValue}
+              onChange={(e) => handlePageInputChange(e.target.value)}
+              onBlur={handlePageInputBlur}
+              onKeyDown={handlePageInputKeyDown}
+              style={{
+                width: '50px',
+                padding: '4px 8px',
+                textAlign: 'center',
+                border: '1px solid var(--spectrum-global-color-gray-400)',
+                borderRadius: '4px',
+                fontSize: '14px'
+              }}
+              aria-label="Current page"
+            />
+            <Text>of {totalPages} pages</Text>
+          </Flex>
+          
+          <ActionButton
+            onPress={handleNextPage}
+            isDisabled={currentPage === totalPages}
+            isQuiet
+            aria-label="Next page"
+          >
+            <ChevronRight />
+          </ActionButton>
+        </Flex>
+      )}
+    </Flex>
   )
 }
 

@@ -32,6 +32,7 @@ interface ResourceDashboardLayoutProps<T> {
   columns: TableColumn<T>[]
   getItemKey: (item: T) => string
   actions?: TableAction<T>[]
+  pageSize?: number
   
   // Action handlers
   onRefresh: () => void
@@ -60,6 +61,7 @@ export function ResourceDashboardLayout<T extends Record<string, any>>({
   columns,
   getItemKey,
   actions,
+  pageSize = 10,
   onRefresh,
   onCreate,
   createLabel = 'Create',
@@ -190,6 +192,7 @@ export function ResourceDashboardLayout<T extends Record<string, any>>({
               data={filteredData}
               getItemKey={getItemKey}
               actions={actions}
+              pageSize={pageSize}
               emptyState={
                 <Flex direction="column" gap="size-200" alignItems="center">
                   <Heading level={3}>
