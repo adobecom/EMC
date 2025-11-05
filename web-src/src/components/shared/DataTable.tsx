@@ -12,15 +12,12 @@ import {
   Cell,
   Flex,
   ActionButton,
-  Text,
-  TextField
+  Text
 } from '@adobe/react-spectrum'
 import type { Selection } from '@adobe/react-spectrum'
 import Edit from '@spectrum-icons/workflow/Edit'
 import Delete from '@spectrum-icons/workflow/Delete'
 import ViewDetail from '@spectrum-icons/workflow/ViewDetail'
-import ChevronUp from '@spectrum-icons/workflow/ChevronUp'
-import ChevronDown from '@spectrum-icons/workflow/ChevronDown'
 import ChevronLeft from '@spectrum-icons/workflow/ChevronLeft'
 import ChevronRight from '@spectrum-icons/workflow/ChevronRight'
 
