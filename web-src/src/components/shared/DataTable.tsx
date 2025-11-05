@@ -231,7 +231,7 @@ export function DataTable<T extends Record<string, any>>({
   }, [columns, actions])
 
   return (
-    <Flex direction="column" gap="size-200" height="100%">
+    <Flex direction="column" gap="size-150" height="100%">
       <TableView
         key={`table-${sortColumn}-${sortDirection}`}
         aria-label="Data table"
@@ -240,10 +240,6 @@ export function DataTable<T extends Record<string, any>>({
         width="100%"
         flex="1"
         overflowMode="wrap"
-        UNSAFE_style={{
-          '--spectrum-table-header-row-height': '80px',
-          '--spectrum-table-row-height': '156px'
-        } as React.CSSProperties}
       >
         <TableHeader columns={allColumns}>
           {(column) => {
@@ -298,7 +294,7 @@ export function DataTable<T extends Record<string, any>>({
             <Row key={getItemKey(item)}>
               {(columnKey) => (
                 <Cell>
-                  <div style={{ minHeight: '156px', minWidth: '132px', display: 'flex', alignItems: 'center' }}>
+                  <div style={{ minHeight: '100px', minWidth: '132px', display: 'flex', alignItems: 'center' }}>
                     {renderCell(item, columnKey)}
                   </div>
                 </Cell>
@@ -312,10 +308,10 @@ export function DataTable<T extends Record<string, any>>({
       {totalPages > 1 && (
         <Flex 
           direction="row" 
-          gap="size-200" 
+          gap="size-150" 
           alignItems="center" 
           justifyContent="center"
-          UNSAFE_style={{ padding: '16px 0' }}
+          UNSAFE_style={{ padding: '8px 0' }}
         >
           <ActionButton
             onPress={handlePrevPage}

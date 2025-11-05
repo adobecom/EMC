@@ -58,7 +58,7 @@ const App: React.FC<AppProps> = (props) => {
   return (
     <ErrorBoundary onError={onError} FallbackComponent={fallbackComponent}>
       <Router>
-        <Provider theme={defaultTheme} colorScheme={'light'}>
+        <Provider theme={defaultTheme} colorScheme={'light'} scale={'medium'}>
           <Grid
             areas={['header', 'content']}
             columns={['1fr']}

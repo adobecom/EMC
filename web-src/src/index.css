@@ -9,6 +9,17 @@ body {
   font-family: --spectrum-global-font-family-base;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  background-color: #FFFFFF !important;
+}
+
+#root {
+  background-color: #FFFFFF !important;
+}
+
+/* Force white background on all Spectrum containers */
+.spectrum-Grid,
+.spectrum-Flex {
+  background-color: transparent !important;
 }
 
 /** Top Navigation Styling **/
@@ -53,6 +64,44 @@ body {
 /** Content Area Styling **/
 .content-area {
   overflow-y: auto;
+  background-color: #FFFFFF;
+}
+
+/** Force White Backgrounds for Spectrum Components **/
+.spectrum-Table,
+.spectrum-Table-body,
+.spectrum-Table-head,
+.spectrum-Table-headCell,
+.spectrum-Table-cell,
+.spectrum-Table-row {
+  background-color: #FFFFFF !important;
+}
+
+/* Override Spectrum's default gray backgrounds */
+[class*="spectrum-Table"] {
+  background-color: #FFFFFF !important;
+}
+
+/* Force white background for View components */
+.spectrum-View {
+  background-color: #FFFFFF !important;
+}
+
+/* Remove any default backgrounds from Spectrum containers */
+[class*="spectrum-Body"],
+[class*="spectrum-Content"] {
+  background-color: transparent !important;
+}
+
+/* Override any remaining gray backgrounds from Spectrum */
+.spectrum-Provider,
+[class*="spectrum-Provider"] {
+  background-color: #FFFFFF !important;
+}
+
+/* Ensure dividers don't add gray backgrounds */
+.spectrum-Divider {
+  background-color: var(--spectrum-global-color-gray-300) !important;
 }
 
 /** User Panel Styling **/

@@ -120,8 +120,8 @@ export function ResourceDashboardLayout<T extends Record<string, any>>({
   
   if (error) {
     return (
-      <View padding="size-300">
-        <Flex direction="column" gap="size-200" alignItems="center" justifyContent="center" height="100%">
+      <View height="100%">
+        <Flex direction="column" gap="size-150" alignItems="center" justifyContent="center" height="100%">
           <Heading level={3}>Error Loading Data</Heading>
           <Text>{error}</Text>
           <ActionButton onPress={onRefresh}>
@@ -137,8 +137,8 @@ export function ResourceDashboardLayout<T extends Record<string, any>>({
   const isSearching = inputValue !== debouncedQuery
 
   return (
-    <View padding="size-300" height="100%">
-      <Flex direction="column" gap="size-300" height="100%">
+    <View height="100%">
+      <Flex direction="column" gap="size-150" height="100%">
         {/* Header */}
         <Flex direction="row" justifyContent="space-between" alignItems="center">
           <Flex direction="column" gap="size-100">
@@ -156,7 +156,7 @@ export function ResourceDashboardLayout<T extends Record<string, any>>({
               )}
             </Flex>
           </Flex>
-          <Flex direction="row" gap="size-200" alignItems="center">
+          <Flex direction="row" gap="size-150" alignItems="center">
             <SearchField
               placeholder={searchPlaceholder}
               value={inputValue}
@@ -181,7 +181,7 @@ export function ResourceDashboardLayout<T extends Record<string, any>>({
         </Flex>
 
         {/* Table */}
-        <View flex="1" backgroundColor="gray-50" borderRadius="medium" padding="size-200">
+        <View flex="1" borderRadius="medium">
           {isLoading || isSearching ? (
             <Flex justifyContent="center" alignItems="center" height="100%">
               <LoadingSpinner message={isSearching ? 'Searching...' : loadingMessage} />
@@ -194,7 +194,7 @@ export function ResourceDashboardLayout<T extends Record<string, any>>({
               actions={actions}
               pageSize={pageSize}
               emptyState={
-                <Flex direction="column" gap="size-200" alignItems="center">
+                <Flex direction="column" gap="size-150" alignItems="center">
                   <Heading level={3}>
                     {debouncedQuery ? 'No Results Found' : emptyStateTitle}
                   </Heading>
