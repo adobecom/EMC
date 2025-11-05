@@ -1,6 +1,10 @@
 application:
   actions: actions
   web: web-src
+  # Environment variables for the web app (frontend)
+  # These will be injected at build time by Parcel
+  env:
+    CLIENT_IDENTITY: $CLIENT_IDENTITY
   extensions:
     dx/excshell/1:
       operations:

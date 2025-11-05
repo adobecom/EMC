@@ -1,43 +1,27 @@
 /* 
 * Environment Configuration
 * Provides access to environment-specific settings
+* 
+* Environment variables are injected at build time by Parcel from:
+* 1. .env file in project root
+* 2. app.config.yaml env section
+* 3. System environment variables
 */
 
 /**
- * Get environment variable
- * Works with both webpack DefinePlugin and runtime environment
- */
-function getEnvVar(key: string, defaultValue: string = ''): string {
-  // Try process.env (webpack DefinePlugin)
-  // @ts-ignore
-  if (typeof process !== 'undefined' && process.env && process.env[key]) {
-    // @ts-ignore
-    return process.env[key]
-  }
-  
-  // Try window global (runtime injection)
-  // @ts-ignore
-  if (typeof window !== 'undefined' && window.EMC_ENV && window.EMC_ENV[key]) {
-    // @ts-ignore
-    return window.EMC_ENV[key]
-  }
-  
-  return defaultValue
-}
-
-/**
  * Environment configuration
+ * Parcel automatically injects process.env variables at build time
  */
 export const env = {
   // Client identity for API requests
-  // This should match the value from your .env file
-  CLIENT_IDENTITY: getEnvVar('CLIENT_IDENTITY', 'emc-console-dev'),
+  // Loaded from .env file: CLIENT_IDENTITY=your-value
+  CLIENT_IDENTITY: process.env.CLIENT_IDENTITY || 'emc-console-dev',
   
   // API Key for external requests
-  API_KEY: getEnvVar('API_KEY', 'acom_event_service'),
+  API_KEY: process.env.API_KEY || 'acom_event_service',
   
   // Environment mode
-  NODE_ENV: getEnvVar('NODE_ENV', 'development'),
+  NODE_ENV: process.env.NODE_ENV || 'development',
   
   // Check if in development mode
   isDevelopment: () => {
@@ -49,6 +33,19 @@ export const env = {
   // Check if in production mode
   isProduction: () => {
     return !env.isDevelopment()
+  }
+}
+
+// Debug logging in development
+if (typeof window !== 'undefined' && env.isDevelopment()) {
+  console.log('🔧 Environment Configuration:')
+  console.log('   CLIENT_IDENTITY:', env.CLIENT_IDENTITY)
+  console.log('   API_KEY:', env.API_KEY)
+  console.log('   NODE_ENV:', env.NODE_ENV)
+  
+  if (env.CLIENT_IDENTITY === 'emc-console-dev') {
+    console.warn('⚠️ Using default CLIENT_IDENTITY')
+    console.warn('   Add CLIENT_IDENTITY to your .env file to set a custom value')
   }
 }
 

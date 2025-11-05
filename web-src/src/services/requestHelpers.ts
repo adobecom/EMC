@@ -5,6 +5,7 @@
 */
 
 import { env } from '../config/env'
+import { ALLOWED_HOSTS } from '../config/constants'
 
 /**
  * Generate a UUID v4
@@ -51,16 +52,8 @@ export function constructRequestHeaders(authToken: string): RequestHeaders {
 /**
  * Validate URL is safe to call
  * Based on isValidUrl from old app
+ * Uses ALLOWED_HOSTS from constants which includes all API endpoints
  */
-const ALLOWED_HOSTS: { [key: string]: boolean } = {
-  'localhost': true,
-  '127.0.0.1': true,
-  // Add your allowed production hosts here
-  'events-service.adobe.io': true,
-  'events-service-stage.adobe.io': true,
-  'events-service-dev.adobe.io': true,
-}
-
 export function isValidUrl(urlString: string): boolean {
   try {
     const url = new URL(urlString)

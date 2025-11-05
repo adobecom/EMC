@@ -20,6 +20,9 @@ import {
   ApiListResponse
 } from '../types/domain'
 import { getSeriesListMock, getEventsListMock } from '../mocks'
+import { tokenStorage } from './tokenStorage'
+import { constructRequestHeaders, safeFetch } from './requestHelpers'
+import { getCurrentEnvironment, getApiHost, ENVIRONMENTS } from '../config/constants'
 
 /**
  * API Service Layer
@@ -145,22 +148,66 @@ class ApiService {
   }
 
   /**
-   * Get series list from backend API
-   * Currently uses mock data for development
-   * 
-   * TODO: Replace with actual API call when backend is ready:
-   * return this.callAction<SeriesApiResponse[]>('getSeriesList')
+   * Get series list from external API
+   * Uses the dev token system for authentication
    */
   async getSeriesList(): Promise<SeriesApiResponse[]> {
+    // Check if we have a valid token
+    const token = tokenStorage.getValidToken()
+    
+    if (!token) {
+      console.warn('⚠️ No valid authentication token. Using mock data.')
+      console.log('💡 Click the "Dev Token" button to add a token for real API access')
+      
+      // Fall back to mock data
+      try {
+        const data = await getSeriesListMock()
+        console.log('📦 Using mock series data:', data.length, 'items')
+        return data
+      } catch (error) {
+        console.error('Error fetching mock series:', error)
+        return []
+      }
+    }
+
+    // Use real API with token
     try {
-      // Use mock data module (simulates API with promise)
-      const data = await getSeriesListMock()
-      console.log('Successfully loaded series data:', data.length, 'items')
-      return data
+      const env = getCurrentEnvironment()
+      console.log(`🔄 Fetching series from real API (${env} environment)...`)
+      
+      const headers = constructRequestHeaders(token)
+      const host = getApiHost('esp', env)
+      const url = `${host}/v1/series`
+
+      const response = await safeFetch(url, {
+        method: 'GET',
+        headers: headers as any
+      })
+
+      const data = await response.json()
+
+      if (!response.ok) {
+        console.error(`❌ API Error: ${response.status}`, data)
+        throw new Error(`API returned ${response.status}`)
+      }
+
+      // The API returns { series: [...] }
+      const series = data.series || []
+      console.log('✅ Successfully loaded series from API:', series.length, 'items')
+      
+      return series
     } catch (error) {
-      console.error('Error fetching series list:', error)
-      // Return empty array as fallback
-      return []
+      console.error('❌ Error fetching series from API:', error)
+      console.log('📦 Falling back to mock data')
+      
+      // Fall back to mock data on error
+      try {
+        const data = await getSeriesListMock()
+        return data
+      } catch (mockError) {
+        console.error('Error fetching mock series:', mockError)
+        return []
+      }
     }
   }
 
@@ -180,24 +227,69 @@ class ApiService {
   }
 
   /**
-   * Get events list from backend API
-   * Currently uses mock data for development
-   * 
-   * TODO: Replace with actual API call when backend is ready:
-   * return this.callAction<EventApiResponse[]>('getEventsList')
+   * Get events list from external API
+   * Uses the dev token system for authentication
    */
   async getEventsList(): Promise<EventApiResponse[]> {
+    // Check if we have a valid token
+    const token = tokenStorage.getValidToken()
+    
+    if (!token) {
+      console.warn('⚠️ No valid authentication token. Using mock data.')
+      console.log('💡 Click the "Dev Token" button to add a token for real API access')
+      
+      // Fall back to mock data
+      try {
+        const data = await getEventsListMock()
+        console.log('📦 Using mock events data:', data.length, 'items')
+        return data
+      } catch (error) {
+        console.error('Error fetching mock events:', error)
+        return []
+      }
+    }
+
+    // Use real API with token
     try {
-      // Use mock data module (simulates API with promise)
-      const data = await getEventsListMock()
-      console.log('Successfully loaded events data:', data.length, 'items')
-      return data
+      const env = getCurrentEnvironment()
+      console.log(`🔄 Fetching events from real API (${env} environment)...`)
+      
+      const headers = constructRequestHeaders(token)
+      const host = getApiHost('esp', env)
+      const url = `${host}/v1/events`
+
+      const response = await safeFetch(url, {
+        method: 'GET',
+        headers: headers as any
+      })
+
+      const data = await response.json()
+
+      if (!response.ok) {
+        console.error(`❌ API Error: ${response.status}`, data)
+        throw new Error(`API returned ${response.status}`)
+      }
+
+      // The API returns { events: [...] }
+      const events = data.events || []
+      console.log('✅ Successfully loaded events from API:', events.length, 'items')
+      
+      return events
     } catch (error) {
-      console.error('Error fetching events list:', error)
-      // Return empty array as fallback
-      return []
+      console.error('❌ Error fetching events from API:', error)
+      console.log('📦 Falling back to mock data')
+      
+      // Fall back to mock data on error
+      try {
+        const data = await getEventsListMock()
+        return data
+      } catch (mockError) {
+        console.error('Error fetching mock events:', mockError)
+        return []
+      }
     }
   }
+
 
   /**
    * Get event details

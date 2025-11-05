@@ -11,46 +11,7 @@
 
 import { tokenStorage } from './tokenStorage'
 import { constructRequestHeaders, safeFetch } from './requestHelpers'
-
-/**
- * API Configuration
- * Define your external API endpoints here
- */
-const API_CONFIG = {
-  esp: {
-    local: { host: 'http://localhost:3000' },
-    dev: { host: 'https://events-service-dev.adobe.io' },
-    stage: { host: 'https://events-service-stage.adobe.io' },
-    prod: { host: 'https://events-service.adobe.io' }
-  },
-  esl: {
-    local: { host: 'http://localhost:3001' },
-    dev: { host: 'https://events-service-dev.adobe.io' },
-    stage: { host: 'https://events-service-stage.adobe.io' },
-    prod: { host: 'https://events-service.adobe.io' }
-  }
-}
-
-/**
- * Get current environment
- */
-function getCurrentEnvironment(): 'local' | 'dev' | 'stage' | 'prod' {
-  const hostname = window.location.hostname
-  
-  if (hostname === 'localhost' || hostname === '127.0.0.1') {
-    return 'local'
-  }
-  
-  if (hostname.includes('-dev')) {
-    return 'dev'
-  }
-  
-  if (hostname.includes('-stage')) {
-    return 'stage'
-  }
-  
-  return 'prod'
-}
+import { getCurrentEnvironment, getApiHost, API_CONFIG } from '../config/constants'
 
 /**
  * External API Service
@@ -83,7 +44,7 @@ class ExternalApiService {
     const token = this.getAuthToken()
     const headers = constructRequestHeaders(token)
     const env = getCurrentEnvironment()
-    const { host } = API_CONFIG[service][env]
+    const host = getApiHost(service, env)
     const url = `${host}${path}`
 
     const options: RequestInit = {
