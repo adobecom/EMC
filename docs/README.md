@@ -48,13 +48,12 @@ Welcome to the Event Management Cloud (EMC) documentation! This index will help 
 
 ## 🔐 Local Development Features
 
-### Dev Token Management (NEW!)
+### Dev Token Management
 
 The EMC application includes a powerful token management system for local development:
 
 - **[Dev Token Quick Start](./DEV_TOKEN_QUICKSTART.md)** ⚡ - Get up and running in 30 seconds
-- **[Dev Token Complete Guide](./DEV_TOKEN_GUIDE.md)** 📖 - Comprehensive guide with architecture and examples
-- **[Dev Token Implementation Summary](./DEV_TOKEN_SUMMARY.md)** 🛠️ - Technical implementation details
+- **[Dev Token Complete Guide](./DEV_TOKEN_GUIDE.md)** 📖 - Comprehensive guide with architecture, examples, and visual diagrams
 
 **What is it?**
 A system that lets you use real Adobe IMS tokens from production sites in your local development environment, enabling full API access without deploying to Experience Cloud Shell.
@@ -104,7 +103,7 @@ A system that lets you use real Adobe IMS tokens from production sites in your l
 
 ### Local Development
 - [Dev Token Quick Start](./DEV_TOKEN_QUICKSTART.md) ⭐
-- [Dev Token Complete Guide](./DEV_TOKEN_GUIDE.md)
+- [Dev Token Guide](./DEV_TOKEN_GUIDE.md)
 - [Development Workflow](./DEVELOPMENT_WORKFLOW.md)
 
 ## 🔍 Quick Reference
@@ -153,23 +152,18 @@ EMC/
 │   ├── TOP_NAV_LAYOUT.md          # Nav structure
 │   ├── USER_PANEL_IMPLEMENTATION.md # User panel
 │   ├── DEV_TOKEN_QUICKSTART.md    # ⚡ Quick setup
-│   ├── DEV_TOKEN_GUIDE.md         # 📖 Complete guide
-│   └── DEV_TOKEN_SUMMARY.md       # 🛠️ Implementation
+│   └── DEV_TOKEN_GUIDE.md         # 📖 Complete guide
 │
 ├── web-src/                        # Frontend application
 │   └── src/
 │       ├── components/             # React components
-│       │   ├── DevTokenDialog.tsx  # 🔐 Token input dialog
-│       │   └── DevTokenButton.tsx  # 🔐 Token status button
 │       ├── services/               # API services
 │       │   ├── api.ts             # Main API service
-│       │   ├── tokenStorage.ts    # 🔐 Token storage
-│       │   ├── requestHelpers.ts  # 🔐 API helpers
-│       │   └── externalApi.example.ts # 🔐 Usage example
+│       │   ├── tokenStorage.ts    # Token management
+│       │   ├── eventEnrichment.ts # Data enrichment
+│       │   └── dataEnrichment.ts  # Enrichment utilities
 │       ├── hooks/                  # React hooks
-│       │   └── useDevToken.ts     # 🔐 Token hook
 │       ├── config/                 # Configuration
-│       │   └── env.ts             # 🔐 Environment config
 │       └── ...
 │
 ├── actions/                        # Backend actions
@@ -211,14 +205,21 @@ EMC/
 2. [Top Nav Layout](./TOP_NAV_LAYOUT.md)
 3. [User Panel Implementation](./USER_PANEL_IMPLEMENTATION.md)
 
-## 🆕 What's New
+## 🆕 Recent Updates
 
-### November 2025
-- ✨ **Dev Token Management System** - Complete local development token management
+### Event Dashboard Enhancements
+- ✨ **Data Enrichment System** - Intelligent caching and batching for API calls
+  - Thumbnail images with shimmer loading
+  - Venue information enrichment
+  - Series details with descriptions
+  - Creator/modifier/publish history tracking
+  - Automatic caching and request deduplication
+
+### Dev Token Management
+- ✨ **Local Development Token System** - Simplified local API testing
   - Token storage and validation
   - Beautiful UI for token input
   - Automatic expiration handling
-  - Non-invasive test mode
   - See [Quick Start](./DEV_TOKEN_QUICKSTART.md)
 
 ## 🤔 Need Help?
@@ -251,8 +252,8 @@ When updating documentation:
 
 ---
 
-**Last Updated:** November 5, 2025
-**Version:** 1.1.0
+**Last Updated:** November 6, 2025
+**Version:** 1.2.0
 
 Happy coding! 🚀
 
