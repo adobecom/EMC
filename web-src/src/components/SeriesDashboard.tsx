@@ -68,7 +68,7 @@ export const SeriesDashboard: React.FC<SeriesDashboardProps> = () => {
   const columns = useMemo<TableColumn<SeriesDashboardItem>[]>(() => [
     {
       key: 'seriesName',
-      name: 'Series Name',
+      name: 'SERIES NAME',
       width: 250,
       sortable: true,
       render: (item) => (
@@ -86,35 +86,35 @@ export const SeriesDashboard: React.FC<SeriesDashboardProps> = () => {
     },
     {
       key: 'seriesStatus',
-      name: 'Status',
+      name: 'STATUS',
       width: 120,
       sortable: true,
       render: (item) => <StatusBadge status={item.seriesStatus} />
     },
     {
       key: 'cloudType',
-      name: 'Cloud Type',
+      name: 'CLOUD TYPE',
       width: 150,
       sortable: true,
       render: (item) => <Text>{item.cloudType}</Text>
     },
     {
       key: 'modificationTime',
-      name: 'Last Modified',
+      name: 'LAST MODIFIED',
       width: 180,
       sortable: true,
       render: (item) => <Text>{formatDate(item.modificationTime)}</Text>
     },
     {
       key: 'creationTime',
-      name: 'Created',
+      name: 'CREATED',
       width: 180,
       sortable: true,
       render: (item) => <Text>{formatDate(item.creationTime)}</Text>
     },
     {
       key: 'createdBy',
-      name: 'Created By',
+      name: 'CREATED BY',
       width: 150,
       sortable: true,
       render: (item) => (
@@ -125,7 +125,7 @@ export const SeriesDashboard: React.FC<SeriesDashboardProps> = () => {
     },
     {
       key: 'modifiedBy',
-      name: 'Modified By',
+      name: 'MODIFIED BY',
       width: 150,
       sortable: true,
       render: (item) => (
@@ -136,7 +136,7 @@ export const SeriesDashboard: React.FC<SeriesDashboardProps> = () => {
     },
     {
       key: 'eventCount',
-      name: 'Events',
+      name: 'EVENTS',
       width: 100,
       sortable: true,
       sortFn: (a, b) => {

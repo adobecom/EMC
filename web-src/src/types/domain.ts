@@ -126,6 +126,7 @@ export interface EventDashboardItem {
   eventId: string
   eventName: string
   seriesId?: string
+  seriesName?: string
   cloudType?: string
   eventType?: string
   published: boolean
@@ -138,8 +139,13 @@ export interface EventDashboardItem {
   hostEmail?: string
   creationTime?: number
   modificationTime?: number
+  publishTime?: number
   createdBy?: string
   modifiedBy?: string
+  venueName?: string
+  language?: string
+  thumbnail?: string
+  contributor?: string
 }
 
 // Enhanced Series type for dashboard display

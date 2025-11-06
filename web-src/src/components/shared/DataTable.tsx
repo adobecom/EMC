@@ -219,7 +219,11 @@ export function DataTable<T extends Record<string, any>>({
                       gap="size-75"
                       justifyContent={column.key === 'actions' ? 'end' : 'start'}
                     >
-                      <Text UNSAFE_style={{ fontWeight: isSorted ? 600 : 400 }}>
+                      <Text UNSAFE_style={{ 
+                        fontWeight: 600,
+                        fontSize: '12px',
+                        color: isSorted ? 'var(--spectrum-global-color-gray-900)' : 'var(--spectrum-global-color-gray-600)'
+                      }}>
                         {column.name}
                       </Text>
                       {isSortable && (

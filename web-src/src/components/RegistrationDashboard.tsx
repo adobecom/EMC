@@ -146,18 +146,18 @@ export const RegistrationDashboard: React.FC<RegistrationDashboardProps> = ({ im
   }
 
   const columns: TableColumn<Registration>[] = [
-    { key: 'attendeeName', name: 'Attendee Name', width: 200 },
-    { key: 'attendeeEmail', name: 'Email', width: 250 },
-    { key: 'attendeePhone', name: 'Phone', width: 150 },
+    { key: 'attendeeName', name: 'ATTENDEE NAME', width: 200 },
+    { key: 'attendeeEmail', name: 'EMAIL', width: 250 },
+    { key: 'attendeePhone', name: 'PHONE', width: 150 },
     {
       key: 'status',
-      name: 'Status',
+      name: 'STATUS',
       width: 120,
       render: (item) => <StatusBadge status={item.status} />
     },
     {
       key: 'registrationDate',
-      name: 'Registration Date',
+      name: 'REGISTRATION DATE',
       width: 180,
       render: (item) => new Date(item.registrationDate).toLocaleString()
     }

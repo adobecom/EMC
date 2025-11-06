@@ -31,6 +31,7 @@ export const EventsDashboard: React.FC<EventsDashboardProps> = () => {
         eventId: item.eventId,
         eventName: item.enTitle || item.localizations?.['en-US']?.title || 'Untitled Event',
         seriesId: item.seriesId,
+        seriesName: item.seriesId, // TODO: Resolve series name from series ID
         cloudType: item.cloudType,
         eventType: item.eventType,
         published: item.published,
@@ -43,6 +44,11 @@ export const EventsDashboard: React.FC<EventsDashboardProps> = () => {
         hostEmail: item.hostEmail,
         creationTime: item.creationTime,
         modificationTime: item.modificationTime,
+        publishTime: undefined, // TODO: Add if available from API
+        venueName: item.venue?.venueName,
+        language: item.defaultLocale,
+        thumbnail: undefined, // TODO: Add if available from API
+        contributor: item.hostEmail, // Using hostEmail as contributor for now
         // These will be fetched later from different endpoints
         createdBy: undefined,
         modifiedBy: undefined
@@ -66,24 +72,35 @@ export const EventsDashboard: React.FC<EventsDashboardProps> = () => {
     const date = new Date(timestamp)
     return date.toLocaleDateString('en-US', {
       year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
+      month: '2-digit',
+      day: '2-digit'
     })
   }, [])
 
-  const formatLocalDateTime = useCallback((date?: string, time?: string): string => {
-    if (!date) return 'N/A'
-    if (!time) return date
-    return `${date} ${time}`
+  const formatLocalDate = useCallback((dateString?: string): string => {
+    if (!dateString) return 'N/A'
+    // Convert YYYY-MM-DD to MM/DD/YYYY
+    const parts = dateString.split('-')
+    if (parts.length === 3) {
+      return `${parts[1]}/${parts[2]}/${parts[0]}`
+    }
+    return dateString
   }, [])
 
   const columns = useMemo<TableColumn<EventDashboardItem>[]>(() => [
     {
+      key: 'thumbnail',
+      name: '',
+      width: 50,
+      sortable: false,
+      render: (item) => (
+        <div style={{ width: '40px', height: '40px', backgroundColor: '#f0f0f0', borderRadius: '4px' }} />
+      )
+    },
+    {
       key: 'eventName',
-      name: 'Event Name',
-      width: 250,
+      name: 'EVENT NAME',
+      width: 200,
       sortable: true,
       render: (item) => (
         <Text><strong>{item.eventName}</strong></Text>
@@ -91,8 +108,8 @@ export const EventsDashboard: React.FC<EventsDashboardProps> = () => {
     },
     {
       key: 'published',
-      name: 'Status',
-      width: 120,
+      name: 'PUBLISH STATUS',
+      width: 140,
       sortable: true,
       sortFn: (a, b) => {
         // Sort published first, then draft
@@ -101,23 +118,23 @@ export const EventsDashboard: React.FC<EventsDashboardProps> = () => {
       render: (item) => <StatusBadge status={item.published ? 'published' : 'draft'} />
     },
     {
-      key: 'eventType',
-      name: 'Type',
-      width: 120,
-      sortable: true,
-      render: (item) => <Text>{item.eventType || 'N/A'}</Text>
+      key: 'contributor',
+      name: 'CONTRIBUTOR',
+      width: 150,
+      sortable: false,
+      render: (item) => <Text>{item.contributor || 'N/A'}</Text>
     },
     {
-      key: 'cloudType',
-      name: 'Cloud Type',
+      key: 'seriesName',
+      name: 'SERIES',
       width: 150,
-      sortable: true,
-      render: (item) => <Text>{item.cloudType || 'N/A'}</Text>
+      sortable: false,
+      render: (item) => <Text>{item.seriesName || 'N/A'}</Text>
     },
     {
       key: 'localStartDate',
-      name: 'Start Date/Time',
-      width: 200,
+      name: 'DATE RUN | (MM/DD/YYYY)',
+      width: 180,
       sortable: true,
       sortFn: (a, b) => {
         // Sort by date string
@@ -125,20 +142,25 @@ export const EventsDashboard: React.FC<EventsDashboardProps> = () => {
         const bDate = b.localStartDate || ''
         return aDate.localeCompare(bDate)
       },
-      render: (item) => (
-        <Flex direction="column" gap="size-25">
-          <Text>{formatLocalDateTime(item.localStartDate, item.localStartTime)}</Text>
-          {item.timezone && (
-            <Text UNSAFE_style={{ fontSize: '11px', color: 'var(--spectrum-global-color-gray-600)' }}>
-              {item.timezone}
-            </Text>
-          )}
-        </Flex>
-      )
+      render: (item) => <Text>{formatLocalDate(item.localStartDate)}</Text>
     },
     {
-      key: 'attendees',
-      name: 'Attendees',
+      key: 'venueName',
+      name: 'VENUE NAME',
+      width: 150,
+      sortable: false,
+      render: (item) => <Text>{item.venueName || 'N/A'}</Text>
+    },
+    {
+      key: 'language',
+      name: 'LANGUAGE',
+      width: 100,
+      sortable: true,
+      render: (item) => <Text>{item.language || 'N/A'}</Text>
+    },
+    {
+      key: 'attendeeCount',
+      name: 'RSVP DATA',
       width: 120,
       sortable: true,
       sortFn: (a, b) => {
@@ -154,24 +176,42 @@ export const EventsDashboard: React.FC<EventsDashboardProps> = () => {
       )
     },
     {
-      key: 'modificationTime',
-      name: 'Last Modified',
-      width: 180,
-      sortable: true,
-      render: (item) => <Text>{formatDate(item.modificationTime)}</Text>
-    },
-    {
       key: 'createdBy',
-      name: 'Created By',
+      name: 'CREATOR',
       width: 150,
-      sortable: true,
+      sortable: false,
       render: (item) => (
         <Text UNSAFE_style={{ color: 'var(--spectrum-global-color-gray-600)' }}>
           {item.createdBy || 'N/A'}
         </Text>
       )
+    },
+    {
+      key: 'modifiedBy',
+      name: 'MODIFIER',
+      width: 150,
+      sortable: false,
+      render: (item) => (
+        <Text UNSAFE_style={{ color: 'var(--spectrum-global-color-gray-600)' }}>
+          {item.modifiedBy || 'N/A'}
+        </Text>
+      )
+    },
+    {
+      key: 'modificationTime',
+      name: 'LAST MODIFIED | (MM/DD/YYYY)',
+      width: 200,
+      sortable: true,
+      render: (item) => <Text>{formatDate(item.modificationTime)}</Text>
+    },
+    {
+      key: 'publishTime',
+      name: 'PUBLISHED AT | (MM/DD/YYYY)',
+      width: 200,
+      sortable: false,
+      render: (item) => <Text>{formatDate(item.publishTime)}</Text>
     }
-  ], [formatDate, formatLocalDateTime])
+  ], [formatDate, formatLocalDate])
 
   const handleCreateEvent = () => {
     // Navigate to create event form
