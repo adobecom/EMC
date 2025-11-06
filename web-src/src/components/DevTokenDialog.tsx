@@ -106,7 +106,7 @@ export const DevTokenDialog: React.FC<DevTokenDialogProps> = ({
 
   return (
     <>
-      <DialogContainer onDismiss={mode === 'optional' ? handleContinueWithoutToken : undefined}>
+      <DialogContainer onDismiss={mode === 'optional' ? handleContinueWithoutToken : () => { return; }}>
         {isOpen && (
           <Dialog size="L">
             <Heading>🔐 Developer Authentication</Heading>
@@ -171,12 +171,12 @@ export const DevTokenDialog: React.FC<DevTokenDialogProps> = ({
                     <li>
                       Open{' '}
                       <a 
-                        href="https://adobe.com" 
+                        href="https://dev--ecc-milo--adobecom.aem.live/ecc/dashboard/t3" 
                         target="_blank" 
                         rel="noopener noreferrer"
                         style={{ color: 'var(--spectrum-global-color-blue-600)' }}
                       >
-                        adobe.com
+                        https://dev--ecc-milo--adobecom.aem.live/ecc/dashboard/t3
                       </a>
                       {' '}and sign in
                     </li>

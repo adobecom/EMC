@@ -86,7 +86,9 @@ const response = await safeFetch('https://your-api.adobe.io/endpoint', {
 | "No valid token" error | Click Dev Token button and add one |
 | Token expired | Clear and add a fresh token |
 | API call fails | Check console for errors, verify token is valid |
-| Button not showing | Make sure you're on localhost |
+| Button not showing | Make sure you're on localhost (not Experience Cloud Shell) |
+
+> **Note**: The dev token system ONLY works on localhost. When running in Adobe Experience Cloud Shell, the real IMS token is automatically used and the dev token button never appears.
 
 ## Tips
 

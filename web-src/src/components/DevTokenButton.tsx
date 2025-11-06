@@ -18,9 +18,9 @@ export const DevTokenButton: React.FC<DevTokenButtonProps> = ({ onTokenChange })
   const [hasValidToken, setHasValidToken] = useState(false)
   const [expirationInfo, setExpirationInfo] = useState<any>(null)
   const [isDevMode] = useState(() => {
+    // Only show dev token UI on localhost (never in Experience Cloud Shell)
     return window.location.hostname === 'localhost' || 
-           window.location.hostname === '127.0.0.1' ||
-           window.location.search.includes('devMode=true')
+           window.location.hostname === '127.0.0.1'
   })
 
   const checkToken = () => {

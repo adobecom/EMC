@@ -697,7 +697,7 @@ export const EventsDashboard: React.FC<EventsDashboardProps> = () => {
       onVisibleItemsChange={handleVisibleEventsChange}
       onRefresh={loadEventsData}
       onCreate={handleCreateEvent}
-      createLabel="Create Event"
+      createLabel="Create new event"
       emptyStateTitle="No Events Found"
       emptyStateDescription="Get started by creating your first event"
       loadingMessage="Loading events..."

@@ -9,9 +9,9 @@ import {
   View,
   Text,
   ActionButton,
+  Button,
   SearchField
 } from '@adobe/react-spectrum'
-import Add from '@spectrum-icons/workflow/Add'
 import Refresh from '@spectrum-icons/workflow/Refresh'
 import { DataTable, TableColumn, TableAction } from './DataTable'
 import { LoadingSpinner } from './LoadingSpinner'
@@ -167,10 +167,9 @@ export function ResourceDashboardLayout<T extends Record<string, any>>({
                 <Refresh />
               </ActionButton>
               {onCreate && (
-                <ActionButton onPress={onCreate}>
-                  <Add />
-                  <Text>{createLabel}</Text>
-                </ActionButton>
+                <Button onPress={onCreate} variant="accent">
+                  {createLabel}
+                </Button>
               )}
             </Flex>
           </Flex>
@@ -213,10 +212,9 @@ export function ResourceDashboardLayout<T extends Record<string, any>>({
                     </ActionButton>
                   ) : (
                     onCreate && (
-                      <ActionButton onPress={onCreate}>
-                        <Add />
-                        <Text>{createLabel}</Text>
-                      </ActionButton>
+                      <Button onPress={onCreate} variant="accent">
+                        {createLabel}
+                      </Button>
                     )
                   )}
                 </Flex>

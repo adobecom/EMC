@@ -54,6 +54,7 @@ The EMC application includes a powerful token management system for local develo
 
 - **[Dev Token Quick Start](./DEV_TOKEN_QUICKSTART.md)** ⚡ - Get up and running in 30 seconds
 - **[Dev Token Complete Guide](./DEV_TOKEN_GUIDE.md)** 📖 - Comprehensive guide with architecture, examples, and visual diagrams
+- **[Dev Token Security Model](./DEV_TOKEN_SECURITY.md)** 🔒 - Security architecture and bootstrap paths
 
 **What is it?**
 A system that lets you use real Adobe IMS tokens from production sites in your local development environment, enabling full API access without deploying to Experience Cloud Shell.
@@ -104,6 +105,7 @@ A system that lets you use real Adobe IMS tokens from production sites in your l
 ### Local Development
 - [Dev Token Quick Start](./DEV_TOKEN_QUICKSTART.md) ⭐
 - [Dev Token Guide](./DEV_TOKEN_GUIDE.md)
+- [Dev Token Security Model](./DEV_TOKEN_SECURITY.md)
 - [Development Workflow](./DEVELOPMENT_WORKFLOW.md)
 
 ## 🔍 Quick Reference

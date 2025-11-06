@@ -23,11 +23,10 @@ export const env = {
   // Environment mode
   NODE_ENV: process.env.NODE_ENV || 'development',
   
-  // Check if in development mode
+  // Check if in development mode (localhost only)
   isDevelopment: () => {
     return window.location.hostname === 'localhost' || 
-           window.location.hostname === '127.0.0.1' ||
-           window.location.search.includes('devMode=true')
+           window.location.hostname === '127.0.0.1'
   },
   
   // Check if in production mode

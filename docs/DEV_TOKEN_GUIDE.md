@@ -263,11 +263,15 @@ function MyComponent() {
 
 ⚠️ **Important Security Notes:**
 
-1. **Dev Mode Only**: Token storage only works in development mode (localhost)
-2. **localStorage**: Tokens are stored in browser localStorage (not secure for production)
-3. **No Encryption**: Tokens are stored in plain text
-4. **Expiration**: Tokens are automatically validated against expiration
-5. **URL Validation**: All API calls are validated against an allowed hosts list
+1. **Localhost Only**: Dev token UI **only appears on localhost** (hostname is `localhost` or `127.0.0.1`)
+2. **Never Interferes with Real IMS**: When running in Adobe Experience Cloud Shell, the dev token system is completely bypassed - the real IMS token from the shell is always used
+3. **Two Separate Bootstrap Paths**:
+   - **Experience Cloud Shell**: Uses `bootstrapInExcShell()` with real IMS token - dev token never checked
+   - **Localhost**: Uses `bootstrapRaw()` with dev token from localStorage
+4. **localStorage**: Tokens are stored in browser localStorage (not secure for production, but only accessible on localhost)
+5. **No Encryption**: Tokens are stored in plain text (acceptable since localhost only)
+6. **Expiration**: Tokens are automatically validated against expiration
+7. **URL Validation**: All API calls are validated against an allowed hosts list
 
 ## Troubleshooting
 
@@ -294,10 +298,11 @@ function MyComponent() {
 
 ### Dialog Not Showing
 
-The dialog only appears in development mode. Check:
-- You're running on localhost
-- Or you have `?devMode=true` in the URL
+The dialog only appears when running on localhost. Check:
+- You're running on `localhost` or `127.0.0.1`
 - The `DevTokenButton` is rendered in `TopNav`
+
+**Note**: The dev token button will NEVER show when running in Adobe Experience Cloud Shell, even with URL parameters. This is by design to prevent confusion with the real IMS session.
 
 ## Architecture
 
