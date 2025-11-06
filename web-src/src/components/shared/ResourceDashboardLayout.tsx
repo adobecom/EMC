@@ -179,17 +179,23 @@ export function ResourceDashboardLayout<T extends Record<string, any>>({
         {/* Table */}
         <View flex="1" borderRadius="medium">
           {isLoading || isSearching ? (
-            <Flex justifyContent="center" alignItems="center" height="100%">
+            <Flex 
+              justifyContent="center" 
+              alignItems="center" 
+              height="100%"
+              UNSAFE_className="fade-in"
+            >
               <LoadingSpinner message={isSearching ? 'Searching...' : loadingMessage} />
             </Flex>
           ) : (
-            <DataTable
-              columns={columns}
-              data={filteredData}
-              getItemKey={getItemKey}
-              actions={actions}
-              pageSize={pageSize}
-              onVisibleItemsChange={onVisibleItemsChange}
+            <div className="fade-in">
+              <DataTable
+                columns={columns}
+                data={filteredData}
+                getItemKey={getItemKey}
+                actions={actions}
+                pageSize={pageSize}
+                onVisibleItemsChange={onVisibleItemsChange}
               emptyState={
                 <Flex direction="column" gap="size-150" alignItems="center">
                   <Heading level={3}>
@@ -215,7 +221,8 @@ export function ResourceDashboardLayout<T extends Record<string, any>>({
                   )}
                 </Flex>
               }
-            />
+              />
+            </div>
           )}
         </View>
       </Flex>
