@@ -198,20 +198,25 @@ export function DataTable<T extends Record<string, any>>({
 
   return (
     <Flex direction="column" gap="size-150" height="100%" width="100%">
-      <div className="custom-data-table">
+      <div className="custom-data-table" style={{ overflowX: 'auto', width: '100%' }}>
         <table>
           <thead>
             <tr>
               {allColumns.map((column) => {
                 const isSortable = column.sortable !== false && column.key !== 'actions'
                 const isSorted = sortColumn === column.key
+                const minWidth = Math.max(column.width || 100, 100)
                 
                 return (
                   <th 
                     key={column.key}
                     onClick={() => isSortable && handleSort(column.key)}
                     className={isSortable ? 'sortable' : ''}
-                    style={{ textAlign: column.key === 'actions' ? 'right' : 'left' }}
+                    style={{ 
+                      textAlign: column.key === 'actions' ? 'right' : 'left',
+                      minWidth: `${minWidth}px`,
+                      width: column.width ? `${column.width}px` : 'auto'
+                    }}
                   >
                     <Flex 
                       direction="row" 
@@ -245,10 +250,16 @@ export function DataTable<T extends Record<string, any>>({
           <tbody>
             {paginatedData.map((item) => (
               <tr key={getItemKey(item)}>
-                {allColumns.map((column) => (
+                {allColumns.map((column) => {
+                  const minWidth = Math.max(column.width || 100, 100)
+                  return (
                   <td 
                     key={column.key}
-                    style={{ textAlign: column.key === 'actions' ? 'right' : 'left' }}
+                    style={{ 
+                      textAlign: column.key === 'actions' ? 'right' : 'left',
+                      minWidth: `${minWidth}px`,
+                      width: column.width ? `${column.width}px` : 'auto'
+                    }}
                   >
                     {column.key === 'actions' && actions ? (
                       <Flex gap="size-100" justifyContent="end">
@@ -270,7 +281,8 @@ export function DataTable<T extends Record<string, any>>({
                       renderCell(item, column)
                     )}
                   </td>
-                ))}
+                  )
+                })}
               </tr>
             ))}
           </tbody>

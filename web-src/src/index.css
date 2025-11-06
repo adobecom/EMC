@@ -65,13 +65,15 @@ body {
 .custom-data-table {
   width: 100%;
   overflow-x: auto;
+  position: relative;
 }
 
 .custom-data-table table {
-  width: 100%;
+  width: max-content;
+  min-width: 100%;
   border-collapse: collapse;
   background-color: #FFFFFF;
-  table-layout: fixed;
+  table-layout: auto;
 }
 
 .custom-data-table thead tr {
@@ -111,13 +113,11 @@ body {
   padding: 16px;
   vertical-align: middle;
   background-color: #FFFFFF;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
-.custom-data-table th,
-.custom-data-table td {
-  overflow: hidden;
+.custom-data-table th {
+  white-space: nowrap;
 }
 
 

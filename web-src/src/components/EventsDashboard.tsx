@@ -91,7 +91,7 @@ export const EventsDashboard: React.FC<EventsDashboardProps> = () => {
     {
       key: 'thumbnail',
       name: '',
-      width: 50,
+      width: 100,
       sortable: false,
       render: (item) => (
         <div style={{ width: '40px', height: '40px', backgroundColor: '#f0f0f0', borderRadius: '4px' }} />
