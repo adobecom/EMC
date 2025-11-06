@@ -202,3 +202,17 @@ body {
   white-space: nowrap;
   flex: 1;
 }
+
+/** Thumbnail Loading Animation **/
+@keyframes shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+.thumbnail-shimmer {
+  animation: shimmer 1.5s infinite;
+}

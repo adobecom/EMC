@@ -21,6 +21,7 @@ export const EventsDashboard: React.FC<EventsDashboardProps> = () => {
   const [error, setError] = useState<string | null>(null)
   const [thumbnails, setThumbnails] = useState<Map<string, EventThumbnail>>(new Map())
   const [visibleEventIds, setVisibleEventIds] = useState<string[]>([])
+  const [loadingThumbnails, setLoadingThumbnails] = useState<Set<string>>(new Set())
 
   const loadEventsData = async () => {
     setIsLoading(true)
@@ -75,8 +76,15 @@ export const EventsDashboard: React.FC<EventsDashboardProps> = () => {
     if (visibleEventIds.length === 0) return
 
     const fetchThumbnails = async () => {
+      // Mark events as loading (only ones not already cached)
+      const eventsToLoad = visibleEventIds.filter(id => !thumbnails.has(id))
+      if (eventsToLoad.length > 0) {
+        setLoadingThumbnails(prev => new Set([...prev, ...eventsToLoad]))
+      }
+
       try {
         const thumbnailResults = await thumbnailEnrichmentManager.getMany(visibleEventIds)
+        
         setThumbnails(prev => {
           const updated = new Map(prev)
           thumbnailResults.forEach((value, key) => {
@@ -88,6 +96,13 @@ export const EventsDashboard: React.FC<EventsDashboardProps> = () => {
         })
       } catch (error) {
         console.error('Error fetching thumbnails:', error)
+      } finally {
+        // Remove loading state for all requested events
+        setLoadingThumbnails(prev => {
+          const updated = new Set(prev)
+          visibleEventIds.forEach(id => updated.delete(id))
+          return updated
+        })
       }
     }
 
@@ -142,6 +157,8 @@ export const EventsDashboard: React.FC<EventsDashboardProps> = () => {
       sortable: false,
       render: (item) => {
         const thumbnail = thumbnails.get(item.eventId)
+        const isLoading = loadingThumbnails.has(item.eventId)
+        
         return (
           <div 
             style={{ 
@@ -152,10 +169,22 @@ export const EventsDashboard: React.FC<EventsDashboardProps> = () => {
               overflow: 'hidden',
               display: 'flex',
               alignItems: 'center',
-              justifyContent: 'center'
+              justifyContent: 'center',
+              position: 'relative'
             }}
           >
-            {thumbnail?.imageUrl ? (
+            {isLoading ? (
+              <div 
+                className="thumbnail-shimmer"
+                style={{
+                  width: '100%',
+                  height: '100%',
+                  background: 'linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%)',
+                  backgroundSize: '200% 100%',
+                  animation: 'shimmer 1.5s infinite'
+                }}
+              />
+            ) : thumbnail?.imageUrl ? (
               <img 
                 src={thumbnail.imageUrl} 
                 alt={thumbnail.altText || item.eventName}
@@ -289,7 +318,7 @@ export const EventsDashboard: React.FC<EventsDashboardProps> = () => {
       sortable: false,
       render: (item) => <Text>{formatDate(item.publishTime)}</Text>
     }
-  ], [formatDate, formatLocalDate, thumbnails])
+  ], [formatDate, formatLocalDate, thumbnails, loadingThumbnails])
 
   const handleCreateEvent = () => {
     // Navigate to create event form
