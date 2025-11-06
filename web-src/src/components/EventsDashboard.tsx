@@ -3,7 +3,14 @@
 */
 
 import React, { useEffect, useState, useMemo, useCallback } from 'react'
-import { Text } from '@adobe/react-spectrum'
+import { Text, ActionButton, MenuTrigger, Menu, Item } from '@adobe/react-spectrum'
+import MoreSmallList from '@spectrum-icons/workflow/MoreSmallList'
+import PublishRemove from '@spectrum-icons/workflow/PublishRemove'
+import ViewDetail from '@spectrum-icons/workflow/ViewDetail'
+import Copy from '@spectrum-icons/workflow/Copy'
+import Edit from '@spectrum-icons/workflow/Edit'
+import Duplicate from '@spectrum-icons/workflow/Duplicate'
+import Delete from '@spectrum-icons/workflow/Delete'
 import { TableColumn } from './shared/DataTable'
 import { StatusBadge, ResourceDashboardLayout } from './shared'
 import { EventDashboardItem } from '../types/domain'
@@ -147,6 +154,49 @@ export const EventsDashboard: React.FC<EventsDashboardProps> = () => {
       return `${parts[1]}/${parts[2]}/${parts[0]}`
     }
     return dateString
+  }, [])
+
+  const handleMenuAction = useCallback((action: string, item: EventDashboardItem) => {
+    switch (action) {
+      case 'publish':
+        console.log(item.published ? 'Unpublish event:' : 'Publish event:', item)
+        // TODO: Implement publish/unpublish
+        alert(`${item.published ? 'Unpublish' : 'Publish'} functionality will be implemented for: ${item.eventName}`)
+        break
+      case 'preview-pre':
+        console.log('Preview pre-event:', item)
+        // TODO: Open preview URL in new tab
+        alert(`Preview pre-event will be implemented for: ${item.eventName}`)
+        break
+      case 'preview-post':
+        console.log('Preview post-event:', item)
+        // TODO: Open preview URL in new tab
+        alert(`Preview post-event will be implemented for: ${item.eventName}`)
+        break
+      case 'copy-url':
+        console.log('Copy URL:', item)
+        // TODO: Copy event URL to clipboard
+        if (item.eventName) {
+          alert(`Copy URL will be implemented for: ${item.eventName}`)
+        }
+        break
+      case 'edit':
+        console.log('Edit event:', item)
+        window.location.hash = `#/events/edit/${item.eventId}`
+        break
+      case 'clone':
+        console.log('Clone event:', item)
+        // TODO: Implement clone functionality
+        alert(`Clone functionality will be implemented for: ${item.eventName}`)
+        break
+      case 'delete':
+        console.log('Delete event:', item)
+        // TODO: Implement delete confirmation dialog
+        alert(`Delete functionality will be implemented for: ${item.eventName}`)
+        break
+      default:
+        console.log('Unknown action:', action)
+    }
   }, [])
 
   const columns = useMemo<TableColumn<EventDashboardItem>[]>(() => [
@@ -317,29 +367,55 @@ export const EventsDashboard: React.FC<EventsDashboardProps> = () => {
       width: 200,
       sortable: false,
       render: (item) => <Text>{formatDate(item.publishTime)}</Text>
+    },
+    {
+      key: 'manage',
+      name: 'MANAGE',
+      width: 100,
+      sortable: false,
+      render: (item) => (
+        <MenuTrigger>
+          <ActionButton isQuiet aria-label="Actions menu">
+            <MoreSmallList />
+          </ActionButton>
+          <Menu onAction={(key) => handleMenuAction(key as string, item)}>
+            <Item key="publish">
+              <PublishRemove />
+              <Text>{item.published ? 'Unpublish' : 'Publish'}</Text>
+            </Item>
+            <Item key="preview-pre">
+              <ViewDetail />
+              <Text>Preview pre-event</Text>
+            </Item>
+            <Item key="preview-post">
+              <ViewDetail />
+              <Text>Preview post-event</Text>
+            </Item>
+            <Item key="copy-url">
+              <Copy />
+              <Text>Copy URL</Text>
+            </Item>
+            <Item key="edit">
+              <Edit />
+              <Text>Edit</Text>
+            </Item>
+            <Item key="clone">
+              <Duplicate />
+              <Text>Clone</Text>
+            </Item>
+            <Item key="delete">
+              <Delete />
+              <Text>Delete</Text>
+            </Item>
+          </Menu>
+        </MenuTrigger>
+      )
     }
-  ], [formatDate, formatLocalDate, thumbnails, loadingThumbnails])
+  ], [formatDate, formatLocalDate, thumbnails, loadingThumbnails, handleMenuAction])
 
   const handleCreateEvent = () => {
     // Navigate to create event form
     window.location.hash = '#/events/new'
-  }
-
-  const handleViewEvent = (item: EventDashboardItem) => {
-    console.log('View event:', item)
-    // TODO: Navigate to event detail view
-    window.location.hash = `#/events/edit/${item.eventId}`
-  }
-
-  const handleEditEvent = (item: EventDashboardItem) => {
-    console.log('Edit event:', item)
-    window.location.hash = `#/events/edit/${item.eventId}`
-  }
-
-  const handleDeleteEvent = (item: EventDashboardItem) => {
-    console.log('Delete event:', item)
-    // TODO: Implement delete confirmation dialog
-    alert(`Delete functionality will be implemented for: ${item.eventName}`)
   }
 
   return (
@@ -352,23 +428,6 @@ export const EventsDashboard: React.FC<EventsDashboardProps> = () => {
       columns={columns}
       getItemKey={(item) => item.eventId}
       onVisibleItemsChange={handleVisibleEventsChange}
-      actions={[
-        {
-          icon: 'view',
-          label: 'View event',
-          onAction: handleViewEvent
-        },
-        {
-          icon: 'edit',
-          label: 'Edit event',
-          onAction: handleEditEvent
-        },
-        {
-          icon: 'delete',
-          label: 'Delete event',
-          onAction: handleDeleteEvent
-        }
-      ]}
       onRefresh={loadEventsData}
       onCreate={handleCreateEvent}
       createLabel="Create Event"
