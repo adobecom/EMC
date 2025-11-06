@@ -37,6 +37,7 @@ interface DataTableProps<T> {
   isLoading?: boolean
   getItemKey: (item: T) => string
   pageSize?: number
+  onVisibleItemsChange?: (items: T[]) => void
 }
 
 const iconMap = {
@@ -52,7 +53,8 @@ export function DataTable<T extends Record<string, any>>({
   emptyState,
   isLoading = false,
   getItemKey,
-  pageSize = 20
+  pageSize = 20,
+  onVisibleItemsChange
 }: DataTableProps<T>): React.ReactElement {
   const [sortColumn, setSortColumn] = useState<string | null>(null)
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc')
@@ -127,6 +129,13 @@ export function DataTable<T extends Record<string, any>>({
     const endIndex = startIndex + pageSize
     return sortedData.slice(startIndex, endIndex)
   }, [sortedData, currentPage, pageSize])
+
+  // Notify parent of visible items change
+  React.useEffect(() => {
+    if (onVisibleItemsChange && paginatedData.length > 0) {
+      onVisibleItemsChange(paginatedData)
+    }
+  }, [paginatedData, onVisibleItemsChange])
 
   // Reset to page 1 when data changes
   React.useEffect(() => {

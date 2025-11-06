@@ -3,11 +3,12 @@
 */
 
 import React, { useEffect, useState, useMemo, useCallback } from 'react'
-import { Flex, Text } from '@adobe/react-spectrum'
+import { Text } from '@adobe/react-spectrum'
 import { TableColumn } from './shared/DataTable'
 import { StatusBadge, ResourceDashboardLayout } from './shared'
 import { EventDashboardItem } from '../types/domain'
 import { apiService } from '../services/api'
+import { thumbnailEnrichmentManager, EventThumbnail } from '../services/eventEnrichment'
 import { IMS } from '../types'
 
 interface EventsDashboardProps {
@@ -18,6 +19,8 @@ export const EventsDashboard: React.FC<EventsDashboardProps> = () => {
   const [events, setEvents] = useState<EventDashboardItem[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [thumbnails, setThumbnails] = useState<Map<string, EventThumbnail>>(new Map())
+  const [visibleEventIds, setVisibleEventIds] = useState<string[]>([])
 
   const loadEventsData = async () => {
     setIsLoading(true)
@@ -67,6 +70,50 @@ export const EventsDashboard: React.FC<EventsDashboardProps> = () => {
     loadEventsData()
   }, [])
 
+  // Fetch thumbnails only for visible event IDs (triggered by pagination)
+  useEffect(() => {
+    if (visibleEventIds.length === 0) return
+
+    const fetchThumbnails = async () => {
+      try {
+        const thumbnailResults = await thumbnailEnrichmentManager.getMany(visibleEventIds)
+        setThumbnails(prev => {
+          const updated = new Map(prev)
+          thumbnailResults.forEach((value, key) => {
+            if (value !== null) {
+              updated.set(key, value)
+            }
+          })
+          return updated
+        })
+      } catch (error) {
+        console.error('Error fetching thumbnails:', error)
+      }
+    }
+
+    fetchThumbnails()
+  }, [visibleEventIds])
+
+  // Callback to track which events are currently visible
+  const handleVisibleEventsChange = useCallback((visibleEvents: EventDashboardItem[]) => {
+    const ids = visibleEvents.map(e => e.eventId)
+    
+    // Only update if the SET of IDs actually changed (not order) to prevent infinite loops
+    setVisibleEventIds(prevIds => {
+      if (prevIds.length !== ids.length) return ids
+      
+      // Check if the same set of IDs (order doesn't matter for caching)
+      const prevSet = new Set(prevIds)
+      const newSet = new Set(ids)
+      
+      if (prevSet.size === newSet.size && [...prevSet].every(id => newSet.has(id))) {
+        return prevIds // Same set of IDs, don't trigger re-fetch
+      }
+      
+      return ids
+    })
+  }, [])
+
   const formatDate = useCallback((timestamp?: number): string => {
     if (!timestamp) return 'N/A'
     const date = new Date(timestamp)
@@ -93,9 +140,40 @@ export const EventsDashboard: React.FC<EventsDashboardProps> = () => {
       name: '',
       width: 100,
       sortable: false,
-      render: (item) => (
-        <div style={{ width: '40px', height: '40px', backgroundColor: '#f0f0f0', borderRadius: '4px' }} />
-      )
+      render: (item) => {
+        const thumbnail = thumbnails.get(item.eventId)
+        return (
+          <div 
+            style={{ 
+              width: '90px', 
+              height: '90px', 
+              backgroundColor: '#f0f0f0', 
+              borderRadius: '4px',
+              overflow: 'hidden',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center'
+            }}
+          >
+            {thumbnail?.imageUrl ? (
+              <img 
+                src={thumbnail.imageUrl} 
+                alt={thumbnail.altText || item.eventName}
+                style={{ 
+                  width: '100%', 
+                  height: '100%', 
+                  objectFit: 'cover' 
+                }}
+                loading="lazy"
+              />
+            ) : (
+              <Text UNSAFE_style={{ fontSize: '10px', color: 'var(--spectrum-global-color-gray-500)' }}>
+                No image
+              </Text>
+            )}
+          </div>
+        )
+      }
     },
     {
       key: 'eventName',
@@ -211,7 +289,7 @@ export const EventsDashboard: React.FC<EventsDashboardProps> = () => {
       sortable: false,
       render: (item) => <Text>{formatDate(item.publishTime)}</Text>
     }
-  ], [formatDate, formatLocalDate])
+  ], [formatDate, formatLocalDate, thumbnails])
 
   const handleCreateEvent = () => {
     // Navigate to create event form
@@ -244,6 +322,7 @@ export const EventsDashboard: React.FC<EventsDashboardProps> = () => {
       data={events}
       columns={columns}
       getItemKey={(item) => item.eventId}
+      onVisibleItemsChange={handleVisibleEventsChange}
       actions={[
         {
           icon: 'view',

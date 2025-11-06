@@ -37,6 +37,7 @@ interface ResourceDashboardLayoutProps<T> {
   onRefresh: () => void
   onCreate?: () => void
   createLabel?: string
+  onVisibleItemsChange?: (items: T[]) => void
   
   // Empty state
   emptyStateTitle?: string
@@ -63,6 +64,7 @@ export function ResourceDashboardLayout<T extends Record<string, any>>({
   onRefresh,
   onCreate,
   createLabel = 'Create',
+  onVisibleItemsChange,
   emptyStateTitle = 'No Items Found',
   emptyStateDescription = 'Get started by creating your first item',
   loadingMessage = 'Loading...',
@@ -187,6 +189,7 @@ export function ResourceDashboardLayout<T extends Record<string, any>>({
               getItemKey={getItemKey}
               actions={actions}
               pageSize={pageSize}
+              onVisibleItemsChange={onVisibleItemsChange}
               emptyState={
                 <Flex direction="column" gap="size-150" alignItems="center">
                   <Heading level={3}>

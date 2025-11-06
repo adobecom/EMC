@@ -71,6 +71,15 @@ export interface SeriesApiResponse {
   modificationTime: number
 }
 
+// Event image types
+export interface EventImage {
+  imageKind: 'event-card-image' | 'event-hero-image' | 'venue-image' | string
+  imageUrl?: string
+  imageId?: string
+  altText?: string
+  [key: string]: any
+}
+
 // Event API Response types (from backend)
 export interface EventApiResponse {
   eventId: string
@@ -117,6 +126,7 @@ export interface EventApiResponse {
   gmtOffset?: number
   localStartTimeMillis?: number
   localEndTimeMillis?: number
+  images?: EventImage[]
   // Add any other fields as optional
   [key: string]: any
 }

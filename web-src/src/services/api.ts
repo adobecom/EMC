@@ -412,6 +412,67 @@ class ApiService {
     return this.callAction<ApiResponse<void>>('deleteEvent', { id })
   }
 
+  /**
+   * Fetch event images for enrichment
+   * Used by the data enrichment service for thumbnails
+   */
+  async getEventImagesBatch(eventIds: string[]): Promise<Map<string, EventApiResponse>> {
+    const token = tokenStorage.getValidToken()
+    const results = new Map<string, EventApiResponse>()
+    
+    if (!token) {
+      console.warn('⚠️ No valid authentication token for event images')
+      return results
+    }
+
+    try {
+      const env = getCurrentEnvironment()
+      const headers = constructRequestHeaders(token, 'GET')
+      const host = getApiHost('esp', env)
+
+      // Fetch all event images in parallel
+      const promises = eventIds.map(async (eventId) => {
+        try {
+          const url = `${host}/v1/events/${eventId}/images`
+          const response = await safeFetch(url, {
+            method: 'GET',
+            headers: headers as any
+          })
+
+          if (response.ok) {
+            const data = await response.json()
+            
+            // Create event object with images for extraction
+            const eventData: EventApiResponse = {
+              eventId,
+              published: false,
+              images: data.images || (Array.isArray(data) ? data : [])
+            }
+            
+            return { eventId, data: eventData }
+          }
+          return null
+        } catch (error) {
+          console.error(`Error fetching images for event ${eventId}:`, error)
+          return null
+        }
+      })
+
+      const responses = await Promise.all(promises)
+      
+      responses.forEach((result) => {
+        if (result && result.data) {
+          results.set(result.eventId, result.data)
+        }
+      })
+      
+    } catch (error) {
+      console.error('Error fetching event images batch:', error)
+    }
+
+    return results
+  }
+
   // Session APIs
   async getSessions(eventId?: string): Promise<ApiListResponse<Session>> {
     return this.callAction<ApiListResponse<Session>>('getSessions', { eventId })
