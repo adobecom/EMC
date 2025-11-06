@@ -13,10 +13,15 @@ export { About } from './About'
 export { UserProfile } from './UserProfile'
 export { UserPanel } from './UserPanel'
 export { OrgTeamManagement } from './OrgTeamManagement'
-export { ResourcesDashboard } from './ResourcesDashboard'
+export { SeriesDashboard } from './SeriesDashboard'
+export { EventsDashboard } from './EventsDashboard'
 export { SeriesForm } from './SeriesForm'
 export { EventForm } from './EventForm'
 export { RegistrationDashboard } from './RegistrationDashboard'
+
+// Dev components
+export { DevTokenButton } from './DevTokenButton'
+export { DevTokenDialog } from './DevTokenDialog'
 
 // Shared components
 export * from './shared'

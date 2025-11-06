@@ -12,6 +12,7 @@ import Runtime, { init } from '@adobe/exc-app'
 import App from './components/App'
 import './index.css'
 import { Runtime as RuntimeType, IMS } from './types'
+import { tokenStorage } from './services/tokenStorage'
 
 // @ts-ignore - React needs to be available globally for some Adobe packages
 window.React = React
@@ -34,15 +35,33 @@ function bootstrapRaw(): void {
     on: () => {},
     done: () => {}
   }
-  const mockIms: IMS = {}
+  
+  // Check for stored dev token
+  const storedToken = tokenStorage.getValidToken()
+  const tokenExpiration = tokenStorage.getTokenExpiration()
+  
+  const mockIms: IMS = {
+    token: storedToken || undefined
+  }
 
   console.log('⚠️  Running in standalone mode without Adobe Experience Cloud Shell')
-  console.log('ℹ️  For proper IMS authentication, use one of these methods:')
-  console.log('   1. Deploy and access via ExC Shell with devMode:')
-  console.log('      aio app deploy')
-  console.log('      https://experience.adobe.com/?devMode=true#/@org/app-id')
-  console.log('   2. Run with local actions:')
-  console.log('      aio app run --local')
+  
+  if (storedToken) {
+    console.log('✅ Using stored development token')
+    if (tokenExpiration) {
+      console.log(`⏰ Token expires: ${tokenExpiration.expiresAt} (${tokenExpiration.timeRemaining} remaining)`)
+    }
+  } else {
+    console.log('🔐 No stored token found')
+    console.log('')
+    console.log('ℹ️  To enable API calls, you can:')
+    console.log('   1. Click the "Dev Token" button in the app to add a token')
+    console.log('   2. Get a token from adobe.com by running:')
+    console.log('      window.adobeIMS?.getAccessToken()')
+    console.log('   3. Deploy and access via ExC Shell with devMode:')
+    console.log('      aio app deploy')
+    console.log('      https://experience.adobe.com/?devMode=true#/@org/app-id')
+  }
   console.log('')
   console.log('📖 See: https://developer.adobe.com/app-builder/docs/getting_started/')
 

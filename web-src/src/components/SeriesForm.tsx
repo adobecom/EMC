@@ -14,7 +14,6 @@ import {
   DatePicker,
   ButtonGroup,
   Button,
-  Divider,
   Flex,
   StatusLight
 } from '@adobe/react-spectrum'
@@ -148,8 +147,6 @@ export const SeriesForm: React.FC<SeriesFormProps> = ({ ims }) => {
         {isEditMode ? 'Edit Series' : 'Create New Series'}
       </Heading>
 
-      <Divider size="M" marginBottom="size-400" />
-
       {error && (
         <View marginBottom="size-300">
           <StatusLight variant="negative">Error: {error}</StatusLight>
@@ -225,15 +222,13 @@ export const SeriesForm: React.FC<SeriesFormProps> = ({ ims }) => {
           <Item key="archived">Archived</Item>
         </Picker>
 
-        <Divider size="M" marginTop="size-400" marginBottom="size-300" />
-
-        <Flex justifyContent="end" gap="size-200">
+        <Flex justifyContent="end" gap="size-200" marginTop="size-300">
           <ButtonGroup>
             <Button variant="secondary" onPress={handleCancel} isDisabled={isSaving}>
               Cancel
             </Button>
             <Button
-              variant="cta"
+              variant="accent"
               type="submit"
               isDisabled={!isFormValid() || isSaving}
             >

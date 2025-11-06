@@ -9,6 +9,11 @@ body {
   font-family: --spectrum-global-font-family-base;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  background-color: #FFFFFF;
+}
+
+#root {
+  background-color: #FFFFFF;
 }
 
 /** Top Navigation Styling **/
@@ -50,16 +55,73 @@ body {
   background-color: var(--spectrum-global-color-gray-75);
 }
 
+/** Content Area Styling **/
+.content-area {
+  overflow-y: auto;
+  background-color: #FFFFFF;
+}
+
+/** Custom Data Table Styling **/
+.custom-data-table {
+  width: 100%;
+  overflow-x: auto;
+  position: relative;
+}
+
+.custom-data-table table {
+  width: max-content;
+  min-width: 100%;
+  border-collapse: collapse;
+  background-color: #FFFFFF;
+  table-layout: auto;
+}
+
+.custom-data-table thead tr {
+  border-bottom: 2px solid var(--spectrum-global-color-gray-300);
+}
+
+.custom-data-table th {
+  height: 80px;
+  padding: 0 16px;
+  text-align: left;
+  font-weight: 500;
+  background-color: #FFFFFF;
+  position: sticky;
+  top: 0;
+  z-index: 1;
+}
+
+.custom-data-table th.sortable {
+  cursor: pointer;
+  user-select: none;
+}
+
+.custom-data-table th.sortable:hover {
+  background-color: var(--spectrum-global-color-gray-75);
+}
+
+.custom-data-table tbody tr {
+  border-bottom: 1px solid var(--spectrum-global-color-gray-200);
+}
+
+.custom-data-table tbody tr:hover {
+  background-color: var(--spectrum-global-color-gray-75);
+}
+
+.custom-data-table td {
+  min-height: 100px;
+  padding: 16px;
+  vertical-align: middle;
+  background-color: #FFFFFF;
+  white-space: nowrap;
+}
+
+.custom-data-table th {
+  white-space: nowrap;
+}
+
+
 /** User Panel Styling **/
-.user-panel {
-  border: 1px solid var(--spectrum-global-color-gray-300);
-  transition: box-shadow 0.2s ease;
-}
-
-.user-panel:hover {
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
-}
-
 .user-panel-compact {
   border-radius: 6px;
   transition: background-color 0.2s ease;
@@ -67,4 +129,104 @@ body {
 
 .user-panel-compact:hover {
   background-color: var(--spectrum-global-color-gray-200);
+}
+
+.user-panel-button,
+.user-panel-button-compact {
+  width: 100%;
+  justify-content: flex-start;
+  min-height: auto;
+}
+
+.user-panel-button-compact {
+  padding: 4px 8px;
+}
+
+.user-panel-button {
+  padding: 0;
+}
+
+.user-avatar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.user-initials {
+  color: white;
+  font-weight: bold;
+  font-size: 14px;
+  line-height: 1;
+}
+
+.user-initials-compact {
+  color: white;
+  font-weight: bold;
+  font-size: 12px;
+  line-height: 1;
+}
+
+.user-info-container {
+  min-width: 0;
+}
+
+.user-name {
+  font-weight: bold;
+  font-size: 13px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.user-email {
+  font-size: 11px;
+  color: var(--spectrum-global-color-gray-600);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.org-label {
+  font-size: 10px;
+  color: var(--spectrum-global-color-gray-600);
+  text-transform: uppercase;
+  font-weight: bold;
+}
+
+.org-value {
+  font-size: 11px;
+  color: var(--spectrum-global-color-gray-700);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex: 1;
+}
+
+/** Thumbnail Loading Animation **/
+@keyframes shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+.thumbnail-shimmer {
+  animation: shimmer 1.5s infinite;
+}
+
+/** Fade In/Out Transitions **/
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.fade-in {
+  animation: fadeIn 0.5s ease-in-out;
 }

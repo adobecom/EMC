@@ -2,23 +2,14 @@
 
 Welcome to the Event Management Cloud Adobe Experience Cloud application!
 
-## Documentation
+## 📖 Documentation
 
-### 📖 Core Documentation
-- [Project Overview](docs/PROJECT_OVERVIEW.md) - Quick start, structure, and commands
-- [Development Workflow](docs/DEVELOPMENT_WORKFLOW.md) - **Official Adobe development workflow**
-- [Frontend Guide](docs/FRONTEND.md) - React/TypeScript development guide
-- [Backend Guide](docs/BACKEND.md) - Adobe I/O Runtime actions guide
-- [API Integration](docs/API_INTEGRATION.md) - Connecting frontend to backend
-- [Testing Guide](docs/TESTING.md) - Unit and E2E testing patterns
+👉 **[Complete Documentation Index](docs/README.md)** - Start here for all guides and references
 
-### 🚀 Quick Links
-- **New to the project?** Start with [Project Overview](docs/PROJECT_OVERVIEW.md)
-- **How to develop?** Read [Development Workflow](docs/DEVELOPMENT_WORKFLOW.md) ⭐
-- **Building UI?** Read [Frontend Guide](docs/FRONTEND.md)
-- **Creating actions?** Read [Backend Guide](docs/BACKEND.md)
-- **Connecting them?** Read [API Integration](docs/API_INTEGRATION.md)
-- **Writing tests?** Read [Testing Guide](docs/TESTING.md)
+### Quick Links
+- [Project Overview](docs/PROJECT_OVERVIEW.md) - Architecture and structure
+- [Dev Token Quick Start](docs/DEV_TOKEN_QUICKSTART.md) - Get up and running in 30 seconds
+- [Development Workflow](docs/DEVELOPMENT_WORKFLOW.md) - Official Adobe workflow
 
 ## Setup
 
@@ -86,15 +77,6 @@ While running your local server (`aio app run`), both UI and actions can be debu
 and select the debugging configuration called `WebAndActions`.
 Alternatively, there are also debug configs for only UI and each separate action.
 
-## Typescript support for UI
+## TypeScript Support
 
-To use typescript use `.tsx` extension for react components and add a `tsconfig.json` 
-and make sure you have the below config added
-```
- {
-  "compilerOptions": {
-      "jsx": "react"
-    }
-  } 
-```
-# EMC
+The UI supports TypeScript out of the box. Use `.tsx` extension for React components. The `tsconfig.json` is already configured with the necessary settings.

@@ -34,6 +34,8 @@
     "typescript": "^5.9.3"
   },
   "scripts": {
+    "dev": "PORT=3000 aio app run",
+    "dev:local": "PORT=3000 aio app run --local",
     "test": "jest --passWithNoTests ./test",
     "e2e": "jest --collectCoverage=false --testRegex ./e2e",
     "lint": "eslint --ignore-pattern web-src --no-error-on-unmatched-pattern test src actions",

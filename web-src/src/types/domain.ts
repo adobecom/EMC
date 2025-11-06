@@ -50,6 +50,200 @@ export interface SeriesFormData {
   metadata?: Record<string, any>
 }
 
+// Series API Response types (from backend)
+export interface TargetCms {
+  provider: string
+  instance: string
+  code: string
+}
+
+export interface SeriesApiResponse {
+  seriesId: string
+  seriesName: string
+  seriesDescription?: string
+  seriesStatus: 'published' | 'draft' | 'archived'
+  cloudType: string
+  targetCms: TargetCms
+  templateId: string
+  externalThemeId?: string
+  relatedDomain?: string
+  creationTime: number
+  modificationTime: number
+}
+
+// Event image types
+export interface EventImage {
+  imageKind: 'event-card-image' | 'event-hero-image' | 'venue-image' | string
+  imageUrl?: string
+  imageId?: string
+  altText?: string
+  [key: string]: any
+}
+
+// Venue types
+export interface VenueCoordinates {
+  lat: number
+  lon: number
+}
+
+export interface VenueAddressComponent {
+  longName: string
+  shortName: string
+  types: string[]
+  languageCode?: string
+}
+
+export interface Venue {
+  placeId?: string
+  venueName: string
+  formattedAddress?: string
+  addressComponents?: VenueAddressComponent[]
+  coordinates?: VenueCoordinates
+  gmtOffset?: number
+  localizations?: Record<string, any>
+  localizationOverrides?: Record<string, any>
+  additionalInformation?: string
+  venueId: string
+  address?: string
+  city?: string
+  state?: string
+  stateCode?: string
+  country?: string
+  countryCode?: string
+  postalCode?: string
+  mapUrl?: string
+  creationTime?: number
+  modificationTime?: number
+  [key: string]: any
+}
+
+// Event history types
+export interface HistoryUser {
+  id: string
+  name: string
+  email: string
+  type: 'user' | string
+}
+
+export interface HistoryDiff {
+  added?: Record<string, any>
+  deleted?: Record<string, any>
+  updated?: Record<string, any>
+}
+
+export interface HistoryRecord {
+  resourceType: string
+  resourceId: string
+  changeType: string
+  timestamp: number
+  user: HistoryUser
+  resourceSubtype?: string
+  resourceSubtypeId?: string
+  imageKind?: string
+  diff?: HistoryDiff
+  resource?: Record<string, any>
+  creationTime: number
+  modificationTime: number
+}
+
+export interface EventHistoryResponse {
+  history: HistoryRecord[]
+  count: number
+  nextPageToken?: string
+}
+
+// Event API Response types (from backend)
+export interface EventApiResponse {
+  eventId: string
+  enTitle?: string
+  seriesId?: string
+  cloudType?: string
+  eventType?: string
+  published: boolean
+  startDate?: string
+  endDate?: string
+  localStartDate?: string
+  localEndDate?: string
+  localStartTime?: string
+  localEndTime?: string
+  timezone?: string
+  duration?: number
+  attendeeLimit?: number
+  attendeeCount?: number
+  waitlistAttendeeCount?: number
+  hostEmail?: string
+  isPrivate?: boolean
+  allowWaitlisting?: boolean
+  allowGuestRegistration?: boolean
+  tags?: string
+  topics?: string[]
+  detailPagePath?: string
+  externalEventId?: string
+  creationTime?: number
+  modificationTime?: number
+  localizationOverrides?: Record<string, any>
+  localizations?: Record<string, any>
+  venue?: Record<string, any>
+  agenda?: any[]
+  rsvpFormFields?: Record<string, any>
+  video?: Record<string, any>
+  marketoIntegration?: Record<string, any>
+  liveUpdate?: boolean
+  forceSpWrite?: boolean
+  defaultLocale?: string
+  showSponsors?: boolean
+  showAgendaPostEvent?: boolean
+  showVenuePostEvent?: boolean
+  showVenueAdditionalInfoPostEvent?: boolean
+  gmtOffset?: number
+  localStartTimeMillis?: number
+  localEndTimeMillis?: number
+  images?: EventImage[]
+  // Add any other fields as optional
+  [key: string]: any
+}
+
+// Enhanced Event type for dashboard display
+export interface EventDashboardItem {
+  eventId: string
+  eventName: string
+  seriesId?: string
+  seriesName?: string
+  cloudType?: string
+  eventType?: string
+  published: boolean
+  startDate?: string
+  localStartDate?: string
+  localStartTime?: string
+  timezone?: string
+  attendeeLimit?: number
+  attendeeCount?: number
+  hostEmail?: string
+  creationTime?: number
+  modificationTime?: number
+  publishTime?: number
+  createdBy?: string
+  modifiedBy?: string
+  venueName?: string
+  language?: string
+  thumbnail?: string
+  contributor?: string
+}
+
+// Enhanced Series type for dashboard display
+export interface SeriesDashboardItem {
+  seriesId: string
+  seriesName: string
+  seriesDescription?: string
+  seriesStatus: 'published' | 'draft' | 'archived' | 'unknown'
+  cloudType: string
+  creationTime: number
+  modificationTime: number
+  createdBy?: string
+  modifiedBy?: string
+  eventCount?: number
+}
+
 // Event types
 export interface Event {
   id: string

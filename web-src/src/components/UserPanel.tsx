@@ -12,8 +12,7 @@ import {
   ActionButton,
   MenuTrigger,
   Menu,
-  Item,
-  Divider
+  Item
 } from '@adobe/react-spectrum'
 import UserIcon from '@spectrum-icons/workflow/User'
 import InfoIcon from '@spectrum-icons/workflow/Info'
@@ -54,8 +53,10 @@ export const UserPanel: React.FC<UserPanelProps> = ({ ims, compact = false }) =>
         borderRadius="medium"
         marginBottom={compact ? 'size-0' : 'size-300'}
       >
-        <Avatar size="avatar-size-400" src="https://pps-stage.services.adobe.com/api/profile/image/default/22c90d64-691f-439f-b7fd-7fe06ccb01a7/138" />
-
+        <Flex direction="row" alignItems="center" gap="size-150">
+          <Avatar size="avatar-size-400" src="https://pps-stage.services.adobe.com/api/profile/image/default/22c90d64-691f-439f-b7fd-7fe06ccb01a7/138" />
+          <Text UNSAFE_className="user-name">Guest User</Text>
+        </Flex>
       </View>
     )
   }
@@ -66,17 +67,12 @@ export const UserPanel: React.FC<UserPanelProps> = ({ ims, compact = false }) =>
       padding={compact ? 'size-100' : 'size-200'}
       borderRadius="medium"
       marginBottom={compact ? 'size-0' : 'size-300'}
-      UNSAFE_className={compact ? 'user-panel-compact' : 'user-panel'}
+      UNSAFE_className={compact ? 'user-panel-compact' : ''}
     >
       <MenuTrigger>
         <ActionButton 
           isQuiet 
-          UNSAFE_style={{ 
-            width: '100%', 
-            justifyContent: 'flex-start',
-            padding: compact ? '4px 8px' : 0,
-            minHeight: 'auto'
-          }}
+          UNSAFE_className={compact ? 'user-panel-button-compact' : 'user-panel-button'}
         >
           <Flex direction="row" alignItems="center" gap="size-150" width="100%">
             {/* Avatar with initials */}
@@ -85,48 +81,20 @@ export const UserPanel: React.FC<UserPanelProps> = ({ ims, compact = false }) =>
               width={compact ? 'size-400' : 'size-500'}
               height={compact ? 'size-400' : 'size-500'}
               borderRadius="medium"
-              UNSAFE_style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                flexShrink: 0
-              }}
+              UNSAFE_className="user-avatar"
             >
-              <Text 
-                UNSAFE_style={{ 
-                  color: 'white', 
-                  fontWeight: 'bold',
-                  fontSize: compact ? '12px' : '14px',
-                  lineHeight: 1
-                }}
-              >
+              <Text UNSAFE_className={compact ? 'user-initials-compact' : 'user-initials'}>
                 {getInitials(userName)}
               </Text>
             </View>
 
             {/* User info - only show name in compact mode */}
-            <Flex direction="column" gap="size-25" flex UNSAFE_style={{ minWidth: 0 }}>
-              <Text 
-                UNSAFE_style={{ 
-                  fontWeight: 'bold',
-                  fontSize: compact ? '13px' : '13px',
-                  overflow: 'hidden',
-                  textOverflow: 'ellipsis',
-                  whiteSpace: 'nowrap'
-                }}
-              >
+            <Flex direction="column" gap="size-25" flex UNSAFE_className="user-info-container">
+              <Text UNSAFE_className="user-name">
                 {userName}
               </Text>
               {!compact && userEmail && (
-                <Text 
-                  UNSAFE_style={{ 
-                    fontSize: '11px', 
-                    color: 'var(--spectrum-global-color-gray-600)',
-                    overflow: 'hidden',
-                    textOverflow: 'ellipsis',
-                    whiteSpace: 'nowrap'
-                  }}
-                >
+                <Text UNSAFE_className="user-email">
                   {userEmail}
                 </Text>
               )}
@@ -152,33 +120,14 @@ export const UserPanel: React.FC<UserPanelProps> = ({ ims, compact = false }) =>
 
       {/* Organization indicator - only show in full mode */}
       {!compact && ims.org && (
-        <>
-          <Divider size="S" marginTop="size-150" marginBottom="size-150" />
-          <Flex direction="row" alignItems="center" gap="size-100">
-            <Text 
-              UNSAFE_style={{ 
-                fontSize: '10px',
-                color: 'var(--spectrum-global-color-gray-600)',
-                textTransform: 'uppercase',
-                fontWeight: 'bold'
-              }}
-            >
-              ORG:
-            </Text>
-            <Text 
-              UNSAFE_style={{ 
-                fontSize: '11px',
-                color: 'var(--spectrum-global-color-gray-700)',
-                overflow: 'hidden',
-                textOverflow: 'ellipsis',
-                whiteSpace: 'nowrap',
-                flex: 1
-              }}
-            >
-              {ims.org}
-            </Text>
-          </Flex>
-        </>
+        <Flex direction="row" alignItems="center" gap="size-100" marginTop="size-150">
+          <Text UNSAFE_className="org-label">
+            ORG:
+          </Text>
+          <Text UNSAFE_className="org-value">
+            {ims.org}
+          </Text>
+        </Flex>
       )}
     </View>
   )

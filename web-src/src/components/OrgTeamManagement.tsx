@@ -19,7 +19,6 @@ import {
   Dialog,
   DialogTrigger,
   Content,
-  Divider,
   AlertDialog
 } from '@adobe/react-spectrum'
 import Add from '@spectrum-icons/workflow/Add'
@@ -222,8 +221,6 @@ export const OrgTeamManagement: React.FC<OrgTeamManagementProps> = ({ ims }) => 
         <Heading level={1}>Organizations & Teams</Heading>
       </Flex>
 
-      <Divider size="M" marginBottom="size-400" />
-
       <Tabs selectedKey={selectedTab} onSelectionChange={setSelectedTab as any}>
         <TabList>
           <Item key="organizations">Organizations</Item>
@@ -234,15 +231,14 @@ export const OrgTeamManagement: React.FC<OrgTeamManagementProps> = ({ ims }) => 
             <Flex direction="column" gap="size-300">
               <Flex justifyContent="end">
                 <DialogTrigger isOpen={isOrgDialogOpen} onOpenChange={setIsOrgDialogOpen}>
-                  <Button variant="cta" onPress={handleCreateOrg}>
+                  <Button variant="accent" onPress={handleCreateOrg}>
                     <Add />
                     Create Organization
                   </Button>
                   {(close) => (
                     <Dialog>
                       <Heading>{editingOrg ? 'Edit' : 'Create'} Organization</Heading>
-                      <Divider />
-                      <Content>
+                      <Content marginTop="size-200">
                         <Form>
                           <TextField
                             label="Name"
@@ -262,7 +258,7 @@ export const OrgTeamManagement: React.FC<OrgTeamManagementProps> = ({ ims }) => 
                           Cancel
                         </Button>
                         <Button
-                          variant="cta"
+                          variant="accent"
                           onPress={() => {
                             handleSaveOrg()
                             close()
@@ -291,15 +287,14 @@ export const OrgTeamManagement: React.FC<OrgTeamManagementProps> = ({ ims }) => 
             <Flex direction="column" gap="size-300">
               <Flex justifyContent="end">
                 <DialogTrigger isOpen={isTeamDialogOpen} onOpenChange={setIsTeamDialogOpen}>
-                  <Button variant="cta" onPress={handleCreateTeam} isDisabled={organizations.length === 0}>
+                  <Button variant="accent" onPress={handleCreateTeam} isDisabled={organizations.length === 0}>
                     <Add />
                     Create Team
                   </Button>
                   {(close) => (
                     <Dialog>
                       <Heading>{editingTeam ? 'Edit' : 'Create'} Team</Heading>
-                      <Divider />
-                      <Content>
+                      <Content marginTop="size-200">
                         <Form>
                           <TextField
                             label="Name"
@@ -324,7 +319,7 @@ export const OrgTeamManagement: React.FC<OrgTeamManagementProps> = ({ ims }) => 
                           Cancel
                         </Button>
                         <Button
-                          variant="cta"
+                          variant="accent"
                           onPress={() => {
                             handleSaveTeam()
                             close()
@@ -353,7 +348,7 @@ export const OrgTeamManagement: React.FC<OrgTeamManagementProps> = ({ ims }) => 
 
       {/* Delete confirmation dialog */}
       <DialogTrigger isOpen={!!itemToDelete} onOpenChange={(isOpen) => !isOpen && setItemToDelete(null)}>
-        <Button variant="primary" />
+        <div style={{ display: 'none' }} />
         {(close) => (
           <AlertDialog
             title="Confirm Delete"

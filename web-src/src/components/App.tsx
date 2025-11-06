@@ -12,7 +12,8 @@ import { Home } from './Home'
 import { About } from './About'
 import { UserProfile } from './UserProfile'
 import { OrgTeamManagement } from './OrgTeamManagement'
-import { ResourcesDashboard } from './ResourcesDashboard'
+import { SeriesDashboard } from './SeriesDashboard'
+import { EventsDashboard } from './EventsDashboard'
 import { SeriesForm } from './SeriesForm'
 import { EventForm } from './EventForm'
 import { RegistrationDashboard } from './RegistrationDashboard'
@@ -57,7 +58,7 @@ const App: React.FC<AppProps> = (props) => {
   return (
     <ErrorBoundary onError={onError} FallbackComponent={fallbackComponent}>
       <Router>
-        <Provider theme={defaultTheme} colorScheme={'light'}>
+        <Provider theme={defaultTheme} colorScheme={'light'} scale={'medium'}>
           <Grid
             areas={['header', 'content']}
             columns={['1fr']}
@@ -71,15 +72,16 @@ const App: React.FC<AppProps> = (props) => {
             <View 
               gridArea='content' 
               padding='size-300'
-              UNSAFE_style={{ overflowY: 'auto' }}
+              UNSAFE_className='content-area'
             >
               <Routes>
                 <Route path='/' element={<Home />} />
                 <Route path='/profile' element={<UserProfile ims={props.ims} />} />
                 <Route path='/organizations' element={<OrgTeamManagement ims={props.ims} />} />
-                <Route path='/resources' element={<ResourcesDashboard ims={props.ims} />} />
+                <Route path='/series' element={<SeriesDashboard ims={props.ims} />} />
                 <Route path='/series/new' element={<SeriesForm ims={props.ims} />} />
                 <Route path='/series/edit/:id' element={<SeriesForm ims={props.ims} />} />
+                <Route path='/events' element={<EventsDashboard ims={props.ims} />} />
                 <Route path='/events/new' element={<EventForm ims={props.ims} />} />
                 <Route path='/events/edit/:id' element={<EventForm ims={props.ims} />} />
                 <Route path='/registrations' element={<RegistrationDashboard ims={props.ims} />} />
