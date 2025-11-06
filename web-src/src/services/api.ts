@@ -14,6 +14,8 @@ import {
   EventApiResponse,
   Session,
   Registration,
+  Venue,
+  EventHistoryResponse,
   ApiResponse,
   ApiListResponse
 } from '../types/domain'
@@ -468,6 +470,177 @@ class ApiService {
       
     } catch (error) {
       console.error('Error fetching event images batch:', error)
+    }
+
+    return results
+  }
+
+  /**
+   * Fetch event venues for enrichment
+   * Used by the data enrichment service for venue information
+   */
+  async getEventVenuesBatch(eventIds: string[]): Promise<Map<string, Venue[]>> {
+    const token = tokenStorage.getValidToken()
+    const results = new Map<string, Venue[]>()
+    
+    if (!token) {
+      console.warn('⚠️ No valid authentication token for event venues')
+      return results
+    }
+
+    try {
+      const env = getCurrentEnvironment()
+      const headers = constructRequestHeaders(token, 'GET')
+      const host = getApiHost('esp', env)
+
+      // Fetch all event venues in parallel
+      const promises = eventIds.map(async (eventId) => {
+        try {
+          const url = `${host}/v1/events/${eventId}/venues`
+          const response = await safeFetch(url, {
+            method: 'GET',
+            headers: headers as any
+          })
+
+          if (response.ok) {
+            const data = await response.json()
+            return { eventId, venues: data.venues || [] }
+          }
+          // 404 means no venue found, which is valid
+          if (response.status === 404) {
+            return { eventId, venues: [] }
+          }
+          return null
+        } catch (error) {
+          console.error(`Error fetching venues for event ${eventId}:`, error)
+          return null
+        }
+      })
+
+      const responses = await Promise.all(promises)
+      
+      responses.forEach((result) => {
+        if (result) {
+          results.set(result.eventId, result.venues)
+        }
+      })
+      
+    } catch (error) {
+      console.error('Error fetching event venues batch:', error)
+    }
+
+    return results
+  }
+
+  /**
+   * Fetch series details for enrichment
+   * Used by the data enrichment service for series information
+   */
+  async getSeriesBatch(seriesIds: string[]): Promise<Map<string, SeriesApiResponse>> {
+    const token = tokenStorage.getValidToken()
+    const results = new Map<string, SeriesApiResponse>()
+    
+    if (!token) {
+      console.warn('⚠️ No valid authentication token for series')
+      return results
+    }
+
+    try {
+      const env = getCurrentEnvironment()
+      const headers = constructRequestHeaders(token, 'GET')
+      const host = getApiHost('esp', env)
+
+      // Fetch all series in parallel
+      const promises = seriesIds.map(async (seriesId) => {
+        try {
+          const url = `${host}/v1/series/${seriesId}`
+          const response = await safeFetch(url, {
+            method: 'GET',
+            headers: headers as any
+          })
+
+          if (response.ok) {
+            const data = await response.json()
+            return { seriesId, series: data }
+          }
+          // 404 means series not found
+          if (response.status === 404) {
+            return null
+          }
+          return null
+        } catch (error) {
+          console.error(`Error fetching series ${seriesId}:`, error)
+          return null
+        }
+      })
+
+      const responses = await Promise.all(promises)
+      
+      responses.forEach((result) => {
+        if (result) {
+          results.set(result.seriesId, result.series)
+        }
+      })
+      
+    } catch (error) {
+      console.error('Error fetching series batch:', error)
+    }
+
+    return results
+  }
+
+  /**
+   * Fetch event history for enrichment
+   * Used by the data enrichment service for creator, modifier, and published at information
+   */
+  async getEventHistoryBatch(eventIds: string[]): Promise<Map<string, EventHistoryResponse>> {
+    const token = tokenStorage.getValidToken()
+    const results = new Map<string, EventHistoryResponse>()
+    
+    if (!token) {
+      console.warn('⚠️ No valid authentication token for event history')
+      return results
+    }
+
+    try {
+      const env = getCurrentEnvironment()
+      const headers = constructRequestHeaders(token, 'GET')
+      const host = getApiHost('esp', env)
+
+      // Fetch all event histories in parallel
+      const promises = eventIds.map(async (eventId) => {
+        try {
+          const url = `${host}/v1/events/${eventId}/history`
+          const response = await safeFetch(url, {
+            method: 'GET',
+            headers: headers as any
+          })
+
+          if (response.ok) {
+            const data = await response.json()
+            return { eventId, history: data }
+          }
+          // 404 means no history found
+          if (response.status === 404) {
+            return { eventId, history: { history: [], count: 0 } }
+          }
+          return null
+        } catch (error) {
+          console.error(`Error fetching history for event ${eventId}:`, error)
+          return null
+        }
+      })
+
+      const responses = await Promise.all(promises)
+      
+      responses.forEach((result) => {
+        if (result) {
+          results.set(result.eventId, result.history)
+        }
+      })
+      
+    } catch (error) {
+      console.error('Error fetching event history batch:', error)
     }
 
     return results

@@ -3,7 +3,7 @@
 */
 
 import React, { useEffect, useState, useMemo, useCallback } from 'react'
-import { Text, ActionButton, MenuTrigger, Menu, Item } from '@adobe/react-spectrum'
+import { Text, ActionButton, MenuTrigger, Menu, Item, Flex } from '@adobe/react-spectrum'
 import MoreSmallList from '@spectrum-icons/workflow/MoreSmallList'
 import PublishRemove from '@spectrum-icons/workflow/PublishRemove'
 import ViewDetail from '@spectrum-icons/workflow/ViewDetail'
@@ -15,7 +15,7 @@ import { TableColumn } from './shared/DataTable'
 import { StatusBadge, ResourceDashboardLayout } from './shared'
 import { EventDashboardItem } from '../types/domain'
 import { apiService } from '../services/api'
-import { thumbnailEnrichmentManager, EventThumbnail } from '../services/eventEnrichment'
+import { thumbnailEnrichmentManager, venueEnrichmentManager, seriesEnrichmentManager, historyEnrichmentManager, EventThumbnail, EventVenueInfo, EventSeriesInfo, EventHistoryInfo } from '../services/eventEnrichment'
 import { IMS } from '../types'
 
 interface EventsDashboardProps {
@@ -27,8 +27,14 @@ export const EventsDashboard: React.FC<EventsDashboardProps> = () => {
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [thumbnails, setThumbnails] = useState<Map<string, EventThumbnail>>(new Map())
+  const [venues, setVenues] = useState<Map<string, EventVenueInfo>>(new Map())
+  const [series, setSeries] = useState<Map<string, EventSeriesInfo>>(new Map())
+  const [history, setHistory] = useState<Map<string, EventHistoryInfo>>(new Map())
   const [visibleEventIds, setVisibleEventIds] = useState<string[]>([])
   const [loadingThumbnails, setLoadingThumbnails] = useState<Set<string>>(new Set())
+  const [loadingVenues, setLoadingVenues] = useState<Set<string>>(new Set())
+  const [loadingSeries, setLoadingSeries] = useState<Set<string>>(new Set())
+  const [loadingHistory, setLoadingHistory] = useState<Set<string>>(new Set())
 
   const loadEventsData = async () => {
     setIsLoading(true)
@@ -114,6 +120,129 @@ export const EventsDashboard: React.FC<EventsDashboardProps> = () => {
     }
 
     fetchThumbnails()
+  }, [visibleEventIds])
+
+  // Fetch venues only for visible event IDs (triggered by pagination)
+  useEffect(() => {
+    if (visibleEventIds.length === 0) return
+
+    const fetchVenues = async () => {
+      // Mark events as loading (only ones not already cached)
+      const eventsToLoad = visibleEventIds.filter(id => !venues.has(id))
+      if (eventsToLoad.length > 0) {
+        setLoadingVenues(prev => new Set([...prev, ...eventsToLoad]))
+      }
+
+      try {
+        const venueResults = await venueEnrichmentManager.getMany(visibleEventIds)
+        
+        setVenues(prev => {
+          const updated = new Map(prev)
+          venueResults.forEach((value, key) => {
+            if (value !== null) {
+              updated.set(key, value)
+            }
+          })
+          return updated
+        })
+      } catch (error) {
+        console.error('Error fetching venues:', error)
+      } finally {
+        // Remove loading state for all requested events
+        setLoadingVenues(prev => {
+          const updated = new Set(prev)
+          visibleEventIds.forEach(id => updated.delete(id))
+          return updated
+        })
+      }
+    }
+
+    fetchVenues()
+  }, [visibleEventIds])
+
+  // Fetch series only for visible event IDs that have seriesId (triggered by pagination)
+  useEffect(() => {
+    if (visibleEventIds.length === 0) return
+
+    const fetchSeries = async () => {
+      // Get unique series IDs from visible events (filter out undefined/null)
+      const seriesIds = Array.from(new Set(
+        visibleEventIds
+          .map(eventId => events.find(e => e.eventId === eventId)?.seriesId)
+          .filter((id): id is string => !!id)
+      ))
+
+      if (seriesIds.length === 0) return
+
+      // Mark series as loading (only ones not already cached)
+      const seriesToLoad = seriesIds.filter(id => !series.has(id))
+      if (seriesToLoad.length > 0) {
+        setLoadingSeries(prev => new Set([...prev, ...seriesToLoad]))
+      }
+
+      try {
+        const seriesResults = await seriesEnrichmentManager.getMany(seriesIds)
+        
+        setSeries(prev => {
+          const updated = new Map(prev)
+          seriesResults.forEach((value, key) => {
+            if (value !== null) {
+              updated.set(key, value)
+            }
+          })
+          return updated
+        })
+      } catch (error) {
+        console.error('Error fetching series:', error)
+      } finally {
+        // Remove loading state for all requested series
+        setLoadingSeries(prev => {
+          const updated = new Set(prev)
+          seriesIds.forEach(id => updated.delete(id))
+          return updated
+        })
+      }
+    }
+
+    fetchSeries()
+  }, [visibleEventIds, events])
+
+  // Fetch history only for visible event IDs (triggered by pagination)
+  useEffect(() => {
+    if (visibleEventIds.length === 0) return
+
+    const fetchHistory = async () => {
+      // Mark events as loading (only ones not already cached)
+      const eventsToLoad = visibleEventIds.filter(id => !history.has(id))
+      if (eventsToLoad.length > 0) {
+        setLoadingHistory(prev => new Set([...prev, ...eventsToLoad]))
+      }
+
+      try {
+        const historyResults = await historyEnrichmentManager.getMany(visibleEventIds)
+        
+        setHistory(prev => {
+          const updated = new Map(prev)
+          historyResults.forEach((value, key) => {
+            if (value !== null) {
+              updated.set(key, value)
+            }
+          })
+          return updated
+        })
+      } catch (error) {
+        console.error('Error fetching history:', error)
+      } finally {
+        // Remove loading state for all requested events
+        setLoadingHistory(prev => {
+          const updated = new Set(prev)
+          visibleEventIds.forEach(id => updated.delete(id))
+          return updated
+        })
+      }
+    }
+
+    fetchHistory()
   }, [visibleEventIds])
 
   // Callback to track which events are currently visible
@@ -284,9 +413,62 @@ export const EventsDashboard: React.FC<EventsDashboardProps> = () => {
     {
       key: 'seriesName',
       name: 'SERIES',
-      width: 150,
+      width: 250,
       sortable: false,
-      render: (item) => <Text>{item.seriesName || 'N/A'}</Text>
+      render: (item) => {
+        if (!item.seriesId) {
+          return <Text>N/A</Text>
+        }
+
+        const seriesInfo = series.get(item.seriesId)
+        const isLoading = loadingSeries.has(item.seriesId)
+        
+        if (isLoading) {
+          return (
+            <Flex direction="column" gap="size-50">
+              <div 
+                className="series-shimmer"
+                style={{
+                  width: '150px',
+                  height: '16px',
+                  background: 'linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%)',
+                  backgroundSize: '200% 100%',
+                  animation: 'shimmer 1.5s infinite',
+                  borderRadius: '4px'
+                }}
+              />
+              <div 
+                className="series-shimmer"
+                style={{
+                  width: '200px',
+                  height: '12px',
+                  background: 'linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%)',
+                  backgroundSize: '200% 100%',
+                  animation: 'shimmer 1.5s infinite',
+                  borderRadius: '4px'
+                }}
+              />
+            </Flex>
+          )
+        }
+        
+        if (seriesInfo) {
+          return (
+            <Flex direction="column" gap="size-50">
+              <Text>{seriesInfo.seriesName}</Text>
+              {seriesInfo.seriesDescription && (
+                <Text UNSAFE_style={{ fontSize: '12px', color: 'var(--spectrum-global-color-gray-700)' }}>
+                  {seriesInfo.seriesDescription.length > 60 
+                    ? `${seriesInfo.seriesDescription.substring(0, 60)}...` 
+                    : seriesInfo.seriesDescription}
+                </Text>
+              )}
+            </Flex>
+          )
+        }
+        
+        return <Text>{item.seriesName || 'N/A'}</Text>
+      }
     },
     {
       key: 'localStartDate',
@@ -306,7 +488,28 @@ export const EventsDashboard: React.FC<EventsDashboardProps> = () => {
       name: 'VENUE NAME',
       width: 150,
       sortable: false,
-      render: (item) => <Text>{item.venueName || 'N/A'}</Text>
+      render: (item) => {
+        const venue = venues.get(item.eventId)
+        const isLoading = loadingVenues.has(item.eventId)
+        
+        if (isLoading) {
+          return (
+            <div 
+              className="venue-shimmer"
+              style={{
+                width: '100px',
+                height: '16px',
+                background: 'linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%)',
+                backgroundSize: '200% 100%',
+                animation: 'shimmer 1.5s infinite',
+                borderRadius: '4px'
+              }}
+            />
+          )
+        }
+        
+        return <Text>{venue?.venueName || item.venueName || 'N/A'}</Text>
+      }
     },
     {
       key: 'language',
@@ -337,22 +540,64 @@ export const EventsDashboard: React.FC<EventsDashboardProps> = () => {
       name: 'CREATOR',
       width: 150,
       sortable: false,
-      render: (item) => (
-        <Text UNSAFE_style={{ color: 'var(--spectrum-global-color-gray-600)' }}>
-          {item.createdBy || 'N/A'}
-        </Text>
-      )
+      render: (item) => {
+        const historyInfo = history.get(item.eventId)
+        const isLoading = loadingHistory.has(item.eventId)
+        
+        if (isLoading) {
+          return (
+            <div 
+              className="creator-shimmer"
+              style={{
+                width: '120px',
+                height: '16px',
+                background: 'linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%)',
+                backgroundSize: '200% 100%',
+                animation: 'shimmer 1.5s infinite',
+                borderRadius: '4px'
+              }}
+            />
+          )
+        }
+        
+        return (
+          <Text UNSAFE_style={{ color: 'var(--spectrum-global-color-gray-600)' }}>
+            {historyInfo?.creator?.name || item.createdBy || 'N/A'}
+          </Text>
+        )
+      }
     },
     {
       key: 'modifiedBy',
       name: 'MODIFIER',
       width: 150,
       sortable: false,
-      render: (item) => (
-        <Text UNSAFE_style={{ color: 'var(--spectrum-global-color-gray-600)' }}>
-          {item.modifiedBy || 'N/A'}
-        </Text>
-      )
+      render: (item) => {
+        const historyInfo = history.get(item.eventId)
+        const isLoading = loadingHistory.has(item.eventId)
+        
+        if (isLoading) {
+          return (
+            <div 
+              className="modifier-shimmer"
+              style={{
+                width: '120px',
+                height: '16px',
+                background: 'linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%)',
+                backgroundSize: '200% 100%',
+                animation: 'shimmer 1.5s infinite',
+                borderRadius: '4px'
+              }}
+            />
+          )
+        }
+        
+        return (
+          <Text UNSAFE_style={{ color: 'var(--spectrum-global-color-gray-600)' }}>
+            {historyInfo?.modifier?.name || item.modifiedBy || 'N/A'}
+          </Text>
+        )
+      }
     },
     {
       key: 'modificationTime',
@@ -366,7 +611,29 @@ export const EventsDashboard: React.FC<EventsDashboardProps> = () => {
       name: 'PUBLISHED AT | (MM/DD/YYYY)',
       width: 200,
       sortable: false,
-      render: (item) => <Text>{formatDate(item.publishTime)}</Text>
+      render: (item) => {
+        const historyInfo = history.get(item.eventId)
+        const isLoading = loadingHistory.has(item.eventId)
+        
+        if (isLoading) {
+          return (
+            <div 
+              className="publishtime-shimmer"
+              style={{
+                width: '140px',
+                height: '16px',
+                background: 'linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%)',
+                backgroundSize: '200% 100%',
+                animation: 'shimmer 1.5s infinite',
+                borderRadius: '4px'
+              }}
+            />
+          )
+        }
+        
+        const publishedAt = historyInfo?.publishedAt || item.publishTime
+        return <Text>{publishedAt ? formatDate(publishedAt) : 'N/A'}</Text>
+      }
     },
     {
       key: 'manage',
@@ -411,7 +678,7 @@ export const EventsDashboard: React.FC<EventsDashboardProps> = () => {
         </MenuTrigger>
       )
     }
-  ], [formatDate, formatLocalDate, thumbnails, loadingThumbnails, handleMenuAction])
+  ], [formatDate, formatLocalDate, thumbnails, loadingThumbnails, venues, loadingVenues, series, loadingSeries, history, loadingHistory, handleMenuAction])
 
   const handleCreateEvent = () => {
     // Navigate to create event form
