@@ -262,17 +262,94 @@ export interface Event {
   updatedAt: string
 }
 
-export interface EventFormData {
+// Tag/Topic types for event categorization
+export interface EventTag {
   name: string
-  description?: string
+  caasId?: string
+}
+
+export interface EventTagGroup {
+  groupName: string
+  tags: EventTag[]
+}
+
+// Speaker/Host profile types
+export interface SocialLink {
+  platform?: string
+  url: string
+}
+
+export interface ProfileData {
+  type: 'speaker' | 'host'
+  firstName: string
+  lastName: string
+  title: string
+  bio?: string
+  imageUrl?: string
+  socialLinks?: SocialLink[]
+}
+
+// Image types for events
+export interface EventImageData {
+  imageKind: 'event-card-image' | 'event-hero-image' | 'venue-image'
+  imageUrl?: string
+  imageId?: string
+  altText?: string
+}
+
+// Venue data types
+export interface VenueData {
+  venueName: string
+  formattedAddress?: string
+  placeId?: string
+  coordinates?: {
+    lat: number
+    lon: number
+  }
+  gmtOffset?: number
+  additionalInformation?: string
+  showVenuePostEvent?: boolean
+  showAdditionalInfoPostEvent?: boolean
+}
+
+// Comprehensive Event Form Data
+export interface EventFormData {
+  // Step 1: Basic Info
+  cloudType: 'CreativeCloud' | 'ExperienceCloud'
   seriesId: string
   organizationId: string
+  name: string
+  description?: string // Rich text description for event page
+  shortDescription?: string // Plain text for Events Hub/SEO (160 chars max)
+  language: string
+  isPrivate: boolean
+  
+  // Step 2: Tags & Topics
+  tags?: EventTag[]
+  
+  // Step 3: Date & Time
   startDateTime: string
   endDateTime: string
-  location?: string
+  timezone?: string
+  
+  // Step 4: Venue
+  venue?: VenueData
+  
+  // Step 5: Attendance & Registration
   capacity?: number
   status: 'draft' | 'published' | 'ongoing' | 'completed' | 'cancelled'
   registrationOpen: boolean
+  allowWaitlist?: boolean
+  allowGuestRegistration?: boolean
+  
+  // Step 6: Images
+  images?: EventImageData[]
+  
+  // Step 7: Speakers & Hosts
+  profiles?: ProfileData[]
+  
+  // Additional metadata
+  communityForumUrl?: string
   metadata?: Record<string, any>
 }
 
