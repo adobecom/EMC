@@ -17,20 +17,18 @@ import {
   Heading,
   Text,
   Button,
-  ActionButton,
   Divider
 } from '@adobe/react-spectrum'
 import { useNavigate, useParams } from 'react-router-dom'
 import {
   EventFormData,
   Organization,
-  EventTag,
   ProfileData,
   VenueData
 } from '../types/domain'
 import { apiService } from '../services/api'
 import { IMS } from '../types'
-import { FormWizard, WizardStep, LoadingSpinner, FormCard } from './shared'
+import { FormWizard, WizardStep, LoadingSpinner, FormCard, RichTextEditor, TagSelector } from './shared'
 import { parseDateTime } from '@internationalized/date'
 import Add from '@spectrum-icons/workflow/Add'
 import Delete from '@spectrum-icons/workflow/Delete'
@@ -40,22 +38,7 @@ interface EventFormProps {
   ims: IMS
 }
 
-// Available tags for event categorization
-const PRODUCT_CATEGORY_TAGS = [
-  { name: 'Graphic Design', caasId: 'caas:product-categories/graphic-design' },
-  { name: 'Video', caasId: 'caas:product-categories/video' },
-  { name: 'Illustration', caasId: 'caas:product-categories/illustration' },
-  { name: 'Photography', caasId: 'caas:product-categories/photography' },
-  { name: 'Generative AI', caasId: 'caas:product-categories/genai' },
-  { name: 'Social', caasId: 'caas:product-categories/social' },
-  { name: '3D', caasId: 'caas:product-categories/3d' }
-]
-
-const BASE_TAGS = [
-  { name: 'Summit', caasId: 'caas:summit' },
-  { name: 'Gated', caasId: 'caas:gated' }
-]
-
+// Language options for event localization
 const LANGUAGE_OPTIONS = [
   { key: 'en', label: 'English' },
   { key: 'es', label: 'Spanish' },
@@ -247,24 +230,6 @@ export const EventForm: React.FC<EventFormProps> = ({ ims }) => {
     }))
   }
 
-  // Toggle tag selection
-  const toggleTag = (tag: EventTag) => {
-    setFormData((prev) => {
-      const currentTags = prev.tags || []
-      const isSelected = currentTags.some((t) => t.name === tag.name)
-      
-      if (isSelected) {
-        return { ...prev, tags: currentTags.filter((t) => t.name !== tag.name) }
-      } else {
-        return { ...prev, tags: [...currentTags, tag] }
-      }
-    })
-  }
-
-  const isTagSelected = (tag: EventTag) => {
-    return (formData.tags || []).some((t) => t.name === tag.name)
-  }
-
   // Profile management
   const addProfile = () => {
     const newProfile: ProfileData = {
@@ -331,52 +296,16 @@ export const EventForm: React.FC<EventFormProps> = ({ ims }) => {
       {/* Event Topics/Tags Component */}
       <FormCard>
     <View>
-        <Heading level={3}>Tags & Topics</Heading>
-        <Text marginBottom="size-200">Choose one or more topics from the list. This will add metadata to your event.</Text>
-        
-        <Heading level={4} marginTop="size-200">Product Categories</Heading>
-        <Flex direction="row" gap="size-100" wrap marginBottom="size-200">
-          {PRODUCT_CATEGORY_TAGS.map((tag) => (
-            <ActionButton
-              key={tag.name}
-              onPress={() => toggleTag(tag)}
-              isQuiet={!isTagSelected(tag)}
-            >
-              {isTagSelected(tag) ? `✓ ${tag.name}` : tag.name}
-            </ActionButton>
-          ))}
-        </Flex>
-
-        <Heading level={4}>Base Tags</Heading>
-        <Flex direction="row" gap="size-100" wrap>
-          {BASE_TAGS.map((tag) => (
-            <ActionButton
-              key={tag.name}
-              onPress={() => toggleTag(tag)}
-              isQuiet={!isTagSelected(tag)}
-            >
-              {isTagSelected(tag) ? `✓ ${tag.name}` : tag.name}
-            </ActionButton>
-          ))}
-        </Flex>
-
-        {formData.tags && formData.tags.length > 0 && (
-          <View marginTop="size-200">
-            <Text>Selected Tags:</Text>
-            <Flex direction="row" gap="size-100" wrap marginTop="size-100">
-              {formData.tags.map((tag, index) => (
-                <View
-                  key={index}
-                  padding="size-50"
-                  backgroundColor="blue-400"
-                  borderRadius="medium"
-                >
-                  <Text UNSAFE_style={{ color: 'white', fontSize: '12px' }}>{tag.name}</Text>
-                </View>
-              ))}
-            </Flex>
-          </View>
-        )}
+          <Heading level={3}>Tags & Topics</Heading>
+          <Text marginBottom="size-200">
+            Choose one or more tags from the Adobe CAAS taxonomy. This will add metadata to your event for better discoverability.
+          </Text>
+          
+          <TagSelector
+            selectedTags={formData.tags || []}
+            onChange={(tags) => updateFormData({ tags })}
+            description="Search and select tags to categorize your event"
+          />
         </View>
       </FormCard>
 
@@ -389,8 +318,8 @@ export const EventForm: React.FC<EventFormProps> = ({ ims }) => {
         label="Organization"
         isRequired
         selectedKey={formData.organizationId}
-          onSelectionChange={(key) => updateFormData({ organizationId: String(key) })}
-          marginTop="size-200"
+        onSelectionChange={(key) => updateFormData({ organizationId: String(key) })}
+        marginTop="size-200"
       >
         {organizations.map((org) => (
           <Item key={org.id}>{org.name}</Item>
@@ -400,6 +329,7 @@ export const EventForm: React.FC<EventFormProps> = ({ ims }) => {
         <TextField
           label="Event Title"
           isRequired
+          isQuiet
           maxLength={80}
           value={formData.name}
           onChange={(value) => updateFormData({ name: value })}
@@ -427,11 +357,11 @@ export const EventForm: React.FC<EventFormProps> = ({ ims }) => {
           Private events won't be publicly found online or published to the events hub
         </Text>
 
-        <TextArea
+        <RichTextEditor
           label="Event Description (Rich Text)"
           value={formData.description || ''}
           onChange={(value) => updateFormData({ description: value })}
-          height="size-2000"
+          height="400px"
           description="This will be the copy displayed on the event page"
         />
 
@@ -447,6 +377,7 @@ export const EventForm: React.FC<EventFormProps> = ({ ims }) => {
         <TextField
           label="Community Forum URL (Optional)"
           type="url"
+          isQuiet
           value={formData.communityForumUrl || ''}
           onChange={(value) => updateFormData({ communityForumUrl: value })}
           description="Link to related forum on community.adobe.com"
@@ -478,6 +409,7 @@ export const EventForm: React.FC<EventFormProps> = ({ ims }) => {
 
         <TextField
           label="Timezone (Optional)"
+          isQuiet
           value={formData.timezone || ''}
           onChange={(value) => updateFormData({ timezone: value })}
           description="e.g., America/Los_Angeles, UTC, etc."
@@ -493,6 +425,7 @@ export const EventForm: React.FC<EventFormProps> = ({ ims }) => {
         <TextField
           label="Venue Name"
           isRequired
+          isQuiet
           maxLength={80}
           value={formData.venue?.venueName || ''}
           onChange={(value) => updateVenueData({ venueName: value })}
@@ -501,16 +434,17 @@ export const EventForm: React.FC<EventFormProps> = ({ ims }) => {
 
         <TextField
           label="Venue Address"
+          isQuiet
           value={formData.venue?.formattedAddress || ''}
           onChange={(value) => updateVenueData({ formattedAddress: value })}
           description="Full address of the venue"
         />
 
-        <TextArea
+        <RichTextEditor
           label="Venue Additional Information (Optional)"
           value={formData.venue?.additionalInformation || ''}
           onChange={(value) => updateVenueData({ additionalInformation: value })}
-          height="size-1000"
+          height="250px"
           description="Additional details about the venue"
         />
 
@@ -576,12 +510,14 @@ export const EventForm: React.FC<EventFormProps> = ({ ims }) => {
             <Flex direction="row" gap="size-150">
               <TextField
                 label="First Name"
+                isQuiet
                 value={profile.firstName}
                 onChange={(value) => updateProfile(index, { firstName: value })}
                 width="50%"
               />
               <TextField
                 label="Last Name"
+                isQuiet
                 value={profile.lastName}
                 onChange={(value) => updateProfile(index, { lastName: value })}
                 width="50%"
@@ -590,19 +526,21 @@ export const EventForm: React.FC<EventFormProps> = ({ ims }) => {
 
             <TextField
               label="Title"
+              isQuiet
               value={profile.title}
               onChange={(value) => updateProfile(index, { title: value })}
             />
 
-            <TextArea
+            <RichTextEditor
               label="Bio (Optional)"
               value={profile.bio || ''}
               onChange={(value) => updateProfile(index, { bio: value })}
-              height="size-800"
+              height="200px"
       />
 
       <TextField
               label="Image URL (Optional)"
+              isQuiet
               value={profile.imageUrl || ''}
               onChange={(value) => updateProfile(index, { imageUrl: value })}
             />
@@ -628,6 +566,7 @@ export const EventForm: React.FC<EventFormProps> = ({ ims }) => {
         <Heading level={4}>Event Card Image</Heading>
         <TextField
           label="Image URL"
+          isQuiet
           value={formData.images?.find((img) => img.imageKind === 'event-card-image')?.imageUrl || ''}
           onChange={(value) => {
             const images = formData.images || []
@@ -648,6 +587,7 @@ export const EventForm: React.FC<EventFormProps> = ({ ims }) => {
         <Heading level={4}>Event Hero Image</Heading>
         <TextField
           label="Image URL"
+          isQuiet
           value={formData.images?.find((img) => img.imageKind === 'event-hero-image')?.imageUrl || ''}
           onChange={(value) => {
             const images = formData.images || []
@@ -668,6 +608,7 @@ export const EventForm: React.FC<EventFormProps> = ({ ims }) => {
         <Heading level={4}>Venue Image</Heading>
         <TextField
           label="Image URL"
+          isQuiet
           value={formData.images?.find((img) => img.imageKind === 'venue-image')?.imageUrl || ''}
           onChange={(value) => {
             const images = formData.images || []

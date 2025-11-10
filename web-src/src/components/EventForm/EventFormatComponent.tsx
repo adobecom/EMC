@@ -8,11 +8,10 @@ import {
   Picker,
   Item,
   Flex,
-  Heading,
   Text
 } from '@adobe/react-spectrum'
 import { apiService } from '../../services/api'
-import { LoadingSpinner } from '../shared'
+import { LoadingSpinner, HeadingWithTooltip } from '../shared'
 import { SeriesApiResponse } from '../../types/domain'
 
 interface CloudOption {
@@ -23,6 +22,7 @@ interface CloudOption {
 interface SeriesOption {
   id: string
   name: string
+  description?: string
 }
 
 interface EventFormatComponentProps {
@@ -37,13 +37,21 @@ export const EventFormatComponent: React.FC<EventFormatComponentProps> = ({
   onChange
 }) => {
   const [clouds, setClouds] = useState<CloudOption[]>([])
-  const [series, setSeries] = useState<SeriesOption[]>([])
+  const [allSeries, setAllSeries] = useState<SeriesApiResponse[]>([]) // Store all series
+  const [series, setSeries] = useState<SeriesOption[]>([]) // Filtered series for display
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
     loadData()
   }, []) // Only run once on mount
+
+  // Re-filter series when cloudType changes
+  useEffect(() => {
+    if (allSeries.length > 0 && cloudType) {
+      filterSeriesByCloud(cloudType)
+    }
+  }, [cloudType, allSeries])
 
   const loadData = async () => {
     setIsLoading(true)
@@ -69,15 +77,15 @@ export const EventFormatComponent: React.FC<EventFormatComponentProps> = ({
 
       // Set series - getSeriesList returns SeriesApiResponse[] directly
       if (seriesResponse && Array.isArray(seriesResponse)) {
-        const seriesOptions = seriesResponse.map((s: SeriesApiResponse) => ({
-          id: s.seriesId,
-          name: s.seriesName
-        }))
-        setSeries(seriesOptions)
+        // Store all series for filtering
+        const publishedSeries = seriesResponse.filter(
+          (s: SeriesApiResponse) => s.seriesStatus === 'published'
+        )
+        setAllSeries(publishedSeries)
         
-        // Auto-select first series if none selected
-        if (!seriesId && seriesOptions.length > 0) {
-          onChange({ seriesId: seriesOptions[0].id })
+        // Filter by selected cloud type if available
+        if (cloudType) {
+          filterSeriesByCloud(cloudType, publishedSeries)
         }
       } else {
         setError('Failed to load series')
@@ -87,6 +95,35 @@ export const EventFormatComponent: React.FC<EventFormatComponentProps> = ({
       setError(err instanceof Error ? err.message : 'Failed to load data')
     } finally {
       setIsLoading(false)
+    }
+  }
+
+  const filterSeriesByCloud = (selectedCloudType: string, seriesList?: SeriesApiResponse[]) => {
+    const seriesToFilter = seriesList || allSeries
+    
+    const filteredSeries = seriesToFilter.filter(
+      (s: SeriesApiResponse) => s.cloudType === selectedCloudType
+    )
+    
+    const seriesOptions = filteredSeries.map((s: SeriesApiResponse) => ({
+      id: s.seriesId,
+      name: s.seriesName,
+      description: s.seriesDescription
+    }))
+    
+    setSeries(seriesOptions)
+    
+    // Auto-select first series if none selected or if current selection is not in filtered list
+    if (seriesOptions.length > 0) {
+      const currentSeriesExists = seriesOptions.some(s => s.id === seriesId)
+      if (!seriesId || !currentSeriesExists) {
+        onChange({ seriesId: seriesOptions[0].id })
+      }
+    } else {
+      // No series available for this cloud type, clear selection
+      if (seriesId) {
+        onChange({ seriesId: '' })
+      }
     }
   }
 
@@ -129,37 +166,46 @@ export const EventFormatComponent: React.FC<EventFormatComponentProps> = ({
 
   return (
     <Flex direction="column" gap="size-200">
-      <Heading level={3}>Event Format</Heading>
-      <Text>Select the cloud type and event series for this event.</Text>
+      <View>
+        <HeadingWithTooltip 
+          level={3}
+          tooltip="The cloud type and series determine where your event will be published and what metadata it inherits."
+        >
+          Event Format
+        </HeadingWithTooltip>
+        <Text>Select the cloud type and event series for this event.</Text>
+      </View>
 
-      <Picker
-        label="Select a cloud"
-        isRequired
-        selectedKey={cloudType}
-        onSelectionChange={handleCloudChange}
-        width="100%"
-      >
-        {clouds.map((cloud) => (
-          <Item key={cloud.key}>{cloud.label}</Item>
-        ))}
-      </Picker>
+      <Flex direction="row" gap="size-300" wrap>
+        <Picker
+          label="Select a cloud"
+          isRequired
+          selectedKey={cloudType}
+          onSelectionChange={handleCloudChange}
+        >
+          {clouds.map((cloud) => (
+            <Item key={cloud.key}>{cloud.label}</Item>
+          ))}
+        </Picker>
 
-      <Picker
-        label="Select a series"
-        isRequired
-        selectedKey={seriesId}
-        onSelectionChange={handleSeriesChange}
-        width="100%"
-        description="The series name will be used on the event detail page and for metadata"
-      >
-        {series.length === 0 ? (
-          <Item key="no-series">No series available</Item>
-        ) : (
-          series.map((s) => (
-            <Item key={s.id}>{s.name}</Item>
-          ))
-        )}
-      </Picker>
+        <Picker
+          label="Select a series"
+          isRequired
+          selectedKey={seriesId}
+          onSelectionChange={handleSeriesChange}
+          description={
+            seriesId && series.find(s => s.id === seriesId)?.description || undefined
+          }
+        >
+          {series.length === 0 ? (
+            <Item key="no-series">No series available</Item>
+          ) : (
+            series.map((s) => (
+              <Item key={s.id}>{s.name}</Item>
+            ))
+          )}
+        </Picker>
+      </Flex>
 
       {series.length === 0 && (
         <View

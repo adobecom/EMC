@@ -273,6 +273,30 @@ export interface EventTagGroup {
   tags: EventTag[]
 }
 
+// CAAS Tag API Response types
+export interface CaasTag {
+  path: string
+  tagID: string
+  name: string
+  title: string
+  description?: string
+  tagImage?: string
+  tags?: Record<string, CaasTag>
+  [key: string]: any // For localized titles like title.ja, title.de, etc.
+}
+
+export interface CaasNamespace {
+  name: string
+  title: string
+  description: string
+  path: string
+  tags: Record<string, CaasTag>
+}
+
+export interface CaasTagsResponse {
+  namespaces: Record<string, CaasNamespace>
+}
+
 // Speaker/Host profile types
 export interface SocialLink {
   platform?: string

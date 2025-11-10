@@ -1470,9 +1470,93 @@ class ApiService {
       return []
     }
   }
+
+  /**
+   * Fetch CAAS tags from Adobe Chimera API
+   * This is a public endpoint that doesn't require authentication
+   * Reference: https://www.adobe.com/chimera-api/tags
+   * 
+   * Implementation uses caching and promise deduplication from v1 app
+   * to prevent redundant API calls
+   */
+  getCaasTags = (() => {
+    let cache: any
+    let promise: Promise<any> | null = null
+
+    return (): Promise<any> => {
+      // Return cached data if available
+      if (cache) {
+        return Promise.resolve(cache)
+      }
+
+      // Return existing promise if fetch is in progress
+      if (!promise) {
+        promise = fetch('https://www.adobe.com/chimera-api/tags')
+          .then((resp) => {
+            if (resp.ok) {
+              return resp.json()
+            }
+            throw new Error('Failed to load tags')
+          })
+          .then((data) => {
+            cache = data
+            return data
+          })
+          .catch((err) => {
+            console.error('❌ Failed to load CAAS tags:', err)
+            // Log to lana if available
+            if (typeof window !== 'undefined' && (window as any).lana) {
+              (window as any).lana.log(`Failed to load CAAS tags: ${err}`)
+            }
+            throw err
+          })
+      }
+
+      return promise
+    }
+  })()
 }
 
 // Export singleton instance
 export const apiService = new ApiService()
 export default apiService
+
+/**
+ * Utility function to deep get a tag by path array
+ * Navigates through the nested tag structure using an array of paths
+ * 
+ * @param pathArray - Array of path segments
+ * @param index - Index to stop at
+ * @param tags - Tags object to navigate through
+ * @returns The tag at the specified path
+ */
+export function deepGetTagByPath(pathArray: string[], index: number, tags: any = {}): any {
+  let currentTag = tags
+  pathArray.forEach((path, i) => {
+    if (i <= index && path && currentTag?.tags) {
+      currentTag = currentTag.tags[path]
+    }
+  })
+  return currentTag
+}
+
+/**
+ * Utility function to deep get a tag by tag ID
+ * Converts a CAAS tag ID (e.g., "caas:product-categories/graphic-design")
+ * into a path and navigates to that tag
+ * 
+ * @param tagID - The CAAS tag ID
+ * @param tags - Tags object to navigate through
+ * @returns The tag with the specified ID
+ */
+export function deepGetTagByTagID(tagID: string, tags: any = {}): any {
+  const tagIDs = tagID.replace('caas:', '').split('/')
+  let currentTag = tags
+  tagIDs.forEach((tag) => {
+    if (currentTag?.tags) {
+      currentTag = currentTag.tags[tag]
+    }
+  })
+  return currentTag
+}
 
