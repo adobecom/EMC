@@ -203,7 +203,7 @@ export const SeriesDashboard: React.FC<SeriesDashboardProps> = () => {
       ]}
       onRefresh={loadSeriesData}
       onCreate={handleCreateSeries}
-      createLabel="Create Series"
+      createLabel="Create new series"
       emptyStateTitle="No Series Found"
       emptyStateDescription="Get started by creating your first series"
       loadingMessage="Loading series..."
