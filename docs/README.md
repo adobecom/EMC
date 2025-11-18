@@ -19,6 +19,12 @@ Welcome to the Event Management Cloud (EMC) documentation! This index will help 
   - Routing with React Router
   - Adobe Spectrum UI components
 
+- **[Event Form Guide](./EVENT_FORM.md)** - Complete event form implementation
+  - Multi-step wizard with 4 main steps
+  - Modular component architecture
+  - Validation and data flow
+  - Create and edit modes
+
 ### Backend Development
 - **[Backend Guide](./BACKEND.md)** - Adobe I/O Runtime actions guide
   - Creating actions
@@ -99,6 +105,7 @@ A system that lets you use real Adobe IMS tokens from production sites in your l
 
 ### UI Components
 - [Frontend Guide](./FRONTEND.md)
+- [Event Form Guide](./EVENT_FORM.md)
 - [User Panel Implementation](./USER_PANEL_IMPLEMENTATION.md)
 - [Top Nav Layout](./TOP_NAV_LAYOUT.md)
 
@@ -180,7 +187,8 @@ EMC/
 1. [Project Overview](./PROJECT_OVERVIEW.md)
 2. [Dev Token Quick Start](./DEV_TOKEN_QUICKSTART.md) ⚡
 3. [Frontend Guide](./FRONTEND.md)
-4. [API Integration](./API_INTEGRATION.md)
+4. [Event Form Guide](./EVENT_FORM.md)
+5. [API Integration](./API_INTEGRATION.md)
 
 ### Backend Developer
 1. [Project Overview](./PROJECT_OVERVIEW.md)
@@ -208,6 +216,14 @@ EMC/
 3. [User Panel Implementation](./USER_PANEL_IMPLEMENTATION.md)
 
 ## 🆕 Recent Updates
+
+### Event Form Implementation (November 2025)
+- ✨ **Production-Ready Multi-Step Form** - Complete event creation/editing
+  - 4-step wizard matching v1 reference structure
+  - Modular EventFormatComponent with cloud/series filtering
+  - Full TypeScript type safety
+  - Comprehensive validation
+  - See [Event Form Guide](./EVENT_FORM.md)
 
 ### Event Dashboard Enhancements
 - ✨ **Data Enrichment System** - Intelligent caching and batching for API calls
@@ -254,8 +270,8 @@ When updating documentation:
 
 ---
 
-**Last Updated:** November 6, 2025
-**Version:** 1.2.0
+**Last Updated:** November 18, 2025
+**Version:** 1.3.0
 
 Happy coding! 🚀
 

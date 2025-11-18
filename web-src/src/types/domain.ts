@@ -343,6 +343,7 @@ export interface EventFormData {
   seriesId: string
   organizationId: string
   name: string
+  urlTitle?: string // English title for page URL
   description?: string // Rich text description for event page
   shortDescription?: string // Plain text for Events Hub/SEO (160 chars max)
   language: string
@@ -374,6 +375,7 @@ export interface EventFormData {
   
   // Additional metadata
   communityForumUrl?: string
+  secondaryLinkTitle?: string
   metadata?: Record<string, any>
 }
 

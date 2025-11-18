@@ -17,21 +17,26 @@ import {
   Heading,
   Text,
   Button,
-  Divider
+  Divider,
+  TooltipTrigger,
+  Tooltip,
+  ActionButton,
+  ComboBox
 } from '@adobe/react-spectrum'
+import { getTimeZones } from '@vvo/tzdb'
 import { useNavigate, useParams } from 'react-router-dom'
 import {
   EventFormData,
-  Organization,
   ProfileData,
   VenueData
 } from '../types/domain'
 import { apiService } from '../services/api'
 import { IMS } from '../types'
-import { FormWizard, WizardStep, LoadingSpinner, FormCard, RichTextEditor, TagSelector } from './shared'
+import { FormWizard, WizardStep, LoadingSpinner, FormCard, RichTextEditor, TagSelector, HeadingWithTooltip } from './shared'
 import { parseDateTime } from '@internationalized/date'
 import Add from '@spectrum-icons/workflow/Add'
 import Delete from '@spectrum-icons/workflow/Delete'
+import Info from '@spectrum-icons/workflow/Info'
 import { EventFormatComponent } from './EventForm/EventFormatComponent'
 
 interface EventFormProps {
@@ -50,6 +55,12 @@ const LANGUAGE_OPTIONS = [
   { key: 'zh', label: 'Chinese' }
 ]
 
+// Timezone options from @vvo/tzdb
+const TIMEZONE_OPTIONS = getTimeZones().map((tz) => ({
+  id: tz.name,
+  name: `${tz.name} (${tz.currentTimeFormat})`
+}))
+
 export const EventForm: React.FC<EventFormProps> = ({ ims }) => {
   const navigate = useNavigate()
   const { id } = useParams<{ id: string }>()
@@ -61,6 +72,7 @@ export const EventForm: React.FC<EventFormProps> = ({ ims }) => {
     seriesId: '',
     organizationId: '',
     name: '',
+    urlTitle: '',
     description: '',
     shortDescription: '',
     language: 'en',
@@ -83,45 +95,29 @@ export const EventForm: React.FC<EventFormProps> = ({ ims }) => {
     allowGuestRegistration: false,
     images: [],
     profiles: [],
-    communityForumUrl: ''
+    communityForumUrl: '',
+    secondaryLinkTitle: ''
   })
 
-  // Reference data
-  const [organizations, setOrganizations] = useState<Organization[]>([])
-  
   // UI state
   const [isLoading, setIsLoading] = useState(false)
   const [isSaving, setIsSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState(false)
+  const [hasSecondaryLink, setHasSecondaryLink] = useState(false)
 
   useEffect(() => {
-    loadOrganizations()
     if (isEditMode && id) {
       loadEvent(id)
     }
   }, [id])
 
-  const loadOrganizations = async () => {
-    try {
-      if (!ims.token || !ims.org) {
-        console.warn('IMS authentication not available yet')
-        return
-      }
-
-      apiService.setAuthHeaders(ims.token, ims.org)
-      const orgsResponse = await apiService.getOrganizations()
-
-      if (orgsResponse.success && orgsResponse.data) {
-        setOrganizations(orgsResponse.data)
-        if (!isEditMode && orgsResponse.data.length > 0) {
-          setFormData((prev) => ({ ...prev, organizationId: orgsResponse.data[0].id }))
-        }
-      }
-    } catch (err) {
-      console.error('Failed to load organizations:', err)
+  // Set hasSecondaryLink based on whether we have a secondary link URL
+  useEffect(() => {
+    if (formData.communityForumUrl) {
+      setHasSecondaryLink(true)
     }
-  }
+  }, [formData.communityForumUrl])
 
   const loadEvent = async (eventId: string) => {
     setIsLoading(true)
@@ -129,12 +125,14 @@ export const EventForm: React.FC<EventFormProps> = ({ ims }) => {
       const response = await apiService.getEvent(eventId)
       if (response.success && response.data) {
         const event = response.data
+        
         // Map the loaded event to form data
         setFormData({
           cloudType: (event.metadata?.cloudType as 'CreativeCloud' | 'ExperienceCloud') || 'CreativeCloud',
           seriesId: event.seriesId,
           organizationId: event.organizationId,
           name: event.name,
+          urlTitle: event.metadata?.urlTitle || '',
           description: event.description,
           shortDescription: event.metadata?.shortDescription || '',
           language: event.metadata?.language || 'en',
@@ -151,7 +149,8 @@ export const EventForm: React.FC<EventFormProps> = ({ ims }) => {
           allowGuestRegistration: event.metadata?.allowGuestRegistration || false,
           images: event.metadata?.images || [],
           profiles: event.metadata?.profiles || [],
-          communityForumUrl: event.metadata?.communityForumUrl || ''
+          communityForumUrl: event.metadata?.communityForumUrl || '',
+          secondaryLinkTitle: event.metadata?.secondaryLinkTitle || ''
         })
       }
     } catch (err) {
@@ -183,6 +182,7 @@ export const EventForm: React.FC<EventFormProps> = ({ ims }) => {
         registrationOpen: formData.registrationOpen,
         metadata: {
           cloudType: formData.cloudType,
+          urlTitle: formData.urlTitle,
           shortDescription: formData.shortDescription,
           language: formData.language,
           isPrivate: formData.isPrivate,
@@ -193,7 +193,8 @@ export const EventForm: React.FC<EventFormProps> = ({ ims }) => {
           allowGuestRegistration: formData.allowGuestRegistration,
           images: formData.images,
           profiles: formData.profiles,
-          communityForumUrl: formData.communityForumUrl
+          communityForumUrl: formData.communityForumUrl,
+          secondaryLinkTitle: formData.secondaryLinkTitle
         }
       }
 
@@ -267,7 +268,6 @@ export const EventForm: React.FC<EventFormProps> = ({ ims }) => {
   // ============================================================
   const step1IsValid =
     formData.seriesId !== '' &&
-    formData.organizationId !== '' &&
     formData.name.trim() !== '' &&
     formData.language !== '' &&
     Boolean(formData.shortDescription && formData.shortDescription.trim() !== '') &&
@@ -311,110 +311,190 @@ export const EventForm: React.FC<EventFormProps> = ({ ims }) => {
 
       {/* Event Information Component */}
       <FormCard>
-        <View>
-        <Heading level={3}>Event Information</Heading>
+        <Flex direction="column" gap="size-200">
+          {/* Header Row: Title with tooltip on left, private toggle on right */}
+          <Flex direction="row" justifyContent="space-between" alignItems="center">
+            <HeadingWithTooltip 
+              level={3}
+              tooltip="Give your event a title, description, dates, and start/end times. If you have a related forum on community.adobe.com, create a CTA to it here."
+            >
+              Event Information
+            </HeadingWithTooltip>
+            
+            <Flex direction="row" alignItems="center" gap="size-100">
+              <Switch
+                isSelected={formData.isPrivate}
+                onChange={(value) => updateFormData({ isPrivate: value })}
+              >
+                Set as a private event
+              </Switch>
+              <TooltipTrigger delay={0}>
+                <ActionButton 
+                  isQuiet 
+                  UNSAFE_style={{ 
+                    minWidth: 'auto',
+                    padding: 0,
+                    width: '20px',
+                    height: '20px'
+                  }}
+                >
+                  <Info size="S" />
+                </ActionButton>
+                <Tooltip variant="info">By setting this to private, your event won't be publicly found online or published to the events hub.</Tooltip>
+              </TooltipTrigger>
+            </Flex>
+          </Flex>
 
-      <Picker
-        label="Organization"
-        isRequired
-        selectedKey={formData.organizationId}
-        onSelectionChange={(key) => updateFormData({ organizationId: String(key) })}
-        marginTop="size-200"
-      >
-        {organizations.map((org) => (
-          <Item key={org.id}>{org.name}</Item>
-        ))}
-      </Picker>
+          <Picker
+            label="Language"
+            isRequired
+            selectedKey={formData.language}
+            onSelectionChange={(key) => updateFormData({ language: String(key) })}
+          >
+            {LANGUAGE_OPTIONS.map((lang) => (
+              <Item key={lang.key}>{lang.label}</Item>
+            ))}
+          </Picker>
 
-        <TextField
-          label="Event Title"
-          isRequired
-          isQuiet
-          maxLength={80}
-          value={formData.name}
-          onChange={(value) => updateFormData({ name: value })}
-          description="80 characters max"
-        />
+          <TextField
+            label="Event Title"
+            isRequired
+            isQuiet
+            maxLength={80}
+            value={formData.name}
+            onChange={(value) => {
+              // Check if old event title matches current URL title
+              if (formData.name === formData.urlTitle) {
+                // They match, so sync is active - update both fields
+                updateFormData({ name: value, urlTitle: value })
+              } else {
+                // They don't match, so don't sync - only update event title
+                updateFormData({ name: value })
+              }
+            }}
+            description="80 characters max"
+            width="100%"
+          />
 
-        <Picker
-          label="Language"
-          isRequired
-          selectedKey={formData.language}
-          onSelectionChange={(key) => updateFormData({ language: String(key) })}
-        >
-          {LANGUAGE_OPTIONS.map((lang) => (
-            <Item key={lang.key}>{lang.label}</Item>
-          ))}
-        </Picker>
+          <View width="100%">
+            <Flex direction="row" gap="size-100" alignItems="center" marginBottom="size-100">
+              <Text>English title for page URL</Text>
+              <TooltipTrigger delay={0}>
+                <ActionButton 
+                  isQuiet 
+                  UNSAFE_style={{ 
+                    minWidth: 'auto',
+                    padding: 0,
+                    width: '20px',
+                    height: '20px'
+                  }}
+                >
+                  <Info size="S" />
+                </ActionButton>
+                <Tooltip variant="info">SEO friendly title</Tooltip>
+              </TooltipTrigger>
+            </Flex>
+            <TextField
+              isQuiet
+              placeholder="Add event title for page URL"
+              value={formData.urlTitle || ''}
+              onChange={(value) => updateFormData({ urlTitle: value })}
+              width="100%"
+            />
+          </View>
 
-        <Switch
-          isSelected={formData.isPrivate}
-          onChange={(value) => updateFormData({ isPrivate: value })}
-        >
-          Set as a private event
-        </Switch>
-        <Text UNSAFE_style={{ fontSize: '12px', marginTop: '4px' }}>
-          Private events won't be publicly found online or published to the events hub
-        </Text>
+          <View width="100%">
+            <HeadingWithTooltip 
+              level={4}
+              tooltip="Add rich text to your event description. This will be the copy displayed on the event page."
+              marginBottom="size-100"
+            >
+              Event Details
+            </HeadingWithTooltip>
+            <RichTextEditor
+              label=""
+              value={formData.description || ''}
+              onChange={(value) => updateFormData({ description: value })}
+              height="400px"
+            />
+          </View>
 
-        <RichTextEditor
-          label="Event Description (Rich Text)"
-          value={formData.description || ''}
-          onChange={(value) => updateFormData({ description: value })}
-          height="400px"
-          description="This will be the copy displayed on the event page"
-        />
+          <TextArea
+            label="Event Description for Events Hub and SEO"
+            isRequired
+            maxLength={160}
+            value={formData.shortDescription || ''}
+            onChange={(value) => updateFormData({ shortDescription: value })}
+            description="160 characters max"
+            width="100%"
+          />
 
-        <TextArea
-          label="Event Description for Events Hub and SEO"
-          isRequired
-          maxLength={160}
-          value={formData.shortDescription || ''}
-          onChange={(value) => updateFormData({ shortDescription: value })}
-          description="160 characters max"
-        />
+          <Flex direction="row" gap="size-200" wrap>
+            <DatePicker
+              label="Start Date & Time"
+              isRequired
+              granularity="minute"
+              value={formData.startDateTime ? parseDateTime(formData.startDateTime) : null}
+              onChange={(date) => updateFormData({ startDateTime: date?.toString() || '' })}
+            />
 
-        <TextField
-          label="Community Forum URL (Optional)"
-          type="url"
-          isQuiet
-          value={formData.communityForumUrl || ''}
-          onChange={(value) => updateFormData({ communityForumUrl: value })}
-          description="Link to related forum on community.adobe.com"
-        />
-    </View>
-      </FormCard>
+            <DatePicker
+              label="End Date & Time"
+              isRequired
+              granularity="minute"
+              value={formData.endDateTime ? parseDateTime(formData.endDateTime) : null}
+              onChange={(date) => updateFormData({ endDateTime: date?.toString() || '' })}
+              minValue={formData.startDateTime ? parseDateTime(formData.startDateTime) : undefined}
+            />
 
-      {/* Date & Time Component */}
-      <FormCard>
-    <View>
-        <Heading level={3}>Date & Time</Heading>
+            <ComboBox
+              label="Timezone (Optional)"
+              items={TIMEZONE_OPTIONS}
+              selectedKey={formData.timezone || null}
+              onSelectionChange={(key) => updateFormData({ timezone: key ? String(key) : '' })}
+              description="Search and select a timezone"
+              menuTrigger="focus"
+            >
+              {(item) => <Item key={item.id}>{item.name}</Item>}
+            </ComboBox>
+          </Flex>
 
-      <DatePicker
-        label="Start Date & Time"
-        isRequired
-        granularity="minute"
-        value={formData.startDateTime ? parseDateTime(formData.startDateTime) : null}
-          onChange={(date) => updateFormData({ startDateTime: date?.toString() || '' })}
-      />
+          <Switch
+            isSelected={hasSecondaryLink}
+            onChange={(value) => {
+              setHasSecondaryLink(value)
+              if (!value) {
+                // Clear fields when disabling
+                updateFormData({ communityForumUrl: '', secondaryLinkTitle: '' })
+              }
+            }}
+          >
+            Add secondary link
+          </Switch>
 
-      <DatePicker
-        label="End Date & Time"
-        isRequired
-        granularity="minute"
-        value={formData.endDateTime ? parseDateTime(formData.endDateTime) : null}
-          onChange={(date) => updateFormData({ endDateTime: date?.toString() || '' })}
-          minValue={formData.startDateTime ? parseDateTime(formData.startDateTime) : undefined}
-        />
+          {hasSecondaryLink && (
+            <>
+              <TextField
+                label="Secondary Link Title"
+                isQuiet
+                value={formData.secondaryLinkTitle || ''}
+                onChange={(value) => updateFormData({ secondaryLinkTitle: value })}
+                description="Display text for the secondary link"
+                width="100%"
+              />
 
-        <TextField
-          label="Timezone (Optional)"
-          isQuiet
-          value={formData.timezone || ''}
-          onChange={(value) => updateFormData({ timezone: value })}
-          description="e.g., America/Los_Angeles, UTC, etc."
-        />
-        </View>
+              <TextField
+                label="Secondary Link URL"
+                type="url"
+                isQuiet
+                value={formData.communityForumUrl || ''}
+                onChange={(value) => updateFormData({ communityForumUrl: value })}
+                description="URL for the secondary link"
+                width="100%"
+              />
+            </>
+          )}
+        </Flex>
       </FormCard>
 
       {/* Venue Information Component */}
