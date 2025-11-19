@@ -98,7 +98,7 @@ export const EventForm: React.FC<EventFormProps> = ({ ims }) => {
     communityForumUrl: '',
     secondaryLinkTitle: ''
   })
-
+  
   // UI state
   const [isLoading, setIsLoading] = useState(false)
   const [isSaving, setIsSaving] = useState(false)
@@ -330,7 +330,7 @@ export const EventForm: React.FC<EventFormProps> = ({ ims }) => {
               </Switch>
               <TooltipTrigger delay={0}>
                 <ActionButton 
-                  isQuiet 
+          isQuiet
                   UNSAFE_style={{ 
                     minWidth: 'auto',
                     padding: 0,
@@ -345,16 +345,16 @@ export const EventForm: React.FC<EventFormProps> = ({ ims }) => {
             </Flex>
           </Flex>
 
-          <Picker
-            label="Language"
-            isRequired
-            selectedKey={formData.language}
-            onSelectionChange={(key) => updateFormData({ language: String(key) })}
-          >
-            {LANGUAGE_OPTIONS.map((lang) => (
-              <Item key={lang.key}>{lang.label}</Item>
-            ))}
-          </Picker>
+        <Picker
+          label="Language"
+          isRequired
+          selectedKey={formData.language}
+          onSelectionChange={(key) => updateFormData({ language: String(key) })}
+        >
+          {LANGUAGE_OPTIONS.map((lang) => (
+            <Item key={lang.key}>{lang.label}</Item>
+          ))}
+        </Picker>
 
           <TextField
             label="Event Title"
@@ -411,66 +411,67 @@ export const EventForm: React.FC<EventFormProps> = ({ ims }) => {
             >
               Event Details
             </HeadingWithTooltip>
-            <RichTextEditor
+        <RichTextEditor
               label=""
-              value={formData.description || ''}
-              onChange={(value) => updateFormData({ description: value })}
-              height="400px"
-            />
+          value={formData.description || ''}
+          onChange={(value) => updateFormData({ description: value })}
+          height="400px"
+        />
           </View>
 
-          <TextArea
-            label="Event Description for Events Hub and SEO"
-            isRequired
-            maxLength={160}
-            value={formData.shortDescription || ''}
-            onChange={(value) => updateFormData({ shortDescription: value })}
-            description="160 characters max"
+        <TextArea
+          label="Event Description for Events Hub and SEO"
+          isRequired
+          maxLength={160}
+          value={formData.shortDescription || ''}
+          onChange={(value) => updateFormData({ shortDescription: value })}
+          description="160 characters max"
             width="100%"
           />
 
           <Flex direction="row" gap="size-200" wrap>
-            <DatePicker
-              label="Start Date & Time"
-              isRequired
-              granularity="minute"
-              value={formData.startDateTime ? parseDateTime(formData.startDateTime) : null}
-              onChange={(date) => updateFormData({ startDateTime: date?.toString() || '' })}
-            />
+      <DatePicker
+        label="Start Date & Time"
+        isRequired
+        granularity="minute"
+        value={formData.startDateTime ? parseDateTime(formData.startDateTime) : null}
+          onChange={(date) => updateFormData({ startDateTime: date?.toString() || '' })}
+      />
 
-            <DatePicker
-              label="End Date & Time"
-              isRequired
-              granularity="minute"
-              value={formData.endDateTime ? parseDateTime(formData.endDateTime) : null}
-              onChange={(date) => updateFormData({ endDateTime: date?.toString() || '' })}
-              minValue={formData.startDateTime ? parseDateTime(formData.startDateTime) : undefined}
+      <DatePicker
+        label="End Date & Time"
+        isRequired
+        granularity="minute"
+        value={formData.endDateTime ? parseDateTime(formData.endDateTime) : null}
+          onChange={(date) => updateFormData({ endDateTime: date?.toString() || '' })}
+          minValue={formData.startDateTime ? parseDateTime(formData.startDateTime) : undefined}
             />
 
             <ComboBox
               label="Timezone (Optional)"
-              items={TIMEZONE_OPTIONS}
+              defaultItems={TIMEZONE_OPTIONS}
               selectedKey={formData.timezone || null}
               onSelectionChange={(key) => updateFormData({ timezone: key ? String(key) : '' })}
               description="Search and select a timezone"
-              menuTrigger="focus"
             >
               {(item) => <Item key={item.id}>{item.name}</Item>}
             </ComboBox>
           </Flex>
 
-          <Switch
-            isSelected={hasSecondaryLink}
-            onChange={(value) => {
-              setHasSecondaryLink(value)
-              if (!value) {
-                // Clear fields when disabling
-                updateFormData({ communityForumUrl: '', secondaryLinkTitle: '' })
-              }
-            }}
-          >
-            Add secondary link
-          </Switch>
+          <View UNSAFE_style={{ display: 'inline-block' }}>
+            <Switch
+              isSelected={hasSecondaryLink}
+              onChange={(value) => {
+                setHasSecondaryLink(value)
+                if (!value) {
+                  // Clear fields when disabling
+                  updateFormData({ communityForumUrl: '', secondaryLinkTitle: '' })
+                }
+              }}
+            >
+              Add secondary link
+            </Switch>
+          </View>
 
           {hasSecondaryLink && (
             <>
@@ -481,12 +482,12 @@ export const EventForm: React.FC<EventFormProps> = ({ ims }) => {
                 onChange={(value) => updateFormData({ secondaryLinkTitle: value })}
                 description="Display text for the secondary link"
                 width="100%"
-              />
+        />
 
-              <TextField
+        <TextField
                 label="Secondary Link URL"
                 type="url"
-                isQuiet
+          isQuiet
                 value={formData.communityForumUrl || ''}
                 onChange={(value) => updateFormData({ communityForumUrl: value })}
                 description="URL for the secondary link"
