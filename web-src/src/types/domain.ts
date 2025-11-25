@@ -310,6 +310,7 @@ export interface ProfileData {
   title: string
   bio?: string
   imageUrl?: string
+  imageId?: string
   socialLinks?: SocialLink[]
 }
 

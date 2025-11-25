@@ -27,11 +27,13 @@ import {
 } from '../types/domain'
 import { apiService } from '../services/api'
 import { IMS } from '../types'
-import { FormWizard, WizardStep, LoadingSpinner, FormCard, RichTextEditor, TagSelector, HeadingWithTooltip } from './shared'
+import { FormWizard, WizardStep, LoadingSpinner, FormCard, RichTextEditor, TagSelector, HeadingWithTooltip, ImageUploader } from './shared'
 import Add from '@spectrum-icons/workflow/Add'
 import Delete from '@spectrum-icons/workflow/Delete'
 import Info from '@spectrum-icons/workflow/Info'
+import LinkOut from '@spectrum-icons/workflow/LinkOut'
 import { EventFormatComponent, EventInfoComponent, AgendaComponent, VenueComponent } from './EventForm/index'
+import { detectSocialPlatform, isValidUrl } from '../utils/socialPlatformDetector'
 
 interface EventFormProps {
   ims: IMS
@@ -237,6 +239,43 @@ export const EventForm: React.FC<EventFormProps> = ({ ims }) => {
     }))
   }
 
+  // Social links management
+  const addSocialLink = (profileIndex: number) => {
+    setFormData((prev) => {
+      const profiles = [...(prev.profiles || [])]
+      const profile = profiles[profileIndex]
+      profile.socialLinks = [...(profile.socialLinks || []), { url: '' }]
+      return { ...prev, profiles }
+    })
+  }
+
+  const updateSocialLink = (profileIndex: number, linkIndex: number, url: string) => {
+    setFormData((prev) => {
+      const profiles = [...(prev.profiles || [])]
+      const profile = profiles[profileIndex]
+      const socialLinks = [...(profile.socialLinks || [])]
+      
+      // Detect platform from URL
+      const platform = detectSocialPlatform(url)
+      socialLinks[linkIndex] = {
+        url,
+        platform: platform?.name
+      }
+      
+      profile.socialLinks = socialLinks
+      return { ...prev, profiles }
+    })
+  }
+
+  const removeSocialLink = (profileIndex: number, linkIndex: number) => {
+    setFormData((prev) => {
+      const profiles = [...(prev.profiles || [])]
+      const profile = profiles[profileIndex]
+      profile.socialLinks = (profile.socialLinks || []).filter((_, i) => i !== linkIndex)
+      return { ...prev, profiles }
+    })
+  }
+
   // ============================================================
   // STEP 1: Basic Info
   // Contains: Event Format, Tags, Event Info, Date/Time, Venue
@@ -417,6 +456,30 @@ export const EventForm: React.FC<EventFormProps> = ({ ims }) => {
               />
             </Flex>
 
+            <View width="100%" UNSAFE_style={{ maxWidth: '400px' }}>
+              <ImageUploader
+                label="Profile Image"
+                imageUrl={profile.imageUrl}
+                imageId={profile.imageId}
+                imageKind="profile-image"
+                altText={`${profile.firstName} ${profile.lastName}`}
+                eventId={id}
+                maxSizeMB={10}
+                onChange={(imageUrl, imageId) => {
+                  updateProfile(index, { 
+                    imageUrl: imageUrl, 
+                    imageId: imageId 
+                  })
+                }}
+                onRemove={() => {
+                  updateProfile(index, { 
+                    imageUrl: undefined, 
+                    imageId: undefined 
+                  })
+                }}
+              />
+            </View>
+
             <TextField
               label="Title"
               isQuiet
@@ -429,14 +492,67 @@ export const EventForm: React.FC<EventFormProps> = ({ ims }) => {
               value={profile.bio || ''}
               onChange={(value) => updateProfile(index, { bio: value })}
               height="200px"
-      />
-
-      <TextField
-              label="Image URL (Optional)"
-              isQuiet
-              value={profile.imageUrl || ''}
-              onChange={(value) => updateProfile(index, { imageUrl: value })}
             />
+
+            {/* Social Links */}
+            <View marginTop="size-200">
+              <Flex justifyContent="space-between" alignItems="center" marginBottom="size-100">
+                <Text UNSAFE_style={{ fontWeight: 'bold' }}>Social Media Links</Text>
+                <ActionButton onPress={() => addSocialLink(index)} isQuiet>
+                  <Add />
+                  <Text>Add Link</Text>
+                </ActionButton>
+              </Flex>
+
+              {(!profile.socialLinks || profile.socialLinks.length === 0) && (
+                <Text UNSAFE_style={{ fontSize: '14px', color: 'var(--spectrum-global-color-gray-600)', fontStyle: 'italic' }}>
+                  No social media links added yet.
+                </Text>
+              )}
+
+              {profile.socialLinks && profile.socialLinks.map((socialLink, linkIndex) => {
+                const detectedPlatform = detectSocialPlatform(socialLink.url)
+                const isValid = isValidUrl(socialLink.url)
+                
+                return (
+                  <Flex key={linkIndex} gap="size-100" alignItems="center" marginTop="size-100">
+                    {/* Platform Icon/Indicator */}
+                    <View
+                      UNSAFE_style={{
+                        minWidth: '40px',
+                        height: '40px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        backgroundColor: detectedPlatform 
+                          ? detectedPlatform.color 
+                          : 'var(--spectrum-global-color-gray-400)',
+                        color: 'white',
+                        borderRadius: '4px',
+                        fontSize: '16px',
+                        fontWeight: 'bold'
+                      }}
+                    >
+                      {detectedPlatform ? detectedPlatform.icon : <LinkOut />}
+                    </View>
+
+                    {/* URL Input */}
+                    <TextField
+                      placeholder="https://..."
+                      value={socialLink.url}
+                      onChange={(value) => updateSocialLink(index, linkIndex, value)}
+                      width="100%"
+                      validationState={socialLink.url && !isValid ? 'invalid' : undefined}
+                    />
+
+                    {/* Remove Button */}
+                    <ActionButton onPress={() => removeSocialLink(index, linkIndex)} isQuiet>
+                      <Delete />
+                    </ActionButton>
+                  </Flex>
+                )
+              })}
+            </View>
           </Flex>
         </View>
       ))}
