@@ -25,6 +25,12 @@ Welcome to the Event Management Cloud (EMC) documentation! This index will help 
   - Validation and data flow
   - Create and edit modes
 
+- **[Modular Component Pattern](./MODULAR_COMPONENT_PATTERN.md)** - Component extraction patterns
+  - Breaking down complex forms
+  - Self-contained, reusable components
+  - External API integration patterns
+  - Image upload with drag & drop
+
 ### Backend Development
 - **[Backend Guide](./BACKEND.md)** - Adobe I/O Runtime actions guide
   - Creating actions
@@ -44,6 +50,12 @@ Welcome to the Event Management Cloud (EMC) documentation! This index will help 
   - Type safety
   - Mock support
   - Consistent error handling
+
+- **[Google Places API Setup](./GOOGLE_PLACES_SETUP.md)** - Google Places integration
+  - API key setup and security
+  - Venue autocomplete configuration
+  - Cost optimization
+  - Troubleshooting guide
 
 ### Testing
 - **[Testing Guide](./TESTING.md)** - Unit and E2E testing patterns
@@ -102,10 +114,12 @@ A system that lets you use real Adobe IMS tokens from production sites in your l
 - [API Integration](./API_INTEGRATION.md)
 - [API Centralization](./API_CENTRALIZATION.md)
 - [Dev Token Guide](./DEV_TOKEN_GUIDE.md)
+- [Google Places API Setup](./GOOGLE_PLACES_SETUP.md)
 
 ### UI Components
 - [Frontend Guide](./FRONTEND.md)
 - [Event Form Guide](./EVENT_FORM.md)
+- [Modular Component Pattern](./MODULAR_COMPONENT_PATTERN.md)
 - [User Panel Implementation](./USER_PANEL_IMPLEMENTATION.md)
 - [Top Nav Layout](./TOP_NAV_LAYOUT.md)
 
@@ -139,6 +153,7 @@ aio app undeploy         # Remove deployment
 | Task | Documentation |
 |------|---------------|
 | Set up local dev with API access | [Dev Token Quick Start](./DEV_TOKEN_QUICKSTART.md) |
+| Set up Google Places API | [Google Places Setup](./GOOGLE_PLACES_SETUP.md) |
 | Create a new component | [Frontend Guide](./FRONTEND.md) |
 | Create a new backend action | [Backend Guide](./BACKEND.md) |
 | Connect frontend to backend | [API Integration](./API_INTEGRATION.md) |
@@ -186,9 +201,11 @@ EMC/
 ### Frontend Developer
 1. [Project Overview](./PROJECT_OVERVIEW.md)
 2. [Dev Token Quick Start](./DEV_TOKEN_QUICKSTART.md) ⚡
-3. [Frontend Guide](./FRONTEND.md)
-4. [Event Form Guide](./EVENT_FORM.md)
-5. [API Integration](./API_INTEGRATION.md)
+3. [Google Places API Setup](./GOOGLE_PLACES_SETUP.md)
+4. [Frontend Guide](./FRONTEND.md)
+5. [Event Form Guide](./EVENT_FORM.md)
+6. [Modular Component Pattern](./MODULAR_COMPONENT_PATTERN.md)
+7. [API Integration](./API_INTEGRATION.md)
 
 ### Backend Developer
 1. [Project Overview](./PROJECT_OVERVIEW.md)
@@ -220,10 +237,11 @@ EMC/
 ### Event Form Implementation (November 2025)
 - ✨ **Production-Ready Multi-Step Form** - Complete event creation/editing
   - 4-step wizard matching v1 reference structure
-  - Modular EventFormatComponent with cloud/series filtering
+  - Modular component architecture (EventFormatComponent, EventInfoComponent)
   - Full TypeScript type safety
   - Comprehensive validation
   - See [Event Form Guide](./EVENT_FORM.md)
+  - See [Modular Component Pattern](./MODULAR_COMPONENT_PATTERN.md)
 
 ### Event Dashboard Enhancements
 - ✨ **Data Enrichment System** - Intelligent caching and batching for API calls

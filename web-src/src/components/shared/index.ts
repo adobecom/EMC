@@ -11,6 +11,7 @@ export { LoadingSpinner } from './LoadingSpinner'
 export { ResourceDashboardLayout } from './ResourceDashboardLayout'
 export { FormCard } from './FormCard'
 export { HeadingWithTooltip } from './HeadingWithTooltip'
+export { ImageUploader } from './ImageUploader'
 export { RichTextEditor } from './RichTextEditor'
 export { TagSelector } from './TagSelector'
 

@@ -6,13 +6,10 @@ import React, { useState, useEffect } from 'react'
 import {
   View,
   TextField,
-  TextArea,
   Picker,
   Item,
-  DatePicker,
   NumberField,
   Switch,
-  Checkbox,
   Flex,
   Heading,
   Text,
@@ -20,10 +17,8 @@ import {
   Divider,
   TooltipTrigger,
   Tooltip,
-  ActionButton,
-  ComboBox
+  ActionButton
 } from '@adobe/react-spectrum'
-import { getTimeZones } from '@vvo/tzdb'
 import { useNavigate, useParams } from 'react-router-dom'
 import {
   EventFormData,
@@ -33,33 +28,15 @@ import {
 import { apiService } from '../services/api'
 import { IMS } from '../types'
 import { FormWizard, WizardStep, LoadingSpinner, FormCard, RichTextEditor, TagSelector, HeadingWithTooltip } from './shared'
-import { parseDateTime } from '@internationalized/date'
 import Add from '@spectrum-icons/workflow/Add'
 import Delete from '@spectrum-icons/workflow/Delete'
 import Info from '@spectrum-icons/workflow/Info'
-import { EventFormatComponent } from './EventForm/EventFormatComponent'
+import { EventFormatComponent, EventInfoComponent, AgendaComponent, VenueComponent } from './EventForm/index'
 
 interface EventFormProps {
   ims: IMS
 }
 
-// Language options for event localization
-const LANGUAGE_OPTIONS = [
-  { key: 'en', label: 'English' },
-  { key: 'es', label: 'Spanish' },
-  { key: 'fr', label: 'French' },
-  { key: 'de', label: 'German' },
-  { key: 'ja', label: 'Japanese' },
-  { key: 'ko', label: 'Korean' },
-  { key: 'pt', label: 'Portuguese' },
-  { key: 'zh', label: 'Chinese' }
-]
-
-// Timezone options from @vvo/tzdb
-const TIMEZONE_OPTIONS = getTimeZones().map((tz) => ({
-  id: tz.name,
-  name: `${tz.name} (${tz.currentTimeFormat})`
-}))
 
 export const EventForm: React.FC<EventFormProps> = ({ ims }) => {
   const navigate = useNavigate()
@@ -96,7 +73,9 @@ export const EventForm: React.FC<EventFormProps> = ({ ims }) => {
     images: [],
     profiles: [],
     communityForumUrl: '',
-    secondaryLinkTitle: ''
+    secondaryLinkTitle: '',
+    agendaItems: [],
+    showAgendaPostEvent: false
   })
   
   // UI state
@@ -104,20 +83,12 @@ export const EventForm: React.FC<EventFormProps> = ({ ims }) => {
   const [isSaving, setIsSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState(false)
-  const [hasSecondaryLink, setHasSecondaryLink] = useState(false)
 
   useEffect(() => {
     if (isEditMode && id) {
       loadEvent(id)
     }
   }, [id])
-
-  // Set hasSecondaryLink based on whether we have a secondary link URL
-  useEffect(() => {
-    if (formData.communityForumUrl) {
-      setHasSecondaryLink(true)
-    }
-  }, [formData.communityForumUrl])
 
   const loadEvent = async (eventId: string) => {
     setIsLoading(true)
@@ -150,7 +121,9 @@ export const EventForm: React.FC<EventFormProps> = ({ ims }) => {
           images: event.metadata?.images || [],
           profiles: event.metadata?.profiles || [],
           communityForumUrl: event.metadata?.communityForumUrl || '',
-          secondaryLinkTitle: event.metadata?.secondaryLinkTitle || ''
+          secondaryLinkTitle: event.metadata?.secondaryLinkTitle || '',
+          agendaItems: event.metadata?.agendaItems || [],
+          showAgendaPostEvent: event.metadata?.showAgendaPostEvent || false
         })
       }
     } catch (err) {
@@ -194,7 +167,9 @@ export const EventForm: React.FC<EventFormProps> = ({ ims }) => {
           images: formData.images,
           profiles: formData.profiles,
           communityForumUrl: formData.communityForumUrl,
-          secondaryLinkTitle: formData.secondaryLinkTitle
+          secondaryLinkTitle: formData.secondaryLinkTitle,
+          agendaItems: formData.agendaItems,
+          showAgendaPostEvent: formData.showAgendaPostEvent
         }
       }
 
@@ -345,204 +320,41 @@ export const EventForm: React.FC<EventFormProps> = ({ ims }) => {
             </Flex>
           </Flex>
 
-        <Picker
-          label="Language"
-          isRequired
-          selectedKey={formData.language}
-          onSelectionChange={(key) => updateFormData({ language: String(key) })}
-        >
-          {LANGUAGE_OPTIONS.map((lang) => (
-            <Item key={lang.key}>{lang.label}</Item>
-          ))}
-        </Picker>
-
-          <TextField
-            label="Event Title"
-            isRequired
-            isQuiet
-            maxLength={80}
-            value={formData.name}
-            onChange={(value) => {
-              // Check if old event title matches current URL title
-              if (formData.name === formData.urlTitle) {
-                // They match, so sync is active - update both fields
-                updateFormData({ name: value, urlTitle: value })
-              } else {
-                // They don't match, so don't sync - only update event title
-                updateFormData({ name: value })
-              }
-            }}
-            description="80 characters max"
-            width="100%"
+          <EventInfoComponent
+            language={formData.language}
+            name={formData.name}
+            urlTitle={formData.urlTitle || ''}
+            description={formData.description || ''}
+            shortDescription={formData.shortDescription || ''}
+            startDateTime={formData.startDateTime}
+            endDateTime={formData.endDateTime}
+            timezone={formData.timezone || ''}
+            communityForumUrl={formData.communityForumUrl || ''}
+            secondaryLinkTitle={formData.secondaryLinkTitle || ''}
+            onChange={(data) => updateFormData(data)}
           />
-
-          <View width="100%">
-            <Flex direction="row" gap="size-100" alignItems="center" marginBottom="size-100">
-              <Text>English title for page URL</Text>
-              <TooltipTrigger delay={0}>
-                <ActionButton 
-                  isQuiet 
-                  UNSAFE_style={{ 
-                    minWidth: 'auto',
-                    padding: 0,
-                    width: '20px',
-                    height: '20px'
-                  }}
-                >
-                  <Info size="S" />
-                </ActionButton>
-                <Tooltip variant="info">SEO friendly title</Tooltip>
-              </TooltipTrigger>
-            </Flex>
-            <TextField
-              isQuiet
-              placeholder="Add event title for page URL"
-              value={formData.urlTitle || ''}
-              onChange={(value) => updateFormData({ urlTitle: value })}
-              width="100%"
-            />
-          </View>
-
-          <View width="100%">
-            <HeadingWithTooltip 
-              level={4}
-              tooltip="Add rich text to your event description. This will be the copy displayed on the event page."
-              marginBottom="size-100"
-            >
-              Event Details
-            </HeadingWithTooltip>
-        <RichTextEditor
-              label=""
-          value={formData.description || ''}
-          onChange={(value) => updateFormData({ description: value })}
-          height="400px"
-        />
-          </View>
-
-        <TextArea
-          label="Event Description for Events Hub and SEO"
-          isRequired
-          maxLength={160}
-          value={formData.shortDescription || ''}
-          onChange={(value) => updateFormData({ shortDescription: value })}
-          description="160 characters max"
-            width="100%"
-          />
-
-          <Flex direction="row" gap="size-200" wrap>
-      <DatePicker
-        label="Start Date & Time"
-        isRequired
-        granularity="minute"
-        value={formData.startDateTime ? parseDateTime(formData.startDateTime) : null}
-          onChange={(date) => updateFormData({ startDateTime: date?.toString() || '' })}
-      />
-
-      <DatePicker
-        label="End Date & Time"
-        isRequired
-        granularity="minute"
-        value={formData.endDateTime ? parseDateTime(formData.endDateTime) : null}
-          onChange={(date) => updateFormData({ endDateTime: date?.toString() || '' })}
-          minValue={formData.startDateTime ? parseDateTime(formData.startDateTime) : undefined}
-            />
-
-            <ComboBox
-              label="Timezone (Optional)"
-              defaultItems={TIMEZONE_OPTIONS}
-              selectedKey={formData.timezone || null}
-              onSelectionChange={(key) => updateFormData({ timezone: key ? String(key) : '' })}
-              description="Search and select a timezone"
-            >
-              {(item) => <Item key={item.id}>{item.name}</Item>}
-            </ComboBox>
-          </Flex>
-
-          <View UNSAFE_style={{ display: 'inline-block' }}>
-            <Switch
-              isSelected={hasSecondaryLink}
-              onChange={(value) => {
-                setHasSecondaryLink(value)
-                if (!value) {
-                  // Clear fields when disabling
-                  updateFormData({ communityForumUrl: '', secondaryLinkTitle: '' })
-                }
-              }}
-            >
-              Add secondary link
-            </Switch>
-          </View>
-
-          {hasSecondaryLink && (
-            <>
-              <TextField
-                label="Secondary Link Title"
-                isQuiet
-                value={formData.secondaryLinkTitle || ''}
-                onChange={(value) => updateFormData({ secondaryLinkTitle: value })}
-                description="Display text for the secondary link"
-                width="100%"
-        />
-
-        <TextField
-                label="Secondary Link URL"
-                type="url"
-          isQuiet
-                value={formData.communityForumUrl || ''}
-                onChange={(value) => updateFormData({ communityForumUrl: value })}
-                description="URL for the secondary link"
-                width="100%"
-              />
-            </>
-          )}
         </Flex>
+      </FormCard>
+
+      {/* Agenda Component */}
+      <FormCard>
+        <AgendaComponent
+          agendaItems={formData.agendaItems || []}
+          showAgendaPostEvent={formData.showAgendaPostEvent}
+          eventStartDateTime={formData.startDateTime}
+          eventEndDateTime={formData.endDateTime}
+          onChange={(agendaItems) => updateFormData({ agendaItems })}
+          onShowAgendaPostEventChange={(value) => updateFormData({ showAgendaPostEvent: value })}
+        />
       </FormCard>
 
       {/* Venue Information Component */}
       <FormCard>
-        <View>
-        <Heading level={3}>Venue Information</Heading>
-
-        <TextField
-          label="Venue Name"
-          isRequired
-          isQuiet
-          maxLength={80}
-          value={formData.venue?.venueName || ''}
-          onChange={(value) => updateVenueData({ venueName: value })}
-          description="80 characters max"
+        <VenueComponent
+          venue={formData.venue!}
+          eventId={id}
+          onChange={updateVenueData}
         />
-
-        <TextField
-          label="Venue Address"
-          isQuiet
-          value={formData.venue?.formattedAddress || ''}
-          onChange={(value) => updateVenueData({ formattedAddress: value })}
-          description="Full address of the venue"
-        />
-
-        <RichTextEditor
-          label="Venue Additional Information (Optional)"
-          value={formData.venue?.additionalInformation || ''}
-          onChange={(value) => updateVenueData({ additionalInformation: value })}
-          height="250px"
-          description="Additional details about the venue"
-        />
-
-        <Checkbox
-          isSelected={formData.venue?.showVenuePostEvent || false}
-          onChange={(value) => updateVenueData({ showVenuePostEvent: value })}
-        >
-          Venue info will appear post-event
-        </Checkbox>
-
-        <Checkbox
-          isSelected={formData.venue?.showAdditionalInfoPostEvent || false}
-          onChange={(value) => updateVenueData({ showAdditionalInfoPostEvent: value })}
-        >
-          Venue additional info will appear post-event
-        </Checkbox>
-        </View>
       </FormCard>
     </Flex>
   )

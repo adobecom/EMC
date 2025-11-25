@@ -332,6 +332,8 @@ export interface VenueData {
   }
   gmtOffset?: number
   additionalInformation?: string
+  venueImageUrl?: string
+  venueImageId?: string
   showVenuePostEvent?: boolean
   showAdditionalInfoPostEvent?: boolean
 }
@@ -376,7 +378,18 @@ export interface EventFormData {
   // Additional metadata
   communityForumUrl?: string
   secondaryLinkTitle?: string
+  agendaItems?: AgendaItem[]
+  showAgendaPostEvent?: boolean
   metadata?: Record<string, any>
+}
+
+// Agenda Item
+export interface AgendaItem {
+  id: string
+  startDateTime: string
+  endDateTime: string
+  title: string
+  description?: string
 }
 
 // Session types
