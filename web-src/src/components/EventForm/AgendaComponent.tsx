@@ -20,6 +20,28 @@ import { v4 as uuidv4 } from 'uuid'
 import { HeadingWithTooltip, RichTextEditor } from '../shared'
 import { AgendaItem } from '../../types/domain'
 
+/**
+ * Safely parse ISO 8601 datetime string for DatePicker
+ * Handles strings with milliseconds and timezone indicators
+ */
+function safeParseDateTimeString(dateString: string | undefined | null) {
+  if (!dateString) return null
+  
+  try {
+    // Remove milliseconds and timezone (Z or +00:00) if present
+    // parseDateTime expects format: YYYY-MM-DDTHH:mm:ss or YYYY-MM-DDTHH:mm
+    const cleaned = dateString
+      .replace(/\.\d{3}Z?$/, '') // Remove .000Z or .000
+      .replace(/[+-]\d{2}:\d{2}$/, '') // Remove timezone offset like +00:00
+      .replace(/Z$/, '') // Remove trailing Z if no milliseconds
+    
+    return parseDateTime(cleaned)
+  } catch (error) {
+    console.error('Failed to parse datetime:', dateString, error)
+    return null
+  }
+}
+
 interface AgendaComponentProps {
   agendaItems: AgendaItem[]
   showAgendaPostEvent?: boolean
@@ -91,8 +113,8 @@ export const AgendaComponent: React.FC<AgendaComponentProps> = ({
       return { minValue: undefined, maxValue: undefined }
     }
     return {
-      minValue: eventStartDateTime ? parseDateTime(eventStartDateTime) : undefined,
-      maxValue: eventEndDateTime ? parseDateTime(eventEndDateTime) : undefined
+      minValue: safeParseDateTimeString(eventStartDateTime) || undefined,
+      maxValue: safeParseDateTimeString(eventEndDateTime) || undefined
     }
   }
 
@@ -189,7 +211,7 @@ export const AgendaComponent: React.FC<AgendaComponentProps> = ({
                 label="Start Date & Time"
                 isRequired
                 granularity="minute"
-                value={item.startDateTime ? parseDateTime(item.startDateTime) : null}
+                value={safeParseDateTimeString(item.startDateTime)}
                 onChange={(date) => updateAgendaItem(index, { startDateTime: date?.toString() || '' })}
                 minValue={minValue}
                 maxValue={maxValue}
@@ -199,9 +221,9 @@ export const AgendaComponent: React.FC<AgendaComponentProps> = ({
                 label="End Date & Time"
                 isRequired
                 granularity="minute"
-                value={item.endDateTime ? parseDateTime(item.endDateTime) : null}
+                value={safeParseDateTimeString(item.endDateTime)}
                 onChange={(date) => updateAgendaItem(index, { endDateTime: date?.toString() || '' })}
-                minValue={item.startDateTime ? parseDateTime(item.startDateTime) : minValue}
+                minValue={safeParseDateTimeString(item.startDateTime) || minValue}
                 maxValue={maxValue}
               />
             </Flex>

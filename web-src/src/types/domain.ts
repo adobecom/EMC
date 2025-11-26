@@ -326,7 +326,7 @@ export interface SponsorData {
 
 // Image types for events
 export interface EventImageData {
-  imageKind: 'event-card-image' | 'event-hero-image' | 'venue-image'
+  imageKind: 'event-card-image' | 'event-hero-image' | 'venue-image' | 'venue-map-image' | string
   imageUrl?: string
   imageId?: string
   altText?: string

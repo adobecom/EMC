@@ -16,6 +16,7 @@ import {
 } from '@adobe/react-spectrum'
 import { ProfileData } from '../../types/domain'
 import { RichTextEditor, ImageUploader } from '../shared'
+import { TYPOGRAPHY } from '../../styles/designSystem'
 import Add from '@spectrum-icons/workflow/Add'
 import Delete from '@spectrum-icons/workflow/Delete'
 import LinkOut from '@spectrum-icons/workflow/LinkOut'
@@ -45,7 +46,7 @@ export const ProfilesComponent: React.FC<ProfilesComponentProps> = ({
   return (
     <Flex direction="column" gap="size-200">
       <Flex justifyContent="space-between" alignItems="center">
-        <Heading level={3}>Speakers & Hosts</Heading>
+        <Heading level={3} UNSAFE_style={TYPOGRAPHY.COMPONENT_HEADING}>Speakers & Hosts</Heading>
         <Button variant="primary" onPress={onAddProfile}>
           <Add />
           <Text>Add Profile</Text>

@@ -23,6 +23,27 @@ import { getTimeZones } from '@vvo/tzdb'
 import Info from '@spectrum-icons/workflow/Info'
 import { HeadingWithTooltip, RichTextEditor } from '../shared'
 
+/**
+ * Safely parse ISO 8601 datetime string for DatePicker
+ * Handles strings with milliseconds and timezone indicators
+ */
+function safeParseDateTimeString(dateString: string | undefined | null) {
+  if (!dateString) return null
+  
+  try {
+    // Remove milliseconds and timezone (Z or +00:00) if present
+    // parseDateTime expects format: YYYY-MM-DDTHH:mm:ss or YYYY-MM-DDTHH:mm
+    const cleaned = dateString
+      .replace(/\.\d{3}Z?$/, '') // Remove .000Z or .000
+      .replace(/[+-]\d{2}:\d{2}$/, '') // Remove timezone offset like +00:00
+    
+    return parseDateTime(cleaned)
+  } catch (error) {
+    console.error('Failed to parse datetime:', dateString, error)
+    return null
+  }
+}
+
 // Language options for event localization
 const LANGUAGE_OPTIONS = [
   { key: 'en', label: 'English' },
@@ -216,7 +237,7 @@ export const EventInfoComponent: React.FC<EventInfoComponentProps> = ({
           label="Start Date & Time"
           isRequired
           granularity="minute"
-          value={startDateTime ? parseDateTime(startDateTime) : null}
+          value={safeParseDateTimeString(startDateTime)}
           onChange={(date) => onChange({ startDateTime: date?.toString() || '' })}
         />
 
@@ -224,9 +245,9 @@ export const EventInfoComponent: React.FC<EventInfoComponentProps> = ({
           label="End Date & Time"
           isRequired
           granularity="minute"
-          value={endDateTime ? parseDateTime(endDateTime) : null}
+          value={safeParseDateTimeString(endDateTime)}
           onChange={(date) => onChange({ endDateTime: date?.toString() || '' })}
-          minValue={startDateTime ? parseDateTime(startDateTime) : undefined}
+          minValue={safeParseDateTimeString(startDateTime) || undefined}
         />
 
         <ComboBox

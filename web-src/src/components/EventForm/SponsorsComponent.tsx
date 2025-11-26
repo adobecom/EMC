@@ -14,6 +14,7 @@ import {
 } from '@adobe/react-spectrum'
 import { SponsorData } from '../../types/domain'
 import { ImageUploader } from '../shared'
+import { TYPOGRAPHY } from '../../styles/designSystem'
 import Add from '@spectrum-icons/workflow/Add'
 import Delete from '@spectrum-icons/workflow/Delete'
 
@@ -37,7 +38,7 @@ export const SponsorsComponent: React.FC<SponsorsComponentProps> = ({
   return (
     <Flex direction="column" gap="size-200">
       <Flex justifyContent="space-between" alignItems="center">
-        <Heading level={3}>Sponsors & Partners</Heading>
+        <Heading level={3} UNSAFE_style={TYPOGRAPHY.COMPONENT_HEADING}>Sponsors & Partners</Heading>
         <Button variant="primary" onPress={onAddSponsor}>
           <Add />
           <Text>Add Sponsor</Text>

@@ -157,6 +157,67 @@ export const COLORS = {
 } as const
 
 // ============================================================
+// Typography
+// ============================================================
+
+/**
+ * Typography styles for consistent text styling across the app
+ */
+export const TYPOGRAPHY = {
+  /**
+   * Step heading - main heading for each wizard step
+   * Used in FormWizard for step titles like "Add Content", "Additional Info"
+   */
+  STEP_HEADING: {
+    color: COLORS.ADOBE_RED,
+    fontSize: '24px',
+    lineHeight: '30px',
+    fontWeight: 900,
+  },
+  
+  /**
+   * Component heading - main heading for each component section
+   * Used for headings like "Event Information", "Venue Information", etc.
+   */
+  COMPONENT_HEADING: {
+    color: COLORS.BLACK,
+    fontSize: '28px',
+    lineHeight: '35px',
+    fontWeight: 700,
+  },
+  
+  /**
+   * Subsection heading - smaller heading within components
+   */
+  SUBSECTION_HEADING: {
+    color: COLORS.GRAY_800,
+    fontSize: '18px',
+    lineHeight: '24px',
+    fontWeight: 700,
+  },
+  
+  /**
+   * Field label style
+   */
+  FIELD_LABEL: {
+    color: COLORS.GRAY_800,
+    fontSize: '14px',
+    lineHeight: '20px',
+    fontWeight: 600,
+  },
+  
+  /**
+   * Helper/description text
+   */
+  HELPER_TEXT: {
+    color: COLORS.GRAY_600,
+    fontSize: '12px',
+    lineHeight: '16px',
+    fontWeight: 400,
+  },
+} as const
+
+// ============================================================
 // Border Styles
 // ============================================================
 

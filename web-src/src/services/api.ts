@@ -625,14 +625,25 @@ class ApiService {
   }
 
   /**
-   * Get full event details with speakers, sponsors, and venues
+   * Get single event by ID
+   */
+  async getEventExternal(eventId: string): Promise<any | ErrorResponse> {
+    validateString(eventId, 'event ID')
+    return this.callExternalApi('esp', `/v1/events/${eventId}`, 'GET', undefined,
+      { operationName: `getEvent(${eventId})`, shouldReturnFullResponse: true }
+    )
+  }
+
+  /**
+   * Get full event details with hydrated speakers, sponsors, and venues
+   * Speakers and sponsors are hydrated from the series level for complete data
    */
   async getEventFull(eventId: string): Promise<any | ErrorResponse> {
     validateString(eventId, 'eventId')
 
     const token = tokenStorage.getValidToken()
     if (!token) {
-      console.warn('⚠️ No valid authentication token for getEvent')
+      console.warn('⚠️ No valid authentication token for getEventFull')
       return { status: 'No Token', error: 'No valid authentication token' }
     }
 
@@ -642,11 +653,13 @@ class ApiService {
       const host = getApiHost('esp', env)
       const url = `${host}/v1/events/${encodeURIComponent(eventId)}`
 
-      const [eventResp, speakersResp, sponsorsResp, venuesResp] = await Promise.all([
+      // First, get the event and event-level speakers/sponsors/venues/images
+      const [eventResp, eventSpeakersResp, eventSponsorsResp, venuesResp, imagesResp] = await Promise.all([
         safeFetch(url, { method: 'GET', headers: headers as any }),
         safeFetch(`${url}/speakers`, { method: 'GET', headers: headers as any }),
         safeFetch(`${url}/sponsors`, { method: 'GET', headers: headers as any }),
         safeFetch(`${url}/venues`, { method: 'GET', headers: headers as any }),
+        safeFetch(`${url}/images`, { method: 'GET', headers: headers as any }),
       ])
 
       let data: any = {}
@@ -658,19 +671,86 @@ class ApiService {
         return { status: eventResp.status, error: 'Failed to get event details' }
       }
 
-      if (speakersResp.ok) {
-        const speakersData = await speakersResp.json()
-        data.speakers = speakersData.speakers.sort((a: any, b: any) => a.ordinal - b.ordinal)
+      const seriesId = data.seriesId
+
+      // Get event-level speaker/sponsor references
+      let eventSpeakers: any[] = []
+      let eventSponsors: any[] = []
+
+      if (eventSpeakersResp.ok) {
+        const speakersData = await eventSpeakersResp.json()
+        eventSpeakers = speakersData.speakers || []
       }
 
-      if (sponsorsResp.ok) {
-        const sponsorsData = await sponsorsResp.json()
-        data.sponsors = sponsorsData.sponsors
+      if (eventSponsorsResp.ok) {
+        const sponsorsData = await eventSponsorsResp.json()
+        eventSponsors = sponsorsData.sponsors || []
       }
 
+      // Hydrate speakers from series level if we have a seriesId
+      if (seriesId && eventSpeakers.length > 0) {
+        const hydratedSpeakers = await Promise.all(
+          eventSpeakers.map(async (eventSpeaker: any) => {
+            const speakerId = eventSpeaker.speakerId
+            if (!speakerId) return eventSpeaker
+
+            try {
+              const speakerUrl = `${host}/v1/series/${seriesId}/speakers/${speakerId}`
+              const speakerResp = await safeFetch(speakerUrl, { method: 'GET', headers: headers as any })
+              
+              if (speakerResp.ok) {
+                const fullSpeaker = await speakerResp.json()
+                // Merge event-level data (like ordinal) with series-level data
+                return { ...fullSpeaker, ...eventSpeaker, ...fullSpeaker }
+              }
+            } catch (err) {
+              console.warn(`Failed to hydrate speaker ${speakerId}:`, err)
+            }
+            return eventSpeaker
+          })
+        )
+        data.speakers = hydratedSpeakers.sort((a: any, b: any) => (a.ordinal || 0) - (b.ordinal || 0))
+      } else {
+        data.speakers = eventSpeakers
+      }
+
+      // Hydrate sponsors from series level if we have a seriesId
+      if (seriesId && eventSponsors.length > 0) {
+        const hydratedSponsors = await Promise.all(
+          eventSponsors.map(async (eventSponsor: any) => {
+            const sponsorId = eventSponsor.sponsorId
+            if (!sponsorId) return eventSponsor
+
+            try {
+              const sponsorUrl = `${host}/v1/series/${seriesId}/sponsors/${sponsorId}`
+              const sponsorResp = await safeFetch(sponsorUrl, { method: 'GET', headers: headers as any })
+              
+              if (sponsorResp.ok) {
+                const fullSponsor = await sponsorResp.json()
+                // Merge event-level data with series-level data
+                return { ...fullSponsor, ...eventSponsor, ...fullSponsor }
+              }
+            } catch (err) {
+              console.warn(`Failed to hydrate sponsor ${sponsorId}:`, err)
+            }
+            return eventSponsor
+          })
+        )
+        data.sponsors = hydratedSponsors
+      } else {
+        data.sponsors = eventSponsors
+      }
+
+      // Get venue
       if (venuesResp.ok) {
         const venuesData = await venuesResp.json()
         data.venue = venuesData.venues?.[0]
+      }
+
+      // Get images
+      if (imagesResp.ok) {
+        const imagesData = await imagesResp.json()
+        data.images = imagesData.images || []
       }
 
       return data

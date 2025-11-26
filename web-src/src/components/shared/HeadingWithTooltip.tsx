@@ -1,6 +1,7 @@
 import React from 'react'
 import { Flex, Heading, TooltipTrigger, Tooltip, ActionButton } from '@adobe/react-spectrum'
 import Info from '@spectrum-icons/workflow/Info'
+import { TYPOGRAPHY } from '../../styles/designSystem'
 
 interface HeadingWithTooltipProps {
   /**
@@ -15,6 +16,7 @@ interface HeadingWithTooltipProps {
   
   /**
    * The heading level (1-6)
+   * Level 3 is styled as a step heading (red, 24px, bold)
    */
   level?: 1 | 2 | 3 | 4 | 5 | 6
   
@@ -29,6 +31,15 @@ interface HeadingWithTooltipProps {
   UNSAFE_style?: React.CSSProperties
 }
 
+/**
+ * Get heading styles based on level
+ * Level 3 uses component heading styles from design system
+ */
+const getHeadingStyles = (level: number, customStyles?: React.CSSProperties): React.CSSProperties => {
+  const baseStyles = level === 3 ? TYPOGRAPHY.COMPONENT_HEADING : {}
+  return { ...baseStyles, ...customStyles }
+}
+
 export const HeadingWithTooltip: React.FC<HeadingWithTooltipProps> = ({
   children,
   tooltip,
@@ -36,13 +47,15 @@ export const HeadingWithTooltip: React.FC<HeadingWithTooltipProps> = ({
   marginBottom,
   UNSAFE_style
 }) => {
+  const headingStyles = getHeadingStyles(level, UNSAFE_style)
+  
   // If no tooltip provided, just render the heading
   if (!tooltip) {
     return (
       <Heading 
         level={level} 
         marginBottom={marginBottom}
-        UNSAFE_style={UNSAFE_style}
+        UNSAFE_style={headingStyles}
       >
         {children}
       </Heading>
@@ -58,7 +71,7 @@ export const HeadingWithTooltip: React.FC<HeadingWithTooltipProps> = ({
     >
       <Heading 
         level={level}
-        UNSAFE_style={UNSAFE_style}
+        UNSAFE_style={headingStyles}
       >
         {children}
       </Heading>

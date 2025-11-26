@@ -10,6 +10,7 @@ import {
 } from '@adobe/react-spectrum'
 import { EventImageData } from '../../types/domain'
 import { ImageUploader } from '../shared'
+import { TYPOGRAPHY } from '../../styles/designSystem'
 
 interface EventImagesComponentProps {
   images: EventImageData[]
@@ -36,13 +37,17 @@ export const EventImagesComponent: React.FC<EventImagesComponentProps> = ({
   }
 
   const handleImageRemove = (imageKind: string) => {
-    const filtered = images.filter((img) => img.imageKind !== imageKind)
+    // Handle venue image which can have multiple kinds
+    const kindsToRemove = imageKind === 'venue-map-image' 
+      ? ['venue-map-image', 'venue-image'] 
+      : [imageKind]
+    const filtered = images.filter((img) => !kindsToRemove.includes(img.imageKind))
     onUpdateImages(filtered)
   }
 
   return (
     <Flex direction="column" gap="size-300">
-      <Heading level={3}>Event Images</Heading>
+      <Heading level={3} UNSAFE_style={TYPOGRAPHY.COMPONENT_HEADING}>Event Images</Heading>
       <Text>
         Add images for your event. These images will be displayed on the event page and listing.
       </Text>
@@ -77,19 +82,19 @@ export const EventImagesComponent: React.FC<EventImagesComponentProps> = ({
         onRemove={() => handleImageRemove('event-card-image')}
       />
 
-      {/* Venue Image */}
+      {/* Venue Image - handles both 'venue-image' and 'venue-map-image' kinds */}
       <ImageUploader
         label="Venue Image"
-        imageUrl={images?.find((img) => img.imageKind === 'venue-image')?.imageUrl}
-        imageId={images?.find((img) => img.imageKind === 'venue-image')?.imageId}
-        imageKind="venue-image"
+        imageUrl={images?.find((img) => img.imageKind === 'venue-map-image' || img.imageKind === 'venue-image')?.imageUrl}
+        imageId={images?.find((img) => img.imageKind === 'venue-map-image' || img.imageKind === 'venue-image')?.imageId}
+        imageKind="venue-map-image"
         altText="Venue image"
         eventId={eventId}
         description="Image of the event venue location"
         recommendedDimensions="1920px x 1080px"
         maxSizeMB={25}
-        onChange={(imageUrl, imageId) => handleImageChange('venue-image', imageUrl, imageId)}
-        onRemove={() => handleImageRemove('venue-image')}
+        onChange={(imageUrl, imageId) => handleImageChange('venue-map-image', imageUrl, imageId)}
+        onRemove={() => handleImageRemove('venue-map-image')}
       />
     </Flex>
   )

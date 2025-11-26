@@ -21,6 +21,55 @@ import { FormWizard, WizardStep, LoadingSpinner, FormCard } from './shared'
 import { EventFormatComponent, EventTagsComponent, EventInfoComponent, AgendaComponent, VenueComponent, ProfilesComponent, SponsorsComponent, EventImagesComponent, RegistrationConfigComponent } from './EventForm/index'
 import { detectSocialPlatform } from '../utils/socialPlatformDetector'
 
+/**
+ * Get a localized value from an object, falling back to direct property
+ * Checks localizations[locale].fieldName first, then direct fieldName
+ */
+function getLocalizedValue(obj: any, fieldName: string, locale: string): any {
+  // Check localized value first
+  const localized = obj?.localizations?.[locale]?.[fieldName]
+  if (localized !== undefined && localized !== null && localized !== '') {
+    return localized
+  }
+  // Fall back to direct property
+  return obj?.[fieldName]
+}
+
+/**
+ * Map API speaker data to ProfileData format
+ * Extracts localized values from the correct locale
+ */
+function mapSpeakersToProfiles(speakers: any[], locale: string = 'en-US'): ProfileData[] {
+  return speakers.map(speaker => ({
+    type: speaker.speakerType === 'host' ? 'host' : 'speaker',
+    firstName: getLocalizedValue(speaker, 'firstName', locale) || speaker.firstName || '',
+    lastName: getLocalizedValue(speaker, 'lastName', locale) || speaker.lastName || '',
+    title: getLocalizedValue(speaker, 'title', locale) || speaker.title || '',
+    bio: getLocalizedValue(speaker, 'bio', locale) || speaker.bio || '',
+    imageUrl: speaker.photo?.imageUrl || speaker.imageUrl || '',
+    imageId: speaker.photo?.imageId || speaker.imageId || '',
+    socialLinks: (speaker.socialLinks || []).map((link: any) => ({
+      url: link.url || link,
+      platform: detectSocialPlatform(link.url || link)?.platform
+    }))
+  }))
+}
+
+/**
+ * Map API sponsor data to SponsorData format
+ * Extracts localized values from the correct locale
+ */
+function mapSponsorsToFormData(sponsors: any[], locale: string = 'en-US'): SponsorData[] {
+  return sponsors.map((sponsor, index) => ({
+    id: sponsor.sponsorId || `sponsor-${index}`,
+    partnerName: getLocalizedValue(sponsor, 'name', locale) || sponsor.name || sponsor.partnerName || '',
+    partnerUrl: getLocalizedValue(sponsor, 'link', locale) || sponsor.link || sponsor.partnerUrl || '',
+    imageUrl: sponsor.image?.imageUrl || sponsor.imageUrl || '',
+    imageId: sponsor.image?.imageId || sponsor.imageId || '',
+    isSaved: true // Already saved since it came from API
+  }))
+}
+
 interface EventFormProps {
   ims: IMS
 }
@@ -88,46 +137,104 @@ export const EventForm: React.FC<EventFormProps> = ({ ims }) => {
   const loadEvent = async (eventId: string) => {
     setIsLoading(true)
     try {
-      const response = await apiService.getEvent(eventId)
-      if (response.success && response.data) {
-        const event = response.data
-        
-        // Map the loaded event to form data
-        setFormData({
-          cloudType: (event.metadata?.cloudType as 'CreativeCloud' | 'ExperienceCloud') || 'CreativeCloud',
-          seriesId: event.seriesId,
-          organizationId: event.organizationId,
-          name: event.name,
-          urlTitle: event.metadata?.urlTitle || '',
-          description: event.description,
-          shortDescription: event.metadata?.shortDescription || '',
-          language: event.metadata?.language || 'en',
-          isPrivate: event.metadata?.isPrivate || false,
-          tags: event.metadata?.tags || [],
-          startDateTime: event.startDateTime,
-          endDateTime: event.endDateTime,
-          timezone: event.metadata?.timezone,
-          venue: event.metadata?.venue || formData.venue,
-          capacity: event.capacity,
-          status: event.status,
-          registrationOpen: event.registrationOpen,
-          allowWaitlist: event.metadata?.allowWaitlist || false,
-          allowGuestRegistration: event.metadata?.allowGuestRegistration || false,
-          hostEmail: event.metadata?.hostEmail || '',
-          rsvpDescription: event.metadata?.rsvpDescription || '',
-          registrationType: event.metadata?.registrationType || 'ESP',
-          marketoFormUrl: event.metadata?.marketoFormUrl || '',
-          visibleRsvpFields: event.metadata?.visibleRsvpFields || [],
-          requiredRsvpFields: event.metadata?.requiredRsvpFields || [],
-          images: event.metadata?.images || [],
-          profiles: event.metadata?.profiles || [],
-          communityForumUrl: event.metadata?.communityForumUrl || '',
-          secondaryLinkTitle: event.metadata?.secondaryLinkTitle || '',
-          agendaItems: event.metadata?.agendaItems || [],
-          showAgendaPostEvent: event.metadata?.showAgendaPostEvent || false,
-          sponsors: event.metadata?.sponsors || []
-        })
+      // Get full event data including speakers, sponsors, and venue
+      const response = await apiService.getEventFull(eventId)
+      
+      // Check if response is an error
+      if ('error' in response) {
+        console.error('Failed to load event:', response)
+        setError('Failed to load event data')
+        return
       }
+      
+      const event = response
+      const locale = event.defaultLocale || 'en-US'
+      const localized = event.localizations?.[locale] || {}
+      
+      // Parse tags from comma-separated CAAS tag string to array
+      const parsedTags = event.tags 
+        ? event.tags.split(',').map((tag: string) => ({
+            name: tag.split('/').pop() || tag,
+            caasId: tag.trim()
+          }))
+        : []
+      
+      // Parse agenda items from localizations
+      const agendaItems = (localized.agenda || []).map((item: any, index: number) => ({
+        id: `agenda-${index}`,
+        title: item.title || '',
+        description: item.description || '',
+        startDateTime: item.startTime 
+          ? `${event.localStartDate}T${item.startTime}` 
+          : '',
+        endDateTime: item.endTime 
+          ? `${event.localStartDate}T${item.endTime}` 
+          : ''
+      }))
+      
+      // Parse secondary link (CTA) from localizations
+      const cta = localized.cta?.[0]
+      
+      // Map venue data if present
+      const venueData = event.venue ? {
+        venueName: event.venue.venueName || '',
+        formattedAddress: event.venue.address || '',
+        placeId: event.venue.placeId,
+        coordinates: event.venue.coordinates,
+        gmtOffset: event.gmtOffset,
+        additionalInformation: event.venue.additionalInfo || '',
+        venueImageUrl: event.venue.imageUrl,
+        venueImageId: event.venue.imageId,
+        showVenuePostEvent: event.showVenuePostEvent ?? true,
+        showAdditionalInfoPostEvent: event.showVenueAdditionalInfoPostEvent ?? true
+      } : formData.venue
+      
+      // Map the loaded event to form data
+      setFormData({
+        // Basic info
+        cloudType: (event.cloudType as 'CreativeCloud' | 'ExperienceCloud') || 'CreativeCloud',
+        seriesId: event.seriesId || '',
+        organizationId: formData.organizationId,
+        name: event.enTitle || localized.title || '',
+        urlTitle: event.detailPagePath?.split('/').slice(-5, -4).join('/') || '',
+        description: localized.eventDetails || '',
+        shortDescription: localized.description || '',
+        language: locale.split('-')[0] || 'en',
+        isPrivate: event.isPrivate || false,
+        
+        // Tags
+        tags: parsedTags,
+        
+        // Date & Time
+        startDateTime: event.startDate || '',
+        endDateTime: event.endDate || '',
+        timezone: event.timezone,
+        
+        // Venue
+        venue: venueData,
+        
+        // Registration
+        capacity: event.attendeeLimit,
+        status: event.published ? 'published' : 'draft',
+        registrationOpen: true,
+        allowWaitlist: event.allowWaitlisting || false,
+        allowGuestRegistration: event.allowGuestRegistration || false,
+        hostEmail: event.hostEmail || '',
+        rsvpDescription: localized.rsvpDescription || '',
+        registrationType: event.registration?.type || 'ESP',
+        marketoFormUrl: event.registration?.marketoFormUrl || '',
+        visibleRsvpFields: event.rsvpFormFields?.visible || [],
+        requiredRsvpFields: event.rsvpFormFields?.required || [],
+        
+        // Content
+        images: event.images || [],
+        profiles: mapSpeakersToProfiles(event.speakers || [], locale),
+        communityForumUrl: cta?.url || '',
+        secondaryLinkTitle: cta?.label || '',
+        agendaItems: agendaItems,
+        showAgendaPostEvent: event.showAgendaPostEvent || false,
+        sponsors: mapSponsorsToFormData(event.sponsors || [], locale)
+      })
     } catch (err) {
       console.error('Failed to load event:', err)
       setError('Failed to load event data')

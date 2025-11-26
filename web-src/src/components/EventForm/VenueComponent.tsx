@@ -12,6 +12,7 @@ import {
   TextField
 } from '@adobe/react-spectrum'
 import { RichTextEditor, ImageUploader } from '../shared'
+import { TYPOGRAPHY } from '../../styles/designSystem'
 import { VenueData } from '../../types/domain'
 import { loadGooglePlacesAPI } from '../../utils/loadGooglePlaces'
 import '../../../src/types/google-places.d.ts'
@@ -133,7 +134,7 @@ export const VenueComponent: React.FC<VenueComponentProps> = ({
 
   return (
     <Flex direction="column" gap="size-200">
-      <Heading level={3}>Venue Information</Heading>
+      <Heading level={3} UNSAFE_style={TYPOGRAPHY.COMPONENT_HEADING}>Venue Information</Heading>
 
       {/* Venue Name with Google Places Autocomplete */}
       <View width="100%">

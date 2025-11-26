@@ -20,7 +20,8 @@ import {
   SIDE_NAV_STICKY_STYLES, 
   SCROLLABLE_CONTENT_STYLES, 
   FIXED_ACTION_BAR_STYLES,
-  COLORS
+  COLORS,
+  TYPOGRAPHY
 } from '../../styles/designSystem'
 
 export interface WizardStep {
@@ -366,7 +367,7 @@ export const FormWizard: React.FC<FormWizardProps> = ({
     <View>
       {/* Step title and description */}
       <View marginBottom="size-300">
-        <Heading level={2}>{currentStep.title}</Heading>
+        <Heading level={2} UNSAFE_style={TYPOGRAPHY.STEP_HEADING}>{currentStep.title}</Heading>
         {currentStep.description && (
           <Text marginTop="size-100">{currentStep.description}</Text>
         )}

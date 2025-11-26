@@ -170,25 +170,32 @@ export const ImageUploader: React.FC<ImageUploaderProps> = ({
           borderWidth="thin"
           borderColor="default"
           borderRadius="medium"
-          padding="size-200"
-          UNSAFE_style={{ position: 'relative' }}
+          UNSAFE_style={{ position: 'relative', overflow: 'hidden' }}
         >
           <img 
             src={imageUrl} 
             alt={altText || label}
             style={{ 
-              maxWidth: '100%', 
+              width: '100%', 
               maxHeight: '300px', 
               display: 'block',
-              margin: '0 auto'
+              objectFit: 'cover'
             }}
           />
-          <Flex justifyContent="end" marginTop="size-100">
-            <ActionButton onPress={handleRemove} isQuiet>
-              <Delete />
-              <Text>Remove</Text>
-            </ActionButton>
-          </Flex>
+          <ActionButton 
+            onPress={handleRemove} 
+            isQuiet
+            aria-label="Remove image"
+            UNSAFE_style={{
+              position: 'absolute',
+              top: '8px',
+              right: '8px',
+              backgroundColor: 'rgba(255, 255, 255, 0.9)',
+              borderRadius: '4px'
+            }}
+          >
+            <Delete />
+          </ActionButton>
         </View>
       ) : (
         // Show dropzone

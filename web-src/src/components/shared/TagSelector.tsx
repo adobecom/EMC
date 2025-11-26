@@ -94,6 +94,37 @@ export const TagSelector: React.FC<TagSelectorProps> = ({
     groupSelectedTags()
   }, [selectedTags])
 
+  // Enrich selected tags with proper names from Chimera data
+  // This handles tags loaded from API that only have caasId
+  useEffect(() => {
+    if (availableTags.length === 0 || selectedTags.length === 0) return
+
+    const enrichedTags = selectedTags.map(selectedTag => {
+      // If tag already has a proper name (not just the path segment), keep it
+      if (selectedTag.name && !selectedTag.name.includes('/')) {
+        // Check if we can find a better name from available tags
+        const matchingTag = availableTags.find(t => t.caasId === selectedTag.caasId)
+        if (matchingTag && matchingTag.name !== selectedTag.name) {
+          return { ...selectedTag, name: matchingTag.name }
+        }
+      }
+      
+      // Look up the tag by caasId to get proper display name
+      const matchingTag = availableTags.find(t => t.caasId === selectedTag.caasId)
+      if (matchingTag) {
+        return { ...selectedTag, name: matchingTag.name }
+      }
+      
+      return selectedTag
+    })
+
+    // Only update if names have actually changed
+    const hasChanges = enrichedTags.some((tag, i) => tag.name !== selectedTags[i].name)
+    if (hasChanges) {
+      onChange(enrichedTags)
+    }
+  }, [availableTags]) // Only run when availableTags loads
+
 
   const extractTagsRecursively = (tagsObj: Record<string, CaasTag>, result: EventTag[]) => {
     Object.values(tagsObj).forEach(tag => {
@@ -110,6 +141,17 @@ export const TagSelector: React.FC<TagSelectorProps> = ({
     })
   }
 
+  /**
+   * Format a path segment into a readable name
+   * e.g., "product-categories" -> "Product Categories"
+   */
+  const formatPathSegment = (segment: string): string => {
+    return segment
+      .split('-')
+      .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+      .join(' ')
+  }
+
   const groupTagsByParent = (tags: EventTag[]): TagGroup[] => {
     const groupMap = new Map<string, EventTag[]>()
 
@@ -124,18 +166,18 @@ export const TagSelector: React.FC<TagSelectorProps> = ({
       // Strip "caas:" prefix if present
       const cleanPath = tag.caasId.replace(/^caas:/, '')
       
-      // Get parent path by removing the last segment
+      // Get parent path by removing the last segment (the tag itself)
       const pathParts = cleanPath.split('/')
       let groupName = 'Base Tags'
       
       if (pathParts.length > 1) {
-        // Use the second-to-last segment as the group name
-        const parentSegment = pathParts[pathParts.length - 2]
-        // Capitalize and format the group name
-        groupName = parentSegment
-          .split('-')
-          .map(word => word.charAt(0).toUpperCase() + word.slice(1))
-          .join(' ')
+        // Build the full lineage path (all parents except the tag itself)
+        const parentParts = pathParts.slice(0, -1)
+        
+        // Format each segment and join with " > " for clear hierarchy
+        groupName = parentParts
+          .map(formatPathSegment)
+          .join(' > ')
       }
 
       const existing = groupMap.get(groupName) || []
