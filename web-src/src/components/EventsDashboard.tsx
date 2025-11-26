@@ -638,7 +638,7 @@ export const EventsDashboard: React.FC<EventsDashboardProps> = () => {
     {
       key: 'manage',
       name: 'MANAGE',
-      width: 100,
+      width: 190,
       sortable: false,
       render: (item) => (
         <MenuTrigger>
