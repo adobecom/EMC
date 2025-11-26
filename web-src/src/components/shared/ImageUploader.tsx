@@ -8,7 +8,6 @@ import {
   Flex,
   Text,
   ProgressCircle,
-  Button,
   ActionButton
 } from '@adobe/react-spectrum'
 import Delete from '@spectrum-icons/workflow/Delete'
@@ -27,6 +26,7 @@ interface ImageUploaderProps {
   description?: string
   maxSizeMB?: number
   recommendedDimensions?: string
+  width?: string | number
   onChange: (imageUrl: string, imageId: string) => void
   onRemove?: () => void
 }
@@ -41,6 +41,7 @@ export const ImageUploader: React.FC<ImageUploaderProps> = ({
   description,
   maxSizeMB = 25,
   recommendedDimensions,
+  width,
   onChange,
   onRemove
 }) => {
@@ -152,8 +153,10 @@ export const ImageUploader: React.FC<ImageUploaderProps> = ({
     setError(null)
   }
 
+  const containerWidth = width ?? '100%'
+
   return (
-    <View width="100%">
+    <View UNSAFE_style={{ width: typeof containerWidth === 'number' ? `${containerWidth}px` : containerWidth }}>
       <Text UNSAFE_style={{ fontWeight: 'bold', marginBottom: '8px', display: 'block' }}>
         {label}
       </Text>
@@ -177,9 +180,8 @@ export const ImageUploader: React.FC<ImageUploaderProps> = ({
             alt={altText || label}
             style={{ 
               width: '100%', 
-              maxHeight: '300px', 
-              display: 'block',
-              objectFit: 'cover'
+              height: 'auto',
+              display: 'block'
             }}
           />
           <ActionButton 
@@ -198,24 +200,24 @@ export const ImageUploader: React.FC<ImageUploaderProps> = ({
           </ActionButton>
         </View>
       ) : (
-        // Show dropzone
-        <View
+        // Show dropzone - entire area is clickable and droppable
+        <div
           onDragOver={handleDragOver}
           onDragLeave={handleDragLeave}
           onDrop={handleDrop}
-          borderRadius="medium"
-          padding="size-400"
-          UNSAFE_style={{
+          onClick={isUploading ? undefined : handleBrowseClick}
+          style={{
             border: isDragging 
               ? '2px dashed var(--spectrum-global-color-blue-600)' 
               : '2px dotted var(--spectrum-global-color-gray-500)',
             backgroundColor: isDragging 
               ? 'var(--spectrum-global-color-blue-100)' 
               : 'transparent',
-            cursor: 'pointer',
-            transition: 'all 0.2s ease'
+            cursor: isUploading ? 'default' : 'pointer',
+            transition: 'all 0.2s ease',
+            borderRadius: '4px',
+            padding: '32px'
           }}
-          UNSAFE_className="image-dropzone"
         >
           {isUploading ? (
             <Flex direction="column" alignItems="center" gap="size-200">
@@ -227,25 +229,21 @@ export const ImageUploader: React.FC<ImageUploaderProps> = ({
               <Text>Uploading... {Math.round(uploadProgress)}%</Text>
             </Flex>
           ) : (
-            <Flex direction="column" alignItems="center" gap="size-200">
-              <ImageAdd size="XXL" UNSAFE_style={{ color: 'var(--spectrum-global-color-gray-700)' }} />
-              <Text UNSAFE_style={{ fontSize: '16px', fontWeight: 'bold', color: 'var(--spectrum-global-color-gray-700)' }}>
-                Drag and drop an image here
-              </Text>
+            <Flex direction="column" alignItems="center" gap="size-150">
+              <ImageAdd size="XXL" UNSAFE_style={{ color: 'var(--spectrum-global-color-gray-600)' }} />
               <Text UNSAFE_style={{ fontSize: '14px', color: 'var(--spectrum-global-color-gray-700)' }}>
-                or
+                Drop image here or click to browse
               </Text>
-              <Button variant="secondary" onPress={handleBrowseClick}>
-                Browse Files
-              </Button>
-              {recommendedDimensions && (
-                <Text UNSAFE_style={{ fontSize: '12px', color: 'var(--spectrum-global-color-gray-600)' }}>
-                  Recommended: {recommendedDimensions}
+              <Flex direction="column" alignItems="center" gap="size-50">
+                {recommendedDimensions && (
+                  <Text UNSAFE_style={{ fontSize: '12px', color: 'var(--spectrum-global-color-gray-500)' }}>
+                    {recommendedDimensions}
+                  </Text>
+                )}
+                <Text UNSAFE_style={{ fontSize: '12px', color: 'var(--spectrum-global-color-gray-500)' }}>
+                  Max {maxSizeMB}MB
                 </Text>
-              )}
-              <Text UNSAFE_style={{ fontSize: '12px', color: 'var(--spectrum-global-color-gray-600)' }}>
-                Maximum file size: {maxSizeMB}MB
-              </Text>
+              </Flex>
             </Flex>
           )}
           
@@ -256,7 +254,7 @@ export const ImageUploader: React.FC<ImageUploaderProps> = ({
             onChange={handleFileInputChange}
             style={{ display: 'none' }}
           />
-        </View>
+        </div>
       )}
 
       {error && (

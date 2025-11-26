@@ -59,6 +59,7 @@ export const EventImagesComponent: React.FC<EventImagesComponentProps> = ({
         description="Main banner image displayed at the top of the event page"
         recommendedDimensions="1920px x 1080px"
         maxSizeMB={25}
+        width={600}
         onChange={(imageUrl, imageId) => handleImageChange('event-hero-image', imageUrl, imageId)}
         onRemove={() => handleImageRemove('event-hero-image')}
       />
@@ -74,6 +75,7 @@ export const EventImagesComponent: React.FC<EventImagesComponentProps> = ({
         description="Thumbnail image displayed in event listings and cards"
         recommendedDimensions="460px x 460px"
         maxSizeMB={10}
+        width={300}
         onChange={(imageUrl, imageId) => handleImageChange('event-card-image', imageUrl, imageId)}
         onRemove={() => handleImageRemove('event-card-image')}
       />
@@ -89,6 +91,7 @@ export const EventImagesComponent: React.FC<EventImagesComponentProps> = ({
         description="Image of the event venue location"
         recommendedDimensions="1920px x 1080px"
         maxSizeMB={25}
+        width={600}
         onChange={(imageUrl, imageId) => handleImageChange('venue-image', imageUrl, imageId)}
         onRemove={() => handleImageRemove('venue-image')}
       />

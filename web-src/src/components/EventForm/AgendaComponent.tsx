@@ -11,7 +11,8 @@ import {
   Button,
   Switch,
   ActionButton,
-  Heading
+  Heading,
+  Text
 } from '@adobe/react-spectrum'
 import { parseDateTime } from '@internationalized/date'
 import Add from '@spectrum-icons/workflow/Add'
@@ -156,8 +157,7 @@ export const AgendaComponent: React.FC<AgendaComponentProps> = ({
       {/* Agenda Items */}
       {agendaItems.length === 0 && (
         <View padding="size-200" backgroundColor="gray-100" borderRadius="medium">
-          <Heading level={4}>No agenda items yet</Heading>
-          <Flex marginTop="size-100">Click "Add agenda item" to add one.</Flex>
+          <Text>No agenda items added yet. Click "Add agenda item" to add one.</Text>
         </View>
       )}
 
