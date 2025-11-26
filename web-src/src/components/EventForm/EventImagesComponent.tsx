@@ -37,11 +37,7 @@ export const EventImagesComponent: React.FC<EventImagesComponentProps> = ({
   }
 
   const handleImageRemove = (imageKind: string) => {
-    // Handle venue image which can have multiple kinds
-    const kindsToRemove = imageKind === 'venue-map-image' 
-      ? ['venue-map-image', 'venue-image'] 
-      : [imageKind]
-    const filtered = images.filter((img) => !kindsToRemove.includes(img.imageKind))
+    const filtered = images.filter((img) => img.imageKind !== imageKind)
     onUpdateImages(filtered)
   }
 
@@ -82,19 +78,19 @@ export const EventImagesComponent: React.FC<EventImagesComponentProps> = ({
         onRemove={() => handleImageRemove('event-card-image')}
       />
 
-      {/* Venue Image - handles both 'venue-image' and 'venue-map-image' kinds */}
+      {/* Venue Image */}
       <ImageUploader
         label="Venue Image"
-        imageUrl={images?.find((img) => img.imageKind === 'venue-map-image' || img.imageKind === 'venue-image')?.imageUrl}
-        imageId={images?.find((img) => img.imageKind === 'venue-map-image' || img.imageKind === 'venue-image')?.imageId}
-        imageKind="venue-map-image"
+        imageUrl={images?.find((img) => img.imageKind === 'venue-image')?.imageUrl}
+        imageId={images?.find((img) => img.imageKind === 'venue-image')?.imageId}
+        imageKind="venue-image"
         altText="Venue image"
         eventId={eventId}
         description="Image of the event venue location"
         recommendedDimensions="1920px x 1080px"
         maxSizeMB={25}
-        onChange={(imageUrl, imageId) => handleImageChange('venue-map-image', imageUrl, imageId)}
-        onRemove={() => handleImageRemove('venue-map-image')}
+        onChange={(imageUrl, imageId) => handleImageChange('venue-image', imageUrl, imageId)}
+        onRemove={() => handleImageRemove('venue-image')}
       />
     </Flex>
   )
