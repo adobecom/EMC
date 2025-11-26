@@ -8,6 +8,7 @@ import { Flex, View } from '@adobe/react-spectrum'
 import { IMS } from '../types'
 import { UserPanel } from './UserPanel'
 import { DevTokenButton } from './DevTokenButton'
+import { STICKY_GNAV_STYLES } from '../styles/designSystem'
 
 interface TopNavProps {
   ims: IMS
@@ -21,6 +22,7 @@ const TopNav: React.FC<TopNavProps> = ({ ims }) => {
       borderBottomColor="gray-300"
       UNSAFE_className="top-nav"
       paddingX="size-300"
+      UNSAFE_style={STICKY_GNAV_STYLES}
     >
       <Flex 
         direction="row" 

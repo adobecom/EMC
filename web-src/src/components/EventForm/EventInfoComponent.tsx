@@ -52,6 +52,7 @@ interface EventInfoComponentProps {
   timezone: string
   communityForumUrl: string
   secondaryLinkTitle: string
+  isPrivate: boolean
   onChange: (data: {
     language?: string
     name?: string
@@ -63,6 +64,7 @@ interface EventInfoComponentProps {
     timezone?: string
     communityForumUrl?: string
     secondaryLinkTitle?: string
+    isPrivate?: boolean
   }) => void
 }
 
@@ -77,6 +79,7 @@ export const EventInfoComponent: React.FC<EventInfoComponentProps> = ({
   timezone,
   communityForumUrl,
   secondaryLinkTitle,
+  isPrivate,
   onChange
 }) => {
   const [hasSecondaryLink, setHasSecondaryLink] = useState(false)
@@ -90,6 +93,40 @@ export const EventInfoComponent: React.FC<EventInfoComponentProps> = ({
 
   return (
     <Flex direction="column" gap="size-200">
+      {/* Header Row: Title with tooltip on left, private toggle on right */}
+      <Flex direction="row" justifyContent="space-between" alignItems="center">
+        <HeadingWithTooltip 
+          level={3}
+          tooltip="Give your event a title, description, dates, and start/end times. If you have a related forum on community.adobe.com, create a CTA to it here."
+        >
+          Event Information
+        </HeadingWithTooltip>
+        
+        <Flex direction="row" alignItems="center" gap="size-100">
+          <Switch
+            isSelected={isPrivate}
+            onChange={(value) => onChange({ isPrivate: value })}
+          >
+            Set as a private event
+          </Switch>
+          <TooltipTrigger delay={0}>
+            <ActionButton 
+              isQuiet
+              UNSAFE_style={{ 
+                minWidth: 'auto',
+                padding: 0,
+                width: '20px',
+                height: '20px'
+              }}
+            >
+              <Info size="S" />
+            </ActionButton>
+            <Tooltip variant="info">By setting this to private, your event won't be publicly found online or published to the events hub.</Tooltip>
+          </TooltipTrigger>
+        </Flex>
+      </Flex>
+
+      {/* Form Fields */}
       <Picker
         label="Language"
         isRequired

@@ -5,35 +5,21 @@
 import React, { useState, useEffect } from 'react'
 import {
   View,
-  TextField,
-  Picker,
-  Item,
-  NumberField,
-  Switch,
   Flex,
-  Heading,
-  Text,
-  Button,
-  Divider,
-  TooltipTrigger,
-  Tooltip,
-  ActionButton
+  Text
 } from '@adobe/react-spectrum'
 import { useNavigate, useParams } from 'react-router-dom'
 import {
   EventFormData,
   ProfileData,
-  VenueData
+  VenueData,
+  SponsorData
 } from '../types/domain'
 import { apiService } from '../services/api'
 import { IMS } from '../types'
-import { FormWizard, WizardStep, LoadingSpinner, FormCard, RichTextEditor, TagSelector, HeadingWithTooltip, ImageUploader } from './shared'
-import Add from '@spectrum-icons/workflow/Add'
-import Delete from '@spectrum-icons/workflow/Delete'
-import Info from '@spectrum-icons/workflow/Info'
-import LinkOut from '@spectrum-icons/workflow/LinkOut'
-import { EventFormatComponent, EventInfoComponent, AgendaComponent, VenueComponent } from './EventForm/index'
-import { detectSocialPlatform, isValidUrl } from '../utils/socialPlatformDetector'
+import { FormWizard, WizardStep, LoadingSpinner, FormCard } from './shared'
+import { EventFormatComponent, EventTagsComponent, EventInfoComponent, AgendaComponent, VenueComponent, ProfilesComponent, SponsorsComponent, EventImagesComponent, RegistrationConfigComponent } from './EventForm/index'
+import { detectSocialPlatform } from '../utils/socialPlatformDetector'
 
 interface EventFormProps {
   ims: IMS
@@ -72,12 +58,19 @@ export const EventForm: React.FC<EventFormProps> = ({ ims }) => {
     registrationOpen: false,
     allowWaitlist: false,
     allowGuestRegistration: false,
+    hostEmail: '',
+    rsvpDescription: '',
+    registrationType: 'ESP',
+    marketoFormUrl: '',
+    visibleRsvpFields: [],
+    requiredRsvpFields: [],
     images: [],
     profiles: [],
     communityForumUrl: '',
     secondaryLinkTitle: '',
     agendaItems: [],
-    showAgendaPostEvent: false
+    showAgendaPostEvent: false,
+    sponsors: []
   })
   
   // UI state
@@ -120,12 +113,19 @@ export const EventForm: React.FC<EventFormProps> = ({ ims }) => {
           registrationOpen: event.registrationOpen,
           allowWaitlist: event.metadata?.allowWaitlist || false,
           allowGuestRegistration: event.metadata?.allowGuestRegistration || false,
+          hostEmail: event.metadata?.hostEmail || '',
+          rsvpDescription: event.metadata?.rsvpDescription || '',
+          registrationType: event.metadata?.registrationType || 'ESP',
+          marketoFormUrl: event.metadata?.marketoFormUrl || '',
+          visibleRsvpFields: event.metadata?.visibleRsvpFields || [],
+          requiredRsvpFields: event.metadata?.requiredRsvpFields || [],
           images: event.metadata?.images || [],
           profiles: event.metadata?.profiles || [],
           communityForumUrl: event.metadata?.communityForumUrl || '',
           secondaryLinkTitle: event.metadata?.secondaryLinkTitle || '',
           agendaItems: event.metadata?.agendaItems || [],
-          showAgendaPostEvent: event.metadata?.showAgendaPostEvent || false
+          showAgendaPostEvent: event.metadata?.showAgendaPostEvent || false,
+          sponsors: event.metadata?.sponsors || []
         })
       }
     } catch (err) {
@@ -166,12 +166,19 @@ export const EventForm: React.FC<EventFormProps> = ({ ims }) => {
           venue: formData.venue,
           allowWaitlist: formData.allowWaitlist,
           allowGuestRegistration: formData.allowGuestRegistration,
+          hostEmail: formData.hostEmail,
+          rsvpDescription: formData.rsvpDescription,
+          registrationType: formData.registrationType,
+          marketoFormUrl: formData.marketoFormUrl,
+          visibleRsvpFields: formData.visibleRsvpFields,
+          requiredRsvpFields: formData.requiredRsvpFields,
           images: formData.images,
           profiles: formData.profiles,
           communityForumUrl: formData.communityForumUrl,
           secondaryLinkTitle: formData.secondaryLinkTitle,
           agendaItems: formData.agendaItems,
-          showAgendaPostEvent: formData.showAgendaPostEvent
+          showAgendaPostEvent: formData.showAgendaPostEvent,
+          sponsors: formData.sponsors
         }
       }
 
@@ -194,7 +201,7 @@ export const EventForm: React.FC<EventFormProps> = ({ ims }) => {
   }
 
   const handleCancel = () => {
-    navigate('/resources')
+    navigate('/events')
   }
 
   const updateFormData = (updates: Partial<EventFormData>) => {
@@ -276,6 +283,47 @@ export const EventForm: React.FC<EventFormProps> = ({ ims }) => {
     })
   }
 
+  // Sponsor management
+  const addSponsor = () => {
+    const newSponsor: SponsorData = {
+      id: `sponsor-${Date.now()}`,
+      partnerName: '',
+      partnerUrl: '',
+      isSaved: false
+    }
+    setFormData((prev) => ({
+      ...prev,
+      sponsors: [...(prev.sponsors || []), newSponsor]
+    }))
+  }
+
+  const updateSponsor = (index: number, updates: Partial<SponsorData>) => {
+    setFormData((prev) => {
+      const sponsors = [...(prev.sponsors || [])]
+      sponsors[index] = { ...sponsors[index], ...updates, isSaved: false }
+      return { ...prev, sponsors }
+    })
+  }
+
+  const saveSponsor = async (index: number) => {
+    // Mark sponsor as saved (in real implementation, this would save to backend)
+    setFormData((prev) => {
+      const sponsors = [...(prev.sponsors || [])]
+      sponsors[index] = { ...sponsors[index], isSaved: true }
+      return { ...prev, sponsors }
+    })
+    
+    // You can add actual save logic here if needed
+    console.log('Sponsor saved:', formData.sponsors?.[index])
+  }
+
+  const removeSponsor = (index: number) => {
+    setFormData((prev) => ({
+      ...prev,
+      sponsors: (prev.sponsors || []).filter((_, i) => i !== index)
+    }))
+  }
+
   // ============================================================
   // STEP 1: Basic Info
   // Contains: Event Format, Tags, Event Info, Date/Time, Venue
@@ -309,70 +357,28 @@ export const EventForm: React.FC<EventFormProps> = ({ ims }) => {
 
       {/* Event Topics/Tags Component */}
       <FormCard>
-    <View>
-          <Heading level={3}>Tags & Topics</Heading>
-          <Text marginBottom="size-200">
-            Choose one or more tags from the Adobe CAAS taxonomy. This will add metadata to your event for better discoverability.
-          </Text>
-          
-          <TagSelector
-            selectedTags={formData.tags || []}
-            onChange={(tags) => updateFormData({ tags })}
-            description="Search and select tags to categorize your event"
-          />
-        </View>
+        <EventTagsComponent
+          selectedTags={formData.tags || []}
+          onChange={(tags) => updateFormData({ tags })}
+        />
       </FormCard>
 
       {/* Event Information Component */}
       <FormCard>
-        <Flex direction="column" gap="size-200">
-          {/* Header Row: Title with tooltip on left, private toggle on right */}
-          <Flex direction="row" justifyContent="space-between" alignItems="center">
-            <HeadingWithTooltip 
-              level={3}
-              tooltip="Give your event a title, description, dates, and start/end times. If you have a related forum on community.adobe.com, create a CTA to it here."
-            >
-              Event Information
-            </HeadingWithTooltip>
-            
-            <Flex direction="row" alignItems="center" gap="size-100">
-              <Switch
-                isSelected={formData.isPrivate}
-                onChange={(value) => updateFormData({ isPrivate: value })}
-              >
-                Set as a private event
-              </Switch>
-              <TooltipTrigger delay={0}>
-                <ActionButton 
-          isQuiet
-                  UNSAFE_style={{ 
-                    minWidth: 'auto',
-                    padding: 0,
-                    width: '20px',
-                    height: '20px'
-                  }}
-                >
-                  <Info size="S" />
-                </ActionButton>
-                <Tooltip variant="info">By setting this to private, your event won't be publicly found online or published to the events hub.</Tooltip>
-              </TooltipTrigger>
-            </Flex>
-          </Flex>
-
-          <EventInfoComponent
-            language={formData.language}
-            name={formData.name}
-            urlTitle={formData.urlTitle || ''}
-            description={formData.description || ''}
-            shortDescription={formData.shortDescription || ''}
-            startDateTime={formData.startDateTime}
-            endDateTime={formData.endDateTime}
-            timezone={formData.timezone || ''}
-            communityForumUrl={formData.communityForumUrl || ''}
-            secondaryLinkTitle={formData.secondaryLinkTitle || ''}
-            onChange={(data) => updateFormData(data)}
-          />
-        </Flex>
+        <EventInfoComponent
+          language={formData.language}
+          name={formData.name}
+          urlTitle={formData.urlTitle || ''}
+          description={formData.description || ''}
+          shortDescription={formData.shortDescription || ''}
+          startDateTime={formData.startDateTime}
+          endDateTime={formData.endDateTime}
+          timezone={formData.timezone || ''}
+          communityForumUrl={formData.communityForumUrl || ''}
+          secondaryLinkTitle={formData.secondaryLinkTitle || ''}
+          isPrivate={formData.isPrivate}
+          onChange={(data) => updateFormData(data)}
+        />
       </FormCard>
 
       {/* Agenda Component */}
@@ -403,294 +409,74 @@ export const EventForm: React.FC<EventFormProps> = ({ ims }) => {
   // ============================================================
   const step2Component = (
     <FormCard>
-      <Flex direction="column" gap="size-200">
-      <Flex justifyContent="space-between" alignItems="center">
-        <Heading level={3}>Speakers & Hosts</Heading>
-        <Button variant="primary" onPress={addProfile}>
-          <Add />
-          <Text>Add Profile</Text>
-        </Button>
-      </Flex>
-
-      <Text>Add speaker and event host details. Profiles will appear in the order they were entered.</Text>
-
-      {(!formData.profiles || formData.profiles.length === 0) && (
-        <View padding="size-200" backgroundColor="gray-100" borderRadius="medium">
-          <Text>No speakers or hosts added yet. Click "Add Profile" to add one.</Text>
-        </View>
-      )}
-
-      {formData.profiles && formData.profiles.map((profile, index) => (
-        <View key={index} padding="size-200" borderWidth="thin" borderColor="dark" borderRadius="medium">
-          <Flex justifyContent="space-between" alignItems="center" marginBottom="size-200">
-            <Heading level={4}>Profile {index + 1}</Heading>
-            <Button variant="negative" onPress={() => removeProfile(index)} isQuiet>
-              <Delete />
-            </Button>
-          </Flex>
-
-          <Flex direction="column" gap="size-150">
-            <Picker
-              label="Profile Type"
-              selectedKey={profile.type}
-              onSelectionChange={(key) => updateProfile(index, { type: key as 'speaker' | 'host' })}
-            >
-              <Item key="speaker">Speaker</Item>
-              <Item key="host">Host</Item>
-            </Picker>
-
-            <Flex direction="row" gap="size-150">
-              <TextField
-                label="First Name"
-                isQuiet
-                value={profile.firstName}
-                onChange={(value) => updateProfile(index, { firstName: value })}
-                width="50%"
-              />
-              <TextField
-                label="Last Name"
-                isQuiet
-                value={profile.lastName}
-                onChange={(value) => updateProfile(index, { lastName: value })}
-                width="50%"
-              />
-            </Flex>
-
-            <View width="100%" UNSAFE_style={{ maxWidth: '400px' }}>
-              <ImageUploader
-                label="Profile Image"
-                imageUrl={profile.imageUrl}
-                imageId={profile.imageId}
-                imageKind="profile-image"
-                altText={`${profile.firstName} ${profile.lastName}`}
-                eventId={id}
-                maxSizeMB={10}
-                onChange={(imageUrl, imageId) => {
-                  updateProfile(index, { 
-                    imageUrl: imageUrl, 
-                    imageId: imageId 
-                  })
-                }}
-                onRemove={() => {
-                  updateProfile(index, { 
-                    imageUrl: undefined, 
-                    imageId: undefined 
-                  })
-                }}
-              />
-            </View>
-
-            <TextField
-              label="Title"
-              isQuiet
-              value={profile.title}
-              onChange={(value) => updateProfile(index, { title: value })}
-            />
-
-            <RichTextEditor
-              label="Bio (Optional)"
-              value={profile.bio || ''}
-              onChange={(value) => updateProfile(index, { bio: value })}
-              height="200px"
-            />
-
-            {/* Social Links */}
-            <View marginTop="size-200">
-              <Flex justifyContent="space-between" alignItems="center" marginBottom="size-100">
-                <Text UNSAFE_style={{ fontWeight: 'bold' }}>Social Media Links</Text>
-                <ActionButton onPress={() => addSocialLink(index)} isQuiet>
-                  <Add />
-                  <Text>Add Link</Text>
-                </ActionButton>
-              </Flex>
-
-              {(!profile.socialLinks || profile.socialLinks.length === 0) && (
-                <Text UNSAFE_style={{ fontSize: '14px', color: 'var(--spectrum-global-color-gray-600)', fontStyle: 'italic' }}>
-                  No social media links added yet.
-                </Text>
-              )}
-
-              {profile.socialLinks && profile.socialLinks.map((socialLink, linkIndex) => {
-                const detectedPlatform = detectSocialPlatform(socialLink.url)
-                const isValid = isValidUrl(socialLink.url)
-                
-                return (
-                  <Flex key={linkIndex} gap="size-100" alignItems="center" marginTop="size-100">
-                    {/* Platform Icon/Indicator */}
-                    <View
-                      UNSAFE_style={{
-                        minWidth: '40px',
-                        height: '40px',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        backgroundColor: detectedPlatform 
-                          ? detectedPlatform.color 
-                          : 'var(--spectrum-global-color-gray-400)',
-                        color: 'white',
-                        borderRadius: '4px',
-                        fontSize: '16px',
-                        fontWeight: 'bold'
-                      }}
-                    >
-                      {detectedPlatform ? detectedPlatform.icon : <LinkOut />}
-                    </View>
-
-                    {/* URL Input */}
-                    <TextField
-                      placeholder="https://..."
-                      value={socialLink.url}
-                      onChange={(value) => updateSocialLink(index, linkIndex, value)}
-                      width="100%"
-                      validationState={socialLink.url && !isValid ? 'invalid' : undefined}
-                    />
-
-                    {/* Remove Button */}
-                    <ActionButton onPress={() => removeSocialLink(index, linkIndex)} isQuiet>
-                      <Delete />
-                    </ActionButton>
-                  </Flex>
-                )
-              })}
-            </View>
-          </Flex>
-        </View>
-      ))}
-      </Flex>
+      <ProfilesComponent
+        profiles={formData.profiles || []}
+        eventId={id}
+        onAddProfile={addProfile}
+        onRemoveProfile={removeProfile}
+        onUpdateProfile={updateProfile}
+        onAddSocialLink={addSocialLink}
+        onRemoveSocialLink={removeSocialLink}
+        onUpdateSocialLink={updateSocialLink}
+      />
     </FormCard>
   )
 
   // ============================================================
-  // STEP 3: Additional Content (Images)
+  // STEP 3: Additional Content (Images & Sponsors)
   // ============================================================
   const step3Component = (
+    <>
+      {/* Sponsors Section */}
     <FormCard>
-      <Flex direction="column" gap="size-200">
-      <Heading level={3}>Event Images</Heading>
-      <Text>
-        Add images for your event. You can add an event card image, hero image, and venue image.
-      </Text>
-
-      <View padding="size-200" backgroundColor="gray-100" borderRadius="medium">
-        <Heading level={4}>Event Card Image</Heading>
-        <TextField
-          label="Image URL"
-          isQuiet
-          value={formData.images?.find((img) => img.imageKind === 'event-card-image')?.imageUrl || ''}
-          onChange={(value) => {
-            const images = formData.images || []
-            const existingIndex = images.findIndex((img) => img.imageKind === 'event-card-image')
-            
-            if (existingIndex >= 0) {
-              images[existingIndex].imageUrl = value
-            } else {
-              images.push({ imageKind: 'event-card-image', imageUrl: value })
-            }
-            
-            updateFormData({ images: [...images] })
-          }}
+        <SponsorsComponent
+          sponsors={formData.sponsors || []}
+          eventId={id}
+          onAddSponsor={addSponsor}
+          onRemoveSponsor={removeSponsor}
+          onUpdateSponsor={updateSponsor}
+          onSaveSponsor={saveSponsor}
         />
-      </View>
+      </FormCard>
 
-      <View padding="size-200" backgroundColor="gray-100" borderRadius="medium">
-        <Heading level={4}>Event Hero Image</Heading>
-        <TextField
-          label="Image URL"
-          isQuiet
-          value={formData.images?.find((img) => img.imageKind === 'event-hero-image')?.imageUrl || ''}
-          onChange={(value) => {
-            const images = formData.images || []
-            const existingIndex = images.findIndex((img) => img.imageKind === 'event-hero-image')
-            
-            if (existingIndex >= 0) {
-              images[existingIndex].imageUrl = value
-            } else {
-              images.push({ imageKind: 'event-hero-image', imageUrl: value })
-            }
-            
-            updateFormData({ images: [...images] })
-          }}
+      {/* Event Images Section */}
+      <FormCard>
+        <EventImagesComponent
+          images={formData.images || []}
+          eventId={id}
+          onUpdateImages={(images) => updateFormData({ images })}
         />
-      </View>
-
-      <View padding="size-200" backgroundColor="gray-100" borderRadius="medium">
-        <Heading level={4}>Venue Image</Heading>
-        <TextField
-          label="Image URL"
-          isQuiet
-          value={formData.images?.find((img) => img.imageKind === 'venue-image')?.imageUrl || ''}
-          onChange={(value) => {
-            const images = formData.images || []
-            const existingIndex = images.findIndex((img) => img.imageKind === 'venue-image')
-            
-            if (existingIndex >= 0) {
-              images[existingIndex].imageUrl = value
-            } else {
-              images.push({ imageKind: 'venue-image', imageUrl: value })
-            }
-            
-            updateFormData({ images: [...images] })
-          }}
-      />
-    </View>
-      </Flex>
     </FormCard>
+    </>
   )
 
   // ============================================================
-  // STEP 4: RSVP (Attendance & Registration)
+  // STEP 4: RSVP (Attendance & Registration) - Cloud-Specific
   // ============================================================
   const step4Component = (
     <FormCard>
-      <Flex direction="column" gap="size-200">
-      <Heading level={3}>Attendance</Heading>
-
-      <NumberField
-        label="Attendance Capacity (Optional)"
-        value={formData.capacity || 0}
-        onChange={(value) => updateFormData({ capacity: value })}
-        minValue={0}
-        description="Maximum number of attendees (0 = unlimited)"
+      <RegistrationConfigComponent
+        cloudType={formData.cloudType || 'CreativeCloud'}
+        venueName={formData.venue?.venueName}
+        capacity={formData.capacity}
+        allowWaitlist={formData.allowWaitlist}
+        allowGuestRegistration={formData.allowGuestRegistration}
+        hostEmail={formData.hostEmail}
+        rsvpDescription={formData.rsvpDescription}
+        registrationType={formData.registrationType}
+        marketoFormUrl={formData.marketoFormUrl}
+        visibleRsvpFields={formData.visibleRsvpFields}
+        requiredRsvpFields={formData.requiredRsvpFields}
+        onCapacityChange={(value) => updateFormData({ capacity: value })}
+        onAllowWaitlistChange={(value) => updateFormData({ allowWaitlist: value })}
+        onAllowGuestRegistrationChange={(value) => updateFormData({ allowGuestRegistration: value })}
+        onHostEmailChange={(value) => updateFormData({ hostEmail: value })}
+        onRsvpDescriptionChange={(value) => updateFormData({ rsvpDescription: value })}
+        onRegistrationTypeChange={(type) => updateFormData({ registrationType: type })}
+        onMarketoFormUrlChange={(url) => updateFormData({ marketoFormUrl: url })}
+        onVisibleFieldsChange={(fields) => updateFormData({ visibleRsvpFields: fields })}
+        onRequiredFieldsChange={(fields) => updateFormData({ requiredRsvpFields: fields })}
       />
-
-      <Divider size="M" />
-
-      <Heading level={3}>Registration Settings</Heading>
-
-      <Switch
-        isSelected={formData.registrationOpen}
-        onChange={(value) => updateFormData({ registrationOpen: value })}
-      >
-        Registration Open
-      </Switch>
-
-      <Switch
-        isSelected={formData.allowWaitlist || false}
-        onChange={(value) => updateFormData({ allowWaitlist: value })}
-      >
-        Allow Waitlisting
-      </Switch>
-
-      <Switch
-        isSelected={formData.allowGuestRegistration || false}
-        onChange={(value) => updateFormData({ allowGuestRegistration: value })}
-      >
-        Allow Guest Registration
-      </Switch>
-
-      <Picker
-        label="Event Status"
-        isRequired
-        selectedKey={formData.status}
-        onSelectionChange={(key) => updateFormData({ status: key as EventFormData['status'] })}
-      >
-        <Item key="draft">Draft</Item>
-        <Item key="published">Published</Item>
-        <Item key="ongoing">Ongoing</Item>
-        <Item key="completed">Completed</Item>
-        <Item key="cancelled">Cancelled</Item>
-      </Picker>
-      </Flex>
     </FormCard>
   )
 
@@ -737,11 +523,6 @@ export const EventForm: React.FC<EventFormProps> = ({ ims }) => {
     <View 
       UNSAFE_style={{
         backgroundColor: 'var(--spectrum-global-color-gray-100)',
-        marginLeft: '-24px',
-        marginRight: '-24px',
-        marginTop: '-24px',
-        marginBottom: '-24px',
-        paddingBottom: '24px'
       }}
     >
       {error && (

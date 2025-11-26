@@ -3,7 +3,13 @@
 */
 
 export { EventFormatComponent } from './EventFormatComponent'
+export { EventTagsComponent } from './EventTagsComponent'
 export { EventInfoComponent } from './EventInfoComponent'
 export { AgendaComponent } from './AgendaComponent'
 export { VenueComponent } from './VenueComponent'
+export { ProfilesComponent } from './ProfilesComponent'
+export { SponsorsComponent } from './SponsorsComponent'
+export { EventImagesComponent } from './EventImagesComponent'
+export { RegistrationConfigComponent } from './RegistrationConfigComponent'
+export { RegistrationFieldsComponent } from './RegistrationFieldsComponent'
 

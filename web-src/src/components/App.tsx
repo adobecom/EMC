@@ -63,15 +63,13 @@ const App: React.FC<AppProps> = (props) => {
             areas={['header', 'content']}
             columns={['1fr']}
             rows={['auto', '1fr']}
-            height='100vh'
             gap='size-0'
           >
-            <View gridArea='header'>
+            <View gridArea='header' UNSAFE_style={{ position: 'sticky', top: 0, zIndex: 1000 }}>
               <TopNav ims={props.ims} />
             </View>
             <View 
               gridArea='content' 
-              padding='size-300'
               UNSAFE_className='content-area'
             >
               <Routes>

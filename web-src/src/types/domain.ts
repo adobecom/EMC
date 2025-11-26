@@ -314,6 +314,16 @@ export interface ProfileData {
   socialLinks?: SocialLink[]
 }
 
+// Sponsor/Partner types
+export interface SponsorData {
+  id: string
+  partnerName: string
+  partnerUrl: string
+  imageUrl?: string
+  imageId?: string
+  isSaved?: boolean
+}
+
 // Image types for events
 export interface EventImageData {
   imageKind: 'event-card-image' | 'event-hero-image' | 'venue-image'
@@ -369,6 +379,13 @@ export interface EventFormData {
   registrationOpen: boolean
   allowWaitlist?: boolean
   allowGuestRegistration?: boolean
+  hostEmail?: string
+  rsvpDescription?: string
+  // Registration fields configuration
+  registrationType?: 'ESP' | 'Marketo'
+  marketoFormUrl?: string
+  visibleRsvpFields?: string[]
+  requiredRsvpFields?: string[]
   
   // Step 6: Images
   images?: EventImageData[]
@@ -381,6 +398,7 @@ export interface EventFormData {
   secondaryLinkTitle?: string
   agendaItems?: AgendaItem[]
   showAgendaPostEvent?: boolean
+  sponsors?: SponsorData[]
   metadata?: Record<string, any>
 }
 

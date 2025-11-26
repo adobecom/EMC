@@ -19,7 +19,7 @@ export const FormCard: React.FC<FormCardProps> = ({ children }) => {
       borderRadius="medium"
       padding="size-400"
       UNSAFE_style={{
-        margin: '24px',
+        marginBottom: '24px',
         boxShadow: '0 3px 6px 0 rgb(0 0 0 / 16%)',
         paddingLeft: '56px',
         paddingRight: '56px',

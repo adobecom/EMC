@@ -81,7 +81,7 @@ export const DevTokenButton: React.FC<DevTokenButtonProps> = ({ onTokenChange })
             </Badge>
           </Flex>
         </ActionButton>
-        <Tooltip>
+        <Tooltip variant="info">
           {hasValidToken && expirationInfo ? (
             <div>
               <strong>Token Active</strong>

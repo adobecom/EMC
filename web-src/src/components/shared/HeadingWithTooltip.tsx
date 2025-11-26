@@ -75,7 +75,7 @@ export const HeadingWithTooltip: React.FC<HeadingWithTooltipProps> = ({
         >
           <Info size="S" />
         </ActionButton>
-        <Tooltip>{tooltip}</Tooltip>
+        <Tooltip variant="info">{tooltip}</Tooltip>
       </TooltipTrigger>
     </Flex>
   )

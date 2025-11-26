@@ -137,7 +137,7 @@ export function ResourceDashboardLayout<T extends Record<string, any>>({
   const isSearching = inputValue !== debouncedQuery
 
   return (
-    <View height="100%">
+    <View padding="size-400">
       <Flex direction="column" gap="size-150" height="100%">
         {/* Header */}
         <Flex direction="row" justifyContent="space-between" alignItems="center">

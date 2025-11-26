@@ -31,6 +31,12 @@ Welcome to the Event Management Cloud (EMC) documentation! This index will help 
   - External API integration patterns
   - Image upload with drag & drop
 
+- **[Design System](./DESIGN_SYSTEM.md)** - Centralized design tokens and style utilities
+  - Layout dimensions and calculations
+  - Color palette and semantic colors
+  - Z-index scale for layering
+  - Common style objects and helpers
+
 ### Backend Development
 - **[Backend Guide](./BACKEND.md)** - Adobe I/O Runtime actions guide
   - Creating actions
@@ -234,6 +240,15 @@ EMC/
 
 ## 🆕 Recent Updates
 
+### Design System (November 25, 2025)
+- ✨ **Centralized Design System** - Single source of truth for styles
+  - Layout dimensions and calculated heights
+  - Color palette (Adobe brand + Spectrum variables)
+  - Z-index scale for proper layering
+  - Common style objects (sticky nav, action bars, scrollable areas)
+  - Border styles and helper functions
+  - See [Design System Guide](./DESIGN_SYSTEM.md)
+
 ### Event Form Implementation (November 2025)
 - ✨ **Production-Ready Multi-Step Form** - Complete event creation/editing
   - 4-step wizard matching v1 reference structure
@@ -288,8 +303,8 @@ When updating documentation:
 
 ---
 
-**Last Updated:** November 18, 2025
-**Version:** 1.3.0
+**Last Updated:** November 25, 2025
+**Version:** 1.4.0
 
 Happy coding! 🚀
 

@@ -7,12 +7,21 @@ import {
   View,
   Flex,
   Button,
-  ButtonGroup,
   ProgressBar,
   Heading,
   Text
 } from '@adobe/react-spectrum'
 import { useNavigate } from 'react-router-dom'
+import ChevronLeft from '@spectrum-icons/workflow/ChevronLeft'
+import ChevronRight from '@spectrum-icons/workflow/ChevronRight'
+import WebPage from '@spectrum-icons/workflow/WebPage'
+import Document from '@spectrum-icons/workflow/Document'
+import { 
+  SIDE_NAV_STICKY_STYLES, 
+  SCROLLABLE_CONTENT_STYLES, 
+  FIXED_ACTION_BAR_STYLES,
+  COLORS
+} from '../../styles/designSystem'
 
 export interface WizardStep {
   id: string
@@ -77,56 +86,94 @@ export const FormWizard: React.FC<FormWizardProps> = ({
       width="size-3000"
       borderEndWidth="thin"
       borderEndColor="gray-300"
-      UNSAFE_style={{
-        position: 'sticky',
-        top: 0,
-        alignSelf: 'flex-start',
-        display: 'flex',
-        flexDirection: 'column',
-        height: 'calc(100vh - 160px)', // viewport height minus action bar (60px)
-        minHeight: 'calc(100vh - 160px)'
-      }}
+      UNSAFE_style={SIDE_NAV_STICKY_STYLES}
     >
       <View padding="size-300" flex={1}>
-        <Heading level={4} marginBottom="size-300" UNSAFE_style={{ 
-          textTransform: 'uppercase', 
-          fontSize: '12px', 
-          fontWeight: 600,
-          color: 'var(--spectrum-global-color-gray-700)',
-          letterSpacing: '0.5px'
+        <Text UNSAFE_style={{ 
+          fontSize: '12px',
+          fontWeight: 500,
+          color: COLORS.GRAY_700,
+          letterSpacing: '0.5px',
+          marginBottom: '16px',
+          display: 'block'
         }}>
-          Event Creation
-        </Heading>
+          EVENT CREATION
+        </Text>
         
         <Flex direction="column" gap="size-100">
           {/* Dashboard Link */}
-          <Button
-            variant="primary"
-            staticColor="black"
-            style="outline"
-            onPress={handleDashboardClick}
-            isDisabled={isSubmitting}
-            UNSAFE_style={{
-              justifyContent: 'flex-start',
+          <button
+            onClick={handleDashboardClick}
+            disabled={isSubmitting}
+            style={{
+              border: 'none',
+              background: COLORS.TRANSPARENT,
+              color: COLORS.GRAY_800,
+              padding: '8px 12px',
+              textAlign: 'left',
+              cursor: isSubmitting ? 'not-allowed' : 'pointer',
+              borderRadius: '4px',
+              fontSize: '14px',
+              fontWeight: 400,
+              opacity: isSubmitting ? 0.5 : 1,
+              transition: 'all 0.2s ease',
               width: '100%',
-              marginBottom: '8px'
+            }}
+            onMouseEnter={(e) => {
+              if (!isSubmitting) {
+                e.currentTarget.style.backgroundColor = 'rgba(235, 16, 0, 0.1)'
+                e.currentTarget.style.color = COLORS.ADOBE_RED
+              }
+            }}
+            onMouseLeave={(e) => {
+              if (!isSubmitting) {
+                e.currentTarget.style.backgroundColor = COLORS.TRANSPARENT
+                e.currentTarget.style.color = COLORS.GRAY_800
+              }
+            }}
+            onMouseDown={(e) => {
+              if (!isSubmitting) {
+                e.currentTarget.style.backgroundColor = 'rgba(235, 16, 0, 0.2)'
+              }
+            }}
+            onMouseUp={(e) => {
+              if (!isSubmitting) {
+                e.currentTarget.style.backgroundColor = 'rgba(235, 16, 0, 0.1)'
+              }
             }}
           >
-            ← Dashboard
-          </Button>
+            <Flex direction="row" gap="size-100" alignItems="center">
+              <ChevronLeft size="S" />
+              <Text>Dashboard</Text>
+            </Flex>
+          </button>
 
           {/* Add Content Section */}
-          <View marginTop="size-100">
-            <Text UNSAFE_style={{ 
-              fontSize: '14px', 
-              fontWeight: 600,
-              marginBottom: '8px',
-              display: 'block'
-            }}>
-              📝 Add Content
-            </Text>
+          <View>
+            <button
+              disabled
+              style={{
+                border: 'none',
+                background: COLORS.TRANSPARENT,
+                color: COLORS.GRAY_800,
+                padding: '8px 12px',
+                textAlign: 'left',
+                cursor: 'default',
+                borderRadius: '4px',
+                fontSize: '14px',
+                fontWeight: 400,
+                transition: 'all 0.2s ease',
+                width: '100%',
+                marginBottom: '8px'
+              }}
+            >
+              <Flex direction="row" gap="size-100" alignItems="center">
+                <Document size="S" />
+                <Text>Add Content</Text>
+              </Flex>
+            </button>
             
-            <Flex direction="column" gap="size-50" marginStart="size-200">
+            <Flex direction="column" gap="size-50">
               {steps.map((step, index) => {
                 const isActive = currentStepIndex === index
                 const isDisabled = false // For now, all enabled
@@ -138,26 +185,39 @@ export const FormWizard: React.FC<FormWizardProps> = ({
                     disabled={isDisabled || isSubmitting}
                     style={{
                       border: 'none',
-                      background: isActive ? 'var(--spectrum-global-color-blue-400)' : 'transparent',
-                      color: isActive ? 'white' : 'var(--spectrum-global-color-gray-800)',
+                      background: isActive ? COLORS.ADOBE_RED : COLORS.TRANSPARENT,
+                      color: isActive ? COLORS.WHITE : COLORS.GRAY_800,
                       padding: '8px 12px',
+                      paddingLeft: '38px', // Align with icon buttons (12px base + 18px icon + 8px gap)
                       textAlign: 'left',
                       cursor: isDisabled ? 'not-allowed' : 'pointer',
                       borderRadius: '4px',
                       fontSize: '14px',
-                      fontWeight: isActive ? 600 : 400,
+                      fontWeight: isActive ? 500 : 400,
                       opacity: isDisabled ? 0.5 : 1,
                       transition: 'all 0.2s ease',
                       width: '100%'
                     }}
                     onMouseEnter={(e) => {
                       if (!isActive && !isDisabled) {
-                        e.currentTarget.style.backgroundColor = 'var(--spectrum-global-color-gray-200)'
+                        e.currentTarget.style.backgroundColor = 'rgba(235, 16, 0, 0.1)' // Light red background
+                        e.currentTarget.style.color = COLORS.ADOBE_RED
                       }
                     }}
                     onMouseLeave={(e) => {
                       if (!isActive) {
-                        e.currentTarget.style.backgroundColor = 'transparent'
+                        e.currentTarget.style.backgroundColor = COLORS.TRANSPARENT
+                        e.currentTarget.style.color = COLORS.GRAY_800
+                      }
+                    }}
+                    onMouseDown={(e) => {
+                      if (!isActive && !isDisabled) {
+                        e.currentTarget.style.backgroundColor = 'rgba(235, 16, 0, 0.2)' // Darker red background
+                      }
+                    }}
+                    onMouseUp={(e) => {
+                      if (!isActive && !isDisabled) {
+                        e.currentTarget.style.backgroundColor = 'rgba(235, 16, 0, 0.1)'
                       }
                     }}
                   >
@@ -192,90 +252,118 @@ export const FormWizard: React.FC<FormWizardProps> = ({
     </View>
   )
 
-  const renderActionBar = () => (
-    <View
-      UNSAFE_style={{
-        position: 'fixed',
-        bottom: 0,
-        left: 0,
-        right: 0,
-        height: '60px',
-        backgroundColor: '#EB1000',
-        zIndex: 100,
-        boxShadow: '0 -2px 8px rgba(0, 0, 0, 0.15)'
-      }}
-    >
-      <Flex
-        direction="row"
-        justifyContent="space-between"
-        alignItems="center"
-        height="100%"
-        marginStart="size-3000"
-        marginEnd="size-400"
-      >
-        <ButtonGroup>
-          {!isFirstStep && (
-            <Button
-              variant="secondary"
-              onPress={handleBack}
-              isDisabled={isSubmitting}
-              UNSAFE_style={{
-                backgroundColor: 'white',
-                color: '#EB1000'
-              }}
-            >
-              Back
-            </Button>
-          )}
-          {onCancel && !showSideNav && (
-            <Button
-              variant="secondary"
-              onPress={onCancel}
-              isDisabled={isSubmitting}
-              UNSAFE_style={{
-                backgroundColor: 'white',
-                color: '#EB1000'
-              }}
-            >
-              Cancel
-            </Button>
-          )}
-        </ButtonGroup>
+  const renderActionBar = () => {
+    const getNextButtonText = () => {
+      if (isSubmitting) return 'Publishing...'
+      if (isLastStep) return 'Publish event'
+      return 'Next step'
+    }
 
-        <Flex direction="row" gap="size-200" alignItems="center">
-          <Button
-            variant="secondary"
-            onPress={() => {
-              // TODO: Implement preview functionality
-              console.log('Preview event')
-            }}
-            isDisabled={isSubmitting}
-            UNSAFE_style={{
-              backgroundColor: 'white',
-              color: '#EB1000'
-            }}
-          >
-            Preview
-          </Button>
-          <Button
-            variant="accent"
-            onPress={handleNext}
-            isDisabled={currentStep.isValid === false || isSubmitting}
-            UNSAFE_style={{
-              backgroundColor: 'white',
-              color: '#EB1000',
-              fontWeight: 600
-            }}
-          >
-            {isLastStep ? 'Submit' : 'Next'}
-          </Button>
+    return (
+      <View
+        UNSAFE_style={{
+          ...FIXED_ACTION_BAR_STYLES,
+          backgroundColor: COLORS.ADOBE_RED,
+        }}
+      >
+        <Flex
+          direction="row"
+          justifyContent="space-between"
+          alignItems="center"
+          height="100%"
+          marginStart="size-400"
+          marginEnd="size-400"
+        >
+          {/* Left: Back button */}
+          <View>
+            <Button
+              variant="secondary"
+              style="outline"
+              staticColor="white"
+              onPress={handleBack}
+              isDisabled={isFirstStep || isSubmitting}
+            >
+              <ChevronLeft />
+            </Button>
+          </View>
+
+          {/* Right: Action buttons */}
+          <Flex direction="row" alignItems="center">
+            {/* Preview buttons */}
+            <Flex direction="row" gap="size-100" alignItems="center">
+              <Button
+                variant="secondary"
+                style="fill"
+                onPress={() => {
+                  // TODO: Implement pre-event preview
+                  console.log('Preview pre-event')
+                }}
+                isDisabled={isSubmitting}
+              >
+                <WebPage size="S" />
+                <Text>Pre-event</Text>
+              </Button>
+              <Button
+                variant="secondary"
+                style="fill"
+                onPress={() => {
+                  // TODO: Implement post-event preview
+                  console.log('Preview post-event')
+                }}
+                isDisabled={isSubmitting}
+              >
+                <WebPage size="S" />
+                <Text>Post-event</Text>
+              </Button>
+            </Flex>
+
+            {/* Vertical Divider */}
+            <View
+              UNSAFE_style={{
+                width: '1px',
+                height: '32px',
+                backgroundColor: COLORS.WHITE,
+                opacity: 0.3,
+                marginLeft: '80px',
+                marginRight: '80px'
+              }}
+            />
+
+            {/* Save and Next buttons */}
+            <Flex direction="row" gap="size-100" alignItems="center">
+              <Button
+                variant="secondary"
+                style="outline"
+                staticColor="white"
+                onPress={() => {
+                  // TODO: Implement save functionality
+                  console.log('Save draft')
+                }}
+                isDisabled={isSubmitting}
+              >
+                Save
+              </Button>
+              <Button
+                variant="primary"
+                style="fill"
+                staticColor="black"
+                onPress={handleNext}
+                isDisabled={currentStep.isValid === false || isSubmitting}
+              >
+                <Flex direction="row-reverse" gap="size-50" alignItems="center">
+                  <Text>{getNextButtonText()}</Text>
+                  <ChevronRight size="S" />
+                </Flex>
+              </Button>
+            </Flex>
+          </Flex>
         </Flex>
-      </Flex>
-    </View>
-  )
+      </View>
+    )
+  }
 
   const mainContent = (
-    <View UNSAFE_style={{ paddingBottom: '80px' }}>
+    <View>
       {/* Step title and description */}
       <View marginBottom="size-300">
         <Heading level={2}>{currentStep.title}</Heading>
@@ -294,7 +382,7 @@ export const FormWizard: React.FC<FormWizardProps> = ({
       <>
         <Flex direction="row" gap="size-0">
           {renderSideNav()}
-          <View flex={1} padding="size-400">
+          <View UNSAFE_style={SCROLLABLE_CONTENT_STYLES} flex={1} padding="size-400">
             {mainContent}
           </View>
         </Flex>
@@ -305,7 +393,7 @@ export const FormWizard: React.FC<FormWizardProps> = ({
 
   return (
     <>
-      <View>{mainContent}</View>
+      <View UNSAFE_style={SCROLLABLE_CONTENT_STYLES}>{mainContent}</View>
       {renderActionBar()}
     </>
   )
