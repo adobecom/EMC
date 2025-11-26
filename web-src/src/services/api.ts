@@ -24,46 +24,52 @@ import { tokenStorage } from './tokenStorage'
 import { constructRequestHeaders, safeFetch } from './requestHelpers'
 import { getCurrentEnvironment, getApiHost, SUPPORTED_CLOUDS } from '../config/constants'
 
-/**
- * Generic error response type
- */
+// ============================================================================
+// TYPES
+// ============================================================================
+
 interface ErrorResponse {
   status: number | string
   error: any
 }
 
-/**
- * Success response for operations
- */
 interface SuccessResponse {
   ok: boolean
 }
 
-/**
- * Image upload configuration
- */
 interface ImageUploadConfig {
   targetUrl: string
   altText?: string
   type: string
 }
 
-/**
- * Image upload progress tracker
- */
 export interface UploadProgressTracker {
   progress: number
 }
 
-/**
- * API Service Layer
- * Centralized service for all external API calls
- */
-
 interface ApiServiceConfig {
-  baseUrl?: string
   headers?: Record<string, string>
 }
+
+// ============================================================================
+// VALIDATION HELPERS
+// ============================================================================
+
+function validateString(value: any, name: string): void {
+  if (!value || typeof value !== 'string') {
+    throw new Error(`Invalid ${name}`)
+  }
+}
+
+function validateObject(value: any, name: string): void {
+  if (!value || typeof value !== 'object') {
+    throw new Error(`Invalid ${name}`)
+  }
+}
+
+// ============================================================================
+// API SERVICE CLASS
+// ============================================================================
 
 class ApiService {
   private config: ApiServiceConfig
@@ -92,8 +98,12 @@ class ApiService {
     }
   }
 
+  // ============================================================================
+  // INTERNAL API METHODS (App Builder Actions)
+  // ============================================================================
+
   /**
-   * Generic API call method
+   * Generic App Builder action call
    */
   private async callAction<T>(
     actionName: string,
@@ -113,92 +123,6 @@ class ApiService {
     )
 
     return response as T
-  }
-
-  /**
-   * Generic external API call wrapper
-   * Handles token validation, environment detection, and error handling
-   */
-  private async callExternalApi<T = any>(
-    service: 'esp' | 'esl',
-    endpoint: string,
-    method: 'GET' | 'POST' | 'PUT' | 'DELETE' = 'GET',
-    body?: any,
-    options?: {
-      operationName?: string
-      transformResponse?: (data: any) => T
-      shouldReturnFullResponse?: boolean
-    }
-  ): Promise<T | ErrorResponse> {
-    const operationName = options?.operationName || `${method} ${endpoint}`
-    const token = tokenStorage.getValidToken()
-    
-    if (!token) {
-      console.warn(`⚠️ No valid authentication token for ${operationName}`)
-      return { status: 'No Token', error: 'No valid authentication token' }
-    }
-
-    try {
-      const env = getCurrentEnvironment()
-      const headers = constructRequestHeaders(token, method)
-      const host = getApiHost(service, env)
-      const url = `${host}${endpoint}`
-
-      const response = await safeFetch(url, {
-        method,
-        headers: headers as any,
-        ...(body && { body: JSON.stringify(body) })
-      })
-
-      // Handle 204 No Content responses (successful deletes)
-      if (response.status === 204) {
-        return { ok: true } as any
-      }
-
-      const data = await response.json()
-
-      if (!response.ok) {
-        console.error(`❌ Failed: ${operationName}. Status: ${response.status}`, data)
-        return { status: response.status, error: data }
-      }
-
-      // Transform response if needed
-      if (options?.transformResponse) {
-        return options.transformResponse(data)
-      }
-
-      return options?.shouldReturnFullResponse ? data : (data.espProvider || data)
-    } catch (error) {
-      console.error(`❌ Failed: ${operationName}:`, error)
-      return { status: 'Network Error', error: error instanceof Error ? error.message : 'Unknown error' }
-    }
-  }
-
-  /**
-   * Fetch with dependent data (for operations that need to fetch related data first)
-   */
-  private async callExternalApiWithDependency<T = any>(
-    service: 'esp' | 'esl',
-    endpoint: string,
-    method: 'PUT',
-    body: any,
-    getDependentData: () => Promise<any | ErrorResponse>,
-    mergeDependentData: (body: any, dependentData: any) => any,
-    operationName: string
-  ): Promise<T | ErrorResponse> {
-    // Get dependent data first
-    const dependentData = await getDependentData()
-    
-    if ('error' in dependentData) {
-      console.error(`❌ Failed to get dependent data for ${operationName}:`, dependentData)
-      return dependentData
-    }
-
-    // Merge dependent data into body
-    const mergedBody = mergeDependentData(body, dependentData)
-
-    // Make the actual call
-    return this.callExternalApi<T>(service, endpoint, method, mergedBody, { operationName })
   }
 
   // Organization APIs
@@ -243,7 +167,7 @@ class ApiService {
     return this.callAction<ApiResponse<void>>('deleteTeam', { id })
   }
 
-  // Series APIs
+  // Series APIs (App Builder)
   async getSeries(organizationId?: string): Promise<ApiListResponse<Series>> {
     return this.callAction<ApiListResponse<Series>>('getSeries', { organizationId })
   }
@@ -264,139 +188,10 @@ class ApiService {
     return this.callAction<ApiResponse<void>>('deleteSeries', { id })
   }
 
-  /**
-   * Get series list from external API
-   * Uses the dev token system for authentication
-   */
-  async getSeriesList(): Promise<SeriesApiResponse[]> {
-    // Check if we have a valid token
-    const token = tokenStorage.getValidToken()
-    
-    if (!token) {
-      console.warn('⚠️ No valid authentication token. Using mock data.')
-      console.log('💡 Click the "Dev Token" button to add a token for real API access')
-      
-      // Fall back to mock data
-      try {
-        const data = await getSeriesListMock()
-        console.log('📦 Using mock series data:', data.length, 'items')
-        return data
-      } catch (error) {
-        console.error('Error fetching mock series:', error)
-        return []
-      }
-    }
-
-    // Use real API with token
-    try {
-      const env = getCurrentEnvironment()
-      console.log(`🔄 Fetching series from real API (${env} environment)...`)
-      
-      const headers = constructRequestHeaders(token, 'GET')
-      const host = getApiHost('esp', env)
-      const url = `${host}/v1/series`
-
-      const response = await safeFetch(url, {
-        method: 'GET',
-        headers: headers as any
-      })
-
-      const data = await response.json()
-
-      if (!response.ok) {
-        console.error(`❌ API Error: ${response.status}`, data)
-        throw new Error(`API returned ${response.status}`)
-      }
-
-      // The API returns { series: [...] }
-      const series = data.series || []
-      console.log('✅ Successfully loaded series from API:', series.length, 'items')
-      
-      return series
-    } catch (error) {
-      console.error('❌ Error fetching series from API:', error)
-      console.log('📦 Falling back to mock data')
-      
-      // Fall back to mock data on error
-      try {
-        const data = await getSeriesListMock()
-        return data
-      } catch (mockError) {
-        console.error('Error fetching mock series:', mockError)
-        return []
-      }
-    }
-  }
-
-  // Event APIs
+  // Event APIs (App Builder)
   async getEvents(seriesId?: string, organizationId?: string): Promise<ApiListResponse<Event>> {
     return this.callAction<ApiListResponse<Event>>('getEvents', { seriesId, organizationId })
   }
-
-  /**
-   * Get events list from external API
-   * Uses the dev token system for authentication
-   */
-  async getEventsList(): Promise<EventApiResponse[]> {
-    // Check if we have a valid token
-    const token = tokenStorage.getValidToken()
-    
-    if (!token) {
-      console.warn('⚠️ No valid authentication token. Using mock data.')
-      console.log('💡 Click the "Dev Token" button to add a token for real API access')
-      
-      // Fall back to mock data
-      try {
-        const data = await getEventsListMock()
-        console.log('📦 Using mock events data:', data.length, 'items')
-        return data
-      } catch (error) {
-        console.error('Error fetching mock events:', error)
-        return []
-      }
-    }
-
-    // Use real API with token
-    try {
-      const env = getCurrentEnvironment()
-      console.log(`🔄 Fetching events from real API (${env} environment)...`)
-      
-      const headers = constructRequestHeaders(token, 'GET')
-      const host = getApiHost('esp', env)
-      const url = `${host}/v1/events`
-
-      const response = await safeFetch(url, {
-        method: 'GET',
-        headers: headers as any
-      })
-
-      const data = await response.json()
-
-      if (!response.ok) {
-        console.error(`❌ API Error: ${response.status}`, data)
-        throw new Error(`API returned ${response.status}`)
-      }
-
-      // The API returns { events: [...] }
-      const events = data.events || []
-      console.log('✅ Successfully loaded events from API:', events.length, 'items')
-      
-      return events
-    } catch (error) {
-      console.error('❌ Error fetching events from API:', error)
-      console.log('📦 Falling back to mock data')
-      
-      // Fall back to mock data on error
-      try {
-        const data = await getEventsListMock()
-        return data
-      } catch (mockError) {
-        console.error('Error fetching mock events:', mockError)
-        return []
-      }
-    }
-  }
-
 
   async getEvent(id: string): Promise<ApiResponse<Event>> {
     return this.callAction<ApiResponse<Event>>('getEvent', { id })
@@ -412,238 +207,6 @@ class ApiService {
 
   async deleteEvent(id: string): Promise<ApiResponse<void>> {
     return this.callAction<ApiResponse<void>>('deleteEvent', { id })
-  }
-
-  /**
-   * Fetch event images for enrichment
-   * Used by the data enrichment service for thumbnails
-   */
-  async getEventImagesBatch(eventIds: string[]): Promise<Map<string, EventApiResponse>> {
-    const token = tokenStorage.getValidToken()
-    const results = new Map<string, EventApiResponse>()
-    
-    if (!token) {
-      console.warn('⚠️ No valid authentication token for event images')
-      return results
-    }
-
-    try {
-      const env = getCurrentEnvironment()
-      const headers = constructRequestHeaders(token, 'GET')
-      const host = getApiHost('esp', env)
-
-      // Fetch all event images in parallel
-      const promises = eventIds.map(async (eventId) => {
-        try {
-          const url = `${host}/v1/events/${eventId}/images`
-          const response = await safeFetch(url, {
-            method: 'GET',
-            headers: headers as any
-          })
-
-          if (response.ok) {
-            const data = await response.json()
-            
-            // Create event object with images for extraction
-            const eventData: EventApiResponse = {
-              eventId,
-              published: false,
-              images: data.images || (Array.isArray(data) ? data : [])
-            }
-            
-            return { eventId, data: eventData }
-          }
-          return null
-        } catch (error) {
-          console.error(`Error fetching images for event ${eventId}:`, error)
-          return null
-        }
-      })
-
-      const responses = await Promise.all(promises)
-      
-      responses.forEach((result) => {
-        if (result && result.data) {
-          results.set(result.eventId, result.data)
-        }
-      })
-      
-    } catch (error) {
-      console.error('Error fetching event images batch:', error)
-    }
-
-    return results
-  }
-
-  /**
-   * Fetch event venues for enrichment
-   * Used by the data enrichment service for venue information
-   */
-  async getEventVenuesBatch(eventIds: string[]): Promise<Map<string, Venue[]>> {
-    const token = tokenStorage.getValidToken()
-    const results = new Map<string, Venue[]>()
-    
-    if (!token) {
-      console.warn('⚠️ No valid authentication token for event venues')
-      return results
-    }
-
-    try {
-      const env = getCurrentEnvironment()
-      const headers = constructRequestHeaders(token, 'GET')
-      const host = getApiHost('esp', env)
-
-      // Fetch all event venues in parallel
-      const promises = eventIds.map(async (eventId) => {
-        try {
-          const url = `${host}/v1/events/${eventId}/venues`
-          const response = await safeFetch(url, {
-            method: 'GET',
-            headers: headers as any
-          })
-
-          if (response.ok) {
-            const data = await response.json()
-            return { eventId, venues: data.venues || [] }
-          }
-          // 404 means no venue found, which is valid
-          if (response.status === 404) {
-            return { eventId, venues: [] }
-          }
-          return null
-        } catch (error) {
-          console.error(`Error fetching venues for event ${eventId}:`, error)
-          return null
-        }
-      })
-
-      const responses = await Promise.all(promises)
-      
-      responses.forEach((result) => {
-        if (result) {
-          results.set(result.eventId, result.venues)
-        }
-      })
-      
-    } catch (error) {
-      console.error('Error fetching event venues batch:', error)
-    }
-
-    return results
-  }
-
-  /**
-   * Fetch series details for enrichment
-   * Used by the data enrichment service for series information
-   */
-  async getSeriesBatch(seriesIds: string[]): Promise<Map<string, SeriesApiResponse>> {
-    const token = tokenStorage.getValidToken()
-    const results = new Map<string, SeriesApiResponse>()
-    
-    if (!token) {
-      console.warn('⚠️ No valid authentication token for series')
-      return results
-    }
-
-    try {
-      const env = getCurrentEnvironment()
-      const headers = constructRequestHeaders(token, 'GET')
-      const host = getApiHost('esp', env)
-
-      // Fetch all series in parallel
-      const promises = seriesIds.map(async (seriesId) => {
-        try {
-          const url = `${host}/v1/series/${seriesId}`
-          const response = await safeFetch(url, {
-            method: 'GET',
-            headers: headers as any
-          })
-
-          if (response.ok) {
-            const data = await response.json()
-            return { seriesId, series: data }
-          }
-          // 404 means series not found
-          if (response.status === 404) {
-            return null
-          }
-          return null
-        } catch (error) {
-          console.error(`Error fetching series ${seriesId}:`, error)
-          return null
-        }
-      })
-
-      const responses = await Promise.all(promises)
-      
-      responses.forEach((result) => {
-        if (result) {
-          results.set(result.seriesId, result.series)
-        }
-      })
-      
-    } catch (error) {
-      console.error('Error fetching series batch:', error)
-    }
-
-    return results
-  }
-
-  /**
-   * Fetch event history for enrichment
-   * Used by the data enrichment service for creator, modifier, and published at information
-   */
-  async getEventHistoryBatch(eventIds: string[]): Promise<Map<string, EventHistoryResponse>> {
-    const token = tokenStorage.getValidToken()
-    const results = new Map<string, EventHistoryResponse>()
-    
-    if (!token) {
-      console.warn('⚠️ No valid authentication token for event history')
-      return results
-    }
-
-    try {
-      const env = getCurrentEnvironment()
-      const headers = constructRequestHeaders(token, 'GET')
-      const host = getApiHost('esp', env)
-
-      // Fetch all event histories in parallel
-      const promises = eventIds.map(async (eventId) => {
-        try {
-          const url = `${host}/v1/events/${eventId}/history`
-          const response = await safeFetch(url, {
-            method: 'GET',
-            headers: headers as any
-          })
-
-          if (response.ok) {
-            const data = await response.json()
-            return { eventId, history: data }
-          }
-          // 404 means no history found
-          if (response.status === 404) {
-            return { eventId, history: { history: [], count: 0 } }
-          }
-          return null
-        } catch (error) {
-          console.error(`Error fetching history for event ${eventId}:`, error)
-          return null
-        }
-      })
-
-      const responses = await Promise.all(promises)
-      
-      responses.forEach((result) => {
-        if (result) {
-          results.set(result.eventId, result.history)
-        }
-      })
-      
-    } catch (error) {
-      console.error('Error fetching event history batch:', error)
-    }
-
-    return results
   }
 
   // Session APIs
@@ -689,200 +252,385 @@ class ApiService {
   }
 
   // ============================================================================
-  // EXTERNAL API METHODS (Real Adobe Events APIs)
-  // Following the pattern established by getEventsList() and getSeriesList()
+  // EXTERNAL API METHODS (Adobe ESP/ESL APIs)
   // ============================================================================
 
   /**
-   * Get locales from external API
+   * Generic external API call wrapper
+   * Handles token validation, environment detection, and error handling
    */
-  async getLocales(): Promise<any | ErrorResponse> {
-    return this.callExternalApi('esp', '/v1/locales', 'GET', undefined, {
-      operationName: 'getLocales',
-      shouldReturnFullResponse: true
-    })
+  private async callExternalApi<T = any>(
+    service: 'esp' | 'esl',
+    endpoint: string,
+    method: 'GET' | 'POST' | 'PUT' | 'DELETE' = 'GET',
+    body?: any,
+    options?: {
+      operationName?: string
+      transformResponse?: (data: any) => T
+      shouldReturnFullResponse?: boolean
+    }
+  ): Promise<T | ErrorResponse> {
+    const operationName = options?.operationName || `${method} ${endpoint}`
+    const token = tokenStorage.getValidToken()
+    
+    if (!token) {
+      console.warn(`⚠️ No valid authentication token for ${operationName}`)
+      return { status: 'No Token', error: 'No valid authentication token' }
+    }
+
+    try {
+      const env = getCurrentEnvironment()
+      const headers = constructRequestHeaders(token, method)
+      const host = getApiHost(service, env)
+      const url = `${host}${endpoint}`
+
+      const response = await safeFetch(url, {
+        method,
+        headers: headers as any,
+        ...(body && { body: JSON.stringify(body) })
+      })
+
+      // Handle 204 No Content (successful deletes)
+      if (response.status === 204) {
+        return { ok: true } as any
+      }
+
+      const data = await response.json()
+
+      if (!response.ok) {
+        console.error(`❌ ${operationName} failed. Status: ${response.status}`, data)
+        return { status: response.status, error: data }
+      }
+
+      // Transform response if needed
+      if (options?.transformResponse) {
+        return options.transformResponse(data)
+      }
+
+      return options?.shouldReturnFullResponse ? data : (data.espProvider || data)
+    } catch (error) {
+      console.error(`❌ ${operationName} failed:`, error)
+      return { status: 'Network Error', error: error instanceof Error ? error.message : 'Unknown error' }
+    }
   }
 
   /**
-   * Delete image
+   * Call external API with dependent data (for PUT operations that need existing data)
    */
-  async deleteImage(config: ImageUploadConfig, imageId: string): Promise<SuccessResponse | ErrorResponse> {
-    if (!imageId || typeof imageId !== 'string') throw new Error('Invalid image ID')
-    if (!config || typeof config !== 'object') throw new Error('Invalid image configs')
+  private async callWithDependency<T = any>(
+    service: 'esp' | 'esl',
+    endpoint: string,
+    body: any,
+    getDependentData: () => Promise<any | ErrorResponse>,
+    mergeDependentData: (body: any, dependentData: any) => any,
+    operationName: string
+  ): Promise<T | ErrorResponse> {
+    const dependentData = await getDependentData()
+    
+    if ('error' in dependentData) {
+      console.error(`❌ Failed to get dependent data for ${operationName}:`, dependentData)
+      return dependentData
+    }
 
-    return this.callExternalApi('esp', `${config.targetUrl}/${imageId}`, 'DELETE', undefined, {
-      operationName: 'deleteImage'
-    })
+    const mergedBody = mergeDependentData(body, dependentData)
+    return this.callExternalApi<T>(service, endpoint, 'PUT', mergedBody, { operationName })
+  }
+
+  // ============================================================================
+  // SERIES EXTERNAL APIs
+  // ============================================================================
+
+  /**
+   * Get series list from ESP API with token authentication and mock fallback
+   */
+  async getSeriesList(): Promise<SeriesApiResponse[]> {
+    const token = tokenStorage.getValidToken()
+    
+    if (!token) {
+      console.warn('⚠️ No valid authentication token. Using mock data.')
+      console.log('💡 Click the "Dev Token" button to add a token for real API access')
+      
+      try {
+        const data = await getSeriesListMock()
+        console.log('📦 Using mock series data:', data.length, 'items')
+        return data
+      } catch (error) {
+        console.error('Error fetching mock series:', error)
+        return []
+      }
+    }
+
+    try {
+      const env = getCurrentEnvironment()
+      console.log(`🔄 Fetching series from real API (${env} environment)...`)
+      
+      const headers = constructRequestHeaders(token, 'GET')
+      const host = getApiHost('esp', env)
+      const url = `${host}/v1/series`
+
+      const response = await safeFetch(url, {
+        method: 'GET',
+        headers: headers as any
+      })
+
+      const data = await response.json()
+
+      if (!response.ok) {
+        console.error(`❌ API Error: ${response.status}`, data)
+        throw new Error(`API returned ${response.status}`)
+      }
+
+      const series = data.series || []
+      console.log('✅ Successfully loaded series from API:', series.length, 'items')
+      
+      return series
+    } catch (error) {
+      console.error('❌ Error fetching series from API:', error)
+      console.log('📦 Falling back to mock data')
+      
+      try {
+        return await getSeriesListMock()
+      } catch (mockError) {
+        console.error('Error fetching mock series:', mockError)
+        return []
+      }
+    }
+  }
+
+  async createSeriesExternal(seriesData: any): Promise<any | ErrorResponse> {
+    validateObject(seriesData, 'series data')
+    return this.callExternalApi('esp', '/v1/series', 'POST', 
+      { ...seriesData, seriesStatus: 'draft' }, 
+      { operationName: 'createSeries', shouldReturnFullResponse: true }
+    )
+  }
+
+  async getSeriesByIdExternal(seriesId: string): Promise<any | ErrorResponse> {
+    validateString(seriesId, 'series ID')
+    return this.callExternalApi('esp', `/v1/series/${seriesId}`, 'GET', undefined,
+      { operationName: `getSeriesById(${seriesId})`, shouldReturnFullResponse: true }
+    )
+  }
+
+  async updateSeriesExternal(seriesId: string, seriesData: any): Promise<any | ErrorResponse> {
+    validateString(seriesId, 'series ID')
+    validateObject(seriesData, 'series data')
+    return this.callExternalApi('esp', `/v1/series/${seriesId}`, 'PUT', 
+      { ...seriesData, seriesId },
+      { operationName: `updateSeries(${seriesId})`, shouldReturnFullResponse: true }
+    )
+  }
+
+  async publishSeries(seriesId: string, seriesData: any): Promise<any | ErrorResponse> {
+    validateString(seriesId, 'series ID')
+    validateObject(seriesData, 'series data')
+    return this.callExternalApi('esp', `/v1/series/${seriesId}`, 'PUT',
+      { ...seriesData, seriesId, seriesStatus: 'published' },
+      { operationName: `publishSeries(${seriesId})`, shouldReturnFullResponse: true }
+    )
+  }
+
+  async unpublishSeries(seriesId: string, seriesData: any): Promise<any | ErrorResponse> {
+    validateString(seriesId, 'series ID')
+    validateObject(seriesData, 'series data')
+    return this.callExternalApi('esp', `/v1/series/${seriesId}`, 'PUT',
+      { ...seriesData, seriesId, seriesStatus: 'draft' },
+      { operationName: `unpublishSeries(${seriesId})`, shouldReturnFullResponse: true }
+    )
+  }
+
+  async archiveSeries(seriesId: string, seriesData: any): Promise<any | ErrorResponse> {
+    validateString(seriesId, 'series ID')
+    validateObject(seriesData, 'series data')
+    return this.callExternalApi('esp', `/v1/series/${seriesId}`, 'PUT',
+      { ...seriesData, seriesId, seriesStatus: 'archived' },
+      { operationName: `archiveSeries(${seriesId})`, shouldReturnFullResponse: true }
+    )
+  }
+
+  async deleteSeriesExternal(seriesId: string): Promise<SuccessResponse | ErrorResponse> {
+    validateString(seriesId, 'series ID')
+    return this.callExternalApi('esp', `/v1/series/${seriesId}`, 'DELETE', undefined,
+      { operationName: `deleteSeries(${seriesId})` }
+    )
+  }
+
+  async getSeriesHistory(seriesId: string): Promise<any | ErrorResponse> {
+    validateString(seriesId, 'series ID')
+    return this.callExternalApi('esp', `/v1/series/${seriesId}/history`, 'GET', undefined,
+      { operationName: 'getSeriesHistory', shouldReturnFullResponse: true }
+    )
   }
 
   /**
-   * Create venue for an event
+   * Fetch series details for enrichment
    */
-  async createVenue(eventId: string, venueData: any): Promise<any | ErrorResponse> {
-    if (!eventId || typeof eventId !== 'string') throw new Error('Invalid event ID')
-    if (!venueData || typeof venueData !== 'object') throw new Error('Invalid venue data')
+  async getSeriesBatch(seriesIds: string[]): Promise<Map<string, SeriesApiResponse>> {
+    const token = tokenStorage.getValidToken()
+    const results = new Map<string, SeriesApiResponse>()
+    
+    if (!token) {
+      console.warn('⚠️ No valid authentication token for series')
+      return results
+    }
 
-    return this.callExternalApi('esl', `/v1/events/${eventId}/venues`, 'POST', venueData, {
-      operationName: 'createVenue'
-    })
+    try {
+      const env = getCurrentEnvironment()
+      const headers = constructRequestHeaders(token, 'GET')
+      const host = getApiHost('esp', env)
+
+      const promises = seriesIds.map(async (seriesId) => {
+        try {
+          const url = `${host}/v1/series/${seriesId}`
+          const response = await safeFetch(url, {
+            method: 'GET',
+            headers: headers as any
+          })
+
+          if (response.ok) {
+            const data = await response.json()
+            return { seriesId, series: data }
+          }
+          return null
+        } catch (error) {
+          console.error(`Error fetching series ${seriesId}:`, error)
+          return null
+        }
+      })
+
+      const responses = await Promise.all(promises)
+      responses.forEach((result) => {
+        if (result) {
+          results.set(result.seriesId, result.series)
+        }
+      })
+    } catch (error) {
+      console.error('Error fetching series batch:', error)
+    }
+
+    return results
   }
 
-  /**
-   * Replace venue for an event
-   */
-  async replaceVenue(eventId: string, venueId: string, venueData: any): Promise<any | ErrorResponse> {
-    if (!eventId || typeof eventId !== 'string') throw new Error('Invalid event ID')
-    if (!venueId || typeof venueId !== 'string') throw new Error('Invalid venue ID')
-    if (!venueData || typeof venueData !== 'object') throw new Error('Invalid venue data')
+  // ============================================================================
+  // EVENT EXTERNAL APIs
+  // ============================================================================
 
-    return this.callExternalApi('esl', `/v1/events/${eventId}/venues/${venueId}`, 'PUT', venueData, {
-      operationName: 'replaceVenue'
-    })
+  /**
+   * Get events list from ESP API with token authentication and mock fallback
+   */
+  async getEventsList(): Promise<EventApiResponse[]> {
+    const token = tokenStorage.getValidToken()
+    
+    if (!token) {
+      console.warn('⚠️ No valid authentication token. Using mock data.')
+      console.log('💡 Click the "Dev Token" button to add a token for real API access')
+      
+      try {
+        const data = await getEventsListMock()
+        console.log('📦 Using mock events data:', data.length, 'items')
+        return data
+      } catch (error) {
+        console.error('Error fetching mock events:', error)
+        return []
+      }
+    }
+
+    try {
+      const env = getCurrentEnvironment()
+      console.log(`🔄 Fetching events from real API (${env} environment)...`)
+      
+      const headers = constructRequestHeaders(token, 'GET')
+      const host = getApiHost('esp', env)
+      const url = `${host}/v1/events`
+
+      const response = await safeFetch(url, {
+        method: 'GET',
+        headers: headers as any
+      })
+
+      const data = await response.json()
+
+      if (!response.ok) {
+        console.error(`❌ API Error: ${response.status}`, data)
+        throw new Error(`API returned ${response.status}`)
+      }
+
+      const events = data.events || []
+      console.log('✅ Successfully loaded events from API:', events.length, 'items')
+      
+      return events
+    } catch (error) {
+      console.error('❌ Error fetching events from API:', error)
+      console.log('📦 Falling back to mock data')
+      
+      try {
+        return await getEventsListMock()
+      } catch (mockError) {
+        console.error('Error fetching mock events:', mockError)
+        return []
+      }
+    }
   }
 
-  /**
-   * Get clouds list
-   */
-  async getClouds(): Promise<any[] | ErrorResponse> {
-    return this.callExternalApi('esp', '/v1/clouds', 'GET', undefined, {
-      operationName: 'getClouds',
-      transformResponse: (data) => data.clouds
-    })
-  }
-
-  /**
-   * Get a single cloud by type
-   */
-  async getCloud(cloudType: string): Promise<any | ErrorResponse> {
-    if (!cloudType || typeof cloudType !== 'string') throw new Error('Invalid cloud ID')
-
-    return this.callExternalApi('esp', `/v1/clouds/${cloudType}`, 'GET', undefined, {
-      operationName: 'getCloud',
-      shouldReturnFullResponse: true
-    })
-  }
-
-  /**
-   * Update cloud
-   */
-  async updateCloud(cloudType: string, cloudData: any): Promise<any | ErrorResponse> {
-    if (!cloudType || typeof cloudType !== 'string') throw new Error('Invalid cloud Type')
-    if (!cloudData || typeof cloudData !== 'object') throw new Error('Invalid cloud data')
-
-    return this.callExternalApi('esp', `/v1/clouds/${cloudType}`, 'PUT', cloudData, {
-      operationName: 'updateCloud',
-      shouldReturnFullResponse: true
-    })
-  }
-
-  /**
-   * Create event
-   */
   async createEventExternal(payload: any, locale: string): Promise<any | ErrorResponse> {
-    if (!payload || typeof payload !== 'object') throw new Error('Invalid event payload')
-    if (!locale || typeof locale !== 'string') throw new Error('Invalid locale')
-
-    const requestData = {
-      ...payload,
-      liveUpdate: false,
-      published: false,
-      defaultLocale: locale,
-    }
-
-    return this.callExternalApi('esl', '/v1/events', 'POST', requestData, {
-      operationName: 'createEvent'
-    })
+    validateObject(payload, 'event payload')
+    validateString(locale, 'locale')
+    return this.callExternalApi('esl', '/v1/events', 'POST',
+      { ...payload, liveUpdate: false, published: false, defaultLocale: locale },
+      { operationName: 'createEvent' }
+    )
   }
 
-  /**
-   * Update event
-   */
   async updateEventExternal(eventId: string, payload: any, policies = { forceSpWrite: false, liveUpdate: false }): Promise<any | ErrorResponse> {
-    if (!eventId || typeof eventId !== 'string') throw new Error('Invalid event ID')
-    if (!payload || typeof payload !== 'object') throw new Error('Invalid event payload')
-
-    const finalPayload = { ...payload, ...policies }
-
-    return this.callExternalApi('esl', `/v1/events/${eventId}`, 'PUT', finalPayload, {
-      operationName: `updateEvent(${eventId})`
-    })
+    validateString(eventId, 'event ID')
+    validateObject(payload, 'event payload')
+    return this.callExternalApi('esl', `/v1/events/${eventId}`, 'PUT',
+      { ...payload, ...policies },
+      { operationName: `updateEvent(${eventId})` }
+    )
   }
 
-  /**
-   * Publish event
-   */
   async publishEvent(eventId: string, payload: any): Promise<any | ErrorResponse> {
-    if (!eventId || typeof eventId !== 'string') throw new Error('Invalid event ID')
-    if (!payload || typeof payload !== 'object') throw new Error('Invalid event payload')
-
-    const requestData = {
-      ...payload,
-      published: true,
-      liveUpdate: true,
-      forceSpWrite: false,
-    }
-
-    return this.callExternalApi('esl', `/v1/events/${eventId}`, 'PUT', requestData, {
-      operationName: `publishEvent(${eventId})`
-    })
+    validateString(eventId, 'event ID')
+    validateObject(payload, 'event payload')
+    return this.callExternalApi('esl', `/v1/events/${eventId}`, 'PUT',
+      { ...payload, published: true, liveUpdate: true, forceSpWrite: false },
+      { operationName: `publishEvent(${eventId})` }
+    )
   }
 
-  /**
-   * Unpublish event
-   */
   async unpublishEvent(eventId: string, payload: any): Promise<any | ErrorResponse> {
-    if (!eventId || typeof eventId !== 'string') throw new Error('Invalid event ID')
-    if (!payload || typeof payload !== 'object') throw new Error('Invalid event payload')
-
-    const requestData = {
-      ...payload,
-      published: false,
-      liveUpdate: true,
-      forceSpWrite: false,
-    }
-
-    return this.callExternalApi('esl', `/v1/events/${eventId}`, 'PUT', requestData, {
-      operationName: `unpublishEvent(${eventId})`
-    })
+    validateString(eventId, 'event ID')
+    validateObject(payload, 'event payload')
+    return this.callExternalApi('esl', `/v1/events/${eventId}`, 'PUT',
+      { ...payload, published: false, liveUpdate: true, forceSpWrite: false },
+      { operationName: `unpublishEvent(${eventId})` }
+    )
   }
 
-  /**
-   * Preview event
-   */
   async previewEvent(eventId: string, payload: any): Promise<any | ErrorResponse> {
-    if (!eventId || typeof eventId !== 'string') throw new Error('Invalid event ID')
-    if (!payload || typeof payload !== 'object') throw new Error('Invalid event payload')
-
-    const requestData = {
-      ...payload,
-      liveUpdate: false,
-      forceSpWrite: true,
-    }
-
-    return this.callExternalApi('esl', `/v1/events/${eventId}`, 'PUT', requestData, {
-      operationName: `previewEvent(${eventId})`
-    })
+    validateString(eventId, 'event ID')
+    validateObject(payload, 'event payload')
+    return this.callExternalApi('esl', `/v1/events/${eventId}`, 'PUT',
+      { ...payload, liveUpdate: false, forceSpWrite: true },
+      { operationName: `previewEvent(${eventId})` }
+    )
   }
 
-  /**
-   * Delete event
-   */
   async deleteEventExternal(eventId: string): Promise<SuccessResponse | ErrorResponse> {
-    if (!eventId || typeof eventId !== 'string') throw new Error('Invalid event ID')
-
-    return this.callExternalApi('esl', `/v1/events/${eventId}`, 'DELETE', undefined, {
-      operationName: `deleteEvent(${eventId})`
-    })
+    validateString(eventId, 'event ID')
+    return this.callExternalApi('esl', `/v1/events/${eventId}`, 'DELETE', undefined,
+      { operationName: `deleteEvent(${eventId})` }
+    )
   }
 
   /**
    * Get full event details with speakers, sponsors, and venues
    */
   async getEventFull(eventId: string): Promise<any | ErrorResponse> {
-    if (!eventId || typeof eventId !== 'string') throw new Error('Invalid eventId')
+    validateString(eventId, 'eventId')
 
     const token = tokenStorage.getValidToken()
-    
     if (!token) {
       console.warn('⚠️ No valid authentication token for getEvent')
       return { status: 'No Token', error: 'No valid authentication token' }
@@ -904,36 +652,25 @@ class ApiService {
       let data: any = {}
 
       if (eventResp.ok) {
-        const eventData = await eventResp.json()
-        data = eventData
+        data = await eventResp.json()
       } else {
         console.error(`❌ Failed to get event ${eventId}. Status: ${eventResp.status}`)
+        return { status: eventResp.status, error: 'Failed to get event details' }
       }
 
       if (speakersResp.ok) {
         const speakersData = await speakersResp.json()
-        const sortedSpeakers = speakersData.speakers.sort((a: any, b: any) => a.ordinal - b.ordinal)
-        data.speakers = sortedSpeakers
-      } else {
-        console.error(`❌ Failed to get speakers for event ${eventId}. Status: ${speakersResp.status}`)
+        data.speakers = speakersData.speakers.sort((a: any, b: any) => a.ordinal - b.ordinal)
       }
 
       if (sponsorsResp.ok) {
         const sponsorsData = await sponsorsResp.json()
         data.sponsors = sponsorsData.sponsors
-      } else {
-        console.error(`❌ Failed to get sponsors for event ${eventId}. Status: ${sponsorsResp.status}`)
       }
 
       if (venuesResp.ok) {
         const venuesData = await venuesResp.json()
         data.venue = venuesData.venues?.[0]
-      } else {
-        console.error(`❌ Failed to get venues for event ${eventId}. Status: ${venuesResp.status}`)
-      }
-
-      if (!eventResp.ok) {
-        return { status: eventResp.status, error: 'Failed to get event details' }
       }
 
       return data
@@ -943,422 +680,411 @@ class ApiService {
     }
   }
 
-  /**
-   * Get event venue
-   */
-  async getEventVenue(eventId: string): Promise<any | null | ErrorResponse> {
-    if (!eventId || typeof eventId !== 'string') throw new Error('Invalid eventId')
+  async getEventImages(eventId: string): Promise<any | ErrorResponse> {
+    validateString(eventId, 'event ID')
+    return this.callExternalApi('esp', `/v1/events/${eventId}/images`, 'GET', undefined,
+      { operationName: 'getEventImages', shouldReturnFullResponse: true }
+    )
+  }
 
-    return this.callExternalApi('esp', `/v1/events/${eventId}/venues`, 'GET', undefined, {
-      operationName: 'getEventVenue',
-      transformResponse: (data) => data.venues?.[0] || null
-    })
+  async getEventHistory(eventId: string): Promise<any | ErrorResponse> {
+    validateString(eventId, 'event ID')
+    return this.callExternalApi('esp', `/v1/events/${eventId}/history`, 'GET', undefined,
+      { operationName: 'getEventHistory', shouldReturnFullResponse: true }
+    )
   }
 
   /**
-   * Create speaker for a series
+   * Batch fetch event images for enrichment
    */
+  async getEventImagesBatch(eventIds: string[]): Promise<Map<string, EventApiResponse>> {
+    const token = tokenStorage.getValidToken()
+    const results = new Map<string, EventApiResponse>()
+    
+    if (!token) return results
+
+    try {
+      const env = getCurrentEnvironment()
+      const headers = constructRequestHeaders(token, 'GET')
+      const host = getApiHost('esp', env)
+
+      const promises = eventIds.map(async (eventId) => {
+        try {
+          const url = `${host}/v1/events/${eventId}/images`
+          const response = await safeFetch(url, { method: 'GET', headers: headers as any })
+
+          if (response.ok) {
+            const data = await response.json()
+            const eventData: EventApiResponse = {
+              eventId,
+              published: false,
+              images: data.images || (Array.isArray(data) ? data : [])
+            }
+            return { eventId, data: eventData }
+          }
+          return null
+        } catch (error) {
+          console.error(`Error fetching images for event ${eventId}:`, error)
+          return null
+        }
+      })
+
+      const responses = await Promise.all(promises)
+      responses.forEach((result) => {
+        if (result?.data) {
+          results.set(result.eventId, result.data)
+        }
+      })
+    } catch (error) {
+      console.error('Error fetching event images batch:', error)
+    }
+
+    return results
+  }
+
+  /**
+   * Batch fetch event venues for enrichment
+   */
+  async getEventVenuesBatch(eventIds: string[]): Promise<Map<string, Venue[]>> {
+    const token = tokenStorage.getValidToken()
+    const results = new Map<string, Venue[]>()
+    
+    if (!token) return results
+
+    try {
+      const env = getCurrentEnvironment()
+      const headers = constructRequestHeaders(token, 'GET')
+      const host = getApiHost('esp', env)
+
+      const promises = eventIds.map(async (eventId) => {
+        try {
+          const url = `${host}/v1/events/${eventId}/venues`
+          const response = await safeFetch(url, { method: 'GET', headers: headers as any })
+
+          if (response.ok) {
+            const data = await response.json()
+            return { eventId, venues: data.venues || [] }
+          }
+          // 404 means no venue found, which is valid
+          if (response.status === 404) {
+            return { eventId, venues: [] }
+          }
+          return null
+        } catch (error) {
+          console.error(`Error fetching venues for event ${eventId}:`, error)
+          return null
+        }
+      })
+
+      const responses = await Promise.all(promises)
+      responses.forEach((result) => {
+        if (result) {
+          results.set(result.eventId, result.venues)
+        }
+      })
+    } catch (error) {
+      console.error('Error fetching event venues batch:', error)
+    }
+
+    return results
+  }
+
+  /**
+   * Batch fetch event history for enrichment
+   */
+  async getEventHistoryBatch(eventIds: string[]): Promise<Map<string, EventHistoryResponse>> {
+    const token = tokenStorage.getValidToken()
+    const results = new Map<string, EventHistoryResponse>()
+    
+    if (!token) return results
+
+    try {
+      const env = getCurrentEnvironment()
+      const headers = constructRequestHeaders(token, 'GET')
+      const host = getApiHost('esp', env)
+
+      const promises = eventIds.map(async (eventId) => {
+        try {
+          const url = `${host}/v1/events/${eventId}/history`
+          const response = await safeFetch(url, { method: 'GET', headers: headers as any })
+
+          if (response.ok) {
+            const data = await response.json()
+            return { eventId, history: data }
+          }
+          if (response.status === 404) {
+            return { eventId, history: { history: [], count: 0 } }
+          }
+          return null
+        } catch (error) {
+          console.error(`Error fetching history for event ${eventId}:`, error)
+          return null
+        }
+      })
+
+      const responses = await Promise.all(promises)
+      responses.forEach((result) => {
+        if (result) {
+          results.set(result.eventId, result.history)
+        }
+      })
+    } catch (error) {
+      console.error('Error fetching event history batch:', error)
+    }
+
+    return results
+  }
+
+  // ============================================================================
+  // SPEAKER APIs
+  // ============================================================================
+
   async createSpeaker(profile: any, seriesId: string): Promise<any | ErrorResponse> {
-    if (!seriesId || typeof seriesId !== 'string') throw new Error('Invalid series ID')
-    if (!profile || typeof profile !== 'object') throw new Error('Invalid speaker profile')
-
-    return this.callExternalApi('esp', `/v1/series/${seriesId}/speakers`, 'POST', profile, {
-      operationName: 'createSpeaker',
-      shouldReturnFullResponse: true
-    })
+    validateString(seriesId, 'series ID')
+    validateObject(profile, 'speaker profile')
+    return this.callExternalApi('esp', `/v1/series/${seriesId}/speakers`, 'POST', profile,
+      { operationName: 'createSpeaker', shouldReturnFullResponse: true }
+    )
   }
 
-  /**
-   * Update speaker for a series
-   */
   async updateSpeaker(profile: any, seriesId: string): Promise<any | ErrorResponse> {
-    if (!seriesId || typeof seriesId !== 'string') throw new Error('Invalid series ID')
-    if (!profile || typeof profile !== 'object') throw new Error('Invalid speaker profile')
-
-    return this.callExternalApi('esp', `/v1/series/${seriesId}/speakers/${profile.speakerId}`, 'PUT', profile, {
-      operationName: 'updateSpeaker',
-      shouldReturnFullResponse: true
-    })
+    validateString(seriesId, 'series ID')
+    validateObject(profile, 'speaker profile')
+    return this.callExternalApi('esp', `/v1/series/${seriesId}/speakers/${profile.speakerId}`, 'PUT', profile,
+      { operationName: 'updateSpeaker', shouldReturnFullResponse: true }
+    )
   }
 
-  /**
-   * Get speaker details from series
-   */
   async getSpeaker(seriesId: string, speakerId: string): Promise<any | ErrorResponse> {
-    if (!seriesId || typeof seriesId !== 'string') throw new Error('Invalid series ID')
-    if (!speakerId || typeof speakerId !== 'string') throw new Error('Invalid speaker ID')
-
-    return this.callExternalApi('esp', `/v1/series/${seriesId}/speakers/${speakerId}`, 'GET', undefined, {
-      operationName: 'getSpeaker',
-      shouldReturnFullResponse: true
-    })
+    validateString(seriesId, 'series ID')
+    validateString(speakerId, 'speaker ID')
+    return this.callExternalApi('esp', `/v1/series/${seriesId}/speakers/${speakerId}`, 'GET', undefined,
+      { operationName: 'getSpeaker', shouldReturnFullResponse: true }
+    )
   }
 
-  /**
-   * Get speakers for a series
-   */
   async getSpeakers(seriesId: string): Promise<any | ErrorResponse> {
-    if (!seriesId || typeof seriesId !== 'string') throw new Error('Invalid series ID')
-
-    return this.callExternalApi('esp', `/v1/series/${seriesId}/speakers`, 'GET', undefined, {
-      operationName: 'getSpeakers',
-      shouldReturnFullResponse: true
-    })
+    validateString(seriesId, 'series ID')
+    return this.callExternalApi('esp', `/v1/series/${seriesId}/speakers`, 'GET', undefined,
+      { operationName: 'getSpeakers', shouldReturnFullResponse: true }
+    )
   }
 
-  /**
-   * Add speaker to event
-   */
   async addSpeakerToEvent(speakerData: any, eventId: string): Promise<any | ErrorResponse> {
-    if (!eventId || typeof eventId !== 'string') throw new Error('Invalid event ID')
-    if (!speakerData || typeof speakerData !== 'object') throw new Error('Invalid speaker data')
-
-    return this.callExternalApi('esp', `/v1/events/${eventId}/speakers`, 'POST', speakerData, {
-      operationName: 'addSpeakerToEvent',
-      shouldReturnFullResponse: true
-    })
+    validateString(eventId, 'event ID')
+    validateObject(speakerData, 'speaker data')
+    return this.callExternalApi('esp', `/v1/events/${eventId}/speakers`, 'POST', speakerData,
+      { operationName: 'addSpeakerToEvent', shouldReturnFullResponse: true }
+    )
   }
 
-  /**
-   * Get event speakers
-   */
   async getEventSpeakers(eventId: string): Promise<any | ErrorResponse> {
-    if (!eventId || typeof eventId !== 'string') throw new Error('Invalid event ID')
-
-    return this.callExternalApi('esp', `/v1/events/${eventId}/speakers`, 'GET', undefined, {
-      operationName: 'getEventSpeakers',
-      shouldReturnFullResponse: true
-    })
+    validateString(eventId, 'event ID')
+    return this.callExternalApi('esp', `/v1/events/${eventId}/speakers`, 'GET', undefined,
+      { operationName: 'getEventSpeakers', shouldReturnFullResponse: true }
+    )
   }
 
-  /**
-   * Get single event speaker
-   */
   async getEventSpeaker(eventId: string, speakerId: string): Promise<any | ErrorResponse> {
-    if (!eventId || typeof eventId !== 'string') throw new Error('Invalid event ID')
-    if (!speakerId || typeof speakerId !== 'string') throw new Error('Invalid speaker ID')
-
-    return this.callExternalApi('esp', `/v1/events/${eventId}/speakers/${speakerId}`, 'GET', undefined, {
-      operationName: 'getEventSpeaker',
-      shouldReturnFullResponse: true
-    })
+    validateString(eventId, 'event ID')
+    validateString(speakerId, 'speaker ID')
+    return this.callExternalApi('esp', `/v1/events/${eventId}/speakers/${speakerId}`, 'GET', undefined,
+      { operationName: 'getEventSpeaker', shouldReturnFullResponse: true }
+    )
   }
 
-  /**
-   * Update speaker in event
-   */
   async updateSpeakerInEvent(speakerData: any, speakerId: string, eventId: string): Promise<any | ErrorResponse> {
-    if (!eventId || typeof eventId !== 'string') throw new Error('Invalid event ID')
-    if (!speakerId || typeof speakerId !== 'string') throw new Error('Invalid speaker ID')
-    if (!speakerData || typeof speakerData !== 'object') throw new Error('Invalid speaker data')
-
-    return this.callExternalApiWithDependency(
+    validateString(eventId, 'event ID')
+    validateString(speakerId, 'speaker ID')
+    validateObject(speakerData, 'speaker data')
+    return this.callWithDependency(
       'esp',
       `/v1/events/${eventId}/speakers/${speakerId}`,
-      'PUT',
       speakerData,
       () => this.getEventSpeaker(eventId, speakerId),
-      (body, dependentData) => ({
-        ...body,
-        modificationTime: dependentData.modificationTime
-      }),
+      (body, dependentData) => ({ ...body, modificationTime: dependentData.modificationTime }),
       'updateSpeakerInEvent'
     )
   }
 
-  /**
-   * Remove speaker from event
-   */
   async removeSpeakerFromEvent(speakerId: string, eventId: string): Promise<SuccessResponse | ErrorResponse> {
-    if (!eventId || typeof eventId !== 'string') throw new Error('Invalid event ID')
-    if (!speakerId || typeof speakerId !== 'string') throw new Error('Invalid speaker ID')
-
-    return this.callExternalApi('esp', `/v1/events/${eventId}/speakers/${speakerId}`, 'DELETE', undefined, {
-      operationName: 'removeSpeakerFromEvent'
-    })
+    validateString(eventId, 'event ID')
+    validateString(speakerId, 'speaker ID')
+    return this.callExternalApi('esp', `/v1/events/${eventId}/speakers/${speakerId}`, 'DELETE', undefined,
+      { operationName: 'removeSpeakerFromEvent' }
+    )
   }
 
-  /**
-   * Create sponsor for a series
-   */
+  async deleteSpeakerImage(speakerId: string, seriesId: string, imageId: string): Promise<SuccessResponse | ErrorResponse> {
+    validateString(seriesId, 'series ID')
+    validateString(speakerId, 'speaker ID')
+    validateString(imageId, 'image ID')
+    return this.callExternalApi('esp', `/v1/series/${seriesId}/speakers/${speakerId}/images/${imageId}`, 'DELETE', undefined,
+      { operationName: 'deleteSpeakerImage' }
+    )
+  }
+
+  // ============================================================================
+  // SPONSOR APIs
+  // ============================================================================
+
   async createSponsor(sponsorData: any, seriesId: string, locale: string): Promise<any | ErrorResponse> {
-    if (!seriesId || typeof seriesId !== 'string') throw new Error('Invalid series ID')
-    if (!sponsorData || typeof sponsorData !== 'object') throw new Error('Invalid sponsor data')
-    if (!locale || typeof locale !== 'string') throw new Error('Invalid locale')
-
-    return this.callExternalApi('esp', `/v1/series/${seriesId}/sponsors`, 'POST', sponsorData, {
-      operationName: 'createSponsor',
-      shouldReturnFullResponse: true
-    })
+    validateString(seriesId, 'series ID')
+    validateObject(sponsorData, 'sponsor data')
+    validateString(locale, 'locale')
+    return this.callExternalApi('esp', `/v1/series/${seriesId}/sponsors`, 'POST', sponsorData,
+      { operationName: 'createSponsor', shouldReturnFullResponse: true }
+    )
   }
 
-  /**
-   * Update sponsor for a series
-   */
   async updateSponsor(sponsorData: any, sponsorId: string, seriesId: string, locale: string): Promise<any | ErrorResponse> {
-    if (!seriesId || typeof seriesId !== 'string') throw new Error('Invalid series ID')
-    if (!sponsorId || typeof sponsorId !== 'string') throw new Error('Invalid sponsor ID')
-    if (!sponsorData || typeof sponsorData !== 'object') throw new Error('Invalid sponsor data')
-    if (!locale || typeof locale !== 'string') throw new Error('Invalid locale')
-
-    return this.callExternalApi('esp', `/v1/series/${seriesId}/sponsors/${sponsorId}`, 'PUT', sponsorData, {
-      operationName: 'updateSponsor',
-      shouldReturnFullResponse: true
-    })
+    validateString(seriesId, 'series ID')
+    validateString(sponsorId, 'sponsor ID')
+    validateObject(sponsorData, 'sponsor data')
+    validateString(locale, 'locale')
+    return this.callExternalApi('esp', `/v1/series/${seriesId}/sponsors/${sponsorId}`, 'PUT', sponsorData,
+      { operationName: 'updateSponsor', shouldReturnFullResponse: true }
+    )
   }
 
-  /**
-   * Get sponsor from series
-   */
   async getSponsor(seriesId: string, sponsorId: string): Promise<any | ErrorResponse> {
-    if (!seriesId || typeof seriesId !== 'string') throw new Error('Invalid series ID')
-    if (!sponsorId || typeof sponsorId !== 'string') throw new Error('Invalid sponsor ID')
-
-    return this.callExternalApi('esp', `/v1/series/${seriesId}/sponsors/${sponsorId}`, 'GET', undefined, {
-      operationName: 'getSponsor',
-      shouldReturnFullResponse: true
-    })
+    validateString(seriesId, 'series ID')
+    validateString(sponsorId, 'sponsor ID')
+    return this.callExternalApi('esp', `/v1/series/${seriesId}/sponsors/${sponsorId}`, 'GET', undefined,
+      { operationName: 'getSponsor', shouldReturnFullResponse: true }
+    )
   }
 
-  /**
-   * Get sponsors for a series
-   */
   async getSponsors(seriesId: string): Promise<any | ErrorResponse> {
-    if (!seriesId || typeof seriesId !== 'string') throw new Error('Invalid series ID')
-
-    return this.callExternalApi('esp', `/v1/series/${seriesId}/sponsors`, 'GET', undefined, {
-      operationName: 'getSponsors',
-      shouldReturnFullResponse: true
-    })
+    validateString(seriesId, 'series ID')
+    return this.callExternalApi('esp', `/v1/series/${seriesId}/sponsors`, 'GET', undefined,
+      { operationName: 'getSponsors', shouldReturnFullResponse: true }
+    )
   }
 
-  /**
-   * Add sponsor to event
-   */
   async addSponsorToEvent(sponsorData: any, eventId: string): Promise<any | ErrorResponse> {
-    if (!eventId || typeof eventId !== 'string') throw new Error('Invalid event ID')
-    if (!sponsorData || typeof sponsorData !== 'object') throw new Error('Invalid sponsor data')
-
-    return this.callExternalApi('esp', `/v1/events/${eventId}/sponsors`, 'POST', sponsorData, {
-      operationName: 'addSponsorToEvent',
-      shouldReturnFullResponse: true
-    })
+    validateString(eventId, 'event ID')
+    validateObject(sponsorData, 'sponsor data')
+    return this.callExternalApi('esp', `/v1/events/${eventId}/sponsors`, 'POST', sponsorData,
+      { operationName: 'addSponsorToEvent', shouldReturnFullResponse: true }
+    )
   }
 
-  /**
-   * Get event sponsor
-   */
   async getEventSponsor(eventId: string, sponsorId: string): Promise<any | ErrorResponse> {
-    if (!eventId || typeof eventId !== 'string') throw new Error('Invalid event ID')
-    if (!sponsorId || typeof sponsorId !== 'string') throw new Error('Invalid sponsor ID')
-
-    return this.callExternalApi('esp', `/v1/events/${eventId}/sponsors/${sponsorId}`, 'GET', undefined, {
-      operationName: 'getEventSponsor',
-      shouldReturnFullResponse: true
-    })
+    validateString(eventId, 'event ID')
+    validateString(sponsorId, 'sponsor ID')
+    return this.callExternalApi('esp', `/v1/events/${eventId}/sponsors/${sponsorId}`, 'GET', undefined,
+      { operationName: 'getEventSponsor', shouldReturnFullResponse: true }
+    )
   }
 
-  /**
-   * Update sponsor in event
-   */
   async updateSponsorInEvent(sponsorData: any, sponsorId: string, eventId: string): Promise<any | ErrorResponse> {
-    if (!eventId || typeof eventId !== 'string') throw new Error('Invalid event ID')
-    if (!sponsorId || typeof sponsorId !== 'string') throw new Error('Invalid sponsor ID')
-    if (!sponsorData || typeof sponsorData !== 'object') throw new Error('Invalid sponsor data')
-
-    return this.callExternalApiWithDependency(
+    validateString(eventId, 'event ID')
+    validateString(sponsorId, 'sponsor ID')
+    validateObject(sponsorData, 'sponsor data')
+    return this.callWithDependency(
       'esp',
       `/v1/events/${eventId}/sponsors/${sponsorId}`,
-      'PUT',
       sponsorData,
       () => this.getEventSponsor(eventId, sponsorId),
-      (body, dependentData) => ({
-        ...body,
-        modificationTime: dependentData.modificationTime
-      }),
+      (body, dependentData) => ({ ...body, modificationTime: dependentData.modificationTime }),
       'updateSponsorInEvent'
     )
   }
 
-  /**
-   * Remove sponsor from event
-   */
   async removeSponsorFromEvent(sponsorId: string, eventId: string): Promise<SuccessResponse | ErrorResponse> {
-    if (!eventId || typeof eventId !== 'string') throw new Error('Invalid event ID')
-    if (!sponsorId || typeof sponsorId !== 'string') throw new Error('Invalid sponsor ID')
-
-    return this.callExternalApi('esp', `/v1/events/${eventId}/sponsors/${sponsorId}`, 'DELETE', undefined, {
-      operationName: 'removeSponsorFromEvent'
-    })
+    validateString(eventId, 'event ID')
+    validateString(sponsorId, 'sponsor ID')
+    return this.callExternalApi('esp', `/v1/events/${eventId}/sponsors/${sponsorId}`, 'DELETE', undefined,
+      { operationName: 'removeSponsorFromEvent' }
+    )
   }
 
-  /**
-   * Get sponsor images
-   */
   async getSponsorImages(seriesId: string, sponsorId: string): Promise<any | ErrorResponse> {
-    if (!seriesId || typeof seriesId !== 'string') throw new Error('Invalid series ID')
-    if (!sponsorId || typeof sponsorId !== 'string') throw new Error('Invalid sponsor ID')
-
-    return this.callExternalApi('esp', `/v1/series/${seriesId}/sponsors/${sponsorId}/images`, 'GET', undefined, {
-      operationName: 'getSponsorImages',
-      shouldReturnFullResponse: true
-    })
+    validateString(seriesId, 'series ID')
+    validateString(sponsorId, 'sponsor ID')
+    return this.callExternalApi('esp', `/v1/series/${seriesId}/sponsors/${sponsorId}/images`, 'GET', undefined,
+      { operationName: 'getSponsorImages', shouldReturnFullResponse: true }
+    )
   }
 
-  /**
-   * Create series
-   */
-  async createSeriesExternal(seriesData: any): Promise<any | ErrorResponse> {
-    if (!seriesData || typeof seriesData !== 'object') throw new Error('Invalid series data')
+  // ============================================================================
+  // VENUE APIs
+  // ============================================================================
 
-    const requestData = { ...seriesData, seriesStatus: 'draft' }
-    
-    return this.callExternalApi('esp', '/v1/series', 'POST', requestData, {
-      operationName: 'createSeries',
-      shouldReturnFullResponse: true
-    })
+  async createVenue(eventId: string, venueData: any): Promise<any | ErrorResponse> {
+    validateString(eventId, 'event ID')
+    validateObject(venueData, 'venue data')
+    return this.callExternalApi('esl', `/v1/events/${eventId}/venues`, 'POST', venueData,
+      { operationName: 'createVenue' }
+    )
   }
 
-  /**
-   * Get series by ID
-   */
-  async getSeriesByIdExternal(seriesId: string): Promise<any | ErrorResponse> {
-    if (!seriesId || typeof seriesId !== 'string') throw new Error('Invalid series ID')
-
-    return this.callExternalApi('esp', `/v1/series/${seriesId}`, 'GET', undefined, {
-      operationName: `getSeriesById(${seriesId})`,
-      shouldReturnFullResponse: true
-    })
+  async replaceVenue(eventId: string, venueId: string, venueData: any): Promise<any | ErrorResponse> {
+    validateString(eventId, 'event ID')
+    validateString(venueId, 'venue ID')
+    validateObject(venueData, 'venue data')
+    return this.callExternalApi('esl', `/v1/events/${eventId}/venues/${venueId}`, 'PUT', venueData,
+      { operationName: 'replaceVenue' }
+    )
   }
 
-  /**
-   * Update series
-   */
-  async updateSeriesExternal(seriesId: string, seriesData: any): Promise<any | ErrorResponse> {
-    if (!seriesId || typeof seriesId !== 'string') throw new Error('Invalid series ID')
-    if (!seriesData || typeof seriesData !== 'object') throw new Error('Invalid series data')
-
-    const requestData = { ...seriesData, seriesId }
-    
-    return this.callExternalApi('esp', `/v1/series/${seriesId}`, 'PUT', requestData, {
-      operationName: `updateSeries(${seriesId})`,
-      shouldReturnFullResponse: true
-    })
+  async getEventVenue(eventId: string): Promise<any | null | ErrorResponse> {
+    validateString(eventId, 'eventId')
+    return this.callExternalApi('esp', `/v1/events/${eventId}/venues`, 'GET', undefined,
+      { operationName: 'getEventVenue', transformResponse: (data) => data.venues?.[0] || null }
+    )
   }
 
-  /**
-   * Publish series
-   */
-  async publishSeries(seriesId: string, seriesData: any): Promise<any | ErrorResponse> {
-    if (!seriesId || typeof seriesId !== 'string') throw new Error('Invalid series ID')
-    if (!seriesData || typeof seriesData !== 'object') throw new Error('Invalid series data')
+  // ============================================================================
+  // ATTENDEE APIs
+  // ============================================================================
 
-    const requestData = { ...seriesData, seriesId, seriesStatus: 'published' }
-    
-    return this.callExternalApi('esp', `/v1/series/${seriesId}`, 'PUT', requestData, {
-      operationName: `publishSeries(${seriesId})`,
-      shouldReturnFullResponse: true
-    })
-  }
-
-  /**
-   * Unpublish series
-   */
-  async unpublishSeries(seriesId: string, seriesData: any): Promise<any | ErrorResponse> {
-    if (!seriesId || typeof seriesId !== 'string') throw new Error('Invalid series ID')
-    if (!seriesData || typeof seriesData !== 'object') throw new Error('Invalid series data')
-
-    const requestData = { ...seriesData, seriesId, seriesStatus: 'draft' }
-    
-    return this.callExternalApi('esp', `/v1/series/${seriesId}`, 'PUT', requestData, {
-      operationName: `unpublishSeries(${seriesId})`,
-      shouldReturnFullResponse: true
-    })
-  }
-
-  /**
-   * Archive series
-   */
-  async archiveSeries(seriesId: string, seriesData: any): Promise<any | ErrorResponse> {
-    if (!seriesId || typeof seriesId !== 'string') throw new Error('Invalid series ID')
-    if (!seriesData || typeof seriesData !== 'object') throw new Error('Invalid series data')
-
-    const requestData = { ...seriesData, seriesId, seriesStatus: 'archived' }
-    
-    return this.callExternalApi('esp', `/v1/series/${seriesId}`, 'PUT', requestData, {
-      operationName: `archiveSeries(${seriesId})`,
-      shouldReturnFullResponse: true
-    })
-  }
-
-  /**
-   * Delete series
-   */
-  async deleteSeriesExternal(seriesId: string): Promise<SuccessResponse | ErrorResponse> {
-    if (!seriesId || typeof seriesId !== 'string') throw new Error('Invalid series ID')
-
-    return this.callExternalApi('esp', `/v1/series/${seriesId}`, 'DELETE', undefined, {
-      operationName: `deleteSeries(${seriesId})`
-    })
-  }
-
-  /**
-   * Create attendee for an event
-   */
   async createAttendee(eventId: string, attendeeData: any): Promise<any | ErrorResponse> {
-    if (!eventId || typeof eventId !== 'string') throw new Error('Invalid event ID')
-    if (!attendeeData || typeof attendeeData !== 'object') throw new Error('Invalid attendee data')
-
-    return this.callExternalApi('esp', `/v1/events/${eventId}/attendees`, 'POST', attendeeData, {
-      operationName: 'createAttendee',
-      shouldReturnFullResponse: true
-    })
+    validateString(eventId, 'event ID')
+    validateObject(attendeeData, 'attendee data')
+    return this.callExternalApi('esp', `/v1/events/${eventId}/attendees`, 'POST', attendeeData,
+      { operationName: 'createAttendee', shouldReturnFullResponse: true }
+    )
   }
 
-  /**
-   * Update attendee
-   */
   async updateAttendee(eventId: string, attendeeId: string, attendeeData: any): Promise<any | ErrorResponse> {
-    if (!eventId || typeof eventId !== 'string') throw new Error('Invalid event ID')
-    if (!attendeeId || typeof attendeeId !== 'string') throw new Error('Invalid attendee ID')
-    if (!attendeeData || typeof attendeeData !== 'object') throw new Error('Invalid attendee data')
-
-    return this.callExternalApi('esp', `/v1/events/${eventId}/attendees/${attendeeId}`, 'PUT', attendeeData, {
-      operationName: 'updateAttendee',
-      shouldReturnFullResponse: true
-    })
+    validateString(eventId, 'event ID')
+    validateString(attendeeId, 'attendee ID')
+    validateObject(attendeeData, 'attendee data')
+    return this.callExternalApi('esp', `/v1/events/${eventId}/attendees/${attendeeId}`, 'PUT', attendeeData,
+      { operationName: 'updateAttendee', shouldReturnFullResponse: true }
+    )
   }
 
-  /**
-   * Remove attendee from event
-   */
   async removeAttendeeFromEvent(eventId: string, attendeeId: string): Promise<any | ErrorResponse> {
-    if (!eventId || typeof eventId !== 'string') throw new Error('Invalid event ID')
-    if (!attendeeId || typeof attendeeId !== 'string') throw new Error('Invalid attendee ID')
-
-    return this.callExternalApi('esl', `/v1/events/${eventId}/attendees/${attendeeId}`, 'DELETE', undefined, {
-      operationName: 'removeAttendeeFromEvent',
-      shouldReturnFullResponse: true
-    })
+    validateString(eventId, 'event ID')
+    validateString(attendeeId, 'attendee ID')
+    return this.callExternalApi('esl', `/v1/events/${eventId}/attendees/${attendeeId}`, 'DELETE', undefined,
+      { operationName: 'removeAttendeeFromEvent', shouldReturnFullResponse: true }
+    )
   }
 
-  /**
-   * Get event attendees
-   */
   async getEventAttendees(eventId: string): Promise<any | ErrorResponse> {
-    if (!eventId || typeof eventId !== 'string') throw new Error('Invalid event ID')
+    validateString(eventId, 'event ID')
+    return this.callExternalApi('esp', `/v1/events/${eventId}/attendees`, 'GET', undefined,
+      { operationName: 'getEventAttendees', shouldReturnFullResponse: true }
+    )
+  }
 
-    return this.callExternalApi('esp', `/v1/events/${eventId}/attendees`, 'GET', undefined, {
-      operationName: 'getEventAttendees',
-      shouldReturnFullResponse: true
-    })
+  async getAttendee(eventId: string, attendeeId: string): Promise<any | ErrorResponse> {
+    validateString(eventId, 'event ID')
+    validateString(attendeeId, 'attendee ID')
+    return this.callExternalApi('esp', `/v1/events/${eventId}/attendees/${attendeeId}`, 'GET', undefined,
+      { operationName: 'getAttendee', shouldReturnFullResponse: true }
+    )
   }
 
   /**
    * Get all event attendees with pagination
    */
   async getAllEventAttendees(eventId: string): Promise<any[] | ErrorResponse> {
-    if (!eventId || typeof eventId !== 'string') throw new Error('Invalid event ID')
+    validateString(eventId, 'event ID')
 
     const recurGetAttendees = async (fullAttendeeArr: any[] = [], nextPageToken: string | null = null): Promise<any[] | ErrorResponse> => {
       const endpoint = nextPageToken 
@@ -1384,71 +1110,55 @@ class ApiService {
     return recurGetAttendees()
   }
 
-  /**
-   * Get single attendee
-   */
-  async getAttendee(eventId: string, attendeeId: string): Promise<any | ErrorResponse> {
-    if (!eventId || typeof eventId !== 'string') throw new Error('Invalid event ID')
-    if (!attendeeId || typeof attendeeId !== 'string') throw new Error('Invalid attendee ID')
+  // ============================================================================
+  // CLOUD & LOCALE APIs
+  // ============================================================================
 
-    return this.callExternalApi('esp', `/v1/events/${eventId}/attendees/${attendeeId}`, 'GET', undefined, {
-      operationName: 'getAttendee',
-      shouldReturnFullResponse: true
-    })
+  async getLocales(): Promise<any | ErrorResponse> {
+    return this.callExternalApi('esp', '/v1/locales', 'GET', undefined,
+      { operationName: 'getLocales', shouldReturnFullResponse: true }
+    )
   }
 
-  /**
-   * Get event images
-   */
-  async getEventImages(eventId: string): Promise<any | ErrorResponse> {
-    if (!eventId || typeof eventId !== 'string') throw new Error('Invalid event ID')
-
-    return this.callExternalApi('esp', `/v1/events/${eventId}/images`, 'GET', undefined, {
-      operationName: 'getEventImages',
-      shouldReturnFullResponse: true
-    })
+  async getClouds(): Promise<any[] | ErrorResponse> {
+    return this.callExternalApi('esp', '/v1/clouds', 'GET', undefined,
+      { operationName: 'getClouds', transformResponse: (data) => data.clouds }
+    )
   }
 
-  /**
-   * Get event history
-   */
-  async getEventHistory(eventId: string): Promise<any | ErrorResponse> {
-    if (!eventId || typeof eventId !== 'string') throw new Error('Invalid event ID')
-
-    return this.callExternalApi('esp', `/v1/events/${eventId}/history`, 'GET', undefined, {
-      operationName: 'getEventHistory',
-      shouldReturnFullResponse: true
-    })
+  async getCloud(cloudType: string): Promise<any | ErrorResponse> {
+    validateString(cloudType, 'cloud ID')
+    return this.callExternalApi('esp', `/v1/clouds/${cloudType}`, 'GET', undefined,
+      { operationName: 'getCloud', shouldReturnFullResponse: true }
+    )
   }
 
-  /**
-   * Get series history
-   */
-  async getSeriesHistory(seriesId: string): Promise<any | ErrorResponse> {
-    if (!seriesId || typeof seriesId !== 'string') throw new Error('Invalid series ID')
-
-    return this.callExternalApi('esp', `/v1/series/${seriesId}/history`, 'GET', undefined, {
-      operationName: 'getSeriesHistory',
-      shouldReturnFullResponse: true
-    })
+  async updateCloud(cloudType: string, cloudData: any): Promise<any | ErrorResponse> {
+    validateString(cloudType, 'cloud Type')
+    validateObject(cloudData, 'cloud data')
+    return this.callExternalApi('esp', `/v1/clouds/${cloudType}`, 'PUT', cloudData,
+      { operationName: 'updateCloud', shouldReturnFullResponse: true }
+    )
   }
 
-  /**
-   * Delete speaker image
-   */
-  async deleteSpeakerImage(speakerId: string, seriesId: string, imageId: string): Promise<SuccessResponse | ErrorResponse> {
-    if (!seriesId || typeof seriesId !== 'string') throw new Error('Invalid series ID')
-    if (!speakerId || typeof speakerId !== 'string') throw new Error('Invalid speaker ID')
-    if (!imageId || typeof imageId !== 'string') throw new Error('Invalid image ID')
+  // ============================================================================
+  // IMAGE APIs
+  // ============================================================================
 
-    return this.callExternalApi('esp', `/v1/series/${seriesId}/speakers/${speakerId}/images/${imageId}`, 'DELETE', undefined, {
-      operationName: 'deleteSpeakerImage'
-    })
+  async deleteImage(config: ImageUploadConfig, imageId: string): Promise<SuccessResponse | ErrorResponse> {
+    validateString(imageId, 'image ID')
+    validateObject(config, 'image configs')
+    return this.callExternalApi('esp', `${config.targetUrl}/${imageId}`, 'DELETE', undefined,
+      { operationName: 'deleteImage' }
+    )
   }
 
+  // ============================================================================
+  // RSVP & TAGS APIs
+  // ============================================================================
+
   /**
-   * Fetch RSVP form configs
-   * Note: This fetches from static JSON files, not the API
+   * Fetch RSVP form configs from static JSON files
    */
   async fetchRsvpFormConfigs(): Promise<any[]> {
     try {
@@ -1474,10 +1184,8 @@ class ApiService {
   /**
    * Fetch CAAS tags from Adobe Chimera API
    * This is a public endpoint that doesn't require authentication
-   * Reference: https://www.adobe.com/chimera-api/tags
    * 
-   * Implementation uses caching and promise deduplication from v1 app
-   * to prevent redundant API calls
+   * Implements caching and promise deduplication to prevent redundant API calls
    */
   getCaasTags = (() => {
     let cache: any
@@ -1517,18 +1225,16 @@ class ApiService {
   })()
 }
 
-// Export singleton instance
+// ============================================================================
+// EXPORTS
+// ============================================================================
+
 export const apiService = new ApiService()
 export default apiService
 
 /**
- * Utility function to deep get a tag by path array
+ * Deep get a tag by path array
  * Navigates through the nested tag structure using an array of paths
- * 
- * @param pathArray - Array of path segments
- * @param index - Index to stop at
- * @param tags - Tags object to navigate through
- * @returns The tag at the specified path
  */
 export function deepGetTagByPath(pathArray: string[], index: number, tags: any = {}): any {
   let currentTag = tags
@@ -1541,13 +1247,9 @@ export function deepGetTagByPath(pathArray: string[], index: number, tags: any =
 }
 
 /**
- * Utility function to deep get a tag by tag ID
+ * Deep get a tag by tag ID
  * Converts a CAAS tag ID (e.g., "caas:product-categories/graphic-design")
  * into a path and navigates to that tag
- * 
- * @param tagID - The CAAS tag ID
- * @param tags - Tags object to navigate through
- * @returns The tag with the specified ID
  */
 export function deepGetTagByTagID(tagID: string, tags: any = {}): any {
   const tagIDs = tagID.replace('caas:', '').split('/')
@@ -1559,4 +1261,3 @@ export function deepGetTagByTagID(tagID: string, tags: any = {}): any {
   })
   return currentTag
 }
-

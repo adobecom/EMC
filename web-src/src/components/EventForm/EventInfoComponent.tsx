@@ -178,7 +178,7 @@ export const EventInfoComponent: React.FC<EventInfoComponentProps> = ({
         </Flex>
         <TextField
           isQuiet
-          placeholder="Add event title for page URL"
+          aria-label="English title for page URL"
           value={urlTitle || ''}
           onChange={(value) => onChange({ urlTitle: value })}
           width="100%"

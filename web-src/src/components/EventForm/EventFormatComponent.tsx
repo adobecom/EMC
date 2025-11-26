@@ -43,7 +43,64 @@ export const EventFormatComponent: React.FC<EventFormatComponentProps> = ({
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
-    loadData()
+    let isMounted = true
+
+    const loadDataAsync = async () => {
+      setIsLoading(true)
+      setError(null)
+
+      try {
+        // Fetch clouds and series in parallel
+        const [cloudsResponse, seriesResponse] = await Promise.all([
+          fetchClouds(),
+          apiService.getSeriesList()
+        ])
+
+        if (!isMounted) return
+
+        // Set clouds
+        if (cloudsResponse) {
+          setClouds(cloudsResponse)
+          // Auto-select first cloud if none selected
+          if (!cloudType && cloudsResponse.length > 0) {
+            onChange({ cloudType: cloudsResponse[0].key })
+          }
+        }
+
+        // Set series
+        if (seriesResponse && Array.isArray(seriesResponse)) {
+          const publishedSeries = seriesResponse.filter(
+            (s: SeriesApiResponse) => s.seriesStatus === 'published'
+          )
+          if (isMounted) {
+            setAllSeries(publishedSeries)
+            
+            // Filter by selected cloud type if available
+            if (cloudType) {
+              filterSeriesByCloud(cloudType, publishedSeries)
+            }
+          }
+        } else {
+          if (isMounted) {
+            setError('Failed to load series')
+          }
+        }
+      } catch (err) {
+        if (!isMounted) return
+        console.error('Failed to load event format data:', err)
+        setError(err instanceof Error ? err.message : 'Failed to load data')
+      } finally {
+        if (isMounted) {
+          setIsLoading(false)
+        }
+      }
+    }
+
+    loadDataAsync()
+
+    return () => {
+      isMounted = false
+    }
   }, []) // Only run once on mount
 
   // Re-filter series when cloudType changes
@@ -53,50 +110,6 @@ export const EventFormatComponent: React.FC<EventFormatComponentProps> = ({
     }
   }, [cloudType, allSeries])
 
-  const loadData = async () => {
-    setIsLoading(true)
-    setError(null)
-
-    try {
-      // Fetch clouds and series in parallel
-      // Note: getSeriesList() uses tokenStorage.getValidToken() internally
-      // and will fall back to mock data if no dev token is available
-      const [cloudsResponse, seriesResponse] = await Promise.all([
-        fetchClouds(),
-        apiService.getSeriesList()
-      ])
-
-      // Set clouds
-      if (cloudsResponse) {
-        setClouds(cloudsResponse)
-        // Auto-select first cloud if none selected
-        if (!cloudType && cloudsResponse.length > 0) {
-          onChange({ cloudType: cloudsResponse[0].key })
-        }
-      }
-
-      // Set series - getSeriesList returns SeriesApiResponse[] directly
-      if (seriesResponse && Array.isArray(seriesResponse)) {
-        // Store all series for filtering
-        const publishedSeries = seriesResponse.filter(
-          (s: SeriesApiResponse) => s.seriesStatus === 'published'
-        )
-        setAllSeries(publishedSeries)
-        
-        // Filter by selected cloud type if available
-        if (cloudType) {
-          filterSeriesByCloud(cloudType, publishedSeries)
-        }
-      } else {
-        setError('Failed to load series')
-      }
-    } catch (err) {
-      console.error('Failed to load event format data:', err)
-      setError(err instanceof Error ? err.message : 'Failed to load data')
-    } finally {
-      setIsLoading(false)
-    }
-  }
 
   const filterSeriesByCloud = (selectedCloudType: string, seriesList?: SeriesApiResponse[]) => {
     const seriesToFilter = seriesList || allSeries

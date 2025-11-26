@@ -40,7 +40,50 @@ export const TagSelector: React.FC<TagSelectorProps> = ({
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
-    loadTags()
+    let isMounted = true
+    
+    const loadTagsAsync = async () => {
+      setIsLoading(true)
+      setError(null)
+
+      try {
+        const response = await apiService.getCaasTags() as CaasTagsResponse
+
+        if (!isMounted) return
+
+        if (!response || !response.namespaces) {
+          setError('Failed to load tags')
+          return
+        }
+
+        const tags: EventTag[] = []
+
+        // Extract all tags from the namespaces
+        Object.values(response.namespaces).forEach(namespace => {
+          if (namespace.tags) {
+            extractTagsRecursively(namespace.tags, tags)
+          }
+        })
+
+        if (isMounted) {
+          setAvailableTags(tags)
+        }
+      } catch (err) {
+        if (!isMounted) return
+        console.error('Failed to load tags:', err)
+        setError(err instanceof Error ? err.message : 'Failed to load tags')
+      } finally {
+        if (isMounted) {
+          setIsLoading(false)
+        }
+      }
+    }
+
+    loadTagsAsync()
+
+    return () => {
+      isMounted = false
+    }
   }, [])
 
   useEffect(() => {
@@ -51,35 +94,6 @@ export const TagSelector: React.FC<TagSelectorProps> = ({
     groupSelectedTags()
   }, [selectedTags])
 
-  const loadTags = async () => {
-    setIsLoading(true)
-    setError(null)
-
-    try {
-      const response = await apiService.getCaasTags() as CaasTagsResponse
-
-      if (!response || !response.namespaces) {
-        setError('Failed to load tags')
-        return
-      }
-
-      const tags: EventTag[] = []
-
-      // Extract all tags from the namespaces
-      Object.values(response.namespaces).forEach(namespace => {
-        if (namespace.tags) {
-          extractTagsRecursively(namespace.tags, tags)
-        }
-      })
-
-      setAvailableTags(tags)
-    } catch (err) {
-      console.error('Failed to load tags:', err)
-      setError(err instanceof Error ? err.message : 'Failed to load tags')
-    } finally {
-      setIsLoading(false)
-    }
-  }
 
   const extractTagsRecursively = (tagsObj: Record<string, CaasTag>, result: EventTag[]) => {
     Object.values(tagsObj).forEach(tag => {
@@ -228,12 +242,12 @@ export const TagSelector: React.FC<TagSelectorProps> = ({
       {/* Search/Add Field */}
       <ComboBox
         label="Search and select tags"
-        placeholder="Type to search tags..."
         inputValue={searchTerm}
         onInputChange={setSearchTerm}
         onSelectionChange={handleAddTag}
         width="100%"
         menuTrigger="focus"
+        description="Type to search tags..."
       >
         {filteredGroups.map(group => (
           <Section key={group.groupName} title={group.groupName}>

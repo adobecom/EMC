@@ -34,15 +34,20 @@ export const VenueComponent: React.FC<VenueComponentProps> = ({
   const [placesApiLoaded, setPlacesApiLoaded] = useState(false)
 
   useEffect(() => {
+    let isMounted = true
+    let autocompleteInstance: google.maps.places.Autocomplete | null = null
+
     const initAutocomplete = async () => {
       try {
         // Load Google Places API
         await loadGooglePlacesAPI()
+        if (!isMounted) return
+        
         setPlacesApiLoaded(true)
 
         // Initialize autocomplete after API is loaded
         if (venueNameInputRef.current && !autocomplete) {
-          const autocompleteInstance = new window.google.maps.places.Autocomplete(
+          autocompleteInstance = new window.google.maps.places.Autocomplete(
             venueNameInputRef.current,
             {
               types: ['establishment'],
@@ -52,7 +57,9 @@ export const VenueComponent: React.FC<VenueComponentProps> = ({
 
           // Listen for API errors (like domain restrictions)
           autocompleteInstance.addListener('place_changed', () => {
-            const place = autocompleteInstance.getPlace()
+            if (!isMounted) return
+            
+            const place = autocompleteInstance?.getPlace()
             
             // Check for API errors
             if (!place || place.name === undefined) {
@@ -93,9 +100,13 @@ export const VenueComponent: React.FC<VenueComponentProps> = ({
             }
           })
 
-          setAutocomplete(autocompleteInstance)
+          if (isMounted) {
+            setAutocomplete(autocompleteInstance)
+          }
         }
       } catch (error) {
+        if (!isMounted) return
+        
         console.error('Error initializing Google Places Autocomplete:', error)
         const errorMessage = error instanceof Error ? error.message : 'Failed to load Google Places API'
         setPlacesApiError(errorMessage)
@@ -104,6 +115,14 @@ export const VenueComponent: React.FC<VenueComponentProps> = ({
     }
 
     initAutocomplete()
+
+    return () => {
+      isMounted = false
+      if (autocompleteInstance) {
+        // Clean up Google Places autocomplete listeners
+        window.google?.maps?.event?.clearInstanceListeners(autocompleteInstance)
+      }
+    }
   }, [autocomplete, onChange])
 
   const handleVenueNameChange = (value: string) => {
@@ -118,34 +137,54 @@ export const VenueComponent: React.FC<VenueComponentProps> = ({
 
       {/* Venue Name with Google Places Autocomplete */}
       <View width="100%">
-        <TextField
-          label="Venue Name"
-          isRequired
-          width="100%"
-          maxLength={80}
-          value={venueNameValue}
-          onChange={handleVenueNameChange}
-          description={
-            placesApiError 
-              ? placesApiError 
-              : placesApiLoaded 
-                ? "Start typing to search for venues" 
-                : "Loading venue autocomplete..."
-          }
-          validationState={placesApiError ? 'invalid' : undefined}
-          UNSAFE_className="venue-name-autocomplete"
-          ref={venueNameInputRef as any}
-        />
-        {placesApiError && (
+        <View marginBottom="size-100">
+          <label htmlFor="venue-name-input" style={{ 
+            display: 'block',
+            fontSize: '14px',
+            fontWeight: 'bold',
+            marginBottom: '8px',
+            color: 'var(--spectrum-global-color-gray-800)'
+          }}>
+            Venue Name <span style={{ color: 'var(--spectrum-global-color-red-600)' }}>*</span>
+          </label>
+          <input
+            id="venue-name-input"
+            ref={venueNameInputRef}
+            type="text"
+            value={venueNameValue}
+            onChange={(e) => handleVenueNameChange(e.target.value)}
+            maxLength={80}
+            required
+            aria-label="Venue Name"
+            style={{
+              width: '100%',
+              padding: '8px 12px',
+              fontSize: '14px',
+              border: placesApiError 
+                ? '1px solid var(--spectrum-global-color-red-600)' 
+                : '1px solid var(--spectrum-global-color-gray-400)',
+              borderRadius: '4px',
+              backgroundColor: 'var(--spectrum-global-color-gray-50)',
+              color: 'var(--spectrum-global-color-gray-800)',
+              fontFamily: 'adobe-clean, sans-serif',
+              boxSizing: 'border-box'
+            }}
+          />
           <Text UNSAFE_style={{ 
-            color: 'var(--spectrum-global-color-orange-600)', 
             fontSize: '12px', 
+            color: placesApiError 
+              ? 'var(--spectrum-global-color-red-600)' 
+              : 'var(--spectrum-global-color-gray-700)',
             marginTop: '4px',
             display: 'block'
           }}>
-            ⚠️ Venue autocomplete is unavailable. You can still enter venue details manually.
+            {placesApiError 
+              ? `⚠️ ${placesApiError}` 
+              : placesApiLoaded 
+                ? "Start typing to search for venues" 
+                : "Loading venue autocomplete..."}
           </Text>
-        )}
+        </View>
       </View>
 
       {/* Venue Address - Auto-populated but editable */}
