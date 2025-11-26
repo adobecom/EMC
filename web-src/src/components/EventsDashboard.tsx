@@ -3,7 +3,7 @@
 */
 
 import React, { useEffect, useState, useMemo, useCallback } from 'react'
-import { Text, ActionButton, MenuTrigger, Menu, Item, Flex } from '@adobe/react-spectrum'
+import { Text, ActionButton, MenuTrigger, Menu, Item, Flex, Button } from '@adobe/react-spectrum'
 import MoreSmallList from '@spectrum-icons/workflow/MoreSmallList'
 import PublishRemove from '@spectrum-icons/workflow/PublishRemove'
 import ViewDetail from '@spectrum-icons/workflow/ViewDetail'
@@ -11,6 +11,9 @@ import Copy from '@spectrum-icons/workflow/Copy'
 import Edit from '@spectrum-icons/workflow/Edit'
 import Duplicate from '@spectrum-icons/workflow/Duplicate'
 import Delete from '@spectrum-icons/workflow/Delete'
+import Globe from '@spectrum-icons/workflow/Globe'
+import Location from '@spectrum-icons/workflow/Location'
+import { getEventTypeOptions, EventType } from '../config/eventTypeConfig'
 import { TableColumn } from './shared/DataTable'
 import { StatusBadge, ResourceDashboardLayout } from './shared'
 import { EventDashboardItem } from '../types/domain'
@@ -680,10 +683,34 @@ export const EventsDashboard: React.FC<EventsDashboardProps> = () => {
     }
   ], [formatDate, formatLocalDate, thumbnails, loadingThumbnails, venues, loadingVenues, series, loadingSeries, history, loadingHistory, handleMenuAction])
 
-  const handleCreateEvent = () => {
-    // Navigate to create event form
-    window.location.hash = '#/events/new'
+  const handleCreateEvent = useCallback((eventType: EventType) => {
+    // Navigate to create event form with event type
+    window.location.hash = `#/events/new/${eventType}`
+  }, [])
+
+  // Event type options from centralized config
+  const eventTypeOptions = useMemo(() => getEventTypeOptions(), [])
+
+  // Icon mapping for event types
+  const eventTypeIcons: Record<EventType, React.ReactNode> = {
+    'in-person': <Location />,
+    'webinar': <Globe />,
   }
+
+  // Custom create button with dropdown menu
+  const createEventButton = useMemo(() => (
+    <MenuTrigger>
+      <Button variant="accent">Create new event</Button>
+      <Menu onAction={(key) => handleCreateEvent(key as EventType)}>
+        {eventTypeOptions.map(option => (
+          <Item key={option.key} textValue={option.label}>
+            {eventTypeIcons[option.key]}
+            <Text>{option.label}</Text>
+          </Item>
+        ))}
+      </Menu>
+    </MenuTrigger>
+  ), [handleCreateEvent, eventTypeOptions])
 
   return (
     <ResourceDashboardLayout
@@ -696,8 +723,7 @@ export const EventsDashboard: React.FC<EventsDashboardProps> = () => {
       getItemKey={(item) => item.eventId}
       onVisibleItemsChange={handleVisibleEventsChange}
       onRefresh={loadEventsData}
-      onCreate={handleCreateEvent}
-      createLabel="Create new event"
+      createButton={createEventButton}
       emptyStateTitle="No Events Found"
       emptyStateDescription="Get started by creating your first event"
       loadingMessage="Loading events..."

@@ -3,10 +3,10 @@
 */
 
 import React from 'react'
-import { View, Heading, Text } from '@adobe/react-spectrum'
+import { Flex, Heading, Text } from '@adobe/react-spectrum'
 import { TagSelector } from '../shared'
 import { EventTag } from '../../types/domain'
-import { TYPOGRAPHY } from '../../styles/designSystem'
+import { TYPOGRAPHY, FLEX_GAP } from '../../styles/designSystem'
 
 interface EventTagsComponentProps {
   selectedTags: EventTag[]
@@ -18,18 +18,19 @@ export const EventTagsComponent: React.FC<EventTagsComponentProps> = ({
   onChange
 }) => {
   return (
-    <View>
-      <Heading level={3} UNSAFE_style={TYPOGRAPHY.COMPONENT_HEADING}>Tags & Topics</Heading>
-      <Text marginBottom="size-200">
-        Choose one or more tags from the Adobe CAAS taxonomy. This will add metadata to your event for better discoverability.
-      </Text>
+    <Flex direction="column" gap={FLEX_GAP.SECTION}>
+      <Flex direction="column" gap={FLEX_GAP.TIGHT}>
+        <Heading level={3} UNSAFE_style={TYPOGRAPHY.COMPONENT_HEADING}>Tags & Topics</Heading>
+        <Text UNSAFE_style={TYPOGRAPHY.SECTION_DESCRIPTION}>
+          Add metadata from the Adobe CAAS taxonomy to improve discoverability.
+        </Text>
+      </Flex>
       
       <TagSelector
         selectedTags={selectedTags}
         onChange={onChange}
-        description="Search and select tags to categorize your event"
       />
-    </View>
+    </Flex>
   )
 }
 

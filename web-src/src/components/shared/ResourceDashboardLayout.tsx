@@ -37,6 +37,7 @@ interface ResourceDashboardLayoutProps<T> {
   onRefresh: () => void
   onCreate?: () => void
   createLabel?: string
+  createButton?: React.ReactNode // Custom create button (overrides onCreate/createLabel)
   onVisibleItemsChange?: (items: T[]) => void
   
   // Empty state
@@ -64,6 +65,7 @@ export function ResourceDashboardLayout<T extends Record<string, any>>({
   onRefresh,
   onCreate,
   createLabel = 'Create',
+  createButton,
   onVisibleItemsChange,
   emptyStateTitle = 'No Items Found',
   emptyStateDescription = 'Get started by creating your first item',
@@ -166,7 +168,9 @@ export function ResourceDashboardLayout<T extends Record<string, any>>({
               <ActionButton onPress={onRefresh} isQuiet>
                 <Refresh />
               </ActionButton>
-              {onCreate && (
+              {createButton ? (
+                createButton
+              ) : onCreate && (
                 <Button onPress={onCreate} variant="accent">
                   {createLabel}
                 </Button>
@@ -211,7 +215,7 @@ export function ResourceDashboardLayout<T extends Record<string, any>>({
                       Clear Search
                     </ActionButton>
                   ) : (
-                    onCreate && (
+                    createButton ? createButton : onCreate && (
                       <Button onPress={onCreate} variant="accent">
                         {createLabel}
                       </Button>

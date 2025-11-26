@@ -12,4 +12,5 @@ export { SponsorsComponent } from './SponsorsComponent'
 export { EventImagesComponent } from './EventImagesComponent'
 export { RegistrationConfigComponent } from './RegistrationConfigComponent'
 export { RegistrationFieldsComponent } from './RegistrationFieldsComponent'
+export { PageMetadataComponent } from './PageMetadataComponent'
 

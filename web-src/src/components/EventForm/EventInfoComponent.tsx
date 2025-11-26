@@ -22,6 +22,7 @@ import { parseDateTime } from '@internationalized/date'
 import { getTimeZones } from '@vvo/tzdb'
 import Info from '@spectrum-icons/workflow/Info'
 import { HeadingWithTooltip, RichTextEditor } from '../shared'
+import { FLEX_GAP } from '../../styles/designSystem'
 
 /**
  * Safely parse ISO 8601 datetime string for DatePicker
@@ -113,7 +114,7 @@ export const EventInfoComponent: React.FC<EventInfoComponentProps> = ({
   }, [communityForumUrl])
 
   return (
-    <Flex direction="column" gap="size-200">
+    <Flex direction="column" gap={FLEX_GAP.SECTION}>
       {/* Header Row: Title with tooltip on left, private toggle on right */}
       <Flex direction="row" justifyContent="space-between" alignItems="center">
         <HeadingWithTooltip 

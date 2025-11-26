@@ -10,6 +10,84 @@
  */
 
 // ============================================================
+// Spacing Scale (based on 8px grid)
+// ============================================================
+
+/**
+ * Spacing tokens following an 8px base grid
+ * Use these for consistent margins, paddings, and gaps throughout the app
+ * 
+ * Naming convention:
+ * - XXS to XXL for general sizes
+ * - Numbers represent pixel values for reference
+ */
+export const SPACING = {
+  /** 0px - No spacing */
+  NONE: 0,
+  /** 4px - Extra extra small */
+  XXS: 4,
+  /** 8px - Extra small */
+  XS: 8,
+  /** 12px - Small */
+  SM: 12,
+  /** 16px - Medium (default) */
+  MD: 16,
+  /** 24px - Large */
+  LG: 24,
+  /** 32px - Extra large */
+  XL: 32,
+  /** 40px - Extra extra large */
+  XXL: 40,
+  /** 48px - Triple extra large */
+  XXXL: 48,
+  /** 64px - Huge */
+  HUGE: 64,
+  /** 80px - Maximum */
+  MAX: 80,
+} as const
+
+/**
+ * Spectrum-compatible spacing using size tokens
+ * These map to React Spectrum's size-* props
+ */
+export const SPECTRUM_SPACING = {
+  'size-0': 0,
+  'size-50': 4,
+  'size-100': 8,
+  'size-150': 12,
+  'size-200': 16,
+  'size-250': 20,
+  'size-300': 24,
+  'size-400': 32,
+  'size-500': 40,
+  'size-600': 48,
+  'size-700': 56,
+  'size-800': 64,
+  'size-1000': 80,
+} as const
+
+/**
+ * Form-specific spacing tokens
+ * Use these for consistent spacing within forms
+ */
+export const FORM_SPACING = {
+  /** Gap between form cards/sections */
+  SECTION_GAP: SPACING.LG, // 24px
+  /** Gap between fields within a section */
+  FIELD_GAP: SPACING.MD, // 16px
+  /** Gap between label and input */
+  LABEL_GAP: SPACING.XXS, // 4px
+  /** Padding inside form cards */
+  CARD_PADDING: SPACING.LG, // 24px
+  /** Gap between heading and content */
+  HEADING_GAP: SPACING.SM, // 12px
+  /** Gap between description and fields */
+  DESCRIPTION_GAP: SPACING.MD, // 16px
+  /** Indent for nested content */
+  INDENT: SPACING.LG, // 24px
+} as const
+
+// ============================================================
 // Layout Dimensions
 // ============================================================
 
@@ -162,6 +240,9 @@ export const COLORS = {
 
 /**
  * Typography styles for consistent text styling across the app
+ * 
+ * NOTE: Margins are set to 0 - use container gap for spacing instead.
+ * This keeps elements like headings with tooltips properly aligned.
  */
 export const TYPOGRAPHY = {
   /**
@@ -173,6 +254,7 @@ export const TYPOGRAPHY = {
     fontSize: '24px',
     lineHeight: '30px',
     fontWeight: 900,
+    margin: 0,
   },
   
   /**
@@ -184,6 +266,7 @@ export const TYPOGRAPHY = {
     fontSize: '28px',
     lineHeight: '35px',
     fontWeight: 700,
+    margin: 0,
   },
   
   /**
@@ -194,6 +277,7 @@ export const TYPOGRAPHY = {
     fontSize: '18px',
     lineHeight: '24px',
     fontWeight: 700,
+    margin: 0,
   },
   
   /**
@@ -204,6 +288,7 @@ export const TYPOGRAPHY = {
     fontSize: '14px',
     lineHeight: '20px',
     fontWeight: 600,
+    margin: 0,
   },
   
   /**
@@ -214,6 +299,18 @@ export const TYPOGRAPHY = {
     fontSize: '12px',
     lineHeight: '16px',
     fontWeight: 400,
+    margin: 0,
+  },
+  
+  /**
+   * Section description text - follows component headings
+   */
+  SECTION_DESCRIPTION: {
+    color: COLORS.GRAY_700,
+    fontSize: '14px',
+    lineHeight: '20px',
+    fontWeight: 400,
+    margin: 0,
   },
 } as const
 
@@ -316,4 +413,157 @@ export const createButtonStyles = (baseStyles: React.CSSProperties) => ({
     cursor: 'not-allowed',
   },
 })
+
+// ============================================================
+// Spacing Utilities
+// ============================================================
+
+/**
+ * Creates a margin style object
+ * @param top - Top margin (use SPACING tokens)
+ * @param right - Right margin (defaults to top)
+ * @param bottom - Bottom margin (defaults to top)
+ * @param left - Left margin (defaults to right)
+ */
+export const createMargin = (
+  top: number,
+  right?: number,
+  bottom?: number,
+  left?: number
+) => ({
+  marginTop: top,
+  marginRight: right ?? top,
+  marginBottom: bottom ?? top,
+  marginLeft: left ?? right ?? top,
+})
+
+/**
+ * Creates a padding style object
+ * @param top - Top padding (use SPACING tokens)
+ * @param right - Right padding (defaults to top)
+ * @param bottom - Bottom padding (defaults to top)
+ * @param left - Left padding (defaults to right)
+ */
+export const createPadding = (
+  top: number,
+  right?: number,
+  bottom?: number,
+  left?: number
+) => ({
+  paddingTop: top,
+  paddingRight: right ?? top,
+  paddingBottom: bottom ?? top,
+  paddingLeft: left ?? right ?? top,
+})
+
+/**
+ * Creates a gap style for flex/grid containers
+ * @param rowGap - Gap between rows (use SPACING tokens)
+ * @param columnGap - Gap between columns (defaults to rowGap)
+ */
+export const createGap = (rowGap: number, columnGap?: number) => ({
+  rowGap,
+  columnGap: columnGap ?? rowGap,
+})
+
+/**
+ * Common layout patterns using spacing tokens
+ * 
+ * Use these for consistent component layouts.
+ * Gap-based spacing keeps elements like headings+tooltips aligned.
+ */
+export const LAYOUT_PATTERNS = {
+  /**
+   * Standard component wrapper
+   * Use as the outermost container in form components
+   * Gap of 24px between major sections (heading, description, fields)
+   */
+  COMPONENT_WRAPPER: {
+    display: 'flex' as const,
+    flexDirection: 'column' as const,
+    gap: FORM_SPACING.SECTION_GAP, // 24px
+  },
+  
+  /**
+   * Standard form section layout
+   * Use for grouping related fields within a component
+   * Gap of 16px between fields
+   */
+  FORM_SECTION: {
+    display: 'flex' as const,
+    flexDirection: 'column' as const,
+    gap: FORM_SPACING.FIELD_GAP, // 16px
+  },
+  
+  /**
+   * Form card with standard padding
+   * Use when content needs a padded container
+   */
+  FORM_CARD: {
+    ...createPadding(FORM_SPACING.CARD_PADDING),
+    display: 'flex' as const,
+    flexDirection: 'column' as const,
+    gap: FORM_SPACING.FIELD_GAP, // 16px
+  },
+  
+  /**
+   * Horizontal field group (e.g., first name / last name)
+   * Use for side-by-side fields
+   */
+  FIELD_ROW: {
+    display: 'flex' as const,
+    flexDirection: 'row' as const,
+    gap: FORM_SPACING.FIELD_GAP, // 16px
+    alignItems: 'flex-start' as const,
+  },
+  
+  /**
+   * Vertical field stack
+   * Use for stacking fields vertically with standard gap
+   */
+  FIELD_STACK: {
+    display: 'flex' as const,
+    flexDirection: 'column' as const,
+    gap: FORM_SPACING.FIELD_GAP, // 16px
+  },
+  
+  /**
+   * Section with heading and content
+   * Smaller gap for heading-to-content relationship
+   */
+  SECTION_WITH_HEADING: {
+    display: 'flex' as const,
+    flexDirection: 'column' as const,
+    gap: FORM_SPACING.HEADING_GAP, // 12px
+  },
+  
+  /**
+   * Tight stack for closely related elements
+   * Use for label+field or icon+text pairs
+   */
+  TIGHT_STACK: {
+    display: 'flex' as const,
+    flexDirection: 'column' as const,
+    gap: SPACING.XS, // 8px
+  },
+}
+
+/**
+ * Spectrum-compatible gap values for Flex component
+ * Use with Flex's gap prop: <Flex gap={FLEX_GAP.SECTION}>
+ */
+export const FLEX_GAP = {
+  /** No gap */
+  NONE: 'size-0',
+  /** 8px - tight spacing */
+  TIGHT: 'size-100',
+  /** 12px - small gap */
+  SMALL: 'size-150',
+  /** 16px - standard field gap */
+  FIELD: 'size-200',
+  /** 24px - section gap */
+  SECTION: 'size-300',
+  /** 32px - large gap */
+  LARGE: 'size-400',
+} as const
 

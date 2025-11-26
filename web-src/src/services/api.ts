@@ -1303,6 +1303,63 @@ class ApiService {
       return promise
     }
   })()
+
+  // ============================================================================
+  // PUBLISHING PROFILES (for Webinar Metadata)
+  // ============================================================================
+
+  /**
+   * Get the publishing profile for an event
+   */
+  async getEventPublishingProfile(eventId: string): Promise<any | ErrorResponse> {
+    validateString(eventId, 'event ID')
+    return this.callExternalApi('esp', `/v1/events/${eventId}/publishing-profile`, 'GET', undefined,
+      { operationName: `getEventPublishingProfile(${eventId})` }
+    )
+  }
+
+  /**
+   * Create a new publishing profile
+   */
+  async createPublishingProfile(profileData: {
+    name: string
+    description?: string
+    metadata: Record<string, string>
+    status?: string
+  }): Promise<any | ErrorResponse> {
+    validateObject(profileData, 'profile data')
+    return this.callExternalApi('esp', '/v1/publishing-profiles', 'POST', profileData,
+      { operationName: 'createPublishingProfile' }
+    )
+  }
+
+  /**
+   * Update an existing publishing profile
+   */
+  async updatePublishingProfile(profileId: string, profileData: {
+    name?: string
+    description?: string
+    metadata?: Record<string, string>
+    status?: string
+    modificationTime: number
+  }): Promise<any | ErrorResponse> {
+    validateString(profileId, 'profile ID')
+    validateObject(profileData, 'profile data')
+    return this.callExternalApi('esp', `/v1/publishing-profiles/${profileId}`, 'PUT', profileData,
+      { operationName: `updatePublishingProfile(${profileId})` }
+    )
+  }
+
+  /**
+   * Assign a publishing profile to an event
+   */
+  async assignPublishingProfileToEvent(eventId: string, profileId: string): Promise<any | ErrorResponse> {
+    validateString(eventId, 'event ID')
+    validateString(profileId, 'profile ID')
+    return this.callExternalApi('esp', `/v1/events/${eventId}/publishing-profile`, 'PUT', { profileId },
+      { operationName: `assignPublishingProfileToEvent(${eventId}, ${profileId})` }
+    )
+  }
 }
 
 // ============================================================================

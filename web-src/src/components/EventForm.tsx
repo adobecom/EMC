@@ -18,8 +18,9 @@ import {
 import { apiService } from '../services/api'
 import { IMS } from '../types'
 import { FormWizard, WizardStep, LoadingSpinner, FormCard } from './shared'
-import { EventFormatComponent, EventTagsComponent, EventInfoComponent, AgendaComponent, VenueComponent, ProfilesComponent, SponsorsComponent, EventImagesComponent, RegistrationConfigComponent } from './EventForm/index'
+import { EventFormatComponent, EventTagsComponent, EventInfoComponent, AgendaComponent, VenueComponent, ProfilesComponent, SponsorsComponent, EventImagesComponent, RegistrationConfigComponent, PageMetadataComponent } from './EventForm/index'
 import { detectSocialPlatform } from '../utils/socialPlatformDetector'
+import { useEventFeatureFlags } from '../hooks/useEventTypeFeatures'
 
 /**
  * Get a localized value from an object, falling back to direct property
@@ -77,12 +78,16 @@ interface EventFormProps {
 
 export const EventForm: React.FC<EventFormProps> = ({ ims }) => {
   const navigate = useNavigate()
-  const { id } = useParams<{ id: string }>()
+  const { id, eventType: eventTypeParam } = useParams<{ id: string; eventType: string }>()
   const isEditMode = !!id
+  
+  // Determine event type from route param (for new events) or default to 'in-person'
+  const initialEventType = (eventTypeParam === 'webinar' ? 'webinar' : 'in-person') as 'in-person' | 'webinar'
 
   // Form data state
   const [formData, setFormData] = useState<EventFormData>({
     cloudType: 'CreativeCloud',
+    eventType: initialEventType,
     seriesId: '',
     organizationId: '',
     name: '',
@@ -146,7 +151,7 @@ export const EventForm: React.FC<EventFormProps> = ({ ims }) => {
         setError('Failed to load event data')
         return
       }
-      
+
       const event = response
       const locale = event.defaultLocale || 'en-US'
       const localized = event.localizations?.[locale] || {}
@@ -189,10 +194,14 @@ export const EventForm: React.FC<EventFormProps> = ({ ims }) => {
         showAdditionalInfoPostEvent: event.showVenueAdditionalInfoPostEvent ?? true
       } : formData.venue
       
-      // Map the loaded event to form data
-      setFormData({
+        // Map the loaded event to form data
+      // Determine event type from API response (InPerson/Webinar or similar)
+      const mappedEventType = event.eventType?.toLowerCase() === 'webinar' ? 'webinar' : 'in-person'
+      
+        setFormData({
         // Basic info
         cloudType: (event.cloudType as 'CreativeCloud' | 'ExperienceCloud') || 'CreativeCloud',
+        eventType: mappedEventType as 'in-person' | 'webinar',
         seriesId: event.seriesId || '',
         organizationId: formData.organizationId,
         name: event.enTitle || localized.title || '',
@@ -321,6 +330,9 @@ export const EventForm: React.FC<EventFormProps> = ({ ims }) => {
       venue: { ...prev.venue!, ...updates }
     }))
   }
+
+  // Get feature flags based on event type (centralized config)
+  const { hasVenue, hasPageMetadata } = useEventFeatureFlags(formData.eventType)
 
   // Profile management
   const addProfile = () => {
@@ -465,9 +477,9 @@ export const EventForm: React.FC<EventFormProps> = ({ ims }) => {
       {/* Event Topics/Tags Component */}
       <FormCard>
         <EventTagsComponent
-          selectedTags={formData.tags || []}
-          onChange={(tags) => updateFormData({ tags })}
-        />
+            selectedTags={formData.tags || []}
+            onChange={(tags) => updateFormData({ tags })}
+          />
       </FormCard>
 
       {/* Event Information Component */}
@@ -500,14 +512,26 @@ export const EventForm: React.FC<EventFormProps> = ({ ims }) => {
         />
       </FormCard>
 
-      {/* Venue Information Component */}
-      <FormCard>
-        <VenueComponent
-          venue={formData.venue!}
-          eventId={id}
-          onChange={updateVenueData}
-        />
-      </FormCard>
+      {/* Venue Information Component - Only for In-Person events */}
+      {hasVenue && (
+        <FormCard>
+          <VenueComponent
+            venue={formData.venue!}
+            eventId={id}
+            onChange={updateVenueData}
+          />
+        </FormCard>
+      )}
+
+      {/* Page Metadata Component - Only for Webinar events */}
+      {hasPageMetadata && (
+        <FormCard>
+          <PageMetadataComponent
+            metadata={formData.metadata || {}}
+            onChange={(metadata) => updateFormData({ metadata })}
+          />
+        </FormCard>
+      )}
     </Flex>
   )
 

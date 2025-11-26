@@ -22,15 +22,11 @@ interface TagGroup {
 interface TagSelectorProps {
   selectedTags: EventTag[]
   onChange: (tags: EventTag[]) => void
-  label?: string
-  description?: string
 }
 
 export const TagSelector: React.FC<TagSelectorProps> = ({
   selectedTags,
-  onChange,
-  label = 'Tags',
-  description
+  onChange
 }) => {
   const [availableTags, setAvailableTags] = useState<EventTag[]>([])
   const [filteredGroups, setFilteredGroups] = useState<TagGroup[]>([])
@@ -259,37 +255,14 @@ export const TagSelector: React.FC<TagSelectorProps> = ({
 
   return (
     <Flex direction="column" gap="size-200">
-      <View>
-        <Text UNSAFE_style={{ 
-          display: 'block',
-          marginBottom: '8px',
-          fontSize: '14px',
-          fontWeight: 500,
-          color: 'var(--spectrum-global-color-gray-800)'
-        }}>
-          {label}
-        </Text>
-        {description && (
-          <Text UNSAFE_style={{ 
-            display: 'block',
-            marginBottom: '12px',
-            fontSize: '12px',
-            color: 'var(--spectrum-global-color-gray-700)'
-          }}>
-            {description}
-          </Text>
-        )}
-      </View>
-
       {/* Search/Add Field */}
       <ComboBox
-        label="Search and select tags"
+        label="Search tags"
         inputValue={searchTerm}
         onInputChange={setSearchTerm}
         onSelectionChange={handleAddTag}
         width="100%"
         menuTrigger="focus"
-        description="Type to search tags..."
       >
         {filteredGroups.map(group => (
           <Section key={group.groupName} title={group.groupName}>
@@ -302,80 +275,60 @@ export const TagSelector: React.FC<TagSelectorProps> = ({
         ))}
       </ComboBox>
 
-      {/* Selected Tags Pool */}
+      {/* Selected Tags */}
       {selectedTags.length > 0 && (
-        <View
-          borderWidth="thin"
-          borderColor="gray-400"
-          borderRadius="medium"
-          padding="size-200"
-          UNSAFE_style={{
-            backgroundColor: 'var(--spectrum-global-color-gray-75)',
-            minHeight: '60px'
-          }}
-        >
-          <Text UNSAFE_style={{ 
-            display: 'block',
-            marginBottom: '12px',
-            fontSize: '12px',
-            fontWeight: 600,
-            color: 'var(--spectrum-global-color-gray-700)'
-          }}>
-            Selected Tags ({selectedTags.length})
-          </Text>
-          <Flex direction="column" gap="size-200">
-            {selectedGroups.map(group => (
-              <View key={group.groupName}>
-                <Text UNSAFE_style={{ 
-                  display: 'block',
-                  marginBottom: '8px',
-                  fontSize: '11px',
-                  fontWeight: 600,
-                  color: 'var(--spectrum-global-color-gray-600)',
-                  textTransform: 'uppercase',
-                  letterSpacing: '0.5px'
-                }}>
-                  {group.groupName}
-                </Text>
-                <Flex direction="row" gap="size-100" wrap>
-                  {group.tags.map(tag => (
-                    <View
-                      key={tag.caasId || tag.name}
-                      borderRadius="medium"
-                      padding="size-100"
+        <Flex direction="column" gap="size-150">
+          {selectedGroups.map(group => (
+            <View key={group.groupName}>
+              <Text UNSAFE_style={{ 
+                display: 'block',
+                marginBottom: '8px',
+                fontSize: '11px',
+                fontWeight: 600,
+                color: 'var(--spectrum-global-color-gray-600)',
+                textTransform: 'uppercase',
+                letterSpacing: '0.5px'
+              }}>
+                {group.groupName}
+              </Text>
+              <Flex direction="row" gap="size-100" wrap>
+                {group.tags.map(tag => (
+                  <View
+                    key={tag.caasId || tag.name}
+                    borderRadius="medium"
+                    padding="size-100"
+                    UNSAFE_style={{
+                      backgroundColor: '#2C2C2C',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '8px'
+                    }}
+                  >
+                    <Text UNSAFE_style={{ 
+                      color: 'white',
+                      fontSize: '14px'
+                    }}>
+                      {tag.name}
+                    </Text>
+                    <ActionButton
+                      isQuiet
+                      onPress={() => handleRemoveTag(tag)}
                       UNSAFE_style={{
-                        backgroundColor: '#2C2C2C',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '8px'
+                        minWidth: 'auto',
+                        padding: 0,
+                        width: '20px',
+                        height: '20px'
                       }}
+                      aria-label={`Remove ${tag.name}`}
                     >
-                      <Text UNSAFE_style={{ 
-                        color: 'white',
-                        fontSize: '14px'
-                      }}>
-                        {tag.name}
-                      </Text>
-                      <ActionButton
-                        isQuiet
-                        onPress={() => handleRemoveTag(tag)}
-                        UNSAFE_style={{
-                          minWidth: 'auto',
-                          padding: 0,
-                          width: '20px',
-                          height: '20px'
-                        }}
-                        aria-label={`Remove ${tag.name}`}
-                      >
-                        <Close size="XS" UNSAFE_style={{ color: 'white' }} />
-                      </ActionButton>
-                    </View>
-                  ))}
-                </Flex>
-              </View>
-            ))}
-          </Flex>
-        </View>
+                      <Close size="XS" UNSAFE_style={{ color: 'white' }} />
+                    </ActionButton>
+                  </View>
+                ))}
+              </Flex>
+            </View>
+          ))}
+        </Flex>
       )}
 
       {selectedTags.length === 0 && (
@@ -394,7 +347,7 @@ export const TagSelector: React.FC<TagSelectorProps> = ({
             color: 'var(--spectrum-global-color-gray-600)',
             fontStyle: 'italic'
           }}>
-            No tags selected. Search and select tags above.
+            No tags selected
           </Text>
         </View>
       )}

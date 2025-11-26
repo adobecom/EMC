@@ -80,7 +80,7 @@ const App: React.FC<AppProps> = (props) => {
                 <Route path='/series/new' element={<SeriesForm ims={props.ims} />} />
                 <Route path='/series/edit/:id' element={<SeriesForm ims={props.ims} />} />
                 <Route path='/events' element={<EventsDashboard ims={props.ims} />} />
-                <Route path='/events/new' element={<EventForm ims={props.ims} />} />
+                <Route path='/events/new/:eventType' element={<EventForm ims={props.ims} />} />
                 <Route path='/events/edit/:id' element={<EventForm ims={props.ims} />} />
                 <Route path='/registrations' element={<RegistrationDashboard ims={props.ims} />} />
                 <Route path='/registrations/:eventId' element={<RegistrationDashboard ims={props.ims} />} />
