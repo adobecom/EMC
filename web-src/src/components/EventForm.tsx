@@ -18,7 +18,7 @@ import {
 import { apiService } from '../services/api'
 import { IMS } from '../types'
 import { FormWizard, WizardStep, LoadingSpinner, FormCard } from './shared'
-import { EventFormatComponent, EventTagsComponent, EventInfoComponent, AgendaComponent, VenueComponent, ProfilesComponent, SponsorsComponent, EventImagesComponent, RegistrationConfigComponent, PageMetadataComponent } from './EventForm/index'
+import { EventFormatComponent, EventTagsComponent, EventInfoComponent, AgendaComponent, VenueComponent, SpeakersComponent, SponsorsComponent, EventImagesComponent, RegistrationConfigComponent, PageMetadataComponent } from './EventForm/index'
 import { detectSocialPlatform } from '../utils/socialPlatformDetector'
 import { useEventFeatureFlags } from '../hooks/useEventTypeFeatures'
 
@@ -424,18 +424,6 @@ export const EventForm: React.FC<EventFormProps> = ({ ims }) => {
     })
   }
 
-  const saveSponsor = async (index: number) => {
-    // Mark sponsor as saved (in real implementation, this would save to backend)
-    setFormData((prev) => {
-      const sponsors = [...(prev.sponsors || [])]
-      sponsors[index] = { ...sponsors[index], isSaved: true }
-      return { ...prev, sponsors }
-    })
-    
-    // You can add actual save logic here if needed
-    console.log('Sponsor saved:', formData.sponsors?.[index])
-  }
-
   const removeSponsor = (index: number) => {
     setFormData((prev) => ({
       ...prev,
@@ -540,8 +528,9 @@ export const EventForm: React.FC<EventFormProps> = ({ ims }) => {
   // ============================================================
   const step2Component = (
     <FormCard>
-      <ProfilesComponent
+      <SpeakersComponent
         profiles={formData.profiles || []}
+        seriesId={formData.seriesId}
         eventId={id}
         onAddProfile={addProfile}
         onRemoveProfile={removeProfile}
@@ -562,11 +551,11 @@ export const EventForm: React.FC<EventFormProps> = ({ ims }) => {
     <FormCard>
         <SponsorsComponent
           sponsors={formData.sponsors || []}
+          seriesId={formData.seriesId}
           eventId={id}
           onAddSponsor={addSponsor}
           onRemoveSponsor={removeSponsor}
           onUpdateSponsor={updateSponsor}
-          onSaveSponsor={saveSponsor}
         />
       </FormCard>
 

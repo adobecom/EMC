@@ -152,6 +152,14 @@ export const RegistrationFieldsComponent: React.FC<RegistrationFieldsComponentPr
     // Format mandated fields for display
     const mandatedFieldsDisplay = mandatedFields.map((field) => convertString(field)).join(', ')
     const cloudName = cloudType === 'CreativeCloud' ? 'Creative Cloud' : 'Experience Cloud'
+
+    // Grid style for consistent 3-column layout
+    const gridStyle: React.CSSProperties = {
+      display: 'grid',
+      gridTemplateColumns: '1fr 1fr 1fr',
+      gap: '24px',
+      alignItems: 'center'
+    }
     
     return (
       <Flex direction="column" gap="size-200">
@@ -162,74 +170,55 @@ export const RegistrationFieldsComponent: React.FC<RegistrationFieldsComponentPr
         )}
         
         <View
-        UNSAFE_style={{
-          border: '1px solid var(--spectrum-global-color-gray-300)',
-          borderRadius: '4px',
-          overflow: 'hidden'
-        }}
-      >
-      {/* Table Header */}
-      <Flex
-        direction="row"
-        gap="size-100"
-        UNSAFE_style={{
-          backgroundColor: 'var(--spectrum-global-color-gray-100)',
-          padding: 'var(--spectrum-global-dimension-size-150)',
-          borderBottom: '1px solid var(--spectrum-global-color-gray-300)',
-          fontWeight: 'bold'
-        }}
-      >
-        <View flex={2}>
-          <Text UNSAFE_style={{ fontWeight: 600, fontSize: '12px' }}>FIELD CATEGORIES</Text>
-        </View>
-        <View flex={1}>
-          <Text UNSAFE_style={{ fontWeight: 600, fontSize: '12px' }}>INCLUDE ON FORM</Text>
-        </View>
-        <View flex={1}>
-          <Text UNSAFE_style={{ fontWeight: 600, fontSize: '12px' }}>MAKE IT REQUIRED</Text>
-        </View>
-      </Flex>
+          UNSAFE_style={{
+            backgroundColor: 'var(--spectrum-global-color-gray-100)',
+            borderRadius: '8px',
+            padding: 'var(--spectrum-global-dimension-size-600)'
+          }}
+        >
+          {/* Header row */}
+          <div style={{ ...gridStyle, marginBottom: '12px' }}>
+            <Text UNSAFE_style={{ fontWeight: 600, fontSize: '12px', color: 'var(--spectrum-global-color-gray-600)' }}>
+              FIELD CATEGORIES
+            </Text>
+            <Text UNSAFE_style={{ fontWeight: 600, fontSize: '12px', color: 'var(--spectrum-global-color-gray-600)' }}>
+              INCLUDE ON FORM
+            </Text>
+            <Text UNSAFE_style={{ fontWeight: 600, fontSize: '12px', color: 'var(--spectrum-global-color-gray-600)' }}>
+              MAKE IT REQUIRED
+            </Text>
+          </div>
 
-      {/* Table Body */}
-      {configurableFields.map((field) => {
-        const fieldName = field.Field
-        const isVisible = visibleFields.includes(fieldName) || mandatedFields.includes(fieldName)
-        const isRequired = requiredFields.includes(fieldName) || mandatedFields.includes(fieldName)
+          {/* Field rows */}
+          <div style={gridStyle}>
+            {configurableFields.map((field) => {
+              const fieldName = field.Field
+              const isVisible = visibleFields.includes(fieldName) || mandatedFields.includes(fieldName)
+              const isRequired = requiredFields.includes(fieldName) || mandatedFields.includes(fieldName)
 
-        return (
-          <Flex
-            key={fieldName}
-            direction="row"
-            gap="size-100"
-            UNSAFE_style={{
-              padding: 'var(--spectrum-global-dimension-size-150)',
-              borderBottom: '1px solid var(--spectrum-global-color-gray-200)',
-              alignItems: 'center'
-            }}
-          >
-            <View flex={2}>
-              <Text>{convertString(fieldName)}</Text>
-            </View>
-            <View flex={1}>
-              <Switch
-                isSelected={isVisible}
-                onChange={(checked) => handleVisibleToggle(fieldName, checked)}
-              >
-                Appears on form
-              </Switch>
-            </View>
-            <View flex={1}>
-              <Switch
-                isSelected={isRequired}
-                onChange={(checked) => handleRequiredToggle(fieldName, checked)}
-              >
-                Required field
-              </Switch>
-            </View>
-          </Flex>
-        )
-      })}
-      </View>
+              return (
+                <React.Fragment key={fieldName}>
+                  <Text UNSAFE_style={{ fontWeight: 500 }}>
+                    {convertString(fieldName)}
+                  </Text>
+                  <Switch
+                    isSelected={isVisible}
+                    onChange={(checked) => handleVisibleToggle(fieldName, checked)}
+                  >
+                    Appears on form
+                  </Switch>
+                  <Switch
+                    isSelected={isRequired}
+                    onChange={(checked) => handleRequiredToggle(fieldName, checked)}
+                    isDisabled={!isVisible}
+                  >
+                    Required field
+                  </Switch>
+                </React.Fragment>
+              )
+            })}
+          </div>
+        </View>
       </Flex>
     )
   }

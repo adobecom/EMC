@@ -14,4 +14,5 @@ export { HeadingWithTooltip } from './HeadingWithTooltip'
 export { ImageUploader } from './ImageUploader'
 export { RichTextEditor } from './RichTextEditor'
 export { TagSelector } from './TagSelector'
+export { AutocompleteTextField } from './AutocompleteTextField'
 

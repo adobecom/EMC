@@ -303,8 +303,21 @@ export interface SocialLink {
   url: string
 }
 
+// Speaker role types for events
+export type SpeakerType = 
+  | 'host'
+  | 'presenter'
+  | 'speaker'
+  | 'guest-speaker'
+  | 'keynote'
+  | 'judge'
+  | 'portfolio-reviewer'
+  | 'career-advisor'
+  | 'product-demonstrator'
+
 export interface ProfileData {
-  type: 'speaker' | 'host'
+  type: SpeakerType
+  speakerId?: string // Series-level speaker ID
   firstName: string
   lastName: string
   title: string
@@ -312,16 +325,53 @@ export interface ProfileData {
   imageUrl?: string
   imageId?: string
   socialLinks?: SocialLink[]
+  // State flags
+  isSaved?: boolean // Speaker has been saved to series
+  isFromSeries?: boolean // Speaker was selected from series autocomplete
+  ordinal?: number // Order in event
+  modificationTime?: number // For API updates
 }
 
-// Sponsor/Partner types
+// Series-level speaker data from API
+export interface SeriesSpeaker {
+  speakerId: string
+  firstName: string
+  lastName: string
+  title?: string
+  bio?: string
+  socialMediaLinks?: SocialLink[]
+  photo?: {
+    imageId: string
+    imageUrl: string
+  }
+  creationTime?: number
+  modificationTime?: number
+}
+
+// Series-level sponsor data from API
+export interface SeriesSponsor {
+  sponsorId: string
+  name: string
+  externalUrl: string
+  logo?: {
+    imageId: string
+    imageUrl: string
+  }
+  creationTime?: number
+  modificationTime?: number
+}
+
+// Sponsor/Partner types for form
 export interface SponsorData {
   id: string
+  sponsorId?: string  // Series-level sponsor ID if saved
   partnerName: string
   partnerUrl: string
   imageUrl?: string
   imageId?: string
   isSaved?: boolean
+  isFromSeries?: boolean  // True if selected from series autocomplete
+  modificationTime?: number
 }
 
 // Image types for events

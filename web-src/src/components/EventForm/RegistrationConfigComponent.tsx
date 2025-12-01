@@ -146,7 +146,7 @@ export const RegistrationConfigComponent: React.FC<RegistrationConfigComponentPr
 
           {/* Allow Guest Registration - ExperienceCloud Only */}
           {isExperienceCloud && (
-            <Flex direction="row" gap="size-100" alignItems="center">
+            <Flex direction="row" alignItems="center">
               <Switch
                 isSelected={allowGuestRegistration}
                 onChange={onAllowGuestRegistrationChange}
@@ -175,7 +175,7 @@ export const RegistrationConfigComponent: React.FC<RegistrationConfigComponentPr
           {/* Contact Host Toggle and Email Field - Hide for ExperienceCloud Webinars */}
           {!(isExperienceCloud && isWebinar) && (
             <Flex direction="row" gap="size-200" alignItems="center" width="100%">
-              <Flex direction="row" gap="size-100" alignItems="center">
+              <Flex direction="row" alignItems="center">
                 <Switch
                   isSelected={contactHostEnabled}
                   onChange={(value) => {
@@ -212,7 +212,6 @@ export const RegistrationConfigComponent: React.FC<RegistrationConfigComponentPr
                   placeholder="Add host email"
                   value={hostEmail}
                   onChange={onHostEmailChange}
-                  width="100%"
                 />
               )}
             </Flex>

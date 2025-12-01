@@ -1,0 +1,115 @@
+/* AutocompleteTextField - styled to match Spectrum quiet text field */
+
+.autocomplete-container {
+  position: relative;
+  width: 100%;
+}
+
+.autocomplete-label {
+  display: block;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--spectrum-global-color-gray-700);
+  margin-bottom: 4px;
+}
+
+.autocomplete-input {
+  width: 100%;
+  padding: 7px 0;
+  font-size: 14px;
+  font-family: inherit;
+  color: var(--spectrum-global-color-gray-800);
+  background: transparent;
+  border: none;
+  border-bottom: 1px solid var(--spectrum-global-color-gray-400);
+  outline: none;
+  transition: border-color 0.2s ease;
+  box-sizing: border-box;
+}
+
+.autocomplete-input:hover {
+  border-bottom-color: var(--spectrum-global-color-gray-500);
+}
+
+.autocomplete-input:focus {
+  border-bottom-color: var(--spectrum-global-color-blue-500);
+  border-bottom-width: 2px;
+  padding-bottom: 6px;
+}
+
+.autocomplete-input:disabled {
+  color: var(--spectrum-global-color-gray-500);
+  cursor: not-allowed;
+}
+
+.autocomplete-input::placeholder {
+  color: var(--spectrum-global-color-gray-500);
+}
+
+/* Dropdown menu */
+.autocomplete-menu {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  margin: 4px 0 0 0;
+  padding: 4px 0;
+  list-style: none;
+  background: var(--spectrum-global-color-gray-50);
+  border: 1px solid var(--spectrum-global-color-gray-300);
+  border-radius: 4px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  max-height: 300px;
+  overflow-y: auto;
+  z-index: 1000;
+  min-width: 240px;
+}
+
+/* Menu option */
+.autocomplete-option {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+  cursor: pointer;
+  transition: background-color 0.1s ease;
+}
+
+.autocomplete-option:hover,
+.autocomplete-option.highlighted {
+  background-color: var(--spectrum-global-color-gray-200);
+}
+
+/* Avatar image */
+.autocomplete-avatar {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  object-fit: cover;
+  flex-shrink: 0;
+}
+
+/* Avatar placeholder (initials) */
+.autocomplete-avatar-placeholder {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background-color: var(--spectrum-global-color-gray-400);
+  color: white;
+  font-size: 11px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+/* Option label */
+.autocomplete-option-label {
+  font-size: 14px;
+  color: var(--spectrum-global-color-gray-800);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+

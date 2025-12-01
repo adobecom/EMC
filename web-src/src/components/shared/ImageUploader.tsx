@@ -27,6 +27,7 @@ interface ImageUploaderProps {
   maxSizeMB?: number
   recommendedDimensions?: string
   width?: string | number
+  isDisabled?: boolean
   onChange: (imageUrl: string, imageId: string) => void
   onRemove?: () => void
 }
@@ -42,6 +43,7 @@ export const ImageUploader: React.FC<ImageUploaderProps> = ({
   maxSizeMB = 25,
   recommendedDimensions,
   width,
+  isDisabled = false,
   onChange,
   onRemove
 }) => {
@@ -184,28 +186,30 @@ export const ImageUploader: React.FC<ImageUploaderProps> = ({
               display: 'block'
             }}
           />
-          <ActionButton 
-            onPress={handleRemove} 
-            isQuiet
-            aria-label="Remove image"
-            UNSAFE_style={{
-              position: 'absolute',
-              top: '8px',
-              right: '8px',
-              backgroundColor: 'rgba(255, 255, 255, 0.9)',
-              borderRadius: '4px'
-            }}
-          >
-            <Delete />
-          </ActionButton>
+          {!isDisabled && (
+            <ActionButton 
+              onPress={handleRemove} 
+              isQuiet
+              aria-label="Remove image"
+              UNSAFE_style={{
+                position: 'absolute',
+                top: '8px',
+                right: '8px',
+                backgroundColor: 'rgba(255, 255, 255, 0.9)',
+                borderRadius: '4px'
+              }}
+            >
+              <Delete />
+            </ActionButton>
+          )}
         </View>
       ) : (
         // Show dropzone - entire area is clickable and droppable
         <div
-          onDragOver={handleDragOver}
-          onDragLeave={handleDragLeave}
-          onDrop={handleDrop}
-          onClick={isUploading ? undefined : handleBrowseClick}
+          onDragOver={isDisabled ? undefined : handleDragOver}
+          onDragLeave={isDisabled ? undefined : handleDragLeave}
+          onDrop={isDisabled ? undefined : handleDrop}
+          onClick={isUploading || isDisabled ? undefined : handleBrowseClick}
           style={{
             border: isDragging 
               ? '2px dashed var(--spectrum-global-color-blue-600)' 
@@ -213,7 +217,8 @@ export const ImageUploader: React.FC<ImageUploaderProps> = ({
             backgroundColor: isDragging 
               ? 'var(--spectrum-global-color-blue-100)' 
               : 'transparent',
-            cursor: isUploading ? 'default' : 'pointer',
+            cursor: isUploading || isDisabled ? 'default' : 'pointer',
+            opacity: isDisabled ? 0.5 : 1,
             transition: 'all 0.2s ease',
             borderRadius: '4px',
             padding: '32px'
