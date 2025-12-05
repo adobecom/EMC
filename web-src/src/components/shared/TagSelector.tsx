@@ -421,26 +421,6 @@ export const TagSelector: React.FC<TagSelectorProps> = ({
         </Flex>
       )}
 
-      {selectedTags.length === 0 && (
-        <View
-          borderWidth="thin"
-          borderColor="gray-300"
-          borderRadius="medium"
-          padding="size-200"
-          UNSAFE_style={{
-            backgroundColor: 'var(--spectrum-global-color-gray-75)',
-            textAlign: 'center'
-          }}
-        >
-          <Text UNSAFE_style={{ 
-            fontSize: '12px',
-            color: 'var(--spectrum-global-color-gray-600)',
-            fontStyle: 'italic'
-          }}>
-            No tags selected
-          </Text>
-        </View>
-      )}
     </Flex>
   )
 }
