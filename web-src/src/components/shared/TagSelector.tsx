@@ -3,13 +3,10 @@ import {
   View,
   Flex,
   Text,
-  ActionButton,
-  ComboBox,
-  Item,
-  Section,
-  Key
+  SearchField
 } from '@adobe/react-spectrum'
 import Close from '@spectrum-icons/workflow/Close'
+import Add from '@spectrum-icons/workflow/Add'
 import { EventTag, CaasTagsResponse, CaasTag } from '../../types/domain'
 import { apiService } from '../../services/api'
 import { LoadingSpinner } from './LoadingSpinner'
@@ -34,6 +31,7 @@ export const TagSelector: React.FC<TagSelectorProps> = ({
   const [searchTerm, setSearchTerm] = useState('')
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false)
 
   useEffect(() => {
     let isMounted = true
@@ -222,12 +220,8 @@ export const TagSelector: React.FC<TagSelectorProps> = ({
     setSelectedGroups(groupTagsByParent(selectedTags))
   }
 
-  const handleAddTag = (key: Key | null) => {
-    if (!key) return
-
-    const tagId = String(key)
-    const tagToAdd = availableTags.find(tag => tag.caasId === tagId)
-    if (tagToAdd && !selectedTags.some(tag => tag.caasId === tagToAdd.caasId)) {
+  const handleAddTag = (tagToAdd: EventTag) => {
+    if (!selectedTags.some(tag => tag.caasId === tagToAdd.caasId)) {
       onChange([...selectedTags, tagToAdd])
       setSearchTerm('') // Clear search after adding
     }
@@ -255,29 +249,132 @@ export const TagSelector: React.FC<TagSelectorProps> = ({
 
   return (
     <Flex direction="column" gap="size-200">
-      {/* Search/Add Field */}
-      <ComboBox
-        label="Search tags"
-        inputValue={searchTerm}
-        onInputChange={setSearchTerm}
-        onSelectionChange={handleAddTag}
-        width="100%"
-        menuTrigger="focus"
-      >
-        {filteredGroups.map(group => (
-          <Section key={group.groupName} title={group.groupName}>
-            {group.tags.map(tag => (
-              <Item key={tag.caasId || tag.name} textValue={tag.name}>
-                {tag.name}
-              </Item>
-            ))}
-          </Section>
-        ))}
-      </ComboBox>
+      {/* Search/Add Field with Dropdown */}
+      <View position="relative">
+        <SearchField
+          label="Search tags"
+          value={searchTerm}
+          onChange={(value) => {
+            setSearchTerm(value)
+            setIsDropdownOpen(true)
+          }}
+          onFocus={() => setIsDropdownOpen(true)}
+          onBlur={() => {
+            // Delay closing to allow click events on dropdown items
+            setTimeout(() => setIsDropdownOpen(false), 200)
+          }}
+          width="100%"
+        />
+        
+        {/* Dropdown with Available Tags */}
+        {isDropdownOpen && filteredGroups.length > 0 && (
+          <View
+            position="absolute"
+            width="100%"
+            UNSAFE_style={{
+              top: '100%',
+              left: 0,
+              zIndex: 1000,
+              backgroundColor: 'var(--spectrum-global-color-gray-100)',
+              border: '1px solid var(--spectrum-global-color-gray-300)',
+              borderRadius: '4px',
+              boxShadow: '0 4px 16px rgba(0, 0, 0, 0.2)',
+              maxHeight: '300px',
+              overflowY: 'auto',
+              marginTop: '4px'
+            }}
+          >
+            <Flex direction="column" gap="size-150" UNSAFE_style={{ padding: '12px' }}>
+              {filteredGroups.map(group => (
+                <View key={group.groupName}>
+                  <Text UNSAFE_style={{ 
+                    display: 'block',
+                    marginBottom: '8px',
+                    fontSize: '11px',
+                    fontWeight: 600,
+                    color: 'var(--spectrum-global-color-gray-600)',
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.5px'
+                  }}>
+                    {group.groupName}
+                  </Text>
+                  <Flex direction="row" gap="size-100" wrap>
+                    {group.tags.map(tag => (
+                      <div
+                        key={tag.caasId || tag.name}
+                        style={{
+                          backgroundColor: '#2C2C2C',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '8px',
+                          cursor: 'pointer',
+                          borderRadius: '4px',
+                          padding: '8px'
+                        }}
+                        onClick={() => {
+                          handleAddTag(tag)
+                          setIsDropdownOpen(false)
+                        }}
+                        role="button"
+                        tabIndex={0}
+                        aria-label={`Add ${tag.name}`}
+                      >
+                        <Text UNSAFE_style={{ 
+                          color: 'white',
+                          fontSize: '14px'
+                        }}>
+                          {tag.name}
+                        </Text>
+                        <Add size="XS" UNSAFE_style={{ color: 'white' }} />
+                      </div>
+                    ))}
+                  </Flex>
+                </View>
+              ))}
+            </Flex>
+          </View>
+        )}
+
+        {isDropdownOpen && filteredGroups.length === 0 && searchTerm && (
+          <View
+            position="absolute"
+            width="100%"
+            UNSAFE_style={{
+              top: '100%',
+              left: 0,
+              zIndex: 1000,
+              backgroundColor: 'var(--spectrum-global-color-gray-100)',
+              border: '1px solid var(--spectrum-global-color-gray-300)',
+              borderRadius: '4px',
+              boxShadow: '0 4px 16px rgba(0, 0, 0, 0.2)',
+              marginTop: '4px',
+              padding: '12px',
+              textAlign: 'center'
+            }}
+          >
+            <Text UNSAFE_style={{ 
+              fontSize: '12px',
+              color: 'var(--spectrum-global-color-gray-600)',
+              fontStyle: 'italic'
+            }}>
+              No matching tags found
+            </Text>
+          </View>
+        )}
+      </View>
 
       {/* Selected Tags */}
       {selectedTags.length > 0 && (
         <Flex direction="column" gap="size-150">
+          <Text UNSAFE_style={{ 
+            fontSize: '12px',
+            fontWeight: 600,
+            color: 'var(--spectrum-global-color-gray-700)',
+            textTransform: 'uppercase',
+            letterSpacing: '0.5px'
+          }}>
+            Selected Tags
+          </Text>
           {selectedGroups.map(group => (
             <View key={group.groupName}>
               <Text UNSAFE_style={{ 
@@ -293,16 +390,21 @@ export const TagSelector: React.FC<TagSelectorProps> = ({
               </Text>
               <Flex direction="row" gap="size-100" wrap>
                 {group.tags.map(tag => (
-                  <View
+                  <div
                     key={tag.caasId || tag.name}
-                    borderRadius="medium"
-                    padding="size-100"
-                    UNSAFE_style={{
+                    style={{
                       backgroundColor: '#2C2C2C',
                       display: 'flex',
                       alignItems: 'center',
-                      gap: '8px'
+                      gap: '8px',
+                      cursor: 'pointer',
+                      borderRadius: '4px',
+                      padding: '8px'
                     }}
+                    onClick={() => handleRemoveTag(tag)}
+                    role="button"
+                    tabIndex={0}
+                    aria-label={`Remove ${tag.name}`}
                   >
                     <Text UNSAFE_style={{ 
                       color: 'white',
@@ -310,20 +412,8 @@ export const TagSelector: React.FC<TagSelectorProps> = ({
                     }}>
                       {tag.name}
                     </Text>
-                    <ActionButton
-                      isQuiet
-                      onPress={() => handleRemoveTag(tag)}
-                      UNSAFE_style={{
-                        minWidth: 'auto',
-                        padding: 0,
-                        width: '20px',
-                        height: '20px'
-                      }}
-                      aria-label={`Remove ${tag.name}`}
-                    >
-                      <Close size="XS" UNSAFE_style={{ color: 'white' }} />
-                    </ActionButton>
-                  </View>
+                    <Close size="XS" UNSAFE_style={{ color: 'white' }} />
+                  </div>
                 ))}
               </Flex>
             </View>
