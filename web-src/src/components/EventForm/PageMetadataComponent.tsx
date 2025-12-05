@@ -11,6 +11,7 @@ import {
   Item
 } from '@adobe/react-spectrum'
 import { TYPOGRAPHY, FLEX_GAP } from '../../styles/designSystem'
+import { useEventFormComponent } from '../../hooks/useEventFormComponent'
 
 interface MetadataField {
   key: string
@@ -25,25 +26,43 @@ interface MetadataCatalogue {
   data: {
     data: MetadataField[]
   }
-  [key: string]: any // Dynamic keys for each field's options
-}
-
-interface PageMetadataComponentProps {
-  metadata: Record<string, string>
-  onChange: (metadata: Record<string, string>) => void
+  [key: string]: any
 }
 
 const METADATA_CATALOGUE_URL = 'https://www.adobe.com/event-libs/assets/configs/metadata-catalogue.json'
 
-export const PageMetadataComponent: React.FC<PageMetadataComponentProps> = ({
-  metadata,
-  onChange
-}) => {
+/**
+ * PageMetadataComponent - Manages page metadata for webinar events
+ * 
+ * Uses EventFormContext for state management.
+ * Fetches metadata catalogue from external URL.
+ */
+export const PageMetadataComponent: React.FC = () => {
+  // ============================================================================
+  // CONTEXT INTEGRATION
+  // ============================================================================
+  
+  const {
+    formData,
+    updateFormData,
+  } = useEventFormComponent({
+    componentId: 'page-metadata',
+  })
+  
+  const metadata = formData.metadata || {}
+  
+  // ============================================================================
+  // LOCAL STATE
+  // ============================================================================
+  
   const [catalogue, setCatalogue] = useState<MetadataCatalogue | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
-  // Fetch metadata catalogue on mount
+  // ============================================================================
+  // DATA LOADING
+  // ============================================================================
+
   useEffect(() => {
     let isMounted = true
 
@@ -75,18 +94,25 @@ export const PageMetadataComponent: React.FC<PageMetadataComponentProps> = ({
     }
   }, [])
 
+  // ============================================================================
+  // EVENT HANDLERS
+  // ============================================================================
+
   const handleFieldChange = (fieldKey: string, value: string) => {
     const updatedMetadata = { ...metadata }
     
-    // Only include fields with actual values (not "No {label}" options)
     if (value && !value.startsWith('No ')) {
       updatedMetadata[fieldKey] = value
     } else {
       delete updatedMetadata[fieldKey]
     }
     
-    onChange(updatedMetadata)
+    updateFormData({ metadata: updatedMetadata })
   }
+
+  // ============================================================================
+  // RENDER
+  // ============================================================================
 
   if (isLoading) {
     return (
@@ -112,7 +138,6 @@ export const PageMetadataComponent: React.FC<PageMetadataComponentProps> = ({
     )
   }
 
-  // Get the list of metadata fields from the catalogue
   const fields = catalogue?.data?.data || []
 
   return (
@@ -128,11 +153,9 @@ export const PageMetadataComponent: React.FC<PageMetadataComponentProps> = ({
       </Flex>
 
       {fields.map((field: MetadataField) => {
-        // Get options for this field from the catalogue
         const fieldOptions: MetadataOption[] = catalogue?.[field.key]?.data || []
         const currentValue = metadata[field.key] || ''
         
-        // Build items array with "No X" option first
         const allOptions = [
           { key: `no-${field.key}`, label: `No ${field.name}` },
           ...fieldOptions.map(opt => ({ key: opt.value, label: opt.value }))
@@ -155,4 +178,3 @@ export const PageMetadataComponent: React.FC<PageMetadataComponentProps> = ({
     </Flex>
   )
 }
-

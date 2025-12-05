@@ -2,7 +2,7 @@
 * <license header>
 */
 
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useCallback } from 'react'
 import {
   View,
   Flex,
@@ -13,7 +13,7 @@ import {
   ActionButton,
   ProgressCircle
 } from '@adobe/react-spectrum'
-import { SponsorData, SeriesSponsor } from '../../types/domain'
+import { SponsorData, SeriesSponsor, EventApiResponse } from '../../types/domain'
 import { ImageUploader, AutocompleteTextField } from '../shared'
 import { TYPOGRAPHY } from '../../styles/designSystem'
 import Add from '@spectrum-icons/workflow/Add'
@@ -21,29 +21,77 @@ import Delete from '@spectrum-icons/workflow/Delete'
 import Edit from '@spectrum-icons/workflow/Edit'
 import SaveFloppy from '@spectrum-icons/workflow/SaveFloppy'
 import { apiService } from '../../services/api'
+import { useEventFormComponent } from '../../hooks/useEventFormComponent'
 
-interface SponsorsComponentProps {
-  sponsors: SponsorData[]
-  seriesId?: string
-  eventId?: string
-  onAddSponsor: () => void
-  onRemoveSponsor: (index: number) => void
-  onUpdateSponsor: (index: number, updates: Partial<SponsorData>) => void
-}
-
-export const SponsorsComponent: React.FC<SponsorsComponentProps> = ({
-  sponsors,
-  seriesId,
-  eventId,
-  onAddSponsor,
-  onRemoveSponsor,
-  onUpdateSponsor
-}) => {
+/**
+ * SponsorsComponent - Manages sponsor and partner information
+ * 
+ * Uses EventFormContext for state management.
+ * Handles:
+ * - Adding/removing sponsors
+ * - Autocomplete from series sponsors
+ * - Saving sponsors to series
+ * 
+ * Note: Sponsor association with event is handled in the main event payload.
+ * The onAfterSave callback associates sponsors with the event after save.
+ */
+export const SponsorsComponent: React.FC = () => {
+  // ============================================================================
+  // CONTEXT INTEGRATION
+  // ============================================================================
+  
+  const {
+    formData,
+    updateFormData,
+    eventId,
+    seriesId,
+  } = useEventFormComponent({
+    componentId: 'sponsors',
+    
+    /**
+     * After event save, associate sponsors with the event
+     */
+    onAfterSave: async (savedEventId: string, eventResponse: EventApiResponse) => {
+      const sponsors = formData.sponsors || []
+      
+      // Get sponsors that need to be associated with the event
+      const sponsorsToAssociate = sponsors
+        .filter(s => s.sponsorId && (s.isSaved || s.isFromSeries))
+        .map(s => ({
+          sponsorId: s.sponsorId!
+        }))
+      
+      if (sponsorsToAssociate.length === 0) return
+      
+      try {
+        // Associate each sponsor with the event in parallel
+        await Promise.all(
+          sponsorsToAssociate.map(sponsorData =>
+            apiService.addSponsorToEvent(sponsorData, savedEventId).catch(err => {
+              console.error(`Failed to associate sponsor ${sponsorData.sponsorId} with event:`, err)
+            })
+          )
+        )
+      } catch (error) {
+        console.error('Error associating sponsors with event:', error)
+      }
+    }
+  })
+  
+  const sponsors = formData.sponsors || []
+  
+  // ============================================================================
+  // LOCAL STATE
+  // ============================================================================
+  
   const [availableSponsors, setAvailableSponsors] = useState<SeriesSponsor[]>([])
   const [isLoadingSponsors, setIsLoadingSponsors] = useState(false)
   const [savingIndex, setSavingIndex] = useState<number | null>(null)
 
-  // Fetch available sponsors from series when seriesId is available
+  // ============================================================================
+  // DATA LOADING
+  // ============================================================================
+
   useEffect(() => {
     let isMounted = true
 
@@ -54,7 +102,6 @@ export const SponsorsComponent: React.FC<SponsorsComponentProps> = ({
       try {
         const response = await apiService.getSponsors(seriesId)
         if (isMounted && response && !('error' in response)) {
-          // Transform API response to SeriesSponsor format
           const sponsorsList = response.sponsors || response || []
           setAvailableSponsors(sponsorsList)
         }
@@ -74,11 +121,34 @@ export const SponsorsComponent: React.FC<SponsorsComponentProps> = ({
     }
   }, [seriesId])
 
-  // Handle selecting a sponsor from autocomplete
+  // ============================================================================
+  // EVENT HANDLERS
+  // ============================================================================
+
+  const addSponsor = useCallback(() => {
+    const newSponsor: SponsorData = {
+      id: `sponsor-${Date.now()}`,
+      partnerName: '',
+      partnerUrl: '',
+      isSaved: false
+    }
+    updateFormData({ sponsors: [...sponsors, newSponsor] })
+  }, [sponsors, updateFormData])
+
+  const removeSponsor = useCallback((index: number) => {
+    updateFormData({ sponsors: sponsors.filter((_, i) => i !== index) })
+  }, [sponsors, updateFormData])
+
+  const updateSponsor = useCallback((index: number, updates: Partial<SponsorData>) => {
+    const updated = [...sponsors]
+    updated[index] = { ...updated[index], ...updates }
+    updateFormData({ sponsors: updated })
+  }, [sponsors, updateFormData])
+
   const handleSelectSponsor = (index: number, sponsorId: string) => {
     const selectedSponsor = availableSponsors.find(s => s.sponsorId === sponsorId)
     if (selectedSponsor) {
-      onUpdateSponsor(index, {
+      updateSponsor(index, {
         sponsorId: selectedSponsor.sponsorId,
         partnerName: selectedSponsor.name,
         partnerUrl: selectedSponsor.externalUrl || '',
@@ -91,7 +161,6 @@ export const SponsorsComponent: React.FC<SponsorsComponentProps> = ({
     }
   }
 
-  // Handle saving sponsor to series
   const handleSaveSponsor = async (index: number) => {
     const sponsor = sponsors[index]
     if (!seriesId || !sponsor.partnerName) return
@@ -105,7 +174,6 @@ export const SponsorsComponent: React.FC<SponsorsComponentProps> = ({
 
       let response
       if (sponsor.sponsorId && sponsor.isFromSeries) {
-        // Update existing sponsor
         response = await apiService.updateSponsor(
           { ...sponsorData, modificationTime: sponsor.modificationTime },
           sponsor.sponsorId,
@@ -113,13 +181,12 @@ export const SponsorsComponent: React.FC<SponsorsComponentProps> = ({
           'en-US'
         )
       } else {
-        // Create new sponsor
         response = await apiService.createSponsor(sponsorData, seriesId, 'en-US')
       }
 
       if (response && !('error' in response)) {
         const newSponsorId = response.sponsorId || sponsor.sponsorId
-        onUpdateSponsor(index, {
+        updateSponsor(index, {
           sponsorId: newSponsorId,
           isSaved: true,
           isFromSeries: true,
@@ -139,16 +206,19 @@ export const SponsorsComponent: React.FC<SponsorsComponentProps> = ({
     }
   }
 
-  // Toggle edit mode for a saved sponsor
   const handleEditSponsor = (index: number) => {
-    onUpdateSponsor(index, { isSaved: false })
+    updateSponsor(index, { isSaved: false })
   }
+
+  // ============================================================================
+  // RENDER
+  // ============================================================================
 
   return (
     <Flex direction="column" gap="size-200">
       <Flex justifyContent="space-between" alignItems="center">
         <Heading level={3} UNSAFE_style={TYPOGRAPHY.COMPONENT_HEADING}>Sponsors & Partners</Heading>
-        <Button variant="primary" onPress={onAddSponsor}>
+        <Button variant="primary" onPress={addSponsor}>
           <Add />
           <Text>Add Sponsor</Text>
         </Button>
@@ -163,13 +233,13 @@ export const SponsorsComponent: React.FC<SponsorsComponentProps> = ({
         </Flex>
       )}
 
-      {(!sponsors || sponsors.length === 0) && (
+      {sponsors.length === 0 && (
         <View padding="size-200" backgroundColor="gray-100" borderRadius="medium">
           <Text>No sponsors added yet. Click "Add Sponsor" to add one.</Text>
         </View>
       )}
 
-      {sponsors && sponsors.map((sponsor, index) => {
+      {sponsors.map((sponsor, index) => {
         const readOnly = sponsor.isSaved || sponsor.isFromSeries
 
         return (
@@ -181,7 +251,7 @@ export const SponsorsComponent: React.FC<SponsorsComponentProps> = ({
             borderRadius="medium"
             UNSAFE_style={{ position: 'relative' }}
           >
-            {/* Action Buttons - Top Right */}
+            {/* Action Buttons */}
             <Flex justifyContent="end" gap="size-100" marginBottom="size-100">
               {readOnly && (
                 <ActionButton onPress={() => handleEditSponsor(index)} isQuiet>
@@ -189,14 +259,14 @@ export const SponsorsComponent: React.FC<SponsorsComponentProps> = ({
                   <Text>Edit</Text>
                 </ActionButton>
               )}
-              <ActionButton onPress={() => onRemoveSponsor(index)} isQuiet>
+              <ActionButton onPress={() => removeSponsor(index)} isQuiet>
                 <Delete />
               </ActionButton>
             </Flex>
 
-            {/* Main Content - Image and Fields */}
+            {/* Main Content */}
             <Flex direction="row" gap="size-300" alignItems="start">
-              {/* Image Uploader - Left Side */}
+              {/* Image Uploader */}
               <View UNSAFE_style={{ maxWidth: '300px', flexShrink: 0 }}>
                 <ImageUploader
                   label="Sponsor Logo"
@@ -204,33 +274,26 @@ export const SponsorsComponent: React.FC<SponsorsComponentProps> = ({
                   imageId={sponsor.imageId}
                   imageKind="sponsor-logo"
                   altText={sponsor.partnerName || 'Sponsor logo'}
-                  eventId={eventId}
+                  eventId={eventId ?? undefined}
                   maxSizeMB={5}
                   recommendedDimensions="400px x 200px"
                   onChange={(imageUrl, imageId) => {
-                    onUpdateSponsor(index, { 
-                      imageUrl: imageUrl, 
-                      imageId: imageId 
-                    })
+                    updateSponsor(index, { imageUrl, imageId })
                   }}
                   onRemove={() => {
-                    onUpdateSponsor(index, { 
-                      imageUrl: undefined, 
-                      imageId: undefined 
-                    })
+                    updateSponsor(index, { imageUrl: undefined, imageId: undefined })
                   }}
                   isDisabled={readOnly}
                 />
               </View>
 
-              {/* Fields - Right Side */}
+              {/* Fields */}
               <Flex direction="column" gap="size-150" width="100%">
                 {seriesId && !readOnly ? (
-                  // Autocomplete for partner name when series is available
                   <AutocompleteTextField
                     label="Partner Name"
                     value={sponsor.partnerName}
-                    onChange={(value) => onUpdateSponsor(index, { partnerName: value })}
+                    onChange={(value) => updateSponsor(index, { partnerName: value })}
                     onSelect={(option) => handleSelectSponsor(index, option.id)}
                     options={availableSponsors.map(s => ({
                       id: s.sponsorId,
@@ -245,7 +308,7 @@ export const SponsorsComponent: React.FC<SponsorsComponentProps> = ({
                     label="Partner Name"
                     isRequired
                     value={sponsor.partnerName}
-                    onChange={(value) => onUpdateSponsor(index, { partnerName: value })}
+                    onChange={(value) => updateSponsor(index, { partnerName: value })}
                     width="100%"
                     isReadOnly={readOnly}
                   />
@@ -255,7 +318,7 @@ export const SponsorsComponent: React.FC<SponsorsComponentProps> = ({
                   label="Partner External URL"
                   isRequired
                   value={sponsor.partnerUrl}
-                  onChange={(value) => onUpdateSponsor(index, { partnerUrl: value })}
+                  onChange={(value) => updateSponsor(index, { partnerUrl: value })}
                   width="100%"
                   placeholder="https://..."
                   isReadOnly={readOnly}
@@ -263,7 +326,7 @@ export const SponsorsComponent: React.FC<SponsorsComponentProps> = ({
               </Flex>
             </Flex>
 
-            {/* Save Button - Bottom Right (only show when not saved) */}
+            {/* Save Button */}
             {!readOnly && seriesId && (
               <Flex justifyContent="end" marginTop="size-200">
                 <Button 

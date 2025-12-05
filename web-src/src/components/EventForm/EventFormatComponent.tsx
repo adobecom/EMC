@@ -13,6 +13,7 @@ import {
 import { apiService } from '../../services/api'
 import { LoadingSpinner, HeadingWithTooltip } from '../shared'
 import { SeriesApiResponse } from '../../types/domain'
+import { useEventFormComponent } from '../../hooks/useEventFormComponent'
 
 interface CloudOption {
   key: string
@@ -25,23 +26,41 @@ interface SeriesOption {
   description?: string
 }
 
-interface EventFormatComponentProps {
-  cloudType: string
-  seriesId: string
-  onChange: (data: { cloudType?: string; seriesId?: string }) => void
-}
-
-export const EventFormatComponent: React.FC<EventFormatComponentProps> = ({
-  cloudType,
-  seriesId,
-  onChange
-}) => {
+/**
+ * EventFormatComponent - Manages cloud type and series selection
+ * 
+ * Uses EventFormContext for state management.
+ * No API calls needed in onAfterSave - just data collection.
+ */
+export const EventFormatComponent: React.FC = () => {
+  // ============================================================================
+  // CONTEXT INTEGRATION
+  // ============================================================================
+  
+  const {
+    formData,
+    updateFormData,
+  } = useEventFormComponent({
+    componentId: 'event-format',
+  })
+  
+  const cloudType = formData.cloudType || 'CreativeCloud'
+  const seriesId = formData.seriesId || ''
+  
+  // ============================================================================
+  // LOCAL STATE
+  // ============================================================================
+  
   const [clouds, setClouds] = useState<CloudOption[]>([])
-  const [allSeries, setAllSeries] = useState<SeriesApiResponse[]>([]) // Store all series
-  const [series, setSeries] = useState<SeriesOption[]>([]) // Filtered series for display
+  const [allSeries, setAllSeries] = useState<SeriesApiResponse[]>([])
+  const [series, setSeries] = useState<SeriesOption[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
+  // ============================================================================
+  // DATA LOADING
+  // ============================================================================
+  
   useEffect(() => {
     let isMounted = true
 
@@ -50,7 +69,6 @@ export const EventFormatComponent: React.FC<EventFormatComponentProps> = ({
       setError(null)
 
       try {
-        // Fetch clouds and series in parallel
         const [cloudsResponse, seriesResponse] = await Promise.all([
           fetchClouds(),
           apiService.getSeriesList()
@@ -58,16 +76,13 @@ export const EventFormatComponent: React.FC<EventFormatComponentProps> = ({
 
         if (!isMounted) return
 
-        // Set clouds
         if (cloudsResponse) {
           setClouds(cloudsResponse)
-          // Auto-select first cloud if none selected
           if (!cloudType && cloudsResponse.length > 0) {
-            onChange({ cloudType: cloudsResponse[0].key })
+            updateFormData({ cloudType: cloudsResponse[0].key as 'CreativeCloud' | 'ExperienceCloud' })
           }
         }
 
-        // Set series
         if (seriesResponse && Array.isArray(seriesResponse)) {
           const publishedSeries = seriesResponse.filter(
             (s: SeriesApiResponse) => s.seriesStatus === 'published'
@@ -75,7 +90,6 @@ export const EventFormatComponent: React.FC<EventFormatComponentProps> = ({
           if (isMounted) {
             setAllSeries(publishedSeries)
             
-            // Filter by selected cloud type if available
             if (cloudType) {
               filterSeriesByCloud(cloudType, publishedSeries)
             }
@@ -101,15 +115,17 @@ export const EventFormatComponent: React.FC<EventFormatComponentProps> = ({
     return () => {
       isMounted = false
     }
-  }, []) // Only run once on mount
+  }, [])
 
-  // Re-filter series when cloudType changes
   useEffect(() => {
     if (allSeries.length > 0 && cloudType) {
       filterSeriesByCloud(cloudType)
     }
   }, [cloudType, allSeries])
 
+  // ============================================================================
+  // HELPERS
+  // ============================================================================
 
   const filterSeriesByCloud = (selectedCloudType: string, seriesList?: SeriesApiResponse[]) => {
     const seriesToFilter = seriesList || allSeries
@@ -126,40 +142,44 @@ export const EventFormatComponent: React.FC<EventFormatComponentProps> = ({
     
     setSeries(seriesOptions)
     
-    // Auto-select first series if none selected or if current selection is not in filtered list
     if (seriesOptions.length > 0) {
       const currentSeriesExists = seriesOptions.some(s => s.id === seriesId)
       if (!seriesId || !currentSeriesExists) {
-        onChange({ seriesId: seriesOptions[0].id })
+        updateFormData({ seriesId: seriesOptions[0].id })
       }
     } else {
-      // No series available for this cloud type, clear selection
       if (seriesId) {
-        onChange({ seriesId: '' })
+        updateFormData({ seriesId: '' })
       }
     }
   }
 
   const fetchClouds = async (): Promise<CloudOption[]> => {
-    // TODO: Replace with actual API call when endpoint is available
-    // For now, return static list based on v1 reference
     return [
       { key: 'CreativeCloud', label: 'Creative Cloud' },
       { key: 'ExperienceCloud', label: 'Experience Cloud' }
     ]
   }
 
+  // ============================================================================
+  // EVENT HANDLERS
+  // ============================================================================
+
   const handleCloudChange = (key: React.Key | null) => {
     if (key) {
-      onChange({ cloudType: String(key) })
+      updateFormData({ cloudType: String(key) as 'CreativeCloud' | 'ExperienceCloud' })
     }
   }
 
   const handleSeriesChange = (key: React.Key | null) => {
     if (key) {
-      onChange({ seriesId: String(key) })
+      updateFormData({ seriesId: String(key) })
     }
   }
+
+  // ============================================================================
+  // RENDER
+  // ============================================================================
 
   if (isLoading) {
     return <LoadingSpinner message="Loading event format options..." />
@@ -234,4 +254,3 @@ export const EventFormatComponent: React.FC<EventFormatComponentProps> = ({
     </Flex>
   )
 }
-

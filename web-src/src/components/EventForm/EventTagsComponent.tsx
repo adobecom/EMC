@@ -5,18 +5,41 @@
 import React from 'react'
 import { Flex, Heading, Text } from '@adobe/react-spectrum'
 import { TagSelector } from '../shared'
-import { EventTag } from '../../types/domain'
 import { TYPOGRAPHY, FLEX_GAP } from '../../styles/designSystem'
+import { useEventFormComponent } from '../../hooks/useEventFormComponent'
 
-interface EventTagsComponentProps {
-  selectedTags: EventTag[]
-  onChange: (tags: EventTag[]) => void
-}
-
-export const EventTagsComponent: React.FC<EventTagsComponentProps> = ({
-  selectedTags,
-  onChange
-}) => {
+/**
+ * EventTagsComponent - Manages event tags/topics
+ * 
+ * Uses EventFormContext for state management.
+ * Simple data collector - no API calls needed.
+ */
+export const EventTagsComponent: React.FC = () => {
+  // ============================================================================
+  // CONTEXT INTEGRATION
+  // ============================================================================
+  
+  const {
+    formData,
+    updateFormData,
+  } = useEventFormComponent({
+    componentId: 'event-tags',
+  })
+  
+  const selectedTags = formData.tags || []
+  
+  // ============================================================================
+  // EVENT HANDLERS
+  // ============================================================================
+  
+  const handleTagsChange = (tags: typeof selectedTags) => {
+    updateFormData({ tags })
+  }
+  
+  // ============================================================================
+  // RENDER
+  // ============================================================================
+  
   return (
     <Flex direction="column" gap={FLEX_GAP.SECTION}>
       <Flex direction="column" gap={FLEX_GAP.TIGHT}>
@@ -28,9 +51,8 @@ export const EventTagsComponent: React.FC<EventTagsComponentProps> = ({
       
       <TagSelector
         selectedTags={selectedTags}
-        onChange={onChange}
+        onChange={handleTagsChange}
       />
     </Flex>
   )
 }
-

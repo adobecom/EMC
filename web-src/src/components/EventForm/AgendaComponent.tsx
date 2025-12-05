@@ -20,21 +20,19 @@ import Delete from '@spectrum-icons/workflow/Delete'
 import { v4 as uuidv4 } from 'uuid'
 import { HeadingWithTooltip, RichTextEditor } from '../shared'
 import { AgendaItem } from '../../types/domain'
+import { useEventFormComponent } from '../../hooks/useEventFormComponent'
 
 /**
  * Safely parse ISO 8601 datetime string for DatePicker
- * Handles strings with milliseconds and timezone indicators
  */
 function safeParseDateTimeString(dateString: string | undefined | null) {
   if (!dateString) return null
   
   try {
-    // Remove milliseconds and timezone (Z or +00:00) if present
-    // parseDateTime expects format: YYYY-MM-DDTHH:mm:ss or YYYY-MM-DDTHH:mm
     const cleaned = dateString
-      .replace(/\.\d{3}Z?$/, '') // Remove .000Z or .000
-      .replace(/[+-]\d{2}:\d{2}$/, '') // Remove timezone offset like +00:00
-      .replace(/Z$/, '') // Remove trailing Z if no milliseconds
+      .replace(/\.\d{3}Z?$/, '')
+      .replace(/[+-]\d{2}:\d{2}$/, '')
+      .replace(/Z$/, '')
     
     return parseDateTime(cleaned)
   } catch (error) {
@@ -43,27 +41,37 @@ function safeParseDateTimeString(dateString: string | undefined | null) {
   }
 }
 
-interface AgendaComponentProps {
-  agendaItems: AgendaItem[]
-  showAgendaPostEvent?: boolean
-  eventStartDateTime?: string
-  eventEndDateTime?: string
-  onChange: (agendaItems: AgendaItem[]) => void
-  onShowAgendaPostEventChange: (value: boolean) => void
-}
-
-export const AgendaComponent: React.FC<AgendaComponentProps> = ({
-  agendaItems,
-  showAgendaPostEvent = false,
-  eventStartDateTime,
-  eventEndDateTime,
-  onChange,
-  onShowAgendaPostEventChange
-}) => {
+/**
+ * AgendaComponent - Manages event agenda items
+ * 
+ * Uses EventFormContext for state management.
+ * Handles agenda items and showAgendaPostEvent flag.
+ */
+export const AgendaComponent: React.FC = () => {
+  // ============================================================================
+  // CONTEXT INTEGRATION
+  // ============================================================================
+  
+  const {
+    formData,
+    updateFormData,
+  } = useEventFormComponent({
+    componentId: 'agenda',
+  })
+  
+  const agendaItems = formData.agendaItems || []
+  const showAgendaPostEvent = formData.showAgendaPostEvent || false
+  const eventStartDateTime = formData.startDateTime
+  const eventEndDateTime = formData.endDateTime
+  
+  // ============================================================================
+  // LOCAL STATE
+  // ============================================================================
+  
   const [orderByTime, setOrderByTime] = useState(false)
   const [clampByEventDateTime, setClampByEventDateTime] = useState(false)
 
-  // Auto-sort when orderByTime is enabled or when items change
+  // Auto-sort when orderByTime is enabled
   useEffect(() => {
     if (orderByTime && agendaItems.length > 0) {
       const allHaveStartTime = agendaItems.every(item => item.startDateTime)
@@ -71,14 +79,17 @@ export const AgendaComponent: React.FC<AgendaComponentProps> = ({
         const sorted = [...agendaItems].sort((a, b) => 
           new Date(a.startDateTime).getTime() - new Date(b.startDateTime).getTime()
         )
-        // Only update if order actually changed
         const orderChanged = sorted.some((item, idx) => item.id !== agendaItems[idx].id)
         if (orderChanged) {
-          onChange(sorted)
+          updateFormData({ agendaItems: sorted })
         }
       }
     }
   }, [orderByTime, agendaItems])
+  
+  // ============================================================================
+  // EVENT HANDLERS
+  // ============================================================================
 
   const addAgendaItem = () => {
     const newItem: AgendaItem = {
@@ -88,27 +99,34 @@ export const AgendaComponent: React.FC<AgendaComponentProps> = ({
       title: '',
       description: ''
     }
-    onChange([...agendaItems, newItem])
+    updateFormData({ agendaItems: [...agendaItems, newItem] })
   }
 
   const updateAgendaItem = (index: number, updates: Partial<AgendaItem>) => {
     const updated = [...agendaItems]
     updated[index] = { ...updated[index], ...updates }
-    onChange(updated)
+    updateFormData({ agendaItems: updated })
   }
 
   const removeAgendaItem = (index: number) => {
-    onChange(agendaItems.filter((_, i) => i !== index))
+    updateFormData({ agendaItems: agendaItems.filter((_, i) => i !== index) })
   }
 
   const moveAgendaItem = (fromIndex: number, toIndex: number) => {
     const updated = [...agendaItems]
     const [moved] = updated.splice(fromIndex, 1)
     updated.splice(toIndex, 0, moved)
-    onChange(updated)
+    updateFormData({ agendaItems: updated })
   }
 
-  // Calculate min/max values for date pickers when clamping is enabled
+  const handleShowAgendaPostEventChange = (value: boolean) => {
+    updateFormData({ showAgendaPostEvent: value })
+  }
+
+  // ============================================================================
+  // HELPERS
+  // ============================================================================
+
   const getDatePickerConstraints = () => {
     if (!clampByEventDateTime) {
       return { minValue: undefined, maxValue: undefined }
@@ -120,6 +138,10 @@ export const AgendaComponent: React.FC<AgendaComponentProps> = ({
   }
 
   const { minValue, maxValue } = getDatePickerConstraints()
+
+  // ============================================================================
+  // RENDER
+  // ============================================================================
 
   return (
     <Flex direction="column" gap="size-200">
@@ -270,7 +292,7 @@ export const AgendaComponent: React.FC<AgendaComponentProps> = ({
       <View UNSAFE_style={{ display: 'inline-block' }}>
         <Switch
           isSelected={showAgendaPostEvent}
-          onChange={onShowAgendaPostEventChange}
+          onChange={handleShowAgendaPostEventChange}
         >
           Show agenda post-event
         </Switch>
@@ -278,4 +300,3 @@ export const AgendaComponent: React.FC<AgendaComponentProps> = ({
     </Flex>
   )
 }
-
