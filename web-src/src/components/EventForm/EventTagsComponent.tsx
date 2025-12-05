@@ -20,9 +20,9 @@ export const EventTagsComponent: React.FC<EventTagsComponentProps> = ({
   return (
     <Flex direction="column" gap={FLEX_GAP.SECTION}>
       <Flex direction="column" gap={FLEX_GAP.TIGHT}>
-        <Heading level={3} UNSAFE_style={TYPOGRAPHY.COMPONENT_HEADING}>Tags & Topics</Heading>
+        <Heading level={3} UNSAFE_style={TYPOGRAPHY.COMPONENT_HEADING}>Event Tags</Heading>
         <Text UNSAFE_style={TYPOGRAPHY.SECTION_DESCRIPTION}>
-          Add metadata from the Adobe CAAS taxonomy to improve discoverability.
+          Add tags to help users filter for relevant events.
         </Text>
       </Flex>
       

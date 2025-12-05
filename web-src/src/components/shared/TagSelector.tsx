@@ -368,9 +368,8 @@ export const TagSelector: React.FC<TagSelectorProps> = ({
         <Flex direction="column" gap="size-150">
           <Text UNSAFE_style={{ 
             fontSize: '12px',
-            fontWeight: 600,
+            fontWeight: 700,
             color: 'var(--spectrum-global-color-gray-700)',
-            textTransform: 'uppercase',
             letterSpacing: '0.5px'
           }}>
             Selected Tags
