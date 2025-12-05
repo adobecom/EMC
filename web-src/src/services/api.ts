@@ -47,6 +47,13 @@ export interface UploadProgressTracker {
   progress: number
 }
 
+interface ScheduleData {
+  pageUrl: string
+  publishDate?: string
+  unpublishDate?: string
+  [key: string]: any
+}
+
 interface ApiServiceConfig {
   headers?: Record<string, string>
 }
@@ -1233,6 +1240,71 @@ class ApiService {
     )
   }
 
+  /**
+   * Upload an image via XHR with progress tracking
+   * Supports both POST (new image) and PUT (update existing image)
+   */
+  async uploadImage(
+    file: File,
+    config: ImageUploadConfig,
+    tracker?: UploadProgressTracker,
+    imageId?: string
+  ): Promise<any | ErrorResponse> {
+    const token = tokenStorage.getValidToken()
+    
+    if (!token) {
+      console.warn('⚠️ No valid authentication token for uploadImage')
+      return { status: 'No Token', error: 'No valid authentication token' }
+    }
+
+    const env = getCurrentEnvironment()
+    const host = getApiHost('esp', env)
+    const method = imageId ? 'PUT' : 'POST'
+    const url = imageId ? `${host}${config.targetUrl}/${imageId}` : `${host}${config.targetUrl}`
+
+    return new Promise((resolve, reject) => {
+      const xhr = new XMLHttpRequest()
+      
+      xhr.open(method, url)
+      xhr.setRequestHeader('x-image-alt-text', config.altText || '')
+      xhr.setRequestHeader('x-image-kind', config.type)
+      xhr.setRequestHeader('x-api-key', 'acom_event_service')
+      xhr.setRequestHeader('Authorization', `Bearer ${token}`)
+      xhr.setRequestHeader('x-request-id', `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`)
+
+      if (tracker) {
+        xhr.upload.onprogress = (event) => {
+          if (event.lengthComputable) {
+            const percentComplete = (event.loaded / event.total) * 100
+            tracker.progress = percentComplete
+          }
+        }
+      }
+
+      xhr.onload = () => {
+        if (xhr.status >= 200 && xhr.status < 300) {
+          try {
+            const respJson = JSON.parse(xhr.responseText)
+            resolve(respJson)
+          } catch (e) {
+            console.error('❌ Failed to parse image upload response:', e)
+            reject({ status: xhr.status, error: 'Failed to parse response' })
+          }
+        } else {
+          console.error(`❌ Unexpected image upload server response: ${xhr.status}`)
+          reject({ status: xhr.status, error: `Upload failed with status: ${xhr.status}` })
+        }
+      }
+
+      xhr.onerror = () => {
+        console.error(`❌ Failed to upload image: ${xhr.statusText}`)
+        reject({ status: 'Network Error', error: `Upload failed: ${xhr.statusText}` })
+      }
+
+      xhr.send(file)
+    })
+  }
+
   // ============================================================================
   // RSVP & TAGS APIs
   // ============================================================================
@@ -1305,16 +1377,67 @@ class ApiService {
   })()
 
   // ============================================================================
+  // SCHEDULE APIs (Page Schedules)
+  // ============================================================================
+
+  async getSchedules(): Promise<any | ErrorResponse> {
+    return this.callExternalApi('esp', '/v1/page-schedules', 'GET', undefined,
+      { operationName: 'getSchedules', shouldReturnFullResponse: true }
+    )
+  }
+
+  async createSchedule(schedule: ScheduleData): Promise<any | ErrorResponse> {
+    validateObject(schedule, 'schedule')
+    return this.callExternalApi('esp', '/v1/page-schedules', 'POST', schedule,
+      { operationName: 'createSchedule', shouldReturnFullResponse: true }
+    )
+  }
+
+  async updateSchedule(scheduleId: string, schedule: ScheduleData): Promise<any | ErrorResponse> {
+    validateString(scheduleId, 'schedule ID')
+    validateObject(schedule, 'schedule')
+    return this.callExternalApi('esp', `/v1/page-schedules/${scheduleId}`, 'PUT', schedule,
+      { operationName: `updateSchedule(${scheduleId})`, shouldReturnFullResponse: true }
+    )
+  }
+
+  async deleteSchedule(scheduleId: string): Promise<SuccessResponse | ErrorResponse> {
+    validateString(scheduleId, 'schedule ID')
+    return this.callExternalApi('esp', `/v1/page-schedules/${scheduleId}`, 'DELETE', undefined,
+      { operationName: `deleteSchedule(${scheduleId})` }
+    )
+  }
+
+  // ============================================================================
   // PUBLISHING PROFILES (for Webinar Metadata)
   // ============================================================================
+
+  /**
+   * Get all publishing profiles
+   */
+  async getPublishingProfiles(): Promise<any | ErrorResponse> {
+    return this.callExternalApi('esp', '/v1/publishing-profiles', 'GET', undefined,
+      { operationName: 'getPublishingProfiles', shouldReturnFullResponse: true }
+    )
+  }
+
+  /**
+   * Get a single publishing profile by ID
+   */
+  async getPublishingProfile(profileId: string): Promise<any | ErrorResponse> {
+    validateString(profileId, 'publishing profile ID')
+    return this.callExternalApi('esp', `/v1/publishing-profiles/${profileId}`, 'GET', undefined,
+      { operationName: `getPublishingProfile(${profileId})`, shouldReturnFullResponse: true }
+    )
+  }
 
   /**
    * Get the publishing profile for an event
    */
   async getEventPublishingProfile(eventId: string): Promise<any | ErrorResponse> {
     validateString(eventId, 'event ID')
-    return this.callExternalApi('esp', `/v1/events/${eventId}/publishing-profile`, 'GET', undefined,
-      { operationName: `getEventPublishingProfile(${eventId})` }
+    return this.callExternalApi('esp', `/v1/events/${eventId}/publishing-profiles`, 'GET', undefined,
+      { operationName: `getEventPublishingProfile(${eventId})`, shouldReturnFullResponse: true }
     )
   }
 
@@ -1324,20 +1447,24 @@ class ApiService {
   async createPublishingProfile(profileData: {
     name: string
     description?: string
-    metadata: Record<string, string>
+    metadata?: Record<string, string>
     status?: string
   }): Promise<any | ErrorResponse> {
     validateObject(profileData, 'profile data')
+    if (!profileData.name || typeof profileData.name !== 'string') {
+      throw new Error('Publishing profile name is required')
+    }
     return this.callExternalApi('esp', '/v1/publishing-profiles', 'POST', profileData,
-      { operationName: 'createPublishingProfile' }
+      { operationName: 'createPublishingProfile', shouldReturnFullResponse: true }
     )
   }
 
   /**
    * Update an existing publishing profile
+   * Requires modificationTime for optimistic locking
    */
   async updatePublishingProfile(profileId: string, profileData: {
-    name?: string
+    name: string
     description?: string
     metadata?: Record<string, string>
     status?: string
@@ -1345,8 +1472,15 @@ class ApiService {
   }): Promise<any | ErrorResponse> {
     validateString(profileId, 'profile ID')
     validateObject(profileData, 'profile data')
-    return this.callExternalApi('esp', `/v1/publishing-profiles/${profileId}`, 'PUT', profileData,
-      { operationName: `updatePublishingProfile(${profileId})` }
+    if (!profileData.name || typeof profileData.name !== 'string') {
+      throw new Error('Publishing profile name is required')
+    }
+    if (!profileData.modificationTime || typeof profileData.modificationTime !== 'number') {
+      throw new Error('Modification time is required for optimistic locking')
+    }
+    return this.callExternalApi('esp', `/v1/publishing-profiles/${profileId}`, 'PUT', 
+      { ...profileData, profileId },
+      { operationName: `updatePublishingProfile(${profileId})`, shouldReturnFullResponse: true }
     )
   }
 
@@ -1356,8 +1490,8 @@ class ApiService {
   async assignPublishingProfileToEvent(eventId: string, profileId: string): Promise<any | ErrorResponse> {
     validateString(eventId, 'event ID')
     validateString(profileId, 'profile ID')
-    return this.callExternalApi('esp', `/v1/events/${eventId}/publishing-profile`, 'PUT', { profileId },
-      { operationName: `assignPublishingProfileToEvent(${eventId}, ${profileId})` }
+    return this.callExternalApi('esp', `/v1/events/${eventId}/publishing-profiles`, 'POST', { profileId },
+      { operationName: `assignPublishingProfileToEvent(${eventId}, ${profileId})`, shouldReturnFullResponse: true }
     )
   }
 }

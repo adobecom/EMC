@@ -66,7 +66,11 @@ export interface SeriesApiResponse {
   targetCms: TargetCms
   templateId: string
   externalThemeId?: string
-  relatedDomain?: string
+  susiContextId?: string // SSO context ID
+  relatedDomain?: string // Related domain for the series
+  contentRoot?: string // Content root path
+  createdBy?: string
+  modifiedBy?: string
   creationTime: number
   modificationTime: number
 }
@@ -93,17 +97,24 @@ export interface VenueAddressComponent {
   languageCode?: string
 }
 
+// Venue localization data
+export interface VenueLocalization {
+  additionalInformation?: string
+  [key: string]: any
+}
+
 export interface Venue {
-  placeId?: string
+  venueId: string
   venueName: string
+  placeId?: string
   formattedAddress?: string
   addressComponents?: VenueAddressComponent[]
   coordinates?: VenueCoordinates
   gmtOffset?: number
-  localizations?: Record<string, any>
+  additionalInformation?: string // Localizable
+  localizations?: Record<string, VenueLocalization>
   localizationOverrides?: Record<string, any>
-  additionalInformation?: string
-  venueId: string
+  // Convenience fields (derived from addressComponents)
   address?: string
   city?: string
   state?: string
@@ -152,10 +163,55 @@ export interface EventHistoryResponse {
   nextPageToken?: string
 }
 
+// Agenda item from API
+export interface AgendaDataItem {
+  startTime: string
+  description?: string
+  title: string
+}
+
+// Video data from API
+export interface VideoData {
+  url?: string
+}
+
+// Registration config from API
+export interface RegistrationData {
+  type?: string
+  formData?: string
+}
+
+// Marketo integration data from API
+export interface MarketoIntegrationData {
+  eventType?: string
+  salesforceCampaignId?: string
+  mczProgramName?: string
+  coMarketingPartner?: string
+  eventPoi?: string
+}
+
+// CTA (Call-to-Action) item
+export interface CtaItem {
+  label?: string
+  url?: string
+  type?: string
+}
+
+// Promotional item
+export interface PromotionalItem {
+  title?: string
+  description?: string
+  url?: string
+  imageUrl?: string
+}
+
 // Event API Response types (from backend)
 export interface EventApiResponse {
   eventId: string
-  enTitle?: string
+  title?: string // Localizable
+  enTitle?: string // English title for URL/reference
+  description?: string // Localizable - rich text for event page
+  eventDetails?: string // Localizable - additional event details
   seriesId?: string
   cloudType?: string
   eventType?: string
@@ -181,13 +237,17 @@ export interface EventApiResponse {
   externalEventId?: string
   creationTime?: number
   modificationTime?: number
+  createdBy?: string
+  modifiedBy?: string
   localizationOverrides?: Record<string, any>
-  localizations?: Record<string, any>
+  localizations?: Record<string, EventLocalization>
   venue?: Record<string, any>
-  agenda?: any[]
+  agenda?: AgendaDataItem[] // Localizable array
   rsvpFormFields?: Record<string, any>
-  video?: Record<string, any>
-  marketoIntegration?: Record<string, any>
+  rsvpDescription?: string // Localizable
+  video?: VideoData
+  registration?: RegistrationData
+  marketoIntegration?: MarketoIntegrationData
   liveUpdate?: boolean
   forceSpWrite?: boolean
   defaultLocale?: string
@@ -195,11 +255,29 @@ export interface EventApiResponse {
   showAgendaPostEvent?: boolean
   showVenuePostEvent?: boolean
   showVenueAdditionalInfoPostEvent?: boolean
+  useLegacyDetailPagePath?: boolean
+  communityTopicUrl?: string // URL for community forum topic
+  cta?: CtaItem[] // Localizable call-to-action items
+  promotionalItems?: PromotionalItem[] // Localizable promotional content
   gmtOffset?: number
   localStartTimeMillis?: number
   localEndTimeMillis?: number
   images?: EventImage[]
+  speakers?: any[]
+  sponsors?: any[]
   // Add any other fields as optional
+  [key: string]: any
+}
+
+// Event localization data
+export interface EventLocalization {
+  title?: string
+  description?: string
+  eventDetails?: string
+  rsvpDescription?: string
+  agenda?: AgendaDataItem[]
+  cta?: CtaItem[]
+  promotionalItems?: PromotionalItem[]
   [key: string]: any
 }
 
@@ -320,43 +398,63 @@ export interface ProfileData {
   speakerId?: string // Series-level speaker ID
   firstName: string
   lastName: string
-  title: string
-  bio?: string
+  title: string // Localizable
+  bio?: string // Localizable
   imageUrl?: string
   imageId?: string
   socialLinks?: SocialLink[]
+  localizations?: Record<string, SpeakerLocalization>
   // State flags
   isSaved?: boolean // Speaker has been saved to series
   isFromSeries?: boolean // Speaker was selected from series autocomplete
   ordinal?: number // Order in event
   modificationTime?: number // For API updates
+  creationTime?: number
 }
 
-// Series-level speaker data from API
+// Speaker localization data
+export interface SpeakerLocalization {
+  title?: string
+  bio?: string
+  [key: string]: any
+}
+
+// Series-level speaker data from API (matches v1 SPEAKER_DATA_FILTER)
 export interface SeriesSpeaker {
   speakerId: string
   firstName: string
   lastName: string
-  title?: string
-  bio?: string
-  socialMediaLinks?: SocialLink[]
+  title?: string // Localizable
+  bio?: string // Localizable
+  socialLinks?: SocialLink[] // v1 uses socialLinks
+  socialMediaLinks?: SocialLink[] // Alias used in some places
   photo?: {
     imageId: string
     imageUrl: string
   }
+  localizations?: Record<string, SpeakerLocalization>
   creationTime?: number
   modificationTime?: number
 }
 
-// Series-level sponsor data from API
+// Sponsor localization data
+export interface SponsorLocalization {
+  info?: string
+  [key: string]: any
+}
+
+// Series-level sponsor data from API (matches v1 SPONSOR_DATA_FILTER)
 export interface SeriesSponsor {
   sponsorId: string
   name: string
-  externalUrl: string
+  info?: string // Localizable description/info about sponsor
+  link?: string // External URL (v1 uses 'link', some places use 'externalUrl')
+  externalUrl?: string // Alias for link
   logo?: {
     imageId: string
     imageUrl: string
   }
+  localizations?: Record<string, SponsorLocalization>
   creationTime?: number
   modificationTime?: number
 }
@@ -367,10 +465,12 @@ export interface SponsorData {
   sponsorId?: string  // Series-level sponsor ID if saved
   partnerName: string
   partnerUrl: string
+  info?: string // Localizable description
   imageUrl?: string
   imageId?: string
   isSaved?: boolean
   isFromSeries?: boolean  // True if selected from series autocomplete
+  localizations?: Record<string, SponsorLocalization>
   modificationTime?: number
 }
 
@@ -406,35 +506,50 @@ export interface EventFormData {
   eventType: 'in-person' | 'webinar'
   seriesId: string
   organizationId: string
-  name: string
+  name: string // Title (localizable)
+  enTitle?: string // English title for URL/reference
   urlTitle?: string // English title for page URL
-  description?: string // Rich text description for event page
+  description?: string // Rich text description for event page (localizable)
+  eventDetails?: string // Additional event details (localizable)
   shortDescription?: string // Plain text for Events Hub/SEO (160 chars max)
   language: string
+  defaultLocale?: string
   isPrivate: boolean
   
   // Step 2: Tags & Topics
   tags?: EventTag[]
+  topics?: string[]
   
   // Step 3: Date & Time
   startDateTime: string
   endDateTime: string
+  localStartDate?: string
+  localEndDate?: string
+  localStartTime?: string
+  localEndTime?: string
   timezone?: string
   
   // Step 4: Venue
   venue?: VenueData
+  showVenuePostEvent?: boolean
+  showVenueAdditionalInfoPostEvent?: boolean
   
   // Step 5: Attendance & Registration
   capacity?: number
+  attendeeLimit?: number
   status: 'draft' | 'published' | 'ongoing' | 'completed' | 'cancelled'
   registrationOpen: boolean
   allowWaitlist?: boolean
+  allowWaitlisting?: boolean // Alias
   allowGuestRegistration?: boolean
   hostEmail?: string
-  rsvpDescription?: string
+  rsvpDescription?: string // Localizable
   // Registration fields configuration
   registrationType?: 'ESP' | 'Marketo'
+  registration?: RegistrationData
   marketoFormUrl?: string
+  marketoIntegration?: MarketoIntegrationData
+  rsvpFormFields?: Record<string, any>
   visibleRsvpFields?: string[]
   requiredRsvpFields?: string[]
   
@@ -444,12 +559,23 @@ export interface EventFormData {
   // Step 7: Speakers & Hosts
   profiles?: ProfileData[]
   
+  // Step 8: Video/Webinar
+  video?: VideoData
+  
   // Additional metadata
-  communityForumUrl?: string
+  communityTopicUrl?: string // URL for community forum topic
+  communityForumUrl?: string // Alias
   secondaryLinkTitle?: string
+  cta?: CtaItem[] // Localizable call-to-action items
+  promotionalItems?: PromotionalItem[] // Localizable promotional content
   agendaItems?: AgendaItem[]
+  agenda?: AgendaDataItem[] // API format
   showAgendaPostEvent?: boolean
+  showSponsors?: boolean
   sponsors?: SponsorData[]
+  useLegacyDetailPagePath?: boolean
+  localizations?: Record<string, EventLocalization>
+  localizationOverrides?: Record<string, any>
   metadata?: Record<string, any>
 }
 
@@ -516,5 +642,23 @@ export interface ApiResponse<T> {
 
 export interface ApiListResponse<T> extends ApiResponse<T[]> {
   pagination?: PaginationParams
+}
+
+// Publishing Profile types (for Webinar metadata)
+export interface PublishingProfile {
+  profileId: string
+  name: string
+  description?: string
+  metadata?: Record<string, string>
+  status?: 'active' | 'inactive' | string
+  creationTime: number
+  modificationTime: number
+}
+
+export interface PublishingProfileFormData {
+  name: string
+  description?: string
+  metadata?: Record<string, string>
+  status?: string
 }
 
