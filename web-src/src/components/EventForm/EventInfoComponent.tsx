@@ -179,7 +179,6 @@ export const EventInfoComponent: React.FC = () => {
       <TextField
         label="Event Title"
         isRequired
-        isQuiet
         maxLength={80}
         value={name}
         onChange={handleNameChange}
@@ -206,7 +205,6 @@ export const EventInfoComponent: React.FC = () => {
           </TooltipTrigger>
         </Flex>
         <TextField
-          isQuiet
           aria-label="English title for page URL"
           value={urlTitle || ''}
           onChange={(value) => updateFormData({ urlTitle: value })}
@@ -282,7 +280,6 @@ export const EventInfoComponent: React.FC = () => {
         <>
           <TextField
             label="Secondary Link Title"
-            isQuiet
             value={secondaryLinkTitle || ''}
             onChange={(value) => updateFormData({ secondaryLinkTitle: value })}
             description="Display text for the secondary link"
@@ -292,7 +289,6 @@ export const EventInfoComponent: React.FC = () => {
           <TextField
             label="Secondary Link URL"
             type="url"
-            isQuiet
             value={communityForumUrl || ''}
             onChange={(value) => updateFormData({ communityForumUrl: value })}
             description="URL for the secondary link"

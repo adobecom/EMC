@@ -254,7 +254,6 @@ export const AgendaComponent: React.FC = () => {
             <TextField
               label="Agenda Title"
               isRequired
-              isQuiet
               value={item.title}
               onChange={(value) => updateAgendaItem(index, { title: value })}
               width="100%"

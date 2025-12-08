@@ -453,7 +453,6 @@ export const SpeakersComponent: React.FC = () => {
               {/* Title */}
               <TextField
                 label="Title"
-                isQuiet
                 value={profile.title}
                 onChange={(value) => updateProfile(index, { title: value })}
                 isReadOnly={readOnly}

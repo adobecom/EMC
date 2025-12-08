@@ -83,14 +83,12 @@ export const ProfilesComponent: React.FC<ProfilesComponentProps> = ({
             <Flex direction="row" gap="size-150">
               <TextField
                 label="First Name"
-                isQuiet
                 value={profile.firstName}
                 onChange={(value) => onUpdateProfile(index, { firstName: value })}
                 width="50%"
               />
               <TextField
                 label="Last Name"
-                isQuiet
                 value={profile.lastName}
                 onChange={(value) => onUpdateProfile(index, { lastName: value })}
                 width="50%"
@@ -123,7 +121,6 @@ export const ProfilesComponent: React.FC<ProfilesComponentProps> = ({
 
             <TextField
               label="Title"
-              isQuiet
               value={profile.title}
               onChange={(value) => onUpdateProfile(index, { title: value })}
             />
