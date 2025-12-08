@@ -26,21 +26,26 @@ EMC/
 ├── web-src/             # Frontend React app
 │   └── src/
 │       ├── components/  # UI components
-│       ├── services/    # API service layer
+│       │   ├── shared/  # Reusable shared components
+│       │   └── EventForm/  # Modular event form components
+│       ├── services/    # API service layer (ESP/ESL external APIs)
 │       ├── types/       # TypeScript definitions
-│       └── hooks/       # Custom React hooks
-├── actions/             # Backend serverless actions
-│   ├── sample/          # Sample action
-│   ├── sampleMessage/   # Sample message action
-│   └── utils.js         # Shared utilities
+│       ├── hooks/       # Custom React hooks
+│       ├── contexts/    # React context providers
+│       ├── config/      # Configuration and constants
+│       ├── mocks/       # Mock data for development
+│       └── utils/       # Utility functions
+├── actions/             # App Builder actions (unused, boilerplate only)
 ├── test/                # Unit tests
 ├── e2e/                 # End-to-end tests
 └── docs/                # Documentation
     ├── PROJECT_OVERVIEW.md      # This file
-    ├── DEVELOPMENT_WORKFLOW.md  # Official Adobe development workflow
+    ├── DEVELOPMENT_WORKFLOW.md  # Development workflow
     ├── FRONTEND.md              # Frontend development guide
-    ├── BACKEND.md               # Backend actions guide
-    ├── API_INTEGRATION.md       # Frontend-backend integration
+    ├── EVENT_FORM.md            # Event form implementation guide
+    ├── MODULAR_COMPONENT_PATTERN.md  # Component patterns
+    ├── API_CENTRALIZATION.md    # API service documentation
+    ├── DEV_TOKEN_*.md           # Dev token management (3 docs)
     └── TESTING.md               # Testing guide
 ```
 
@@ -74,17 +79,18 @@ Organization (IMS Org)
 - **React Router** - Client-side routing
 - **@internationalized/date** - Date handling
 
-### Backend
-- **Adobe I/O Runtime** - Serverless platform (OpenWhisk)
-- **Node.js 22** - Runtime environment
-- **@adobe/aio-sdk** - Adobe I/O SDK
-- **node-fetch** - HTTP client
+### External APIs
+- **Adobe ESP (Event Service Platform)** - Series, events, speakers, sponsors, venues
+- **Adobe ESL (Event Service Layer)** - Event lifecycle operations
+- **Google Places API** - Venue autocomplete and location data
+- **Adobe Chimera API** - CAAS tags for content tagging
 
 ### Development Tools
 - **Jest** - Testing framework
 - **ESLint** - Code linting
 - **TypeScript** - Type checking
 - **Parcel** - Frontend bundler
+- **Dev Token System** - Local development authentication
 
 ## Authentication & Authorization
 
@@ -142,8 +148,8 @@ TypeScript configuration for frontend code
 ## Next Steps for New Developers
 
 1. Read [FRONTEND.md](./FRONTEND.md) for UI development
-2. Read [BACKEND.md](./BACKEND.md) for action development
-3. Read [API_INTEGRATION.md](./API_INTEGRATION.md) for connecting frontend to backend
+2. Read [EVENT_FORM.md](./EVENT_FORM.md) for event form patterns
+3. Read [DEV_TOKEN_QUICKSTART.md](./DEV_TOKEN_QUICKSTART.md) for local development setup
 4. Read [TESTING.md](./TESTING.md) for testing patterns
 
 ## Common Commands
@@ -195,8 +201,8 @@ aio rt activation get <id> # Get activation details
 
 - **Read the [Development Workflow](./DEVELOPMENT_WORKFLOW.md)** - Learn the official Adobe way to develop ⭐
 - See [Frontend Guide](./FRONTEND.md) for React/TypeScript patterns
-- See [Backend Guide](./BACKEND.md) for Adobe I/O Runtime actions
-- See [API Integration](./API_INTEGRATION.md) for frontend-backend communication
+- See [Event Form Guide](./EVENT_FORM.md) for form implementation
+- See [API Centralization](./API_CENTRALIZATION.md) for API service layer
 - See [Testing Guide](./TESTING.md) for unit and E2E testing
 
 ## Resources

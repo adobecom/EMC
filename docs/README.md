@@ -37,20 +37,7 @@ Welcome to the Event Management Cloud (EMC) documentation! This index will help 
   - Z-index scale for layering
   - Common style objects and helpers
 
-### Backend Development
-- **[Backend Guide](./BACKEND.md)** - Adobe I/O Runtime actions guide
-  - Creating actions
-  - Action structure
-  - Deployment
-  - State management with Adobe I/O State
-
-### API Integration
-- **[API Integration](./API_INTEGRATION.md)** - Connecting frontend to backend
-  - API service layer
-  - Authentication
-  - Error handling
-  - Mock data for development
-
+### API & Services
 - **[API Centralization](./API_CENTRALIZATION.md)** - Centralized API management system
   - ApiService architecture
   - Type safety
@@ -113,11 +100,10 @@ A system that lets you use real Adobe IMS tokens from production sites in your l
 ### Development Workflow
 - [Development Workflow](./DEVELOPMENT_WORKFLOW.md)
 - [Frontend Guide](./FRONTEND.md)
-- [Backend Guide](./BACKEND.md)
+- [Event Form Guide](./EVENT_FORM.md)
 - [Testing Guide](./TESTING.md)
 
 ### Integration & APIs
-- [API Integration](./API_INTEGRATION.md)
 - [API Centralization](./API_CENTRALIZATION.md)
 - [Dev Token Guide](./DEV_TOKEN_GUIDE.md)
 - [Google Places API Setup](./GOOGLE_PLACES_SETUP.md)
@@ -161,8 +147,8 @@ aio app undeploy         # Remove deployment
 | Set up local dev with API access | [Dev Token Quick Start](./DEV_TOKEN_QUICKSTART.md) |
 | Set up Google Places API | [Google Places Setup](./GOOGLE_PLACES_SETUP.md) |
 | Create a new component | [Frontend Guide](./FRONTEND.md) |
-| Create a new backend action | [Backend Guide](./BACKEND.md) |
-| Connect frontend to backend | [API Integration](./API_INTEGRATION.md) |
+| Create modular form component | [Modular Component Pattern](./MODULAR_COMPONENT_PATTERN.md) |
+| Use API services | [API Centralization](./API_CENTRALIZATION.md) |
 | Write tests | [Testing Guide](./TESTING.md) |
 | Understand the architecture | [Project Overview](./PROJECT_OVERVIEW.md) |
 
@@ -175,8 +161,8 @@ EMC/
 │   ├── PROJECT_OVERVIEW.md         # Start here!
 │   ├── DEVELOPMENT_WORKFLOW.md     # How to develop
 │   ├── FRONTEND.md                 # Frontend guide
-│   ├── BACKEND.md                  # Backend guide
-│   ├── API_INTEGRATION.md          # API guide
+│   ├── EVENT_FORM.md               # Event form guide
+│   ├── MODULAR_COMPONENT_PATTERN.md # Component patterns
 │   ├── API_CENTRALIZATION.md       # API architecture
 │   ├── TESTING.md                  # Testing guide
 │   ├── TOP_NAV_LAYOUT.md          # Nav structure
@@ -211,21 +197,15 @@ EMC/
 4. [Frontend Guide](./FRONTEND.md)
 5. [Event Form Guide](./EVENT_FORM.md)
 6. [Modular Component Pattern](./MODULAR_COMPONENT_PATTERN.md)
-7. [API Integration](./API_INTEGRATION.md)
-
-### Backend Developer
-1. [Project Overview](./PROJECT_OVERVIEW.md)
-2. [Backend Guide](./BACKEND.md)
-3. [API Integration](./API_INTEGRATION.md)
-4. [Testing Guide](./TESTING.md)
+7. [API Centralization](./API_CENTRALIZATION.md)
 
 ### Full-Stack Developer
 1. [Project Overview](./PROJECT_OVERVIEW.md)
 2. [Dev Token Quick Start](./DEV_TOKEN_QUICKSTART.md) ⚡
 3. [Development Workflow](./DEVELOPMENT_WORKFLOW.md)
 4. [Frontend Guide](./FRONTEND.md)
-5. [Backend Guide](./BACKEND.md)
-6. [API Integration](./API_INTEGRATION.md)
+5. [Event Form Guide](./EVENT_FORM.md)
+6. [API Centralization](./API_CENTRALIZATION.md)
 7. [Testing Guide](./TESTING.md)
 
 ### QA Engineer
@@ -282,7 +262,7 @@ EMC/
 | Can't make API calls locally | [Dev Token Quick Start](./DEV_TOKEN_QUICKSTART.md) |
 | Don't understand the architecture | [Project Overview](./PROJECT_OVERVIEW.md) |
 | Component not rendering | [Frontend Guide](./FRONTEND.md) |
-| Action not working | [Backend Guide](./BACKEND.md) |
+| Form component extraction | [Modular Component Pattern](./MODULAR_COMPONENT_PATTERN.md) |
 | Tests failing | [Testing Guide](./TESTING.md) |
 | Token expired | [Dev Token Guide](./DEV_TOKEN_GUIDE.md#troubleshooting) |
 
@@ -303,8 +283,8 @@ When updating documentation:
 
 ---
 
-**Last Updated:** November 25, 2025
-**Version:** 1.4.0
+**Last Updated:** December 8, 2025
+**Version:** 1.5.0
 
 Happy coding! 🚀
 

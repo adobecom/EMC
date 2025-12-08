@@ -755,5 +755,5 @@ expect(result.createdAt).toMatch(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/)
 - [Jest Documentation](https://jestjs.io/)
 - [Testing Library](https://testing-library.com/)
 - [Frontend Testing Guide](./FRONTEND.md#testing)
-- [Backend Testing Guide](./BACKEND.md#testing-actions)
+- [Event Form Guide](./EVENT_FORM.md) - Form testing patterns
 
