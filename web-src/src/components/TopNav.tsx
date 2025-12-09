@@ -48,7 +48,7 @@ const TopNav: React.FC<TopNavProps> = ({ ims }) => {
           </a>
         </View>
 
-        {/* Center: Navigation Links */}
+        {/* Center: Navigation Links - Order: Home, Clouds, Series, Events, Attendees, About */}
         <Flex 
           direction="row" 
           alignItems="center" 
@@ -64,9 +64,9 @@ const TopNav: React.FC<TopNavProps> = ({ ims }) => {
           </NavLink>
           <NavLink
             className={({ isActive }) => `nav-link ${isActive ? 'is-selected' : ''}`}
-            to="/organizations"
+            to="/clouds"
           >
-            Organizations
+            Clouds
           </NavLink>
           <NavLink
             className={({ isActive }) => `nav-link ${isActive ? 'is-selected' : ''}`}
@@ -82,27 +82,9 @@ const TopNav: React.FC<TopNavProps> = ({ ims }) => {
           </NavLink>
           <NavLink
             className={({ isActive }) => `nav-link ${isActive ? 'is-selected' : ''}`}
-            to="/registrations"
-          >
-            Registrations
-          </NavLink>
-          <NavLink
-            className={({ isActive }) => `nav-link ${isActive ? 'is-selected' : ''}`}
             to="/attendees"
           >
             Attendees
-          </NavLink>
-          <NavLink
-            className={({ isActive }) => `nav-link ${isActive ? 'is-selected' : ''}`}
-            to="/clouds"
-          >
-            Clouds
-          </NavLink>
-          <NavLink
-            className={({ isActive }) => `nav-link ${isActive ? 'is-selected' : ''}`}
-            to="/actions"
-          >
-            Actions
           </NavLink>
           <NavLink
             className={({ isActive }) => `nav-link ${isActive ? 'is-selected' : ''}`}
@@ -123,4 +105,3 @@ const TopNav: React.FC<TopNavProps> = ({ ims }) => {
 }
 
 export default TopNav
-

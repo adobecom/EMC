@@ -345,3 +345,19 @@ body {
   color: var(--spectrum-global-color-gray-800);
 }
 
+/** Home Page - Navigation Cards **/
+.nav-card {
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.nav-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  border-color: var(--spectrum-global-color-blue-400) !important;
+}
+
+.nav-card:active {
+  transform: translateY(0);
+}
+

@@ -483,10 +483,11 @@ export interface EventImageData {
 }
 
 // Venue data types
-// Address component from Google Places API (required by OpenAPI)
+// Address component per OpenAPI AddressComponent schema
+// Note: Uses camelCase (longName, shortName) - converted from Google Places snake_case
 export interface AddressComponent {
-  long_name: string
-  short_name: string
+  longName: string
+  shortName: string
   types: string[]
 }
 

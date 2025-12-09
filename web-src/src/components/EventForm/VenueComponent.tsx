@@ -215,14 +215,16 @@ export const VenueComponent: React.FC = () => {
               }
 
               if (place.utc_offset_minutes !== undefined) {
-                updates.gmtOffset = place.utc_offset_minutes
+                // Per OpenAPI: gmtOffset is in hours, Google Places returns minutes
+                updates.gmtOffset = place.utc_offset_minutes / 60
               }
               
               // Required by OpenAPI: addressComponents from Google Places API
+              // Per OpenAPI AddressComponent schema: uses camelCase (longName, shortName, types)
               if (place.address_components) {
                 updates.addressComponents = place.address_components.map((component: any) => ({
-                  long_name: component.long_name,
-                  short_name: component.short_name,
+                  longName: component.long_name,
+                  shortName: component.short_name,
                   types: component.types
                 }))
               }

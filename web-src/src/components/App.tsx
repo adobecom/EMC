@@ -7,16 +7,13 @@ import { Provider, defaultTheme, Grid, View } from '@adobe/react-spectrum'
 import ErrorBoundary from 'react-error-boundary'
 import { HashRouter as Router, Routes, Route } from 'react-router-dom'
 import TopNav from './TopNav'
-import ActionsForm from './ActionsForm'
 import { Home } from './Home'
 import { About } from './About'
 import { UserProfile } from './UserProfile'
-import { OrgTeamManagement } from './OrgTeamManagement'
 import { SeriesDashboard } from './SeriesDashboard'
 import { EventsDashboard } from './EventsDashboard'
 import { SeriesForm } from './SeriesForm'
 import { EventForm } from './EventForm'
-import { RegistrationDashboard } from './RegistrationDashboard'
 import { AttendeeDashboard } from './AttendeeDashboard'
 import { CloudManagementConsole } from './CloudManagementConsole'
 import { Runtime, IMS } from '../types'
@@ -77,19 +74,15 @@ const App: React.FC<AppProps> = (props) => {
               <Routes>
                 <Route path='/' element={<Home />} />
                 <Route path='/profile' element={<UserProfile ims={props.ims} />} />
-                <Route path='/organizations' element={<OrgTeamManagement ims={props.ims} />} />
+                <Route path='/clouds' element={<CloudManagementConsole ims={props.ims} />} />
                 <Route path='/series' element={<SeriesDashboard ims={props.ims} />} />
                 <Route path='/series/new' element={<SeriesForm ims={props.ims} />} />
                 <Route path='/series/edit/:id' element={<SeriesForm ims={props.ims} />} />
                 <Route path='/events' element={<EventsDashboard ims={props.ims} />} />
                 <Route path='/events/new/:eventType' element={<EventForm ims={props.ims} />} />
                 <Route path='/events/edit/:id' element={<EventForm ims={props.ims} />} />
-                <Route path='/registrations' element={<RegistrationDashboard ims={props.ims} />} />
-                <Route path='/registrations/:eventId' element={<RegistrationDashboard ims={props.ims} />} />
                 <Route path='/attendees' element={<AttendeeDashboard ims={props.ims} />} />
                 <Route path='/attendees/:eventId' element={<AttendeeDashboard ims={props.ims} />} />
-                <Route path='/clouds' element={<CloudManagementConsole ims={props.ims} />} />
-                <Route path='/actions' element={<ActionsForm runtime={props.runtime} ims={props.ims} />}/>
                 <Route path='/about' element={<About />}/>
               </Routes>
             </View>
@@ -101,4 +94,3 @@ const App: React.FC<AppProps> = (props) => {
 }
 
 export default App
-

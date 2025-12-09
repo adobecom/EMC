@@ -170,9 +170,18 @@ export const SponsorsComponent: React.FC = () => {
 
     setSavingIndex(index)
     try {
+      // Per OpenAPI BaseSponsorProperties: requires name and link
+      // link must be a valid URL pattern: ^https:\/\/...
+      // Validate link is provided (required field)
+      if (!sponsor.partnerUrl || !sponsor.partnerUrl.startsWith('https://')) {
+        console.error('Sponsor link must be a valid https:// URL')
+        setSavingIndex(null)
+        return
+      }
+      
       const sponsorData = {
         name: sponsor.partnerName,
-        externalUrl: sponsor.partnerUrl || ''
+        link: sponsor.partnerUrl // Required field per OpenAPI
       }
 
       let response

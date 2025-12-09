@@ -137,15 +137,21 @@ export function useEventFormSave() {
     
     // Date/Time mapping - API requires separate localStartDate/localEndDate and localStartTime/localEndTime
     // Form uses combined startDateTime/endDateTime
+    // Per OpenAPI Time schema: pattern "^(00|0[0-9]|1[0-9]|2[0-3]):([0-9]|[0-5][0-9]):([0-9]|[0-5][0-9])$"
+    // Format must be HH:MM:SS (with seconds)
     if (mergedData.startDateTime) {
       const [startDate, startTime] = mergedData.startDateTime.split('T')
       payload.localStartDate = startDate
-      payload.localStartTime = startTime?.slice(0, 5) || '09:00' // HH:MM format
+      // Ensure HH:MM:SS format - append :00 if only HH:MM provided
+      const formattedStartTime = startTime?.slice(0, 5) || '09:00'
+      payload.localStartTime = formattedStartTime.length === 5 ? `${formattedStartTime}:00` : formattedStartTime
     }
     if (mergedData.endDateTime) {
       const [endDate, endTime] = mergedData.endDateTime.split('T')
       payload.localEndDate = endDate
-      payload.localEndTime = endTime?.slice(0, 5) || '17:00' // HH:MM format
+      // Ensure HH:MM:SS format - append :00 if only HH:MM provided
+      const formattedEndTime = endTime?.slice(0, 5) || '17:00'
+      payload.localEndTime = formattedEndTime.length === 5 ? `${formattedEndTime}:00` : formattedEndTime
     }
     
     // Title mapping
@@ -165,12 +171,18 @@ export function useEventFormSave() {
     }
     
     // Agenda items transformation
+    // Per OpenAPI AgendaItem schema: startTime uses Time schema (HH:MM:SS format)
     if (mergedData.agendaItems && mergedData.agendaItems.length > 0) {
-      const agendaForApi = mergedData.agendaItems.map(item => ({
-        title: item.title,
-        description: item.description || '',
-        startTime: item.startDateTime?.split('T')[1]?.slice(0, 5) || '', // Extract HH:MM
-      }))
+      const agendaForApi = mergedData.agendaItems.map(item => {
+        const rawTime = item.startDateTime?.split('T')[1]?.slice(0, 5) || '09:00'
+        // Ensure HH:MM:SS format
+        const startTime = rawTime.length === 5 ? `${rawTime}:00` : rawTime
+        return {
+          title: item.title,
+          description: item.description || '',
+          startTime,
+        }
+      })
       setEventAttribute(payload, 'agenda', agendaForApi, locale)
     }
     
