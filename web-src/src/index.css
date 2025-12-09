@@ -231,3 +231,36 @@ body {
   animation: fadeIn 0.5s ease-in-out;
 }
 
+/** Cloud Management Console - Locale Toggle Buttons **/
+.locale-btn,
+.locale-btn-selected {
+  border-radius: 4px !important;
+  transition: all 0.15s ease;
+}
+
+.locale-btn {
+  border: 1px solid var(--spectrum-global-color-gray-400) !important;
+  background-color: transparent !important;
+}
+
+.locale-btn:hover {
+  border-color: var(--spectrum-global-color-gray-500) !important;
+  background-color: var(--spectrum-global-color-gray-100) !important;
+}
+
+.locale-btn-selected {
+  background-color: var(--spectrum-global-color-gray-800) !important;
+  border: 1px solid var(--spectrum-global-color-gray-800) !important;
+  color: white !important;
+}
+
+.locale-btn-selected:hover {
+  background-color: var(--spectrum-global-color-gray-700) !important;
+  border-color: var(--spectrum-global-color-gray-700) !important;
+}
+
+.locale-btn-selected svg {
+  color: white !important;
+  fill: currentColor;
+}
+
