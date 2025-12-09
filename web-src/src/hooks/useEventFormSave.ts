@@ -315,13 +315,16 @@ export function useEventFormSave() {
         payload.published = true
       }
       
-      // 5. Call create/update API
+      // 5. Call create/update API (using external ESP/ESL API)
       let response: EventApiResponse
       let savedEventId: string
       
       if (isEditMode && eventId) {
         // Update existing event
-        const result = await apiService.updateEvent(eventId, payload)
+        const result = await apiService.updateEventExternal(eventId, payload, {
+          forceSpWrite: false,
+          liveUpdate: publish // Only live update when publishing
+        })
         if ('error' in result) {
           throw new Error(result.message || 'Failed to update event')
         }
@@ -329,7 +332,7 @@ export function useEventFormSave() {
         savedEventId = eventId
       } else {
         // Create new event
-        const result = await apiService.createEvent(payload)
+        const result = await apiService.createEventExternal(payload, locale)
         if ('error' in result) {
           throw new Error(result.message || 'Failed to create event')
         }
@@ -379,6 +382,7 @@ export function useEventFormSave() {
   }, [
     formData,
     eventId,
+    locale,
     isEditMode,
     buildEventPayload,
     validateComponents,

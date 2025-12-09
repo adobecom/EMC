@@ -79,6 +79,12 @@ export interface EventFormState {
   saveError: string | null
   isLoading: boolean
   loadError: string | null
+  
+  // Published state
+  isPublished: boolean
+  
+  // Wizard navigation state
+  maxStepReached: number
 }
 
 /**
@@ -97,6 +103,8 @@ type EventFormAction =
   | { type: 'SET_SAVE_ERROR'; payload: string | null }
   | { type: 'SET_LOADING'; payload: boolean }
   | { type: 'SET_LOAD_ERROR'; payload: string | null }
+  | { type: 'SET_PUBLISHED'; payload: boolean }
+  | { type: 'SET_MAX_STEP_REACHED'; payload: number }
   | { type: 'RESET_TO_SAVED' }
 
 /**
@@ -116,6 +124,8 @@ export interface EventFormContextValue {
   isDirty: boolean
   saveStatus: SaveStatus
   isLoading: boolean
+  isPublished: boolean
+  maxStepReached: number
   
   // Actions
   updateFormData: (updates: Partial<EventFormData>) => void
@@ -129,6 +139,8 @@ export interface EventFormContextValue {
   setSaveError: (error: string | null) => void
   setLoading: (loading: boolean) => void
   setLoadError: (error: string | null) => void
+  setPublished: (published: boolean) => void
+  setMaxStepReached: (step: number) => void
   
   // Component registration
   registerComponent: (id: string, callbacks: ComponentCallbacks) => void
@@ -202,6 +214,8 @@ const createInitialState = (initialData?: Partial<EventFormData>): EventFormStat
   saveError: null,
   isLoading: false,
   loadError: null,
+  isPublished: false,
+  maxStepReached: 0,
 })
 
 // ============================================================================
@@ -261,6 +275,12 @@ function eventFormReducer(state: EventFormState, action: EventFormAction): Event
     
     case 'SET_LOAD_ERROR':
       return { ...state, loadError: action.payload }
+    
+    case 'SET_PUBLISHED':
+      return { ...state, isPublished: action.payload }
+    
+    case 'SET_MAX_STEP_REACHED':
+      return { ...state, maxStepReached: Math.max(state.maxStepReached, action.payload) }
     
     case 'RESET_TO_SAVED':
       // If we have an API response, we'd need to map it back to formData
@@ -375,6 +395,14 @@ export const EventFormProvider: React.FC<EventFormProviderProps> = ({
     dispatch({ type: 'SET_LOAD_ERROR', payload: error })
   }, [])
   
+  const setPublished = useCallback((published: boolean) => {
+    dispatch({ type: 'SET_PUBLISHED', payload: published })
+  }, [])
+  
+  const setMaxStepReached = useCallback((step: number) => {
+    dispatch({ type: 'SET_MAX_STEP_REACHED', payload: step })
+  }, [])
+  
   // ============================================================================
   // COMPONENT REGISTRATION
   // ============================================================================
@@ -449,6 +477,8 @@ export const EventFormProvider: React.FC<EventFormProviderProps> = ({
     isDirty: state.isDirty,
     saveStatus: state.saveStatus,
     isLoading: state.isLoading,
+    isPublished: state.isPublished,
+    maxStepReached: state.maxStepReached,
     
     // Actions
     updateFormData,
@@ -462,6 +492,8 @@ export const EventFormProvider: React.FC<EventFormProviderProps> = ({
     setSaveError,
     setLoading,
     setLoadError,
+    setPublished,
+    setMaxStepReached,
     
     // Component registration
     registerComponent,
@@ -485,6 +517,8 @@ export const EventFormProvider: React.FC<EventFormProviderProps> = ({
     setSaveError,
     setLoading,
     setLoadError,
+    setPublished,
+    setMaxStepReached,
     registerComponent,
     unregisterComponent,
     getRegisteredComponents,

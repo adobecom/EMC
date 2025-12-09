@@ -18,7 +18,7 @@ import {
   StatusLight
 } from '@adobe/react-spectrum'
 import { useNavigate, useParams } from 'react-router-dom'
-import { SeriesFormData, Organization } from '../types/domain'
+import { SeriesFormData, SeriesApiResponse } from '../types/domain'
 import { apiService } from '../services/api'
 import { IMS } from '../types'
 import { LoadingSpinner } from './shared'
@@ -42,56 +42,44 @@ export const SeriesForm: React.FC<SeriesFormProps> = ({ ims }) => {
     status: 'draft'
   })
 
-  const [organizations, setOrganizations] = useState<Organization[]>([])
+  // Store the full series response for updates (needed for modificationTime)
+  const [existingSeriesData, setExistingSeriesData] = useState<SeriesApiResponse | null>(null)
+
   const [isLoading, setIsLoading] = useState(false)
   const [isSaving, setIsSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState(false)
 
   useEffect(() => {
-    loadOrganizations()
     if (isEditMode && id) {
       loadSeries(id)
     }
   }, [id])
 
-  const loadOrganizations = async () => {
-    try {
-      // Check if IMS data is available
-      if (!ims.token || !ims.org) {
-        console.warn('IMS authentication not available yet')
-        return
-      }
-
-      apiService.setAuthHeaders(ims.token, ims.org)
-      const response = await apiService.getOrganizations()
-      if (response.success && response.data) {
-        setOrganizations(response.data)
-        if (!isEditMode && response.data.length > 0) {
-          setFormData((prev) => ({ ...prev, organizationId: response.data[0].id }))
-        }
-      }
-    } catch (err) {
-      console.error('Failed to load organizations:', err)
-    }
-  }
-
   const loadSeries = async (seriesId: string) => {
     setIsLoading(true)
     try {
-      const response = await apiService.getSeriesById(seriesId)
-      if (response.success && response.data) {
-        const series = response.data
-        setFormData({
-          name: series.name,
-          description: series.description,
-          organizationId: series.organizationId,
-          startDate: series.startDate,
-          endDate: series.endDate,
-          status: series.status,
-          metadata: series.metadata
-        })
+      // Use external API
+      const response = await apiService.getSeriesByIdExternal(seriesId)
+      
+      if ('error' in response) {
+        setError('Failed to load series data')
+        return
       }
+      
+      // Store full response for later updates
+      setExistingSeriesData(response as SeriesApiResponse)
+      
+      const series = response as SeriesApiResponse
+      setFormData({
+        name: series.seriesName || '',
+        description: series.seriesDescription || '',
+        organizationId: series.organizationId || '',
+        startDate: series.startDate || '',
+        endDate: series.endDate || '',
+        status: series.seriesStatus || 'draft',
+        metadata: series.metadata
+      })
     } catch (err) {
       console.error('Failed to load series:', err)
       setError('Failed to load series data')
@@ -107,11 +95,33 @@ export const SeriesForm: React.FC<SeriesFormProps> = ({ ims }) => {
     setSuccess(false)
 
     try {
-      if (isEditMode && id) {
-        await apiService.updateSeries(id, formData)
-      } else {
-        await apiService.createSeries(formData)
+      // Build payload for external API
+      const payload: any = {
+        seriesName: formData.name,
+        seriesDescription: formData.description,
+        startDate: formData.startDate,
+        endDate: formData.endDate,
+        seriesStatus: formData.status,
+        ...(formData.organizationId && { organizationId: formData.organizationId }),
+        ...(formData.metadata && { metadata: formData.metadata })
       }
+
+      if (isEditMode && id && existingSeriesData) {
+        // Include modificationTime for optimistic locking
+        payload.modificationTime = existingSeriesData.modificationTime
+        const result = await apiService.updateSeriesExternal(id, payload)
+        
+        if ('error' in result) {
+          throw new Error(result.error?.message || 'Failed to update series')
+        }
+      } else {
+        const result = await apiService.createSeriesExternal(payload)
+        
+        if ('error' in result) {
+          throw new Error(result.error?.message || 'Failed to create series')
+        }
+      }
+      
       setSuccess(true)
       setTimeout(() => {
         navigate('/resources')
@@ -131,7 +141,6 @@ export const SeriesForm: React.FC<SeriesFormProps> = ({ ims }) => {
   const isFormValid = () => {
     return (
       formData.name.trim() !== '' &&
-      formData.organizationId !== '' &&
       formData.startDate !== '' &&
       formData.endDate !== ''
     )
@@ -177,19 +186,6 @@ export const SeriesForm: React.FC<SeriesFormProps> = ({ ims }) => {
           height="size-1000"
         />
 
-        <Picker
-          label="Organization"
-          isRequired
-          selectedKey={formData.organizationId}
-          onSelectionChange={(key) =>
-            setFormData({ ...formData, organizationId: String(key) })
-          }
-        >
-          {organizations.map((org) => (
-            <Item key={org.id}>{org.name}</Item>
-          ))}
-        </Picker>
-
         <DatePicker
           label="Start Date"
           isRequired
@@ -217,8 +213,7 @@ export const SeriesForm: React.FC<SeriesFormProps> = ({ ims }) => {
           }
         >
           <Item key="draft">Draft</Item>
-          <Item key="active">Active</Item>
-          <Item key="completed">Completed</Item>
+          <Item key="published">Published</Item>
           <Item key="archived">Archived</Item>
         </Picker>
 
@@ -240,4 +235,3 @@ export const SeriesForm: React.FC<SeriesFormProps> = ({ ims }) => {
     </View>
   )
 }
-

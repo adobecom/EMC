@@ -182,20 +182,26 @@ const EventFormInner: React.FC<EventFormInnerProps> = ({ ims }) => {
   // Get context
   const {
     formData,
+    eventId,
     isEditMode,
     isLoading,
+    isPublished,
+    maxStepReached,
     updateFormData,
     setEventId,
     setEditMode,
     setEventResponse,
     setLoading,
     setLoadError,
+    setPublished,
+    setMaxStepReached,
     loadFromStorage,
+    persistToStorage,
     state,
   } = useEventFormContext()
   
   // Get save hook
-  const { saveEvent, isSaving, saveError } = useEventFormSave()
+  const { saveEvent, publishEvent, saveDraft, isSaving, saveError } = useEventFormSave()
   
   // Get feature flags based on event type
   const { hasVenue, hasPageMetadata } = useEventFeatureFlags(formData.eventType)
@@ -227,6 +233,12 @@ const EventFormInner: React.FC<EventFormInnerProps> = ({ ims }) => {
       
       setEventResponse(response as EventApiResponse)
       
+      // Set published status
+      setPublished(response.published ?? false)
+      
+      // When editing an existing event, all steps are accessible
+      setMaxStepReached(3) // 0-indexed, so 3 is the last step (RSVP)
+      
       const eventLocale = response.defaultLocale || 'en-US'
       const mappedData = mapApiResponseToFormData(response as EventApiResponse, eventLocale)
       updateFormData(mappedData)
@@ -243,22 +255,94 @@ const EventFormInner: React.FC<EventFormInnerProps> = ({ ims }) => {
   // FORM HANDLERS
   // ============================================================================
   
-  const handleComplete = useCallback(async () => {
-    await saveEvent({
-      onSuccess: () => {
-        setTimeout(() => {
-          navigate('/resources')
-        }, 1500)
+  /**
+   * Handle Save button click - saves to API + sessionStorage without advancing
+   * Returns true on success, false on failure
+   */
+  const handleSave = useCallback(async (): Promise<boolean> => {
+    // First persist to sessionStorage immediately
+    persistToStorage()
+    
+    // Then save to API
+    const result = await saveDraft({
+      onSuccess: (savedEventId) => {
+        console.log('Event saved successfully:', savedEventId)
       },
       onError: (error) => {
         console.error('Failed to save event:', error)
       }
     })
-  }, [saveEvent, navigate])
+    
+    return result.success
+  }, [saveDraft, persistToStorage])
+  
+  /**
+   * Handle Next Step button click - saves to API + sessionStorage then advances
+   * Returns true on success (so FormWizard can advance), false on failure
+   */
+  const handleNextStep = useCallback(async (): Promise<boolean> => {
+    // First persist to sessionStorage immediately
+    persistToStorage()
+    
+    // Then save to API
+    const result = await saveDraft({
+      onSuccess: (savedEventId) => {
+        console.log('Event saved before advancing:', savedEventId)
+      },
+      onError: (error) => {
+        console.error('Failed to save event:', error)
+      }
+    })
+    
+    return result.success
+  }, [saveDraft, persistToStorage])
+  
+  /**
+   * Handle Publish/Re-publish button click (last step completion)
+   */
+  const handleComplete = useCallback(async () => {
+    // Persist to sessionStorage first
+    persistToStorage()
+    
+    // Save and publish
+    await publishEvent({
+      onSuccess: () => {
+        setPublished(true)
+        setTimeout(() => {
+          navigate('/resources')
+        }, 1500)
+      },
+      onError: (error) => {
+        console.error('Failed to publish event:', error)
+      }
+    })
+  }, [publishEvent, persistToStorage, setPublished, navigate])
+  
+  /**
+   * Handle max step change from FormWizard
+   */
+  const handleMaxStepChange = useCallback((step: number) => {
+    setMaxStepReached(step)
+  }, [setMaxStepReached])
   
   const handleCancel = useCallback(() => {
     navigate('/events')
   }, [navigate])
+  
+  /**
+   * Handle preview requests
+   */
+  const handlePreview = useCallback((previewType: 'pre-event' | 'post-event') => {
+    if (!eventId) {
+      console.warn('Cannot preview - event has not been saved yet')
+      return
+    }
+    
+    // TODO: Implement actual preview URL generation
+    const baseUrl = window.location.origin
+    const previewUrl = `${baseUrl}/preview/${eventId}/${previewType}`
+    window.open(previewUrl, '_blank')
+  }, [eventId])
   
   // ============================================================================
   // STEP 1: Basic Info
@@ -405,7 +489,10 @@ const EventFormInner: React.FC<EventFormInnerProps> = ({ ims }) => {
           margin="size-300"
         >
           <Text UNSAFE_style={{ color: 'white' }}>
-            Event {isEditMode ? 'updated' : 'created'} successfully! Redirecting...
+            {isPublished 
+              ? 'Event published successfully! Redirecting...'
+              : `Event ${isEditMode ? 'updated' : 'created'} successfully!`
+            }
           </Text>
         </View>
       )}
@@ -413,9 +500,16 @@ const EventFormInner: React.FC<EventFormInnerProps> = ({ ims }) => {
       <FormWizard
         steps={steps}
         onComplete={handleComplete}
+        onSave={handleSave}
+        onNextStep={handleNextStep}
         onCancel={handleCancel}
+        onPreview={handlePreview}
         isSubmitting={isSaving}
         showSideNav={true}
+        hasEventId={!!eventId}
+        isPublished={isPublished}
+        maxStepReached={maxStepReached}
+        onMaxStepChange={handleMaxStepChange}
       />
     </View>
   )
