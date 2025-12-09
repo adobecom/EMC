@@ -88,6 +88,12 @@ const TopNav: React.FC<TopNavProps> = ({ ims }) => {
           </NavLink>
           <NavLink
             className={({ isActive }) => `nav-link ${isActive ? 'is-selected' : ''}`}
+            to="/attendees"
+          >
+            Attendees
+          </NavLink>
+          <NavLink
+            className={({ isActive }) => `nav-link ${isActive ? 'is-selected' : ''}`}
             to="/clouds"
           >
             Clouds

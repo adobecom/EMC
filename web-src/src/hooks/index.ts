@@ -6,6 +6,7 @@ export { useLoadData } from './useLoadData'
 export { useDevToken } from './useDevToken'
 export { useEventFormComponent, useEventFormData } from './useEventFormComponent'
 export { useEventFormSave } from './useEventFormSave'
+export { useRsvpConfig } from './useRsvpConfig'
 export type { UseEventFormComponentOptions, UseEventFormComponentReturn } from './useEventFormComponent'
 export type { SaveOptions, SaveResult } from './useEventFormSave'
 
