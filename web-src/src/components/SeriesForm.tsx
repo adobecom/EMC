@@ -28,6 +28,20 @@ interface SeriesFormProps {
   ims: IMS
 }
 
+// Target CMS configurations as defined in OpenAPI spec
+const TARGET_CMS_OPTIONS = [
+  { 
+    key: 'sp-acom', 
+    label: 'SharePoint - ACOM',
+    value: { provider: 'sharepoint', instance: 'acom', code: 'sp-acom' }
+  },
+  { 
+    key: 'da-bacom', 
+    label: 'Document Authoring - BACOM',
+    value: { provider: 'documentAuthoring', instance: 'bacom', code: 'da-bacom' }
+  },
+]
+
 export const SeriesForm: React.FC<SeriesFormProps> = ({ ims }) => {
   const navigate = useNavigate()
   const { id } = useParams<{ id: string }>()
@@ -41,6 +55,10 @@ export const SeriesForm: React.FC<SeriesFormProps> = ({ ims }) => {
     endDate: '',
     status: 'draft'
   })
+
+  // Additional fields required by API
+  const [templateId, setTemplateId] = useState<string>('')
+  const [targetCmsKey, setTargetCmsKey] = useState<string>('sp-acom')
 
   // Store the full series response for updates (needed for modificationTime)
   const [existingSeriesData, setExistingSeriesData] = useState<SeriesApiResponse | null>(null)
@@ -80,6 +98,14 @@ export const SeriesForm: React.FC<SeriesFormProps> = ({ ims }) => {
         status: series.seriesStatus || 'draft',
         metadata: series.metadata
       })
+      
+      // Load additional fields if available
+      if (series.templateId) {
+        setTemplateId(series.templateId)
+      }
+      if (series.targetCms?.code) {
+        setTargetCmsKey(series.targetCms.code)
+      }
     } catch (err) {
       console.error('Failed to load series:', err)
       setError('Failed to load series data')
@@ -95,13 +121,19 @@ export const SeriesForm: React.FC<SeriesFormProps> = ({ ims }) => {
     setSuccess(false)
 
     try {
+      // Get the targetCms object from the selected key
+      const targetCmsOption = TARGET_CMS_OPTIONS.find(opt => opt.key === targetCmsKey)
+      
       // Build payload for external API
+      // Required fields per OpenAPI: seriesName, templateId, targetCms
       const payload: any = {
         seriesName: formData.name,
         seriesDescription: formData.description,
         startDate: formData.startDate,
         endDate: formData.endDate,
         seriesStatus: formData.status,
+        templateId: templateId || null, // Required field
+        targetCms: targetCmsOption?.value, // Required field
         ...(formData.organizationId && { organizationId: formData.organizationId }),
         ...(formData.metadata && { metadata: formData.metadata })
       }
@@ -115,6 +147,14 @@ export const SeriesForm: React.FC<SeriesFormProps> = ({ ims }) => {
           throw new Error(result.error?.message || 'Failed to update series')
         }
       } else {
+        // Validate required fields for create
+        if (!templateId) {
+          throw new Error('Template ID is required to create a series')
+        }
+        if (!targetCmsOption) {
+          throw new Error('Target CMS is required to create a series')
+        }
+        
         const result = await apiService.createSeriesExternal(payload)
         
         if ('error' in result) {
@@ -139,6 +179,17 @@ export const SeriesForm: React.FC<SeriesFormProps> = ({ ims }) => {
   }
 
   const isFormValid = () => {
+    // For create mode, templateId and targetCms are required
+    if (!isEditMode) {
+      return (
+        formData.name.trim() !== '' &&
+        formData.startDate !== '' &&
+        formData.endDate !== '' &&
+        templateId.trim() !== '' &&
+        targetCmsKey !== ''
+      )
+    }
+    // For edit mode, just need the basic fields
     return (
       formData.name.trim() !== '' &&
       formData.startDate !== '' &&
@@ -185,6 +236,27 @@ export const SeriesForm: React.FC<SeriesFormProps> = ({ ims }) => {
           onChange={(value) => setFormData({ ...formData, description: value })}
           height="size-1000"
         />
+
+        {/* Template ID - Required for series creation */}
+        <TextField
+          label="Template ID"
+          isRequired={!isEditMode}
+          value={templateId}
+          onChange={setTemplateId}
+          description="The path to the event template (e.g., /events/templates/default)"
+        />
+
+        {/* Target CMS - Required for series creation */}
+        <Picker
+          label="Target CMS"
+          isRequired={!isEditMode}
+          selectedKey={targetCmsKey}
+          onSelectionChange={(key) => setTargetCmsKey(String(key))}
+        >
+          {TARGET_CMS_OPTIONS.map((option) => (
+            <Item key={option.key}>{option.label}</Item>
+          ))}
+        </Picker>
 
         <DatePicker
           label="Start Date"

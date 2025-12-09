@@ -18,6 +18,7 @@ export { EventsDashboard } from './EventsDashboard'
 export { SeriesForm } from './SeriesForm'
 export { EventForm } from './EventForm'
 export { RegistrationDashboard } from './RegistrationDashboard'
+export { CloudManagementConsole } from './CloudManagementConsole'
 
 // Dev components
 export { DevTokenButton } from './DevTokenButton'

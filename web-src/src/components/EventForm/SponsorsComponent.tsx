@@ -55,10 +55,13 @@ export const SponsorsComponent: React.FC = () => {
       const sponsors = formData.sponsors || []
       
       // Get sponsors that need to be associated with the event
+      // API requires: sponsorId, sponsorType (PascalCase enum)
+      // Valid sponsorType values: Diamond, Platinum, Gold, Silver, Bronze, Engagement, Partner
       const sponsorsToAssociate = sponsors
         .filter(s => s.sponsorId && (s.isSaved || s.isFromSeries))
         .map(s => ({
-          sponsorId: s.sponsorId!
+          sponsorId: s.sponsorId!,
+          sponsorType: s.type || 'Partner' // Default to PascalCase "Partner" per OpenAPI enum
         }))
       
       if (sponsorsToAssociate.length === 0) return

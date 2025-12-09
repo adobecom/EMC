@@ -72,11 +72,13 @@ export const SpeakersComponent: React.FC = () => {
       const profiles = formData.profiles || []
       
       // Get speakers that need to be associated with the event
+      // API requires: speakerId, speakerType (PascalCase enum), ordinal
+      // Valid speakerType values: Host, Presenter, Speaker, GuestSpeaker, Keynote, Judge, PortfolioReviewer, CareerAdvisor, ProductDemonstrator
       const speakersToAssociate = profiles
         .filter(p => p.speakerId && p.isSaved)
         .map((p, index) => ({
           speakerId: p.speakerId!,
-          speakerType: p.type || 'speaker',
+          speakerType: p.type || 'Speaker', // Default to PascalCase "Speaker" per OpenAPI enum
           ordinal: index
         }))
       

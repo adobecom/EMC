@@ -178,14 +178,17 @@ export const SPONSOR_DATA_FILTER: DataFilter = {
 // VENUE DATA FILTER
 // ============================================================================
 
+// Required fields per OpenAPI BaseVenueProperties:
+// placeId, venueName, formattedAddress, addressComponents, coordinates, gmtOffset
 export const VENUE_DATA_FILTER: DataFilter = {
   venueName: { type: 'string', localizable: false, submittable: true },
   placeId: { type: 'string', localizable: false, submittable: true },
   coordinates: { type: 'object', localizable: false, submittable: true },
   gmtOffset: { type: 'number', localizable: false, submittable: true },
-  addressComponents: { type: 'array', localizable: false, submittable: true },
+  addressComponents: { type: 'array', localizable: false, submittable: true }, // Required by OpenAPI
   formattedAddress: { type: 'string', localizable: false, submittable: true },
   localizations: { type: 'object', localizable: false, submittable: true },
+  localizationOverrides: { type: 'object', localizable: false, submittable: true },
   additionalInformation: { type: 'string', localizable: true, submittable: true },
   creationTime: { type: 'string', localizable: false, submittable: false },
   modificationTime: { type: 'string', localizable: false, submittable: true },

@@ -483,6 +483,13 @@ export interface EventImageData {
 }
 
 // Venue data types
+// Address component from Google Places API (required by OpenAPI)
+export interface AddressComponent {
+  long_name: string
+  short_name: string
+  types: string[]
+}
+
 export interface VenueData {
   venueName: string
   formattedAddress?: string
@@ -492,6 +499,7 @@ export interface VenueData {
     lon: number
   }
   gmtOffset?: number
+  addressComponents?: AddressComponent[] // Required by OpenAPI for venue creation
   additionalInformation?: string
   venueImageUrl?: string
   venueImageId?: string

@@ -17,6 +17,7 @@ import { EventsDashboard } from './EventsDashboard'
 import { SeriesForm } from './SeriesForm'
 import { EventForm } from './EventForm'
 import { RegistrationDashboard } from './RegistrationDashboard'
+import { CloudManagementConsole } from './CloudManagementConsole'
 import { Runtime, IMS } from '../types'
 
 interface AppProps {
@@ -84,6 +85,7 @@ const App: React.FC<AppProps> = (props) => {
                 <Route path='/events/edit/:id' element={<EventForm ims={props.ims} />} />
                 <Route path='/registrations' element={<RegistrationDashboard ims={props.ims} />} />
                 <Route path='/registrations/:eventId' element={<RegistrationDashboard ims={props.ims} />} />
+                <Route path='/clouds' element={<CloudManagementConsole ims={props.ims} />} />
                 <Route path='/actions' element={<ActionsForm runtime={props.runtime} ims={props.ims} />}/>
                 <Route path='/about' element={<About />}/>
               </Routes>

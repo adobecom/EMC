@@ -119,6 +119,35 @@ export function useEventFormSave() {
     }
     
     // Map form field names to API field names where they differ
+    
+    // EventType mapping - API requires PascalCase: "InPerson" | "Webinar" | "Hybrid"
+    // Form uses lowercase: "in-person" | "webinar"
+    if (mergedData.eventType) {
+      const eventTypeMap: Record<string, string> = {
+        'in-person': 'InPerson',
+        'webinar': 'Webinar',
+        'hybrid': 'Hybrid',
+        // Also handle if already in correct format
+        'InPerson': 'InPerson',
+        'Webinar': 'Webinar',
+        'Hybrid': 'Hybrid',
+      }
+      payload.eventType = eventTypeMap[mergedData.eventType] || 'InPerson'
+    }
+    
+    // Date/Time mapping - API requires separate localStartDate/localEndDate and localStartTime/localEndTime
+    // Form uses combined startDateTime/endDateTime
+    if (mergedData.startDateTime) {
+      const [startDate, startTime] = mergedData.startDateTime.split('T')
+      payload.localStartDate = startDate
+      payload.localStartTime = startTime?.slice(0, 5) || '09:00' // HH:MM format
+    }
+    if (mergedData.endDateTime) {
+      const [endDate, endTime] = mergedData.endDateTime.split('T')
+      payload.localEndDate = endDate
+      payload.localEndTime = endTime?.slice(0, 5) || '17:00' // HH:MM format
+    }
+    
     // Title mapping
     if (mergedData.name) {
       setEventAttribute(payload, 'title', mergedData.name, locale)

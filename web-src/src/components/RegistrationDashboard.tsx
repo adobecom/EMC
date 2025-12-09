@@ -27,30 +27,36 @@ interface RegistrationDashboardProps {
 }
 
 // Attendee data structure from ESP API
+// Attendee data structure from ESP API
+// Per OpenAPI spec: registrationStatus is an enum with only "registered" | "waitlisted"
+// checkedIn is a separate boolean field
 interface Attendee {
   attendeeId: string
-  eventId: string
+  eventId?: string
   email: string
   firstName?: string
   lastName?: string
-  phone?: string
-  status?: 'registered' | 'waitlisted' | 'checked-in' | 'cancelled'
+  mobilePhone?: string
+  registrationStatus?: 'registered' | 'waitlisted' // Per OpenAPI RegistrationStatus enum
+  checkedIn?: boolean // Per OpenAPI EventAttendee schema
   registrationDate?: string
   creationTime?: number
   modificationTime?: number
 }
 
 // Map attendee status to display status
-function mapAttendeeStatus(status?: string): 'pending' | 'confirmed' | 'attended' | 'cancelled' {
-  switch (status) {
+function mapAttendeeStatus(attendee: Attendee): 'pending' | 'confirmed' | 'attended' | 'cancelled' {
+  // Check if attendee has checked in (checkedIn is a boolean per OpenAPI)
+  if (attendee.checkedIn) {
+    return 'attended'
+  }
+  
+  // Map registration status
+  switch (attendee.registrationStatus) {
     case 'registered':
       return 'confirmed'
     case 'waitlisted':
       return 'pending'
-    case 'checked-in':
-      return 'attended'
-    case 'cancelled':
-      return 'cancelled'
     default:
       return 'pending'
   }
@@ -128,11 +134,12 @@ export const RegistrationDashboard: React.FC<RegistrationDashboardProps> = ({ im
     }
   }
 
-  const handleUpdateStatus = async (attendee: Attendee, newStatus: string) => {
+  const handleUpdateStatus = async (attendee: Attendee, newStatus: 'registered' | 'waitlisted') => {
     try {
       // Use external API - updateAttendee requires eventId, attendeeId, and data
-      await apiService.updateAttendee(attendee.eventId, attendee.attendeeId, { 
-        status: newStatus,
+      // Per OpenAPI, field is "registrationStatus" not "status", and only accepts "registered" | "waitlisted"
+      await apiService.updateAttendee(selectedEventId, attendee.attendeeId, { 
+        registrationStatus: newStatus,
         modificationTime: attendee.modificationTime 
       })
       if (selectedEventId) {
@@ -157,12 +164,13 @@ export const RegistrationDashboard: React.FC<RegistrationDashboardProps> = ({ im
 
     attendees.forEach((attendee) => {
       const name = [attendee.firstName, attendee.lastName].filter(Boolean).join(' ') || 'N/A'
+      const displayStatus = attendee.checkedIn ? 'checked-in' : (attendee.registrationStatus || 'registered')
       const row = [
         attendee.attendeeId,
         name,
         attendee.email,
-        attendee.phone || '',
-        attendee.status || 'registered',
+        attendee.mobilePhone || '',
+        displayStatus,
         attendee.registrationDate || (attendee.creationTime ? new Date(attendee.creationTime).toLocaleString() : '')
       ]
       csvRows.push(row.map(val => `"${val}"`).join(','))
@@ -189,12 +197,12 @@ export const RegistrationDashboard: React.FC<RegistrationDashboardProps> = ({ im
       }
     },
     { key: 'email', name: 'EMAIL', width: 250 },
-    { key: 'phone', name: 'PHONE', width: 150 },
+    { key: 'mobilePhone', name: 'PHONE', width: 150 },
     {
       key: 'status',
       name: 'STATUS',
       width: 120,
-      render: (item) => <StatusBadge status={mapAttendeeStatus(item.status)} />
+      render: (item) => <StatusBadge status={mapAttendeeStatus(item)} />
     },
     {
       key: 'registrationDate',
@@ -210,12 +218,12 @@ export const RegistrationDashboard: React.FC<RegistrationDashboardProps> = ({ im
   const actions: TableAction<Attendee>[] = [
     {
       icon: 'edit',
-      label: 'Update Status',
+      label: 'Toggle Status',
       onAction: (item) => {
-        // Cycle through statuses
-        const statuses = ['registered', 'waitlisted', 'checked-in', 'cancelled']
-        const currentIndex = statuses.indexOf(item.status || 'registered')
-        const nextStatus = statuses[(currentIndex + 1) % statuses.length]
+        // Toggle between the two valid statuses per OpenAPI
+        const validStatuses: Array<'registered' | 'waitlisted'> = ['registered', 'waitlisted']
+        const currentIndex = validStatuses.indexOf(item.registrationStatus || 'registered')
+        const nextStatus = validStatuses[(currentIndex + 1) % validStatuses.length]
         handleUpdateStatus(item, nextStatus)
       }
     },
@@ -226,13 +234,12 @@ export const RegistrationDashboard: React.FC<RegistrationDashboardProps> = ({ im
     }
   ]
 
-  // Get statistics
+  // Get statistics based on registrationStatus and checkedIn fields per OpenAPI
   const stats = {
     total: attendees.length,
-    confirmed: attendees.filter((a) => a.status === 'registered').length,
-    pending: attendees.filter((a) => a.status === 'waitlisted').length,
-    attended: attendees.filter((a) => a.status === 'checked-in').length,
-    cancelled: attendees.filter((a) => a.status === 'cancelled').length
+    registered: attendees.filter((a) => a.registrationStatus === 'registered').length,
+    waitlisted: attendees.filter((a) => a.registrationStatus === 'waitlisted').length,
+    checkedIn: attendees.filter((a) => a.checkedIn === true).length
   }
 
   const selectedEvent = events.find((e) => e.eventId === selectedEventId)
@@ -306,22 +313,17 @@ export const RegistrationDashboard: React.FC<RegistrationDashboardProps> = ({ im
             </Flex>
             <Flex direction="column" gap="size-50">
               <Text>
-                <strong>Registered:</strong> {stats.confirmed}
+                <strong>Registered:</strong> {stats.registered}
               </Text>
             </Flex>
             <Flex direction="column" gap="size-50">
               <Text>
-                <strong>Waitlisted:</strong> {stats.pending}
+                <strong>Waitlisted:</strong> {stats.waitlisted}
               </Text>
             </Flex>
             <Flex direction="column" gap="size-50">
               <Text>
-                <strong>Checked In:</strong> {stats.attended}
-              </Text>
-            </Flex>
-            <Flex direction="column" gap="size-50">
-              <Text>
-                <strong>Cancelled:</strong> {stats.cancelled}
+                <strong>Checked In:</strong> {stats.checkedIn}
               </Text>
             </Flex>
           </Flex>

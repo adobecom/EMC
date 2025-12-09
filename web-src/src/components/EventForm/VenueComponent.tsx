@@ -56,12 +56,14 @@ export const VenueComponent: React.FC = () => {
       }
       
       // Build the localized venue payload
+      // Required fields per OpenAPI: placeId, venueName, formattedAddress, addressComponents, coordinates, gmtOffset
       const venuePayload = getVenuePayload({
         venueName: venueData.venueName,
         placeId: venueData.placeId,
         coordinates: venueData.coordinates,
         gmtOffset: venueData.gmtOffset,
         formattedAddress: venueData.formattedAddress,
+        addressComponents: venueData.addressComponents, // Required by OpenAPI
         additionalInformation: venueData.additionalInformation,
       }, locale)
       
@@ -214,6 +216,15 @@ export const VenueComponent: React.FC = () => {
 
               if (place.utc_offset_minutes !== undefined) {
                 updates.gmtOffset = place.utc_offset_minutes
+              }
+              
+              // Required by OpenAPI: addressComponents from Google Places API
+              if (place.address_components) {
+                updates.addressComponents = place.address_components.map((component: any) => ({
+                  long_name: component.long_name,
+                  short_name: component.short_name,
+                  types: component.types
+                }))
               }
 
               setVenueNameValue(place.name || '')
