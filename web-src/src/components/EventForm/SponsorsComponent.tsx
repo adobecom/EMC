@@ -11,9 +11,11 @@ import {
   Heading,
   Text,
   ActionButton,
-  ProgressCircle
+  ProgressCircle,
+  Picker,
+  Item
 } from '@adobe/react-spectrum'
-import { SponsorData, SeriesSponsor, EventApiResponse } from '../../types/domain'
+import { SponsorData, SeriesSponsor, EventApiResponse, SponsorType } from '../../types/domain'
 import { ImageUploader, AutocompleteTextField } from '../shared'
 import { TYPOGRAPHY } from '../../styles/designSystem'
 import Add from '@spectrum-icons/workflow/Add'
@@ -23,6 +25,17 @@ import SaveFloppy from '@spectrum-icons/workflow/SaveFloppy'
 import { apiService } from '../../services/api'
 import { useEventFormComponent } from '../../hooks/useEventFormComponent'
 
+// Sponsor type options per OpenAPI SponsorType enum
+const SPONSOR_TYPE_OPTIONS: { key: SponsorType; label: string }[] = [
+  { key: 'Diamond', label: 'Diamond' },
+  { key: 'Platinum', label: 'Platinum' },
+  { key: 'Gold', label: 'Gold' },
+  { key: 'Silver', label: 'Silver' },
+  { key: 'Bronze', label: 'Bronze' },
+  { key: 'Engagement', label: 'Engagement' },
+  { key: 'Partner', label: 'Partner' },
+]
+
 /**
  * SponsorsComponent - Manages sponsor and partner information
  * 
@@ -31,9 +44,7 @@ import { useEventFormComponent } from '../../hooks/useEventFormComponent'
  * - Adding/removing sponsors
  * - Autocomplete from series sponsors
  * - Saving sponsors to series
- * 
- * Note: Sponsor association with event is handled in the main event payload.
- * The onAfterSave callback associates sponsors with the event after save.
+ * - Event-level sponsor association (add, update, remove)
  */
 export const SponsorsComponent: React.FC = () => {
   // ============================================================================
@@ -49,34 +60,97 @@ export const SponsorsComponent: React.FC = () => {
     componentId: 'sponsors',
     
     /**
-     * After event save, associate sponsors with the event
+     * After event save, manage sponsors at event level (add, update, remove)
+     * Based on v1 reference pattern for speakers
      */
     onAfterSave: async (savedEventId: string, eventResponse: EventApiResponse) => {
       const sponsors = formData.sponsors || []
+      const savedSponsors = eventResponse.sponsors || []
       
-      // Get sponsors that need to be associated with the event
+      // Build current sponsors list from form data
       // API requires: sponsorId, sponsorType (PascalCase enum)
-      // Valid sponsorType values: Diamond, Platinum, Gold, Silver, Bronze, Engagement, Partner
-      const sponsorsToAssociate = sponsors
+      const currentSponsors = sponsors
         .filter(s => s.sponsorId && (s.isSaved || s.isFromSeries))
         .map(s => ({
           sponsorId: s.sponsorId!,
-          sponsorType: s.type || 'Partner' // Default to PascalCase "Partner" per OpenAPI enum
+          sponsorType: s.type || 'Partner' as SponsorType
         }))
       
-      if (sponsorsToAssociate.length === 0) return
-      
-      try {
-        // Associate each sponsor with the event in parallel
+      // Case 1: All sponsors removed
+      if (currentSponsors.length === 0 && savedSponsors.length > 0) {
         await Promise.all(
-          sponsorsToAssociate.map(sponsorData =>
-            apiService.addSponsorToEvent(sponsorData, savedEventId).catch(err => {
-              console.error(`Failed to associate sponsor ${sponsorData.sponsorId} with event:`, err)
-            })
-          )
+          savedSponsors.map(async (sponsor: any) => {
+            const result = await apiService.removeSponsorFromEvent(sponsor.sponsorId, savedEventId)
+            if ('error' in result) {
+              console.error(`Failed to remove sponsor ${sponsor.sponsorId} from event:`, result)
+            }
+          })
         )
-      } catch (error) {
-        console.error('Error associating sponsors with event:', error)
+        return
+      }
+      
+      // Case 2: Process each current sponsor - add or update
+      await Promise.all(
+        currentSponsors.map(async (eventSponsor) => {
+          if (!eventSponsor.sponsorId) return
+          
+          if (savedSponsors.length === 0) {
+            // No saved sponsors, add all
+            const result = await apiService.addSponsorToEvent(eventSponsor, savedEventId)
+            if ('error' in result) {
+              console.error(`Failed to add sponsor ${eventSponsor.sponsorId} to event:`, result)
+            }
+          } else {
+            // Check if sponsor exists with same type
+            const existingSponsor = savedSponsors.find((saved: any) => {
+              const idMatch = saved.sponsorId === eventSponsor.sponsorId
+              const typeMatch = saved.sponsorType === eventSponsor.sponsorType
+              return idMatch && typeMatch
+            })
+            
+            if (existingSponsor) {
+              // Sponsor unchanged, do nothing
+            } else {
+              // Check if sponsor exists but needs update
+              const sponsorToUpdate = savedSponsors.find((saved: any) => 
+                saved.sponsorId === eventSponsor.sponsorId
+              )
+              
+              if (sponsorToUpdate) {
+                // Update sponsor type
+                const result = await apiService.updateSponsorInEvent(
+                  eventSponsor,
+                  eventSponsor.sponsorId,
+                  savedEventId
+                )
+                if ('error' in result) {
+                  console.error(`Failed to update sponsor ${eventSponsor.sponsorId} in event:`, result)
+                }
+              } else {
+                // New sponsor, add to event
+                const result = await apiService.addSponsorToEvent(eventSponsor, savedEventId)
+                if ('error' in result) {
+                  console.error(`Failed to add sponsor ${eventSponsor.sponsorId} to event:`, result)
+                }
+              }
+            }
+          }
+        })
+      )
+      
+      // Case 3: Remove sponsors that are no longer in the form
+      if (savedSponsors.length > 0) {
+        await Promise.all(
+          savedSponsors.map(async (savedSponsor: any) => {
+            const stillNeeded = currentSponsors.find(s => s.sponsorId === savedSponsor.sponsorId)
+            if (!stillNeeded) {
+              const result = await apiService.removeSponsorFromEvent(savedSponsor.sponsorId, savedEventId)
+              if ('error' in result) {
+                console.error(`Failed to remove sponsor ${savedSponsor.sponsorId} from event:`, result)
+              }
+            }
+          })
+        )
       }
     }
   })
@@ -335,6 +409,19 @@ export const SponsorsComponent: React.FC = () => {
                   placeholder="https://..."
                   isReadOnly={readOnly}
                 />
+
+                {/* Sponsor Type for event-level association */}
+                <Picker
+                  label="Sponsor Level"
+                  selectedKey={sponsor.type || 'Partner'}
+                  onSelectionChange={(key) => updateSponsor(index, { type: key as SponsorType })}
+                  width="size-3000"
+                  isDisabled={readOnly}
+                >
+                  {SPONSOR_TYPE_OPTIONS.map(option => (
+                    <Item key={option.key}>{option.label}</Item>
+                  ))}
+                </Picker>
               </Flex>
             </Flex>
 

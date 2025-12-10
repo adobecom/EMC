@@ -468,6 +468,9 @@ export interface SeriesSponsor {
   modificationTime?: number
 }
 
+// Sponsor type enum per OpenAPI SponsorType schema
+export type SponsorType = 'Diamond' | 'Platinum' | 'Gold' | 'Silver' | 'Bronze' | 'Engagement' | 'Partner'
+
 // Sponsor/Partner types for form
 export interface SponsorData {
   id: string
@@ -475,6 +478,7 @@ export interface SponsorData {
   partnerName: string
   partnerUrl: string
   info?: string // Localizable description
+  type?: SponsorType // Event-level sponsor type
   imageUrl?: string
   imageId?: string
   isSaved?: boolean

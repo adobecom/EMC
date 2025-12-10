@@ -40,6 +40,36 @@ const SPEAKER_TYPE_OPTIONS: { key: SpeakerType; label: string }[] = [
 ]
 
 /**
+ * Convert kebab-case speaker type to PascalCase for API
+ * Form uses: host, presenter, speaker, guest-speaker, keynote, judge, portfolio-reviewer, career-advisor, product-demonstrator
+ * API expects: Host, Presenter, Speaker, GuestSpeaker, Keynote, Judge, PortfolioReviewer, CareerAdvisor, ProductDemonstrator
+ */
+function toApiSpeakerType(type: SpeakerType | string): string {
+  const typeMap: Record<string, string> = {
+    'host': 'Host',
+    'presenter': 'Presenter',
+    'speaker': 'Speaker',
+    'guest-speaker': 'GuestSpeaker',
+    'keynote': 'Keynote',
+    'judge': 'Judge',
+    'portfolio-reviewer': 'PortfolioReviewer',
+    'career-advisor': 'CareerAdvisor',
+    'product-demonstrator': 'ProductDemonstrator',
+    // Also handle if already in PascalCase
+    'Host': 'Host',
+    'Presenter': 'Presenter',
+    'Speaker': 'Speaker',
+    'GuestSpeaker': 'GuestSpeaker',
+    'Keynote': 'Keynote',
+    'Judge': 'Judge',
+    'PortfolioReviewer': 'PortfolioReviewer',
+    'CareerAdvisor': 'CareerAdvisor',
+    'ProductDemonstrator': 'ProductDemonstrator',
+  }
+  return typeMap[type] || 'Speaker'
+}
+
+/**
  * SpeakersComponent - Manages speaker and host profiles
  * 
  * Uses EventFormContext for state management.
@@ -66,35 +96,99 @@ export const SpeakersComponent: React.FC = () => {
     componentId: 'speakers',
     
     /**
-     * After event save, associate speakers with the event
+     * After event save, manage speakers at event level (add, update, remove)
+     * Based on v1 reference: profile-component.js
      */
     onAfterSave: async (savedEventId: string, eventResponse: EventApiResponse) => {
       const profiles = formData.profiles || []
+      const savedSpeakers = eventResponse.speakers || []
       
-      // Get speakers that need to be associated with the event
+      // Build current speakers list from form data
       // API requires: speakerId, speakerType (PascalCase enum), ordinal
-      // Valid speakerType values: Host, Presenter, Speaker, GuestSpeaker, Keynote, Judge, PortfolioReviewer, CareerAdvisor, ProductDemonstrator
-      const speakersToAssociate = profiles
+      const currentSpeakers = profiles
         .filter(p => p.speakerId && p.isSaved)
         .map((p, index) => ({
           speakerId: p.speakerId!,
-          speakerType: p.type || 'Speaker', // Default to PascalCase "Speaker" per OpenAPI enum
+          speakerType: toApiSpeakerType(p.type),
           ordinal: index
         }))
       
-      if (speakersToAssociate.length === 0) return
-      
-      try {
-        // Associate each speaker with the event in parallel
+      // Case 1: All speakers removed
+      if (currentSpeakers.length === 0 && savedSpeakers.length > 0) {
         await Promise.all(
-          speakersToAssociate.map(speakerData =>
-            apiService.addSpeakerToEvent(speakerData, savedEventId).catch(err => {
-              console.error(`Failed to associate speaker ${speakerData.speakerId} with event:`, err)
-            })
-          )
+          savedSpeakers.map(async (speaker: any) => {
+            const result = await apiService.removeSpeakerFromEvent(speaker.speakerId, savedEventId)
+            if ('error' in result) {
+              console.error(`Failed to remove speaker ${speaker.speakerId} from event:`, result)
+            }
+          })
         )
-      } catch (error) {
-        console.error('Error associating speakers with event:', error)
+        return
+      }
+      
+      // Case 2: Process each current speaker - add or update
+      await Promise.all(
+        currentSpeakers.map(async (eventSpeaker) => {
+          if (!eventSpeaker.speakerId) return
+          
+          if (savedSpeakers.length === 0) {
+            // No saved speakers, add all
+            const result = await apiService.addSpeakerToEvent(eventSpeaker, savedEventId)
+            if ('error' in result) {
+              console.error(`Failed to add speaker ${eventSpeaker.speakerId} to event:`, result)
+            }
+          } else {
+            // Check if speaker exists with same type and ordinal
+            const existingSpeaker = savedSpeakers.find((saved: any) => {
+              const idMatch = saved.speakerId === eventSpeaker.speakerId
+              const typeMatch = saved.speakerType === eventSpeaker.speakerType
+              const ordinalMatch = saved.ordinal === eventSpeaker.ordinal
+              return idMatch && typeMatch && ordinalMatch
+            })
+            
+            if (existingSpeaker) {
+              // Speaker unchanged, do nothing
+            } else {
+              // Check if speaker exists but needs update
+              const speakerToUpdate = savedSpeakers.find((saved: any) => 
+                saved.speakerId === eventSpeaker.speakerId
+              )
+              
+              if (speakerToUpdate) {
+                // Update speaker type or ordinal
+                const result = await apiService.updateSpeakerInEvent(
+                  eventSpeaker,
+                  eventSpeaker.speakerId,
+                  savedEventId
+                )
+                if ('error' in result) {
+                  console.error(`Failed to update speaker ${eventSpeaker.speakerId} in event:`, result)
+                }
+              } else {
+                // New speaker, add to event
+                const result = await apiService.addSpeakerToEvent(eventSpeaker, savedEventId)
+                if ('error' in result) {
+                  console.error(`Failed to add speaker ${eventSpeaker.speakerId} to event:`, result)
+                }
+              }
+            }
+          }
+        })
+      )
+      
+      // Case 3: Remove speakers that are no longer in the form
+      if (savedSpeakers.length > 0) {
+        await Promise.all(
+          savedSpeakers.map(async (savedSpeaker: any) => {
+            const stillNeeded = currentSpeakers.find(p => p.speakerId === savedSpeaker.speakerId)
+            if (!stillNeeded) {
+              const result = await apiService.removeSpeakerFromEvent(savedSpeaker.speakerId, savedEventId)
+              if ('error' in result) {
+                console.error(`Failed to remove speaker ${savedSpeaker.speakerId} from event:`, result)
+              }
+            }
+          })
+        )
       }
     }
   })
