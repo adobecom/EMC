@@ -81,10 +81,69 @@ function validateObject(value: any, name: string): void {
 class ApiService {
   private config: ApiServiceConfig
   private actionUrls: Record<string, string>
+  
+  /**
+   * Dry-run mode: when enabled, POST/PUT/DELETE calls are logged but not executed
+   * Enable via console: apiService.enableDryRun() or window.enableDryRun()
+   */
+  private static dryRunMode = false
 
   constructor(config: ApiServiceConfig = {}) {
     this.config = config
     this.actionUrls = {}
+  }
+  
+  /**
+   * Enable dry-run mode - POST/PUT/DELETE calls will be logged but not executed
+   */
+  static enableDryRun(): void {
+    ApiService.dryRunMode = true
+    console.log('%c🔒 DRY-RUN MODE ENABLED', 'background: #ff9800; color: black; padding: 4px 8px; border-radius: 4px; font-weight: bold;')
+    console.log('   POST, PUT, and DELETE calls will be logged but not sent to the backend.')
+    console.log('   To disable: apiService.disableDryRun() or window.disableDryRun()')
+  }
+  
+  /**
+   * Disable dry-run mode - resume normal API calls
+   */
+  static disableDryRun(): void {
+    ApiService.dryRunMode = false
+    console.log('%c🔓 DRY-RUN MODE DISABLED', 'background: #4caf50; color: white; padding: 4px 8px; border-radius: 4px; font-weight: bold;')
+    console.log('   API calls will now be sent to the backend normally.')
+  }
+  
+  /**
+   * Check if dry-run mode is enabled
+   */
+  static isDryRunEnabled(): boolean {
+    return ApiService.dryRunMode
+  }
+  
+  /**
+   * Instance method wrappers for static methods
+   */
+  enableDryRun(): void { ApiService.enableDryRun() }
+  disableDryRun(): void { ApiService.disableDryRun() }
+  isDryRunEnabled(): boolean { return ApiService.isDryRunEnabled() }
+  
+  /**
+   * Log a dry-run call with formatted output
+   */
+  private logDryRunCall(
+    method: string,
+    url: string,
+    body?: any,
+    operationName?: string
+  ): void {
+    console.group(`%c🔒 DRY-RUN: ${operationName || `${method} ${url}`}`, 'background: #ff9800; color: black; padding: 2px 6px; border-radius: 3px;')
+    console.log('%cMethod:', 'font-weight: bold;', method)
+    console.log('%cURL:', 'font-weight: bold;', url)
+    if (body) {
+      console.log('%cPayload:', 'font-weight: bold;')
+      console.log(JSON.stringify(body, null, 2))
+      console.log('%cRaw payload object:', 'font-weight: bold; color: #666;', body)
+    }
+    console.groupEnd()
   }
 
   /**
@@ -265,6 +324,8 @@ class ApiService {
   /**
    * Generic external API call wrapper
    * Handles token validation, environment detection, and error handling
+   * 
+   * When dry-run mode is enabled, POST/PUT/DELETE calls are logged but not executed
    */
   private async callExternalApi<T = any>(
     service: 'esp' | 'esl',
@@ -285,11 +346,27 @@ class ApiService {
       return { status: 'No Token', error: 'No valid authentication token' }
     }
 
+    const env = getCurrentEnvironment()
+    const host = getApiHost(service, env)
+    const url = `${host}${endpoint}`
+
+    // DRY-RUN MODE: Log but don't execute mutating calls
+    if (ApiService.dryRunMode && method !== 'GET') {
+      this.logDryRunCall(method, url, body, operationName)
+      
+      // Return a mock success response
+      return {
+        ok: true,
+        _dryRun: true,
+        _message: 'This was a dry-run call. No data was sent to the server.',
+        _method: method,
+        _url: url,
+        _body: body
+      } as any
+    }
+
     try {
-      const env = getCurrentEnvironment()
       const headers = constructRequestHeaders(token, method)
-      const host = getApiHost(service, env)
-      const url = `${host}${endpoint}`
 
       const response = await safeFetch(url, {
         method,
@@ -1262,6 +1339,24 @@ class ApiService {
     const method = imageId ? 'PUT' : 'POST'
     const url = imageId ? `${host}${config.targetUrl}/${imageId}` : `${host}${config.targetUrl}`
 
+    // DRY-RUN MODE: Log but don't execute image upload
+    if (ApiService.dryRunMode) {
+      this.logDryRunCall(method, url, {
+        fileName: file.name,
+        fileSize: file.size,
+        fileType: file.type,
+        config,
+        imageId
+      }, `uploadImage(${file.name})`)
+      
+      return {
+        ok: true,
+        _dryRun: true,
+        _message: 'Image upload was logged but not sent (dry-run mode)',
+        imageId: imageId || 'dry-run-mock-id'
+      }
+    }
+
     return new Promise((resolve, reject) => {
       const xhr = new XMLHttpRequest()
       
@@ -1502,6 +1597,33 @@ class ApiService {
 
 export const apiService = new ApiService()
 export default apiService
+
+// ============================================================================
+// BROWSER CONSOLE HELPERS
+// ============================================================================
+
+/**
+ * Expose dry-run mode controls on the window object for easy console access
+ * 
+ * Usage in browser console:
+ *   enableDryRun()    - Enable dry-run mode (POST/PUT/DELETE logged but not sent)
+ *   disableDryRun()   - Disable dry-run mode (resume normal operation)
+ *   isDryRunEnabled() - Check if dry-run mode is active
+ */
+if (typeof window !== 'undefined') {
+  (window as any).apiService = apiService;
+  (window as any).enableDryRun = () => apiService.enableDryRun();
+  (window as any).disableDryRun = () => apiService.disableDryRun();
+  (window as any).isDryRunEnabled = () => apiService.isDryRunEnabled();
+  
+  // Log availability on load
+  console.log(
+    '%c🛠️ API Debug Mode Available',
+    'color: #2196f3; font-weight: bold;',
+    '\n   enableDryRun()  - Log POST/PUT/DELETE calls without sending',
+    '\n   disableDryRun() - Resume normal API operation'
+  )
+}
 
 /**
  * Deep get a tag by path array

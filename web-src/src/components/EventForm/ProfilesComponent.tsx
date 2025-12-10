@@ -14,7 +14,7 @@ import {
   Text,
   ActionButton
 } from '@adobe/react-spectrum'
-import { ProfileData } from '../../types/domain'
+import { ProfileData, SocialLinkFormData } from '../../types/domain'
 import { RichTextEditor, ImageUploader } from '../shared'
 import { TYPOGRAPHY } from '../../styles/designSystem'
 import Add from '@spectrum-icons/workflow/Add'

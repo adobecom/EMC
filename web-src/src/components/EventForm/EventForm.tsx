@@ -2,11 +2,10 @@
 * <license header>
 */
 
-import React, { useEffect, useCallback } from 'react'
+import React, { useEffect, useCallback, useRef } from 'react'
 import {
   View,
-  Flex,
-  Text
+  Flex
 } from '@adobe/react-spectrum'
 import { useNavigate, useParams } from 'react-router-dom'
 import {
@@ -30,9 +29,9 @@ import {
   RegistrationConfigComponent, 
   PageMetadataComponent 
 } from './index'
-import { detectSocialPlatform } from '../../utils/socialPlatformDetector'
+import { fromApiSocialLink } from '../../utils/socialPlatformDetector'
 import { useEventFeatureFlags } from '../../hooks/useEventTypeFeatures'
-import { EventFormProvider, useEventFormContext } from '../../contexts/EventFormContext'
+import { EventFormProvider, useEventFormContext, useToast } from '../../contexts'
 import { useEventFormSave } from '../../hooks/useEventFormSave'
 
 // ============================================================================
@@ -63,10 +62,8 @@ function mapSpeakersToProfiles(speakers: any[], locale: string = 'en-US'): Profi
     bio: getLocalizedValue(speaker, 'bio', locale) || speaker.bio || '',
     imageUrl: speaker.photo?.imageUrl || speaker.imageUrl || '',
     imageId: speaker.photo?.imageId || speaker.imageId || '',
-    socialLinks: (speaker.socialLinks || []).map((link: any) => ({
-      url: link.url || link,
-      platform: detectSocialPlatform(link.url || link)?.platform
-    })),
+    // Convert API format (serviceName, link) to form format (url, platform)
+    socialLinks: (speaker.socialLinks || []).map((link: any) => fromApiSocialLink(link)),
     isSaved: true,
     isFromSeries: true
   }))
@@ -178,6 +175,10 @@ interface EventFormInnerProps {
 const EventFormInner: React.FC<EventFormInnerProps> = ({ ims }) => {
   const navigate = useNavigate()
   const { id: eventIdParam } = useParams<{ id: string }>()
+  const toast = useToast()
+  
+  // Track the last error shown to prevent duplicate toasts
+  const lastErrorShownRef = useRef<string | null>(null)
   
   // Get context
   const {
@@ -202,6 +203,18 @@ const EventFormInner: React.FC<EventFormInnerProps> = ({ ims }) => {
   
   // Get save hook
   const { saveEvent, publishEvent, saveDraft, isSaving, saveError } = useEventFormSave()
+  
+  // Show toast when saveError changes
+  useEffect(() => {
+    if (saveError && saveError !== lastErrorShownRef.current) {
+      toast.error(saveError, { duration: 8000 })
+      lastErrorShownRef.current = saveError
+    }
+    // Reset when error is cleared
+    if (!saveError) {
+      lastErrorShownRef.current = null
+    }
+  }, [saveError, toast])
   
   // Get feature flags based on event type
   const { hasVenue, hasPageMetadata } = useEventFeatureFlags(formData.eventType)
@@ -267,14 +280,16 @@ const EventFormInner: React.FC<EventFormInnerProps> = ({ ims }) => {
     const result = await saveDraft({
       onSuccess: (savedEventId) => {
         console.log('Event saved successfully:', savedEventId)
+        toast.success(isEditMode ? 'Event updated successfully!' : 'Event saved successfully!')
       },
       onError: (error) => {
         console.error('Failed to save event:', error)
+        // Error toast is handled by the useEffect watching saveError
       }
     })
     
     return result.success
-  }, [saveDraft, persistToStorage])
+  }, [saveDraft, persistToStorage, toast, isEditMode])
   
   /**
    * Handle Next Step button click - saves to API + sessionStorage then advances
@@ -288,14 +303,17 @@ const EventFormInner: React.FC<EventFormInnerProps> = ({ ims }) => {
     const result = await saveDraft({
       onSuccess: (savedEventId) => {
         console.log('Event saved before advancing:', savedEventId)
+        // Show a subtle success toast for auto-save during navigation
+        toast.success('Progress saved', { duration: 2000 })
       },
       onError: (error) => {
         console.error('Failed to save event:', error)
+        // Error toast is handled by the useEffect watching saveError
       }
     })
     
     return result.success
-  }, [saveDraft, persistToStorage])
+  }, [saveDraft, persistToStorage, toast])
   
   /**
    * Handle Publish/Re-publish button click (last step completion)
@@ -308,15 +326,27 @@ const EventFormInner: React.FC<EventFormInnerProps> = ({ ims }) => {
     await publishEvent({
       onSuccess: () => {
         setPublished(true)
+        toast.success(
+          isPublished ? 'Event re-published successfully!' : 'Event published successfully!',
+          { 
+            duration: 3000,
+            action: {
+              label: 'View Events',
+              onPress: () => navigate('/events')
+            }
+          }
+        )
+        // Navigate after a short delay to let user see the success message
         setTimeout(() => {
-          navigate('/resources')
-        }, 1500)
+          navigate('/events')
+        }, 2000)
       },
       onError: (error) => {
         console.error('Failed to publish event:', error)
+        // Error toast is handled by the useEffect watching saveError
       }
     })
-  }, [publishEvent, persistToStorage, setPublished, navigate])
+  }, [publishEvent, persistToStorage, setPublished, navigate, toast, isPublished])
   
   /**
    * Handle max step change from FormWizard
@@ -470,33 +500,6 @@ const EventFormInner: React.FC<EventFormInnerProps> = ({ ims }) => {
         backgroundColor: 'var(--spectrum-global-color-gray-100)',
       }}
     >
-      {saveError && (
-        <View
-          padding="size-200"
-          backgroundColor="negative"
-          borderRadius="medium"
-          margin="size-300"
-        >
-          <Text UNSAFE_style={{ color: 'white' }}>Error: {saveError}</Text>
-        </View>
-      )}
-
-      {state.saveStatus === 'success' && (
-        <View
-          padding="size-200"
-          backgroundColor="positive"
-          borderRadius="medium"
-          margin="size-300"
-        >
-          <Text UNSAFE_style={{ color: 'white' }}>
-            {isPublished 
-              ? 'Event published successfully! Redirecting...'
-              : `Event ${isEditMode ? 'updated' : 'created'} successfully!`
-            }
-          </Text>
-        </View>
-      )}
-
       <FormWizard
         steps={steps}
         onComplete={handleComplete}

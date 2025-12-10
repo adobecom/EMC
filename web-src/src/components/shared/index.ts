@@ -15,4 +15,5 @@ export { ImageUploader } from './ImageUploader'
 export { RichTextEditor } from './RichTextEditor'
 export { TagSelector } from './TagSelector'
 export { AutocompleteTextField } from './AutocompleteTextField'
+export { ToastContainer } from './ToastContainer'
 

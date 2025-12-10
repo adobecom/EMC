@@ -38,8 +38,11 @@ export async function getSpeakerPayload(
   if (!speakerData) return speakerData
 
   // Remove empty social links
+  // socialLinks should be in API format: { serviceName, link }
   if (speakerData.socialLinks) {
-    speakerData.socialLinks = speakerData.socialLinks.filter((sm: any) => sm.link !== '')
+    speakerData.socialLinks = speakerData.socialLinks.filter((sm: any) => 
+      sm.link && sm.link !== '' && sm.serviceName
+    )
   }
 
   // Fetch existing speaker data to preserve other locale's localizations

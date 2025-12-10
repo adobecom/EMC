@@ -16,4 +16,6 @@ export type {
   ComponentCallbacks,
   RegisteredComponent,
 } from './EventFormContext'
+export { ToastProvider, useToast } from './ToastContext'
+export type { Toast, ToastVariant, ToastOptions } from './ToastContext'
 

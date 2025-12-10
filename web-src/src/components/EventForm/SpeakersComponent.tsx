@@ -23,7 +23,7 @@ import Delete from '@spectrum-icons/workflow/Delete'
 import Edit from '@spectrum-icons/workflow/Edit'
 import SaveFloppy from '@spectrum-icons/workflow/SaveFloppy'
 import LinkOut from '@spectrum-icons/workflow/LinkOut'
-import { detectSocialPlatform, isValidUrl } from '../../utils/socialPlatformDetector'
+import { detectSocialPlatform, isValidUrl, toApiSocialLink, fromApiSocialLink } from '../../utils/socialPlatformDetector'
 import { apiService } from '../../services/api'
 import { useEventFormComponent } from '../../hooks/useEventFormComponent'
 
@@ -219,10 +219,8 @@ export const SpeakersComponent: React.FC = () => {
       bio: speaker.bio || '',
       imageUrl: speaker.photo?.imageUrl,
       imageId: speaker.photo?.imageId,
-      socialLinks: speaker.socialMediaLinks?.map(link => ({
-        platform: link.platform,
-        url: link.url
-      })) || [],
+      // Convert API format (serviceName, link) to form format (url, platform)
+      socialLinks: speaker.socialLinks?.map(link => fromApiSocialLink(link)) || [],
       isFromSeries: true,
       isSaved: true,
       modificationTime: speaker.modificationTime
@@ -247,7 +245,8 @@ export const SpeakersComponent: React.FC = () => {
         lastName: profile.lastName,
         title: profile.title || '',
         bio: profile.bio || '',
-        socialMediaLinks: profile.socialLinks?.filter(l => l.url) || []
+        // Convert form format (url, platform) to API format (serviceName, link)
+        socialLinks: profile.socialLinks?.filter(l => l.url).map(l => toApiSocialLink(l)) || []
       }
 
       let response
