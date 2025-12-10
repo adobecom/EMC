@@ -16,7 +16,7 @@ import {
 } from '@adobe/react-spectrum'
 import UserIcon from '@spectrum-icons/workflow/User'
 import InfoIcon from '@spectrum-icons/workflow/Info'
-import { IMS } from '../types'
+import { IMS } from '../../types'
 
 interface UserPanelProps {
   ims: IMS

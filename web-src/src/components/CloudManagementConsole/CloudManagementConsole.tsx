@@ -17,9 +17,9 @@ import {
 } from '@adobe/react-spectrum'
 import Add from '@spectrum-icons/workflow/Add'
 import Checkmark from '@spectrum-icons/workflow/Checkmark'
-import { IMS } from '../types'
-import { apiService } from '../services/api'
-import { LoadingSpinner } from './shared'
+import { IMS } from '../../types'
+import { apiService } from '../../services/api'
+import { LoadingSpinner } from '../shared'
 import {
   COLORS,
   TYPOGRAPHY,
@@ -31,7 +31,7 @@ import {
   FIXED_ACTION_BAR_STYLES,
   createActionBarPadding,
   ACTION_BAR_BUTTON_STYLES,
-} from '../styles/designSystem'
+} from '../../styles/designSystem'
 
 // ============================================================================
 // TYPES
@@ -447,3 +447,4 @@ export const CloudManagementConsole: React.FC<CloudManagementConsoleProps> = () 
 }
 
 export default CloudManagementConsole
+

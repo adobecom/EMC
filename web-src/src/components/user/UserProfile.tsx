@@ -12,7 +12,7 @@ import {
   IllustratedMessage
 } from '@adobe/react-spectrum'
 import User from '@spectrum-icons/workflow/User'
-import { IMS } from '../types'
+import { IMS } from '../../types'
 
 interface UserProfileProps {
   ims: IMS

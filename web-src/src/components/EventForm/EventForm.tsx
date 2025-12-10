@@ -14,10 +14,10 @@ import {
   ProfileData,
   SponsorData,
   EventApiResponse
-} from '../types/domain'
-import { apiService } from '../services/api'
-import { IMS } from '../types'
-import { FormWizard, WizardStep, LoadingSpinner, FormCard } from './shared'
+} from '../../types/domain'
+import { apiService } from '../../services/api'
+import { IMS } from '../../types'
+import { FormWizard, WizardStep, LoadingSpinner, FormCard } from '../shared'
 import { 
   EventFormatComponent, 
   EventTagsComponent, 
@@ -29,11 +29,11 @@ import {
   EventImagesComponent, 
   RegistrationConfigComponent, 
   PageMetadataComponent 
-} from './EventForm/index'
-import { detectSocialPlatform } from '../utils/socialPlatformDetector'
-import { useEventFeatureFlags } from '../hooks/useEventTypeFeatures'
-import { EventFormProvider, useEventFormContext } from '../contexts/EventFormContext'
-import { useEventFormSave } from '../hooks/useEventFormSave'
+} from './index'
+import { detectSocialPlatform } from '../../utils/socialPlatformDetector'
+import { useEventFeatureFlags } from '../../hooks/useEventTypeFeatures'
+import { EventFormProvider, useEventFormContext } from '../../contexts/EventFormContext'
+import { useEventFormSave } from '../../hooks/useEventFormSave'
 
 // ============================================================================
 // HELPERS
@@ -538,3 +538,4 @@ export const EventForm: React.FC<EventFormProps> = ({ ims }) => {
     </EventFormProvider>
   )
 }
+

@@ -18,10 +18,10 @@ import {
   StatusLight
 } from '@adobe/react-spectrum'
 import { useNavigate, useParams } from 'react-router-dom'
-import { SeriesFormData, SeriesApiResponse } from '../types/domain'
-import { apiService } from '../services/api'
-import { IMS } from '../types'
-import { LoadingSpinner } from './shared'
+import { SeriesFormData, SeriesApiResponse } from '../../types/domain'
+import { apiService } from '../../services/api'
+import { IMS } from '../../types'
+import { LoadingSpinner } from '../shared'
 import { parseDate } from '@internationalized/date'
 
 interface SeriesFormProps {
@@ -307,3 +307,4 @@ export const SeriesForm: React.FC<SeriesFormProps> = ({ ims }) => {
     </View>
   )
 }
+

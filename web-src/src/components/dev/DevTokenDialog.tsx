@@ -18,7 +18,7 @@ import {
   StatusLight,
   AlertDialog
 } from '@adobe/react-spectrum'
-import { tokenStorage } from '../services/tokenStorage'
+import { tokenStorage } from '../../services/tokenStorage'
 
 interface DevTokenDialogProps {
   isOpen: boolean

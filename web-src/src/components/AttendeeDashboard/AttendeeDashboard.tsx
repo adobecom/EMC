@@ -12,20 +12,20 @@ import {
   DialogTrigger
 } from '@adobe/react-spectrum'
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom'
-import type { EventApiResponse } from '../types/domain'
-import type { Attendee, AttendeeFilters, AttendeeStats } from '../types/attendee'
-import { calculateAttendeeStats, getAttendeeName } from '../types/attendee'
-import { apiService } from '../services/api'
-import { useRsvpConfig } from '../hooks/useRsvpConfig'
-import { IMS } from '../types'
-import { LoadingSpinner } from './shared'
+import type { EventApiResponse } from '../../types/domain'
+import type { Attendee, AttendeeFilters, AttendeeStats } from '../../types/attendee'
+import { calculateAttendeeStats, getAttendeeName } from '../../types/attendee'
+import { apiService } from '../../services/api'
+import { useRsvpConfig } from '../../hooks/useRsvpConfig'
+import { IMS } from '../../types'
+import { LoadingSpinner } from '../shared'
 import {
   EventSelectorComponent,
   EventInfoComponent,
   AttendeeFiltersComponent,
   AttendeeTableComponent,
   BulkActionsToolbar
-} from './AttendeeDashboard/index'
+} from './index'
 
 interface AttendeeDashboardProps {
   ims: IMS

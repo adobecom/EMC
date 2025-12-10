@@ -5,10 +5,10 @@
 import React from 'react'
 import { NavLink } from 'react-router-dom'
 import { Flex, View } from '@adobe/react-spectrum'
-import { IMS } from '../types'
-import { UserPanel } from './UserPanel'
-import { DevTokenButton } from './DevTokenButton'
-import { STICKY_GNAV_STYLES } from '../styles/designSystem'
+import { IMS } from '../../types'
+import { UserPanel } from '../user'
+import { DevTokenButton } from '../dev'
+import { STICKY_GNAV_STYLES } from '../../styles/designSystem'
 
 interface TopNavProps {
   ims: IMS
@@ -105,3 +105,4 @@ const TopNav: React.FC<TopNavProps> = ({ ims }) => {
 }
 
 export default TopNav
+

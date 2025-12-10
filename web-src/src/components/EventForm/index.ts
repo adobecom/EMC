@@ -2,6 +2,10 @@
 * <license header>
 */
 
+// Main component
+export { EventForm } from './EventForm'
+
+// Sub-components
 export { EventFormatComponent } from './EventFormatComponent'
 export { EventTagsComponent } from './EventTagsComponent'
 export { EventInfoComponent } from './EventInfoComponent'

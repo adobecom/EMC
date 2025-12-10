@@ -4,11 +4,11 @@
 
 import React, { useEffect, useState, useMemo, useCallback } from 'react'
 import { Flex, Text } from '@adobe/react-spectrum'
-import { TableColumn } from './shared/DataTable'
-import { StatusBadge, ResourceDashboardLayout } from './shared'
-import { SeriesDashboardItem } from '../types/domain'
-import { apiService } from '../services/api'
-import { IMS } from '../types'
+import { TableColumn } from '../shared/DataTable'
+import { StatusBadge, ResourceDashboardLayout } from '../shared'
+import { SeriesDashboardItem } from '../../types/domain'
+import { apiService } from '../../services/api'
+import { IMS } from '../../types'
 
 interface SeriesDashboardProps {
   ims: IMS

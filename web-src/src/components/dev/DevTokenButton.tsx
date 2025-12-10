@@ -6,7 +6,7 @@
 import React, { useState, useEffect } from 'react'
 import { ActionButton, Badge, Flex, Text, Tooltip, TooltipTrigger } from '@adobe/react-spectrum'
 import Key from '@spectrum-icons/workflow/Key'
-import { tokenStorage } from '../services/tokenStorage'
+import { tokenStorage } from '../../services/tokenStorage'
 import { DevTokenDialog } from './DevTokenDialog'
 
 interface DevTokenButtonProps {

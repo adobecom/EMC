@@ -93,11 +93,17 @@ export function useEventFormSave() {
     const localizations: Record<string, any> = {}
     
     // Process each field according to the data filter
+    // Note: Some fields are handled specially below (tags, eventType, dates, etc.)
+    const speciallyHandledFields = new Set(['tags', 'eventType', 'startDateTime', 'endDateTime', 'agendaItems'])
+    
     Object.entries(mergedData).forEach(([key, value]) => {
       const descriptor = EVENT_DATA_FILTER[key]
       
       // Skip non-submittable fields
       if (!descriptor?.submittable) return
+      
+      // Skip fields that are handled specially below
+      if (speciallyHandledFields.has(key)) return
       
       // Skip invalid values (null, undefined, empty string - but not false)
       if (!isValidAttribute(value)) return
@@ -187,13 +193,21 @@ export function useEventFormSave() {
     }
     
     // CTA (secondary link) transformation
-    if (mergedData.communityForumUrl || mergedData.secondaryLinkTitle) {
-      const cta = [{
-        url: mergedData.communityForumUrl || '',
-        label: mergedData.secondaryLinkTitle || '',
-        type: 'secondary'
-      }]
-      setEventAttribute(payload, 'cta', cta, locale)
+    // Per OpenAPI CTAObject schema: requires "label" and "url" (format: uri)
+    // Only include CTA if we have both valid url and label
+    if (mergedData.communityForumUrl && mergedData.secondaryLinkTitle) {
+      // Validate URL format (must be a valid URI, typically https://)
+      const url = mergedData.communityForumUrl.trim()
+      const label = mergedData.secondaryLinkTitle.trim()
+      
+      if (url && label) {
+        const cta = [{
+          url,
+          label
+          // Note: "type" is not in OpenAPI CTAObject schema, removed to avoid validation failure
+        }]
+        setEventAttribute(payload, 'cta', cta, locale)
+      }
     }
     
     // RSVP description
@@ -214,12 +228,27 @@ export function useEventFormSave() {
     // Privacy mapping
     payload.isPrivate = mergedData.isPrivate ?? false
     
-    // Tags transformation (array of EventTag -> comma-separated CAAS IDs)
-    if (mergedData.tags && mergedData.tags.length > 0) {
-      payload.tags = mergedData.tags
-        .filter(tag => tag.caasId)
-        .map(tag => tag.caasId)
-        .join(',')
+    // Tags transformation (array of EventTag -> comma-separated CAAS IDs string)
+    // Per OpenAPI TagIdList schema:
+    // - Type: string | null (NOT array)
+    // - Pattern: ^(?:caas:[0-9a-zA-Z-_\/,&()]+)+[^\/,-]$
+    // - Must start with "caas:"
+    // - Cannot end with "/", ",", or "-"
+    if (mergedData.tags && Array.isArray(mergedData.tags) && mergedData.tags.length > 0) {
+      const validTags = mergedData.tags
+        .filter((tag: any) => tag.caasId && typeof tag.caasId === 'string' && tag.caasId.startsWith('caas:'))
+        .map((tag: any) => tag.caasId.trim())
+        .filter((caasId: string) => {
+          // Validate pattern: must not end with /, ,, or -
+          const lastChar = caasId.slice(-1)
+          return lastChar !== '/' && lastChar !== ',' && lastChar !== '-'
+        })
+      
+      if (validTags.length > 0) {
+        // Join as comma-separated string (NOT array)
+        payload.tags = validTags.join(',')
+      }
+      // If no valid tags, don't include the field (or set to null per schema)
     }
     
     // Post-event visibility flags
@@ -256,6 +285,12 @@ export function useEventFormSave() {
     
     // Set default locale
     payload.defaultLocale = locale
+    
+    // Validate URL fields per OpenAPI NullableLink pattern (must be https:// or null)
+    // communityTopicUrl: NullableLink pattern ^https:\/\/...
+    if (payload.communityTopicUrl && !payload.communityTopicUrl.startsWith('https://')) {
+      delete payload.communityTopicUrl // Remove invalid URL
+    }
     
     return payload
   }, [locale, seriesId])
