@@ -661,7 +661,7 @@ class ApiService {
     validateString(locale, 'locale')
     return this.callExternalApi('esl', '/v1/events', 'POST',
       { ...payload, liveUpdate: false, published: false, defaultLocale: locale },
-      { operationName: 'createEvent' }
+      { operationName: 'createEvent', shouldReturnFullResponse: true }
     )
   }
 
@@ -670,7 +670,7 @@ class ApiService {
     validateObject(payload, 'event payload')
     return this.callExternalApi('esl', `/v1/events/${eventId}`, 'PUT',
       { ...payload, ...policies },
-      { operationName: `updateEvent(${eventId})` }
+      { operationName: `updateEvent(${eventId})`, shouldReturnFullResponse: true }
     )
   }
 
@@ -679,7 +679,7 @@ class ApiService {
     validateObject(payload, 'event payload')
     return this.callExternalApi('esl', `/v1/events/${eventId}`, 'PUT',
       { ...payload, published: true, liveUpdate: true, forceSpWrite: false },
-      { operationName: `publishEvent(${eventId})` }
+      { operationName: `publishEvent(${eventId})`, shouldReturnFullResponse: true }
     )
   }
 
@@ -688,7 +688,7 @@ class ApiService {
     validateObject(payload, 'event payload')
     return this.callExternalApi('esl', `/v1/events/${eventId}`, 'PUT',
       { ...payload, published: false, liveUpdate: true, forceSpWrite: false },
-      { operationName: `unpublishEvent(${eventId})` }
+      { operationName: `unpublishEvent(${eventId})`, shouldReturnFullResponse: true }
     )
   }
 

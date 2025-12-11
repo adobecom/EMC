@@ -173,34 +173,60 @@ const DocSectionComponent: React.FC<DocSectionComponentProps> = ({
 }) => {
   return (
     <View marginBottom="size-200">
-      <ActionButton
-        onPress={onToggle}
-        isQuiet
-        width="100%"
-        UNSAFE_style={{ 
-          justifyContent: 'flex-start',
+      {/* Custom clickable header instead of ActionButton for better alignment control */}
+      <View
+        UNSAFE_style={{
+          cursor: 'pointer',
           padding: '12px 16px',
-          height: 'auto'
+          borderRadius: '4px',
+          transition: 'background-color 0.15s ease'
         }}
+        UNSAFE_className="doc-section-header"
       >
-        <Flex direction="row" alignItems="center" gap="size-100" width="100%">
-          {isExpanded ? <ChevronDown size="S" /> : <ChevronRight size="S" />}
-          <View UNSAFE_style={{ color: 'var(--spectrum-global-color-gray-700)' }}>
+        <Flex 
+          direction="row" 
+          alignItems="center" 
+          gap="size-150" 
+          width="100%"
+          UNSAFE_style={{ cursor: 'pointer' }}
+        >
+          <ActionButton
+            onPress={onToggle}
+            isQuiet
+            aria-label={isExpanded ? 'Collapse section' : 'Expand section'}
+            UNSAFE_style={{ flexShrink: 0 }}
+          >
+            {isExpanded ? <ChevronDown size="S" /> : <ChevronRight size="S" />}
+          </ActionButton>
+          <View 
+            UNSAFE_style={{ color: 'var(--spectrum-global-color-gray-700)', flexShrink: 0 }}
+            onClick={onToggle}
+          >
             {section.icon}
           </View>
-          <Flex direction="column" alignItems="start" gap="size-0">
-            <Text UNSAFE_style={{ fontWeight: 600 }}>{section.title}</Text>
+          <Flex 
+            direction="column" 
+            gap="size-50" 
+            UNSAFE_style={{ 
+              alignItems: 'flex-start',
+              textAlign: 'left',
+              flex: 1
+            }}
+            onClick={onToggle}
+          >
+            <Text UNSAFE_style={{ fontWeight: 600, textAlign: 'left' }}>{section.title}</Text>
             <Text 
               UNSAFE_style={{ 
                 fontSize: '12px', 
-                color: 'var(--spectrum-global-color-gray-600)' 
+                color: 'var(--spectrum-global-color-gray-600)',
+                textAlign: 'left'
               }}
             >
               {section.description}
             </Text>
           </Flex>
         </Flex>
-      </ActionButton>
+      </View>
 
       {isExpanded && (
         <View marginStart="size-400" marginTop="size-100">
@@ -222,33 +248,61 @@ interface DocItemComponentProps {
   doc: DocItem
 }
 
+// Helper to determine the correct path for each doc file
+const getDocPath = (filename: string): string => {
+  if (filename === 'README.md') {
+    return 'README.md'
+  }
+  return `docs/${filename}`
+}
+
 const DocItemComponent: React.FC<DocItemComponentProps> = ({ doc }) => {
+  const docPath = getDocPath(doc.file)
+  // GitHub URL for viewing .md files
+  const githubBaseUrl = 'https://github.com/adobecom/EMC/blob/main'
+  const docUrl = `${githubBaseUrl}/${docPath}`
+  
   return (
     <View
       backgroundColor="gray-50"
       borderRadius="regular"
       padding="size-200"
       UNSAFE_style={{
-        borderLeft: '3px solid var(--spectrum-global-color-gray-300)'
+        borderLeft: '3px solid var(--spectrum-global-color-blue-400)'
       }}
     >
-      <Flex direction="column" gap="size-50">
-        <Flex direction="row" alignItems="center" gap="size-100">
+      <Flex direction="column" gap="size-100">
+        <Flex direction="row" alignItems="center" justifyContent="space-between" wrap="wrap" gap="size-100">
           <Text UNSAFE_style={{ fontWeight: 600 }}>{doc.title}</Text>
-          <Text 
-            UNSAFE_style={{ 
-              fontSize: '11px', 
-              color: 'var(--spectrum-global-color-gray-500)',
-              fontFamily: 'monospace'
-            }}
-          >
-            {doc.file}
-          </Text>
+          <Link>
+            <a 
+              href={docUrl} 
+              target="_blank" 
+              rel="noopener noreferrer"
+              style={{ textDecoration: 'none' }}
+            >
+              <Flex direction="row" alignItems="center" gap="size-50">
+                <Text 
+                  UNSAFE_style={{ 
+                    fontSize: '11px', 
+                    color: 'var(--spectrum-global-color-blue-600)',
+                    fontFamily: 'monospace',
+                    backgroundColor: 'var(--spectrum-global-color-blue-100)',
+                    padding: '2px 8px',
+                    borderRadius: '4px'
+                  }}
+                >
+                  {doc.file} ↗
+                </Text>
+              </Flex>
+            </a>
+          </Link>
         </Flex>
         <Text 
           UNSAFE_style={{ 
             fontSize: '13px', 
-            color: 'var(--spectrum-global-color-gray-700)' 
+            color: 'var(--spectrum-global-color-gray-700)',
+            lineHeight: '1.5'
           }}
         >
           {doc.description}
@@ -322,7 +376,7 @@ export const About: React.FC = () => {
           />
           <QuickRefItem
             label="Dev Server"
-            value="localhost:9080"
+            value="localhost:3000"
           />
           <QuickRefItem
             label="Start Command"
@@ -425,18 +479,25 @@ export const About: React.FC = () => {
  * Quick reference item
  */
 const QuickRefItem: React.FC<{ label: string; value: string }> = ({ label, value }) => (
-  <View>
-    <Text 
-      UNSAFE_style={{ 
-        fontSize: '11px', 
-        fontWeight: 600,
-        color: 'var(--spectrum-global-color-gray-600)',
-        textTransform: 'uppercase'
-      }}
-    >
-      {label}
-    </Text>
-    <Text UNSAFE_style={{ fontWeight: 500 }}>{value}</Text>
+  <View
+    backgroundColor="gray-75"
+    padding="size-150"
+    borderRadius="regular"
+  >
+    <Flex direction="column" gap="size-50">
+      <Text 
+        UNSAFE_style={{ 
+          fontSize: '11px', 
+          fontWeight: 600,
+          color: 'var(--spectrum-global-color-gray-600)',
+          textTransform: 'uppercase',
+          letterSpacing: '0.5px'
+        }}
+      >
+        {label}
+      </Text>
+      <Text UNSAFE_style={{ fontWeight: 500, fontSize: '14px' }}>{value}</Text>
+    </Flex>
   </View>
 )
 

@@ -7,6 +7,7 @@ import {
   View,
   TextField,
   DatePicker,
+  TimeField,
   Flex,
   Button,
   Switch,
@@ -14,7 +15,8 @@ import {
   Heading,
   Text
 } from '@adobe/react-spectrum'
-import { parseDateTime } from '@internationalized/date'
+import { Time } from '@internationalized/date'
+import { parseDateTime, CalendarDateTime } from '@internationalized/date'
 import Add from '@spectrum-icons/workflow/Add'
 import Delete from '@spectrum-icons/workflow/Delete'
 import { v4 as uuidv4 } from 'uuid'
@@ -25,7 +27,7 @@ import { useEventFormComponent } from '../../hooks/useEventFormComponent'
 /**
  * Safely parse ISO 8601 datetime string for DatePicker
  */
-function safeParseDateTimeString(dateString: string | undefined | null) {
+function safeParseDateTimeString(dateString: string | undefined | null): CalendarDateTime | null {
   if (!dateString) return null
   
   try {
@@ -39,6 +41,123 @@ function safeParseDateTimeString(dateString: string | undefined | null) {
     console.error('Failed to parse datetime:', dateString, error)
     return null
   }
+}
+
+/**
+ * Add minutes to a CalendarDateTime
+ * Returns a new CalendarDateTime with the added minutes
+ */
+function addMinutes(dt: CalendarDateTime, minutes: number): CalendarDateTime {
+  let newMinute = dt.minute + minutes
+  let newHour = dt.hour
+  let newDay = dt.day
+  let newMonth = dt.month
+  let newYear = dt.year
+  
+  // Handle minute overflow
+  while (newMinute >= 60) {
+    newMinute -= 60
+    newHour += 1
+  }
+  while (newMinute < 0) {
+    newMinute += 60
+    newHour -= 1
+  }
+  
+  // Handle hour overflow
+  while (newHour >= 24) {
+    newHour -= 24
+    newDay += 1
+  }
+  while (newHour < 0) {
+    newHour += 24
+    newDay -= 1
+  }
+  
+  // For simplicity, handle day overflow approximately (doesn't need to be perfect for +1 minute)
+  const daysInMonth = [0, 31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
+  // Adjust for leap years
+  if ((newYear % 4 === 0 && newYear % 100 !== 0) || newYear % 400 === 0) {
+    daysInMonth[2] = 29
+  }
+  
+  while (newDay > daysInMonth[newMonth]) {
+    newDay -= daysInMonth[newMonth]
+    newMonth += 1
+    if (newMonth > 12) {
+      newMonth = 1
+      newYear += 1
+    }
+  }
+  
+  return new CalendarDateTime(newYear, newMonth, newDay, newHour, newMinute, dt.second || 0)
+}
+
+/**
+ * Get minimum end datetime (start + 1 minute) to ensure positive duration
+ */
+function getMinEndDateTime(startDateTimeStr: string | undefined): CalendarDateTime | undefined {
+  if (!startDateTimeStr) return undefined
+  const startDt = safeParseDateTimeString(startDateTimeStr)
+  if (!startDt) return undefined
+  return addMinutes(startDt, 1)
+}
+
+/**
+ * Check if two datetime strings represent the same calendar day
+ */
+function isSameDay(dateStr1: string | undefined, dateStr2: string | undefined): boolean {
+  if (!dateStr1 || !dateStr2) return false
+  const dt1 = safeParseDateTimeString(dateStr1)
+  const dt2 = safeParseDateTimeString(dateStr2)
+  if (!dt1 || !dt2) return false
+  return dt1.year === dt2.year && dt1.month === dt2.month && dt1.day === dt2.day
+}
+
+/**
+ * Parse time from datetime string for TimeField
+ */
+function parseTimeFromDateTime(dateTimeStr: string | undefined): Time | null {
+  if (!dateTimeStr) return null
+  const dt = safeParseDateTimeString(dateTimeStr)
+  if (!dt) return null
+  return new Time(dt.hour, dt.minute, dt.second || 0)
+}
+
+/**
+ * Get the min time value for TimeField (start + 1 minute)
+ */
+function getMinEndTime(startDateTimeStr: string | undefined): Time | undefined {
+  if (!startDateTimeStr) return undefined
+  const dt = safeParseDateTimeString(startDateTimeStr)
+  if (!dt) return undefined
+  // Add 1 minute
+  let minute = dt.minute + 1
+  let hour = dt.hour
+  if (minute >= 60) {
+    minute = 0
+    hour = (hour + 1) % 24
+  }
+  return new Time(hour, minute, 0)
+}
+
+/**
+ * Convert Time to ISO datetime string using the event's base date
+ */
+function timeToDateTimeString(time: Time | null, baseDateTimeStr: string | undefined): string {
+  if (!time || !baseDateTimeStr) return ''
+  const baseDate = safeParseDateTimeString(baseDateTimeStr)
+  if (!baseDate) return ''
+  
+  const newDt = new CalendarDateTime(
+    baseDate.year,
+    baseDate.month,
+    baseDate.day,
+    time.hour,
+    time.minute,
+    time.second || 0
+  )
+  return newDt.toString()
 }
 
 /**
@@ -69,7 +188,14 @@ export const AgendaComponent: React.FC = () => {
   // ============================================================================
   
   const [orderByTime, setOrderByTime] = useState(false)
-  const [clampByEventDateTime, setClampByEventDateTime] = useState(false)
+  // By default, agenda items are constrained to the event date/time window
+  const [allowDatesOutsideEvent, setAllowDatesOutsideEvent] = useState(false)
+  
+  // Computed: is clamping active (default true unless user opts out)
+  const isClampingActive = !allowDatesOutsideEvent && eventStartDateTime && eventEndDateTime
+  
+  // Computed: is the event a single-day event?
+  const isSameDayEvent = isSameDay(eventStartDateTime, eventEndDateTime)
 
   // Auto-sort when orderByTime is enabled
   useEffect(() => {
@@ -128,7 +254,7 @@ export const AgendaComponent: React.FC = () => {
   // ============================================================================
 
   const getDatePickerConstraints = () => {
-    if (!clampByEventDateTime) {
+    if (!isClampingActive) {
       return { minValue: undefined, maxValue: undefined }
     }
     return {
@@ -138,6 +264,9 @@ export const AgendaComponent: React.FC = () => {
   }
 
   const { minValue, maxValue } = getDatePickerConstraints()
+  
+  // Determine if we should show time-only pickers (when clamped and same-day event)
+  const showTimeOnly = isClampingActive && isSameDayEvent
 
   // ============================================================================
   // RENDER
@@ -166,11 +295,11 @@ export const AgendaComponent: React.FC = () => {
           
           <View UNSAFE_style={{ display: 'inline-block' }}>
             <Switch
-              isSelected={clampByEventDateTime}
-              onChange={setClampByEventDateTime}
+              isSelected={allowDatesOutsideEvent}
+              onChange={setAllowDatesOutsideEvent}
               isDisabled={!eventStartDateTime || !eventEndDateTime}
             >
-              Clamp by event date time
+              Allow dates outside event window
             </Switch>
           </View>
         </Flex>
@@ -227,27 +356,52 @@ export const AgendaComponent: React.FC = () => {
           </Flex>
 
           <Flex direction="column" gap="size-200">
-            {/* Date/Time Row */}
+            {/* Date/Time Row - shows TimeField only for same-day events when clamped */}
             <Flex direction="row" gap="size-200" wrap>
-              <DatePicker
-                label="Start Date & Time"
-                isRequired
-                granularity="minute"
-                value={safeParseDateTimeString(item.startDateTime)}
-                onChange={(date) => updateAgendaItem(index, { startDateTime: date?.toString() || '' })}
-                minValue={minValue}
-                maxValue={maxValue}
-              />
-
-              <DatePicker
-                label="End Date & Time"
-                isRequired
-                granularity="minute"
-                value={safeParseDateTimeString(item.endDateTime)}
-                onChange={(date) => updateAgendaItem(index, { endDateTime: date?.toString() || '' })}
-                minValue={safeParseDateTimeString(item.startDateTime) || minValue}
-                maxValue={maxValue}
-              />
+              {showTimeOnly ? (
+                <>
+                  <TimeField
+                    label="Start Time"
+                    isRequired
+                    granularity="minute"
+                    value={parseTimeFromDateTime(item.startDateTime)}
+                    onChange={(time) => updateAgendaItem(index, { 
+                      startDateTime: timeToDateTimeString(time, eventStartDateTime) 
+                    })}
+                  />
+                  <TimeField
+                    label="End Time"
+                    isRequired
+                    granularity="minute"
+                    value={parseTimeFromDateTime(item.endDateTime)}
+                    onChange={(time) => updateAgendaItem(index, { 
+                      endDateTime: timeToDateTimeString(time, eventStartDateTime) 
+                    })}
+                    minValue={getMinEndTime(item.startDateTime)}
+                  />
+                </>
+              ) : (
+                <>
+                  <DatePicker
+                    label="Start Date & Time"
+                    isRequired
+                    granularity="minute"
+                    value={safeParseDateTimeString(item.startDateTime)}
+                    onChange={(date) => updateAgendaItem(index, { startDateTime: date?.toString() || '' })}
+                    minValue={minValue}
+                    maxValue={maxValue}
+                  />
+                  <DatePicker
+                    label="End Date & Time"
+                    isRequired
+                    granularity="minute"
+                    value={safeParseDateTimeString(item.endDateTime)}
+                    onChange={(date) => updateAgendaItem(index, { endDateTime: date?.toString() || '' })}
+                    minValue={getMinEndDateTime(item.startDateTime) || minValue}
+                    maxValue={maxValue}
+                  />
+                </>
+              )}
             </Flex>
 
             {/* Title */}

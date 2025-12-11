@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react'
+import React, { useEffect, useRef, useCallback } from 'react'
 import { View, Text } from '@adobe/react-spectrum'
 import 'quill/dist/quill.snow.css'
 
@@ -21,6 +21,21 @@ export const RichTextEditor: React.FC<RichTextEditorProps> = ({
 }) => {
   const editorRef = useRef<any>(null)
   const quillRef = useRef<any>(null)
+  // Track whether we're programmatically updating content to avoid feedback loops
+  const isUpdatingRef = useRef(false)
+  // Store the latest value in a ref for use in the text-change handler
+  const valueRef = useRef(value)
+  // Store the latest onChange in a ref to avoid stale closures
+  const onChangeRef = useRef(onChange)
+  
+  // Keep refs in sync with props
+  useEffect(() => {
+    valueRef.current = value
+  }, [value])
+  
+  useEffect(() => {
+    onChangeRef.current = onChange
+  }, [onChange])
   
   useEffect(() => {
     // Dynamically import Quill to avoid SSR issues
@@ -46,16 +61,25 @@ export const RichTextEditor: React.FC<RichTextEditorProps> = ({
             })
             
             // Set initial value
-            if (value) {
-              quillRef.current.root.innerHTML = value
+            if (valueRef.current) {
+              isUpdatingRef.current = true
+              quillRef.current.root.innerHTML = valueRef.current
+              isUpdatingRef.current = false
             }
             
-            // Listen for changes
-            quillRef.current.on('text-change', () => {
+            // Listen for changes - only trigger onChange for user edits, not programmatic updates
+            quillRef.current.on('text-change', (_delta: any, _oldDelta: any, source: string) => {
+              // Skip if this is a programmatic update or not a user edit
+              if (isUpdatingRef.current || source !== 'user') {
+                return
+              }
+              
               const html = quillRef.current.root.innerHTML
-              // Only trigger onChange if content actually changed
-              if (html !== value) {
-                onChange(html === '<p><br></p>' ? '' : html)
+              const normalizedHtml = html === '<p><br></p>' ? '' : html
+              
+              // Only trigger onChange if content actually differs from current value
+              if (normalizedHtml !== valueRef.current) {
+                onChangeRef.current(normalizedHtml)
               }
             })
           }
@@ -73,16 +97,18 @@ export const RichTextEditor: React.FC<RichTextEditorProps> = ({
         quillRef.current = null
       }
     }
-  }, [])
+  }, [label])
   
   // Update editor content when value prop changes externally
   useEffect(() => {
     if (quillRef.current && quillRef.current.root.innerHTML !== value) {
+      isUpdatingRef.current = true
       const currentSelection = quillRef.current.getSelection()
       quillRef.current.root.innerHTML = value || ''
       if (currentSelection) {
         quillRef.current.setSelection(currentSelection)
       }
+      isUpdatingRef.current = false
     }
   }, [value])
 

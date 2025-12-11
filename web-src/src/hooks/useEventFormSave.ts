@@ -72,13 +72,13 @@ export function useEventFormSave() {
     locale,
     isEditMode,
     saveStatus,
+    eventDataResp, // Raw API response - contains modificationTime/creationTime for updates
     getRegisteredComponents,
     setEventId,
     setEventResponse,
     setSaveStatus,
     setSaveError,
     clearStorage,
-    updateFormData,
   } = context
   
   /**
@@ -389,6 +389,23 @@ export function useEventFormSave() {
       // Add publish flag if requested
       if (publish) {
         payload.published = true
+      } else {
+        // Ensure published is always set (required by schema)
+        payload.published = payload.published ?? false
+      }
+      
+      // Ensure required fields have values
+      // Per OpenAPI BaseEventProperties required: cloudType, seriesId, eventType, 
+      // localStartDate, localEndDate, localStartTime, localEndTime, timezone, published
+      if (!payload.cloudType) {
+        payload.cloudType = formData.cloudType || 'CreativeCloud'
+      }
+      if (!payload.seriesId && seriesId) {
+        payload.seriesId = seriesId
+      }
+      if (!payload.timezone) {
+        // Default to America/Los_Angeles if not set (required field)
+        payload.timezone = formData.timezone || 'America/Los_Angeles'
       }
       
       // 5. Call create/update API (using external ESP/ESL API)
@@ -396,6 +413,20 @@ export function useEventFormSave() {
       let savedEventId: string
       
       if (isEditMode && eventId) {
+        // Per OpenAPI EventUpdateBody schema (Event -> EventDetails), eventId is required in the body
+        payload.eventId = eventId
+        
+        // For updates, include modificationTime for optimistic locking
+        // This is required by the backend to prevent concurrent update conflicts
+        if (eventDataResp?.modificationTime) {
+          payload.modificationTime = eventDataResp.modificationTime
+        }
+        
+        // Per OpenAPI EventDetails schema, creationTime is also required for updates
+        if (eventDataResp?.creationTime) {
+          payload.creationTime = eventDataResp.creationTime
+        }
+        
         // Update existing event
         const result = await apiService.updateEventExternal(eventId, payload, {
           forceSpWrite: false,
@@ -415,8 +446,9 @@ export function useEventFormSave() {
         response = result as EventApiResponse
         savedEventId = response.eventId
         
-        // Update context with new event ID
+        // Update context with new event ID and store the response for subsequent updates
         setEventId(savedEventId)
+        setEventResponse(response) // Store response so modificationTime/creationTime are available
       }
       
       // 6. Call component onAfterSave callbacks (for venue, images, speakers, etc.)
@@ -458,8 +490,10 @@ export function useEventFormSave() {
   }, [
     formData,
     eventId,
+    seriesId,
     locale,
     isEditMode,
+    eventDataResp,
     buildEventPayload,
     validateComponents,
     gatherComponentPayloads,

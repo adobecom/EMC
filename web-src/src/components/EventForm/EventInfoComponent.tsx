@@ -18,7 +18,7 @@ import {
   ActionButton,
   ComboBox
 } from '@adobe/react-spectrum'
-import { parseDateTime } from '@internationalized/date'
+import { parseDateTime, CalendarDateTime } from '@internationalized/date'
 import { getTimeZones } from '@vvo/tzdb'
 import Info from '@spectrum-icons/workflow/Info'
 import { HeadingWithTooltip, RichTextEditor } from '../shared'
@@ -28,7 +28,7 @@ import { useEventFormComponent } from '../../hooks/useEventFormComponent'
 /**
  * Safely parse ISO 8601 datetime string for DatePicker
  */
-function safeParseDateTimeString(dateString: string | undefined | null) {
+function safeParseDateTimeString(dateString: string | undefined | null): CalendarDateTime | null {
   if (!dateString) return null
   
   try {
@@ -41,6 +41,65 @@ function safeParseDateTimeString(dateString: string | undefined | null) {
     console.error('Failed to parse datetime:', dateString, error)
     return null
   }
+}
+
+/**
+ * Add minutes to a CalendarDateTime
+ * Returns a new CalendarDateTime with the added minutes
+ */
+function addMinutes(dt: CalendarDateTime, minutes: number): CalendarDateTime {
+  let newMinute = dt.minute + minutes
+  let newHour = dt.hour
+  let newDay = dt.day
+  let newMonth = dt.month
+  let newYear = dt.year
+  
+  // Handle minute overflow
+  while (newMinute >= 60) {
+    newMinute -= 60
+    newHour += 1
+  }
+  while (newMinute < 0) {
+    newMinute += 60
+    newHour -= 1
+  }
+  
+  // Handle hour overflow
+  while (newHour >= 24) {
+    newHour -= 24
+    newDay += 1
+  }
+  while (newHour < 0) {
+    newHour += 24
+    newDay -= 1
+  }
+  
+  // For simplicity, handle day overflow approximately (doesn't need to be perfect for +1 minute)
+  const daysInMonth = [0, 31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
+  // Adjust for leap years
+  if ((newYear % 4 === 0 && newYear % 100 !== 0) || newYear % 400 === 0) {
+    daysInMonth[2] = 29
+  }
+  
+  while (newDay > daysInMonth[newMonth]) {
+    newDay -= daysInMonth[newMonth]
+    newMonth += 1
+    if (newMonth > 12) {
+      newMonth = 1
+      newYear += 1
+    }
+  }
+  
+  return new CalendarDateTime(newYear, newMonth, newDay, newHour, newMinute, dt.second || 0)
+}
+
+/**
+ * Get minimum end datetime (start + 1 minute) to ensure positive duration
+ */
+function getMinEndDateTime(startDateTimeStr: string): CalendarDateTime | undefined {
+  const startDt = safeParseDateTimeString(startDateTimeStr)
+  if (!startDt) return undefined
+  return addMinutes(startDt, 1)
 }
 
 const LANGUAGE_OPTIONS = [
@@ -253,11 +312,12 @@ export const EventInfoComponent: React.FC = () => {
           granularity="minute"
           value={safeParseDateTimeString(endDateTime)}
           onChange={(date) => updateFormData({ endDateTime: date?.toString() || '' })}
-          minValue={safeParseDateTimeString(startDateTime) || undefined}
+          minValue={getMinEndDateTime(startDateTime)}
         />
 
         <ComboBox
-          label="Timezone (Optional)"
+          label="Timezone"
+          isRequired
           defaultItems={TIMEZONE_OPTIONS}
           selectedKey={timezone || null}
           onSelectionChange={(key) => updateFormData({ timezone: key ? String(key) : '' })}

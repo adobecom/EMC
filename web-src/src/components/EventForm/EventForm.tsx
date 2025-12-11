@@ -385,6 +385,7 @@ const EventFormInner: React.FC<EventFormInnerProps> = ({ ims }) => {
     Boolean(formData.shortDescription && formData.shortDescription.trim() !== '') &&
     formData.startDateTime !== '' &&
     formData.endDateTime !== '' &&
+    Boolean(formData.timezone && formData.timezone.trim() !== '') && // Timezone is required
     (hasVenue ? formData.venue?.venueName?.trim() !== '' : true)
   
   const step1Component = (
