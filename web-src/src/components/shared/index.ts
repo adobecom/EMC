@@ -5,7 +5,7 @@
 export { DataTable } from './DataTable'
 export type { TableColumn, TableAction } from './DataTable'
 export { FormWizard } from './FormWizard'
-export type { WizardStep } from './FormWizard'
+export type { WizardStep, EventTypeLabel, EventStatus } from './FormWizard'
 export { StatusBadge } from './StatusBadge'
 export { LoadingSpinner } from './LoadingSpinner'
 export { ResourceDashboardLayout } from './ResourceDashboardLayout'

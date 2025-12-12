@@ -28,7 +28,8 @@ import {
   EventImagesComponent, 
   RegistrationConfigComponent, 
   PageMetadataComponent,
-  PromotionalContentComponent 
+  PromotionalContentComponent,
+  MarketoIntegrationComponent
 } from './index'
 import { fromApiSocialLink } from '../../utils/socialPlatformDetector'
 import { useEventFeatureFlags } from '../../hooks/useEventTypeFeatures'
@@ -141,8 +142,14 @@ function mapApiResponseToFormData(event: EventApiResponse, locale: string): Part
     defaultLocale: locale,
     isPrivate: event.isPrivate || false,
     tags: parsedTags,
-    startDateTime: event.startDate || '',
-    endDateTime: event.endDate || '',
+    // Use localStartDate + localStartTime (already in event's timezone) 
+    // instead of startDate/endDate (which are UTC and cause timezone shift)
+    startDateTime: event.localStartDate && event.localStartTime 
+      ? `${event.localStartDate}T${event.localStartTime.slice(0, 5)}` 
+      : '',
+    endDateTime: event.localEndDate && event.localEndTime 
+      ? `${event.localEndDate}T${event.localEndTime.slice(0, 5)}` 
+      : '',
     timezone: event.timezone,
     venue: venueData,
     capacity: event.attendeeLimit,
@@ -175,7 +182,9 @@ function mapApiResponseToFormData(event: EventApiResponse, locale: string): Part
       .map((item: any) => {
         if (typeof item === 'string') return { title: item }
         return item
-      })
+      }),
+    // Map Marketo integration data
+    marketoIntegration: event.marketoIntegration,
   }
 }
 
@@ -232,7 +241,7 @@ const EventFormInner: React.FC<EventFormInnerProps> = ({ ims }) => {
   }, [saveError, toast])
   
   // Get feature flags based on event type
-  const { hasVenue, hasPageMetadata } = useEventFeatureFlags(formData.eventType)
+  const { hasVenue, hasPageMetadata, hasMarketoIntegration } = useEventFeatureFlags(formData.eventType)
   
   // ============================================================================
   // LOAD EVENT DATA
@@ -443,6 +452,13 @@ const EventFormInner: React.FC<EventFormInnerProps> = ({ ims }) => {
           <PageMetadataComponent />
         </FormCard>
       )}
+
+      {/* Marketo integration is only for ExperienceCloud events */}
+      {hasMarketoIntegration && formData.cloudType === 'ExperienceCloud' && (
+        <FormCard>
+          <MarketoIntegrationComponent />
+        </FormCard>
+      )}
     </Flex>
   )
   
@@ -525,6 +541,18 @@ const EventFormInner: React.FC<EventFormInnerProps> = ({ ims }) => {
     return <LoadingSpinner message="Loading event data..." />
   }
   
+  // Determine event type label for display
+  const getEventTypeLabel = (): string => {
+    const eventType = formData.eventType
+    switch (eventType) {
+      case 'webinar':
+        return 'Webinar'
+      case 'in-person':
+      default:
+        return 'In-person event'
+    }
+  }
+
   return (
     <View 
       UNSAFE_style={{
@@ -544,6 +572,7 @@ const EventFormInner: React.FC<EventFormInnerProps> = ({ ims }) => {
         isPublished={isPublished}
         maxStepReached={maxStepReached}
         onMaxStepChange={handleMaxStepChange}
+        eventTypeLabel={getEventTypeLabel()}
       />
     </View>
   )

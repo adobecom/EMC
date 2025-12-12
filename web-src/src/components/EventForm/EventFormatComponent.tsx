@@ -32,6 +32,9 @@ interface SeriesOption {
  * 
  * Uses EventFormContext for state management.
  * No API calls needed in onAfterSave - just data collection.
+ * 
+ * Note: Cloud type and series are locked once the event is created (eventId exists).
+ * Marketers cannot change these fields after event creation.
  */
 export const EventFormatComponent: React.FC = () => {
   // ============================================================================
@@ -41,6 +44,7 @@ export const EventFormatComponent: React.FC = () => {
   const {
     formData,
     updateFormData,
+    eventId,
   } = useEventFormComponent({
     componentId: 'event-format',
   })
@@ -51,6 +55,9 @@ export const EventFormatComponent: React.FC = () => {
   const cloudType = formData.cloudType || 'CreativeCloud'
   // Use context seriesId as source of truth (falls back to formData for initial load)
   const seriesId = contextSeriesId || formData.seriesId || ''
+  
+  // Once the event is created (eventId exists), cloud and series are locked
+  const isLocked = !!eventId
   
   // ============================================================================
   // LOCAL STATE
@@ -214,7 +221,10 @@ export const EventFormatComponent: React.FC = () => {
         >
           Event Format
         </HeadingWithTooltip>
-        <Text>Select the cloud type and event series for this event.</Text>
+        <Text>
+          Select the cloud type and event series for this event.
+          {isLocked && ' These fields are locked after the event is created.'}
+        </Text>
       </View>
 
       <Flex direction="row" gap="size-300" wrap>
@@ -223,6 +233,7 @@ export const EventFormatComponent: React.FC = () => {
           isRequired
           selectedKey={cloudType}
           onSelectionChange={handleCloudChange}
+          isDisabled={isLocked}
         >
           {clouds.map((cloud) => (
             <Item key={cloud.key}>{cloud.label}</Item>
@@ -234,6 +245,7 @@ export const EventFormatComponent: React.FC = () => {
           isRequired
           selectedKey={seriesId}
           onSelectionChange={handleSeriesChange}
+          isDisabled={isLocked}
           description={
             seriesId && series.find(s => s.id === seriesId)?.description || undefined
           }
@@ -248,7 +260,7 @@ export const EventFormatComponent: React.FC = () => {
         </Picker>
       </Flex>
 
-      {series.length === 0 && (
+      {series.length === 0 && !isLocked && (
         <View
           padding="size-150"
           backgroundColor="notice"

@@ -232,6 +232,11 @@ export const COLORS = {
   BUTTON_ACTIVE_OVERLAY: 'rgba(0, 0, 0, 0.1)',
   BUTTON_DISABLED_OVERLAY: 'rgba(255, 255, 255, 0.4)',
   BUTTON_DISABLED_TEXT: 'rgba(255, 255, 255, 0.5)',
+
+  STATUS_DRAFT: '#2D9D92',
+  STATUS_PUBLISHED: '#CD3ACE',
+  STATUS_ARCHIVED: '#666666',
+  STATUS_CANCELLED: '#D7373F',
 } as const
 
 // ============================================================

@@ -34,6 +34,12 @@ export interface WizardStep {
   isValid?: boolean
 }
 
+/** Event type for display in the header */
+export type EventTypeLabel = 'In-person event' | 'Webinar' | 'Hybrid event' | string
+
+/** Event status for the status badge */
+export type EventStatus = 'draft' | 'published' | 'archived' | 'cancelled' | string
+
 interface FormWizardProps {
   steps: WizardStep[]
   /** Called when the final publish/re-publish button is clicked */
@@ -55,6 +61,10 @@ interface FormWizardProps {
   maxStepReached?: number
   /** Callback when max step changes */
   onMaxStepChange?: (stepIndex: number) => void
+  /** Event type label to display above the step heading */
+  eventTypeLabel?: EventTypeLabel
+  /** Event status for the status badge (defaults to 'draft' or 'published' based on isPublished) */
+  eventStatus?: EventStatus
 }
 
 export const FormWizard: React.FC<FormWizardProps> = ({
@@ -69,7 +79,9 @@ export const FormWizard: React.FC<FormWizardProps> = ({
   hasEventId = false,
   isPublished = false,
   maxStepReached = 0,
-  onMaxStepChange
+  onMaxStepChange,
+  eventTypeLabel,
+  eventStatus
 }) => {
   const [currentStepIndex, setCurrentStepIndex] = useState(0)
   const [isNavigating, setIsNavigating] = useState(false)
@@ -285,7 +297,7 @@ export const FormWizard: React.FC<FormWizardProps> = ({
                     style={{
                       border: 'none',
                       background: isActive ? COLORS.ADOBE_RED : COLORS.TRANSPARENT,
-                      color: isActive ? COLORS.WHITE : isLocked ? COLORS.GRAY_500 : COLORS.GRAY_800,
+                      color: isActive ? COLORS.WHITE : isLocked ? COLORS.GRAY_600 : COLORS.GRAY_800,
                       padding: '8px 12px',
                       paddingLeft: '32px',
                       textAlign: 'left',
@@ -307,7 +319,7 @@ export const FormWizard: React.FC<FormWizardProps> = ({
                     onMouseLeave={(e) => {
                       if (!isActive) {
                         e.currentTarget.style.backgroundColor = COLORS.TRANSPARENT
-                        e.currentTarget.style.color = isLocked ? COLORS.GRAY_500 : COLORS.GRAY_800
+                        e.currentTarget.style.color = isLocked ? COLORS.GRAY_600 : COLORS.GRAY_800
                       }
                     }}
                     onMouseDown={(e) => {
@@ -340,7 +352,7 @@ export const FormWizard: React.FC<FormWizardProps> = ({
                       {isLocked && (
                         <LockClosed 
                           size="XS" 
-                          UNSAFE_style={{ color: COLORS.GRAY_500 }} 
+                          UNSAFE_style={{ color: COLORS.GRAY_600 }} 
                         />
                       )}
                     </span>
@@ -497,14 +509,99 @@ export const FormWizard: React.FC<FormWizardProps> = ({
     )
   }
 
+  // Determine the display status - use provided status, or derive from isPublished
+  const displayStatus = eventStatus || (isPublished ? 'published' : 'draft')
+  
+  // Status badge styling based on status
+  const getStatusBadgeStyles = (status: string): { dotColor: string; textColor: string; bgColor: string; borderColor: string } => {
+    const statusStyles: Record<string, { dotColor: string; textColor: string; bgColor: string; borderColor: string }> = {
+      draft: {
+        dotColor: COLORS.STATUS_DRAFT,
+        textColor: COLORS.GRAY_800,
+        bgColor: COLORS.WHITE,
+        borderColor: COLORS.GRAY_300
+      },
+      published: {
+        dotColor: COLORS.STATUS_PUBLISHED,
+        textColor: COLORS.GRAY_800,
+        bgColor: COLORS.WHITE,
+        borderColor: COLORS.GRAY_300
+      },
+      archived: {
+        dotColor: COLORS.STATUS_ARCHIVED,
+        textColor: COLORS.GRAY_700,
+        bgColor: COLORS.WHITE,
+        borderColor: COLORS.GRAY_300
+      },
+      cancelled: {
+        dotColor: COLORS.STATUS_CANCELLED,
+        textColor: COLORS.GRAY_800,
+        bgColor: COLORS.WHITE,
+        borderColor: COLORS.GRAY_300
+      }
+    }
+    return statusStyles[status.toLowerCase()] || statusStyles.draft
+  }
+  
+  const statusStyles = getStatusBadgeStyles(displayStatus)
+  const statusLabel = displayStatus.charAt(0).toUpperCase() + displayStatus.slice(1).toLowerCase()
+
   const mainContent = (
     <View>
-      {/* Step title and description */}
+      {/* Step title */}
       <View marginBottom="size-300">
-        <Heading level={2} UNSAFE_style={TYPOGRAPHY.STEP_HEADING}>{currentStep.title}</Heading>
-        {currentStep.description && (
-          <Text marginTop="size-100">{currentStep.description}</Text>
+        {/* Event type label */}
+        {eventTypeLabel && (
+          <Text 
+            UNSAFE_style={{ 
+              fontSize: '14px',
+              fontWeight: 500,
+              color: COLORS.GRAY_700,
+              marginBottom: '8px',
+              display: 'block'
+            }}
+          >
+            {eventTypeLabel}
+          </Text>
         )}
+        
+        {/* Heading row with status badge */}
+        <Flex direction="row" alignItems="center" gap="size-400">
+          <Heading level={2} UNSAFE_style={TYPOGRAPHY.STEP_HEADING}>{currentStep.title}</Heading>
+          
+          {/* Status badge */}
+          <View
+            UNSAFE_style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '8px',
+              padding: '0 8px',
+              borderRadius: '4px',
+              backgroundColor: statusStyles.bgColor,
+              flexShrink: 0
+            }}
+          >
+            {/* Status dot */}
+            <span
+              style={{
+                width: '10px',
+                height: '10px',
+                borderRadius: '50%',
+                backgroundColor: statusStyles.dotColor,
+                flexShrink: 0
+              }}
+            />
+            <Text
+              UNSAFE_style={{
+                fontSize: '14px',
+                fontWeight: 500,
+                color: statusStyles.textColor
+              }}
+            >
+              {statusLabel}
+            </Text>
+          </View>
+        </Flex>
       </View>
 
       {/* Step content */}

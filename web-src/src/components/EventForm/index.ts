@@ -18,4 +18,5 @@ export { RegistrationConfigComponent } from './RegistrationConfigComponent'
 export { RegistrationFieldsComponent } from './RegistrationFieldsComponent'
 export { PageMetadataComponent } from './PageMetadataComponent'
 export { PromotionalContentComponent } from './PromotionalContentComponent'
+export { MarketoIntegrationComponent } from './MarketoIntegrationComponent'
 

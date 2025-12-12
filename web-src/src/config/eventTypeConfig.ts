@@ -16,6 +16,7 @@ export interface EventTypeFeatures {
   // Step 1: Add Content
   hasVenue: boolean
   hasPageMetadata: boolean
+  hasMarketoIntegration: boolean
   
   // Step 2: Additional Info (future)
   hasOnDemandRecording?: boolean
@@ -40,6 +41,7 @@ export const EVENT_TYPE_CONFIG: Record<EventType, EventTypeFeatures> = {
     description: 'Physical event at a venue location',
     hasVenue: true,
     hasPageMetadata: false,
+    hasMarketoIntegration: true,
     hasPhysicalCapacity: true,
     hasVirtualCapacity: false,
     hasOnDemandRecording: false,
@@ -50,6 +52,7 @@ export const EVENT_TYPE_CONFIG: Record<EventType, EventTypeFeatures> = {
     description: 'Virtual event streamed online',
     hasVenue: false,
     hasPageMetadata: true,
+    hasMarketoIntegration: true,
     hasPhysicalCapacity: false,
     hasVirtualCapacity: true,
     hasOnDemandRecording: true,

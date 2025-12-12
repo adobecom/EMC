@@ -33,6 +33,7 @@ export function useEventFeatureFlags(eventType: EventType | string) {
   return useMemo(() => ({
     hasVenue: features.hasVenue,
     hasPageMetadata: features.hasPageMetadata,
+    hasMarketoIntegration: features.hasMarketoIntegration ?? false,
     hasOnDemandRecording: features.hasOnDemandRecording ?? false,
     hasWebinarPlatformSettings: features.hasWebinarPlatformSettings ?? false,
     hasPhysicalCapacity: features.hasPhysicalCapacity ?? false,
