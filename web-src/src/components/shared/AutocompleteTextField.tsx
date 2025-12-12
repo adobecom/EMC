@@ -20,6 +20,7 @@ interface AutocompleteTextFieldProps {
   options: AutocompleteOption[]
   placeholder?: string
   isDisabled?: boolean
+  isRequired?: boolean
 }
 
 export const AutocompleteTextField: React.FC<AutocompleteTextFieldProps> = ({
@@ -28,6 +29,7 @@ export const AutocompleteTextField: React.FC<AutocompleteTextFieldProps> = ({
   onChange,
   onSelect,
   options,
+  isRequired = false,
   placeholder,
   isDisabled = false
 }) => {
@@ -37,11 +39,14 @@ export const AutocompleteTextField: React.FC<AutocompleteTextFieldProps> = ({
   const inputRef = useRef<HTMLInputElement>(null)
 
   // Filter options based on input value
-  const filteredOptions = value.length > 0
-    ? options.filter(opt => 
-        opt.label.toLowerCase().includes(value.toLowerCase())
-      ).slice(0, 10)
-    : []
+  const getFilteredOptions = (searchValue: string) => {
+    if (searchValue.length === 0) return []
+    return options.filter(opt => 
+      opt.label.toLowerCase().includes(searchValue.toLowerCase())
+    ).slice(0, 10)
+  }
+  
+  const filteredOptions = getFilteredOptions(value)
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -59,7 +64,9 @@ export const AutocompleteTextField: React.FC<AutocompleteTextFieldProps> = ({
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const newValue = e.target.value
     onChange(newValue)
-    setIsOpen(newValue.length > 0 && filteredOptions.length > 0)
+    // Compute filtered options with the NEW value to avoid stale closure
+    const newFilteredOptions = getFilteredOptions(newValue)
+    setIsOpen(newValue.length > 0 && newFilteredOptions.length > 0)
     setHighlightedIndex(-1)
   }
 
@@ -105,18 +112,22 @@ export const AutocompleteTextField: React.FC<AutocompleteTextFieldProps> = ({
     }
   }
 
-  // Update isOpen when filtered options change
+  // Update isOpen when options or value changes (handles async loading of options)
   useEffect(() => {
-    if (value.length > 0 && filteredOptions.length > 0 && document.activeElement === inputRef.current) {
+    const currentFiltered = getFilteredOptions(value)
+    if (value.length > 0 && currentFiltered.length > 0 && document.activeElement === inputRef.current) {
       setIsOpen(true)
-    } else if (filteredOptions.length === 0) {
+    } else if (currentFiltered.length === 0) {
       setIsOpen(false)
     }
-  }, [filteredOptions.length, value])
+  }, [options, value])
 
   return (
     <div className="autocomplete-container" ref={containerRef}>
-      <label className="autocomplete-label">{label}</label>
+      <label className="autocomplete-label">
+        {label}
+        {isRequired && <span className="autocomplete-required"> *</span>}
+      </label>
       <input
         ref={inputRef}
         type="text"
@@ -125,7 +136,9 @@ export const AutocompleteTextField: React.FC<AutocompleteTextFieldProps> = ({
         onChange={handleInputChange}
         onKeyDown={handleKeyDown}
         onFocus={() => {
-          if (value.length > 0 && filteredOptions.length > 0) {
+          // Re-compute filtered options on focus to ensure we have the latest
+          const currentFiltered = getFilteredOptions(value)
+          if (value.length > 0 && currentFiltered.length > 0) {
             setIsOpen(true)
           }
         }}

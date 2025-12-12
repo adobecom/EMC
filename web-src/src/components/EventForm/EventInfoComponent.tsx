@@ -18,25 +18,23 @@ import {
   ActionButton,
   ComboBox
 } from '@adobe/react-spectrum'
-import { parseDateTime } from '@internationalized/date'
+import { parseDateTime, CalendarDateTime } from '@internationalized/date'
 import { getTimeZones } from '@vvo/tzdb'
 import Info from '@spectrum-icons/workflow/Info'
 import { HeadingWithTooltip, RichTextEditor } from '../shared'
 import { FLEX_GAP } from '../../styles/designSystem'
+import { useEventFormComponent } from '../../hooks/useEventFormComponent'
 
 /**
  * Safely parse ISO 8601 datetime string for DatePicker
- * Handles strings with milliseconds and timezone indicators
  */
-function safeParseDateTimeString(dateString: string | undefined | null) {
+function safeParseDateTimeString(dateString: string | undefined | null): CalendarDateTime | null {
   if (!dateString) return null
   
   try {
-    // Remove milliseconds and timezone (Z or +00:00) if present
-    // parseDateTime expects format: YYYY-MM-DDTHH:mm:ss or YYYY-MM-DDTHH:mm
     const cleaned = dateString
-      .replace(/\.\d{3}Z?$/, '') // Remove .000Z or .000
-      .replace(/[+-]\d{2}:\d{2}$/, '') // Remove timezone offset like +00:00
+      .replace(/\.\d{3}Z?$/, '')
+      .replace(/[+-]\d{2}:\d{2}$/, '')
     
     return parseDateTime(cleaned)
   } catch (error) {
@@ -45,7 +43,65 @@ function safeParseDateTimeString(dateString: string | undefined | null) {
   }
 }
 
-// Language options for event localization
+/**
+ * Add minutes to a CalendarDateTime
+ * Returns a new CalendarDateTime with the added minutes
+ */
+function addMinutes(dt: CalendarDateTime, minutes: number): CalendarDateTime {
+  let newMinute = dt.minute + minutes
+  let newHour = dt.hour
+  let newDay = dt.day
+  let newMonth = dt.month
+  let newYear = dt.year
+  
+  // Handle minute overflow
+  while (newMinute >= 60) {
+    newMinute -= 60
+    newHour += 1
+  }
+  while (newMinute < 0) {
+    newMinute += 60
+    newHour -= 1
+  }
+  
+  // Handle hour overflow
+  while (newHour >= 24) {
+    newHour -= 24
+    newDay += 1
+  }
+  while (newHour < 0) {
+    newHour += 24
+    newDay -= 1
+  }
+  
+  // For simplicity, handle day overflow approximately (doesn't need to be perfect for +1 minute)
+  const daysInMonth = [0, 31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
+  // Adjust for leap years
+  if ((newYear % 4 === 0 && newYear % 100 !== 0) || newYear % 400 === 0) {
+    daysInMonth[2] = 29
+  }
+  
+  while (newDay > daysInMonth[newMonth]) {
+    newDay -= daysInMonth[newMonth]
+    newMonth += 1
+    if (newMonth > 12) {
+      newMonth = 1
+      newYear += 1
+    }
+  }
+  
+  return new CalendarDateTime(newYear, newMonth, newDay, newHour, newMinute, dt.second || 0)
+}
+
+/**
+ * Get minimum end datetime (start + 1 minute) to ensure positive duration
+ */
+function getMinEndDateTime(startDateTimeStr: string): CalendarDateTime | undefined {
+  const startDt = safeParseDateTimeString(startDateTimeStr)
+  if (!startDt) return undefined
+  return addMinutes(startDt, 1)
+}
+
 const LANGUAGE_OPTIONS = [
   { key: 'en', label: 'English' },
   { key: 'es', label: 'Spanish' },
@@ -57,65 +113,84 @@ const LANGUAGE_OPTIONS = [
   { key: 'zh', label: 'Chinese' }
 ]
 
-// Timezone options from @vvo/tzdb
 const TIMEZONE_OPTIONS = getTimeZones().map((tz) => ({
   id: tz.name,
   name: `${tz.name} (${tz.currentTimeFormat})`
 }))
 
-interface EventInfoComponentProps {
-  language: string
-  name: string
-  urlTitle: string
-  description: string
-  shortDescription: string
-  startDateTime: string
-  endDateTime: string
-  timezone: string
-  communityForumUrl: string
-  secondaryLinkTitle: string
-  isPrivate: boolean
-  onChange: (data: {
-    language?: string
-    name?: string
-    urlTitle?: string
-    description?: string
-    shortDescription?: string
-    startDateTime?: string
-    endDateTime?: string
-    timezone?: string
-    communityForumUrl?: string
-    secondaryLinkTitle?: string
-    isPrivate?: boolean
-  }) => void
-}
-
-export const EventInfoComponent: React.FC<EventInfoComponentProps> = ({
-  language,
-  name,
-  urlTitle,
-  description,
-  shortDescription,
-  startDateTime,
-  endDateTime,
-  timezone,
-  communityForumUrl,
-  secondaryLinkTitle,
-  isPrivate,
-  onChange
-}) => {
+/**
+ * EventInfoComponent - Manages core event information
+ * 
+ * Uses EventFormContext for state management.
+ * Handles: language, name, urlTitle, description, shortDescription,
+ * startDateTime, endDateTime, timezone, communityForumUrl, secondaryLinkTitle, isPrivate
+ */
+export const EventInfoComponent: React.FC = () => {
+  // ============================================================================
+  // CONTEXT INTEGRATION
+  // ============================================================================
+  
+  const {
+    formData,
+    updateFormData,
+  } = useEventFormComponent({
+    componentId: 'event-info',
+  })
+  
+  // Destructure form data
+  const {
+    language = 'en',
+    name = '',
+    enTitle = '',
+    description = '',
+    shortDescription = '',
+    startDateTime = '',
+    endDateTime = '',
+    timezone = '',
+    communityForumUrl = '',
+    secondaryLinkTitle = '',
+    isPrivate = false,
+  } = formData
+  
+  // ============================================================================
+  // LOCAL STATE
+  // ============================================================================
+  
   const [hasSecondaryLink, setHasSecondaryLink] = useState(false)
 
-  // Set hasSecondaryLink based on whether we have a secondary link URL
   useEffect(() => {
     if (communityForumUrl) {
       setHasSecondaryLink(true)
     }
   }, [communityForumUrl])
+  
+  // ============================================================================
+  // EVENT HANDLERS
+  // ============================================================================
+  
+  const handleNameChange = (value: string) => {
+    // Sync URL title if they match
+    if (name === enTitle) {
+      updateFormData({ name: value, urlTitle: value })
+    } else {
+      updateFormData({ name: value })
+    }
+  }
+  
+  const handleSecondaryLinkToggle = (value: boolean) => {
+    setHasSecondaryLink(value)
+    if (!value) {
+      updateFormData({ communityForumUrl: '', secondaryLinkTitle: '' })
+    }
+  }
+
+  // ============================================================================
+  // RENDER
+  // ============================================================================
 
   return (
     <Flex direction="column" gap={FLEX_GAP.SECTION}>
-      {/* Header Row: Title with tooltip on left, private toggle on right */}
+      {/* Header Row */}
       <Flex direction="row" justifyContent="space-between" alignItems="center">
         <HeadingWithTooltip 
           level={3}
@@ -127,7 +202,7 @@ export const EventInfoComponent: React.FC<EventInfoComponentProps> = ({
         <Flex direction="row" alignItems="center" gap="size-100">
           <Switch
             isSelected={isPrivate}
-            onChange={(value) => onChange({ isPrivate: value })}
+            onChange={(value) => updateFormData({ isPrivate: value })}
           >
             Set as a private event
           </Switch>
@@ -153,7 +228,7 @@ export const EventInfoComponent: React.FC<EventInfoComponentProps> = ({
         label="Language"
         isRequired
         selectedKey={language}
-        onSelectionChange={(key) => onChange({ language: String(key) })}
+        onSelectionChange={(key) => updateFormData({ language: String(key) })}
       >
         {LANGUAGE_OPTIONS.map((lang) => (
           <Item key={lang.key}>{lang.label}</Item>
@@ -163,19 +238,9 @@ export const EventInfoComponent: React.FC<EventInfoComponentProps> = ({
       <TextField
         label="Event Title"
         isRequired
-        isQuiet
         maxLength={80}
         value={name}
-        onChange={(value) => {
-          // Check if old event title matches current URL title
-          if (name === urlTitle) {
-            // They match, so sync is active - update both fields
-            onChange({ name: value, urlTitle: value })
-          } else {
-            // They don't match, so don't sync - only update event title
-            onChange({ name: value })
-          }
-        }}
+        onChange={handleNameChange}
         description="80 characters max"
         width="100%"
       />
@@ -199,10 +264,9 @@ export const EventInfoComponent: React.FC<EventInfoComponentProps> = ({
           </TooltipTrigger>
         </Flex>
         <TextField
-          isQuiet
           aria-label="English title for page URL"
-          value={urlTitle || ''}
-          onChange={(value) => onChange({ urlTitle: value })}
+          value={enTitle || ''}
+          onChange={(value) => updateFormData({ enTitle: value })}
           width="100%"
         />
       </View>
@@ -218,7 +282,7 @@ export const EventInfoComponent: React.FC<EventInfoComponentProps> = ({
         <RichTextEditor
           label=""
           value={description || ''}
-          onChange={(value) => onChange({ description: value })}
+          onChange={(value) => updateFormData({ description: value })}
           height="400px"
         />
       </View>
@@ -228,7 +292,7 @@ export const EventInfoComponent: React.FC<EventInfoComponentProps> = ({
         isRequired
         maxLength={160}
         value={shortDescription || ''}
-        onChange={(value) => onChange({ shortDescription: value })}
+        onChange={(value) => updateFormData({ shortDescription: value })}
         description="160 characters max"
         width="100%"
       />
@@ -239,7 +303,7 @@ export const EventInfoComponent: React.FC<EventInfoComponentProps> = ({
           isRequired
           granularity="minute"
           value={safeParseDateTimeString(startDateTime)}
-          onChange={(date) => onChange({ startDateTime: date?.toString() || '' })}
+          onChange={(date) => updateFormData({ startDateTime: date?.toString() || '' })}
         />
 
         <DatePicker
@@ -247,15 +311,16 @@ export const EventInfoComponent: React.FC<EventInfoComponentProps> = ({
           isRequired
           granularity="minute"
           value={safeParseDateTimeString(endDateTime)}
-          onChange={(date) => onChange({ endDateTime: date?.toString() || '' })}
-          minValue={safeParseDateTimeString(startDateTime) || undefined}
+          onChange={(date) => updateFormData({ endDateTime: date?.toString() || '' })}
+          minValue={getMinEndDateTime(startDateTime)}
         />
 
         <ComboBox
-          label="Timezone (Optional)"
+          label="Timezone"
+          isRequired
           defaultItems={TIMEZONE_OPTIONS}
           selectedKey={timezone || null}
-          onSelectionChange={(key) => onChange({ timezone: key ? String(key) : '' })}
+          onSelectionChange={(key) => updateFormData({ timezone: key ? String(key) : '' })}
           description="Search and select a timezone"
         >
           {(item) => <Item key={item.id}>{item.name}</Item>}
@@ -265,13 +330,7 @@ export const EventInfoComponent: React.FC<EventInfoComponentProps> = ({
       <View UNSAFE_style={{ display: 'inline-block' }}>
         <Switch
           isSelected={hasSecondaryLink}
-          onChange={(value) => {
-            setHasSecondaryLink(value)
-            if (!value) {
-              // Clear fields when disabling
-              onChange({ communityForumUrl: '', secondaryLinkTitle: '' })
-            }
-          }}
+          onChange={handleSecondaryLinkToggle}
         >
           Add secondary link
         </Switch>
@@ -281,9 +340,8 @@ export const EventInfoComponent: React.FC<EventInfoComponentProps> = ({
         <>
           <TextField
             label="Secondary Link Title"
-            isQuiet
             value={secondaryLinkTitle || ''}
-            onChange={(value) => onChange({ secondaryLinkTitle: value })}
+            onChange={(value) => updateFormData({ secondaryLinkTitle: value })}
             description="Display text for the secondary link"
             width="100%"
           />
@@ -291,9 +349,8 @@ export const EventInfoComponent: React.FC<EventInfoComponentProps> = ({
           <TextField
             label="Secondary Link URL"
             type="url"
-            isQuiet
             value={communityForumUrl || ''}
-            onChange={(value) => onChange({ communityForumUrl: value })}
+            onChange={(value) => updateFormData({ communityForumUrl: value })}
             description="URL for the secondary link"
             width="100%"
           />
@@ -302,4 +359,3 @@ export const EventInfoComponent: React.FC<EventInfoComponentProps> = ({
     </Flex>
   )
 }
-

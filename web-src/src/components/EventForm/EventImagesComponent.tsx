@@ -2,7 +2,7 @@
 * <license header>
 */
 
-import React from 'react'
+import React, { useCallback } from 'react'
 import {
   Flex,
   Heading,
@@ -11,19 +11,35 @@ import {
 import { EventImageData } from '../../types/domain'
 import { ImageUploader } from '../shared'
 import { TYPOGRAPHY } from '../../styles/designSystem'
+import { useEventFormComponent } from '../../hooks/useEventFormComponent'
 
-interface EventImagesComponentProps {
-  images: EventImageData[]
-  eventId?: string
-  onUpdateImages: (images: EventImageData[]) => void
-}
+/**
+ * EventImagesComponent - Manages event images (hero, thumbnail, venue)
+ * 
+ * Uses EventFormContext for state management.
+ * Image uploads are handled by the ImageUploader component which makes
+ * its own API calls. This component just tracks the image IDs/URLs.
+ */
+export const EventImagesComponent: React.FC = () => {
+  // ============================================================================
+  // CONTEXT INTEGRATION
+  // ============================================================================
+  
+  const {
+    formData,
+    updateFormData,
+    eventId,
+  } = useEventFormComponent({
+    componentId: 'event-images',
+  })
+  
+  const images = formData.images || []
 
-export const EventImagesComponent: React.FC<EventImagesComponentProps> = ({
-  images,
-  eventId,
-  onUpdateImages
-}) => {
-  const handleImageChange = (imageKind: string, imageUrl: string, imageId: string) => {
+  // ============================================================================
+  // EVENT HANDLERS
+  // ============================================================================
+
+  const handleImageChange = useCallback((imageKind: string, imageUrl: string, imageId: string) => {
     const existingIndex = images.findIndex((img) => img.imageKind === imageKind)
     const updatedImages = [...images]
     
@@ -33,13 +49,17 @@ export const EventImagesComponent: React.FC<EventImagesComponentProps> = ({
       updatedImages.push({ imageKind, imageUrl, imageId })
     }
     
-    onUpdateImages(updatedImages)
-  }
+    updateFormData({ images: updatedImages })
+  }, [images, updateFormData])
 
-  const handleImageRemove = (imageKind: string) => {
+  const handleImageRemove = useCallback((imageKind: string) => {
     const filtered = images.filter((img) => img.imageKind !== imageKind)
-    onUpdateImages(filtered)
-  }
+    updateFormData({ images: filtered })
+  }, [images, updateFormData])
+
+  // ============================================================================
+  // RENDER
+  // ============================================================================
 
   return (
     <Flex direction="column" gap="size-300">
@@ -55,7 +75,7 @@ export const EventImagesComponent: React.FC<EventImagesComponentProps> = ({
         imageId={images?.find((img) => img.imageKind === 'event-hero-image')?.imageId}
         imageKind="event-hero-image"
         altText="Event hero image"
-        eventId={eventId}
+        eventId={eventId ?? undefined}
         description="Main banner image displayed at the top of the event page"
         recommendedDimensions="1920px x 1080px"
         maxSizeMB={25}
@@ -71,7 +91,7 @@ export const EventImagesComponent: React.FC<EventImagesComponentProps> = ({
         imageId={images?.find((img) => img.imageKind === 'event-card-image')?.imageId}
         imageKind="event-card-image"
         altText="Event thumbnail image"
-        eventId={eventId}
+        eventId={eventId ?? undefined}
         description="Thumbnail image displayed in event listings and cards"
         recommendedDimensions="460px x 460px"
         maxSizeMB={10}
@@ -87,7 +107,7 @@ export const EventImagesComponent: React.FC<EventImagesComponentProps> = ({
         imageId={images?.find((img) => img.imageKind === 'venue-image')?.imageId}
         imageKind="venue-image"
         altText="Venue image"
-        eventId={eventId}
+        eventId={eventId ?? undefined}
         description="Image of the event venue location"
         recommendedDimensions="1920px x 1080px"
         maxSizeMB={25}
@@ -98,4 +118,3 @@ export const EventImagesComponent: React.FC<EventImagesComponentProps> = ({
     </Flex>
   )
 }
-

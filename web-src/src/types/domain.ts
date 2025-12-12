@@ -376,9 +376,18 @@ export interface CaasTagsResponse {
 }
 
 // Speaker/Host profile types
+// Per OpenAPI SocialLink schema: serviceName and link are required
+export type SocialServiceName = 'YouTube' | 'LinkedIn' | 'Web' | 'X' | 'TikTok' | 'Instagram' | 'Facebook' | 'Pinterest'
+
 export interface SocialLink {
-  platform?: string
-  url: string
+  serviceName: SocialServiceName
+  link: string
+}
+
+// Internal form representation (before API transformation)
+export interface SocialLinkFormData {
+  platform?: string // Display name for UI
+  url: string // User input
 }
 
 // Speaker role types for events
@@ -402,7 +411,7 @@ export interface ProfileData {
   bio?: string // Localizable
   imageUrl?: string
   imageId?: string
-  socialLinks?: SocialLink[]
+  socialLinks?: SocialLinkFormData[] // Form representation (url, platform)
   localizations?: Record<string, SpeakerLocalization>
   // State flags
   isSaved?: boolean // Speaker has been saved to series
@@ -420,14 +429,14 @@ export interface SpeakerLocalization {
 }
 
 // Series-level speaker data from API (matches v1 SPEAKER_DATA_FILTER)
+// Per OpenAPI: socialLinks uses SocialLink schema with serviceName + link
 export interface SeriesSpeaker {
   speakerId: string
   firstName: string
   lastName: string
   title?: string // Localizable
   bio?: string // Localizable
-  socialLinks?: SocialLink[] // v1 uses socialLinks
-  socialMediaLinks?: SocialLink[] // Alias used in some places
+  socialLinks?: SocialLink[] // API format: { serviceName, link }
   photo?: {
     imageId: string
     imageUrl: string
@@ -450,6 +459,12 @@ export interface SeriesSponsor {
   info?: string // Localizable description/info about sponsor
   link?: string // External URL (v1 uses 'link', some places use 'externalUrl')
   externalUrl?: string // Alias for link
+  // API returns image data under 'image' property
+  image?: {
+    imageId: string
+    imageUrl: string
+    altText?: string
+  }
   logo?: {
     imageId: string
     imageUrl: string
@@ -459,6 +474,9 @@ export interface SeriesSponsor {
   modificationTime?: number
 }
 
+// Sponsor type enum per OpenAPI SponsorType schema
+export type SponsorType = 'Diamond' | 'Platinum' | 'Gold' | 'Silver' | 'Bronze' | 'Engagement' | 'Partner'
+
 // Sponsor/Partner types for form
 export interface SponsorData {
   id: string
@@ -466,6 +484,7 @@ export interface SponsorData {
   partnerName: string
   partnerUrl: string
   info?: string // Localizable description
+  type?: SponsorType // Event-level sponsor type
   imageUrl?: string
   imageId?: string
   isSaved?: boolean
@@ -483,6 +502,14 @@ export interface EventImageData {
 }
 
 // Venue data types
+// Address component per OpenAPI AddressComponent schema
+// Note: Uses camelCase (longName, shortName) - converted from Google Places snake_case
+export interface AddressComponent {
+  longName: string
+  shortName: string
+  types: string[]
+}
+
 export interface VenueData {
   venueName: string
   formattedAddress?: string
@@ -492,6 +519,7 @@ export interface VenueData {
     lon: number
   }
   gmtOffset?: number
+  addressComponents?: AddressComponent[] // Required by OpenAPI for venue creation
   additionalInformation?: string
   venueImageUrl?: string
   venueImageId?: string

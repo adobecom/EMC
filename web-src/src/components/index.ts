@@ -2,27 +2,28 @@
 * <license header>
 */
 
-// Main components
+// App root
 export { default as App } from './App'
-export { default as TopNav } from './TopNav'
-export { default as ActionsForm } from './ActionsForm'
-export { Home } from './Home'
-export { About } from './About'
+
+// Layout components
+export * from './layout'
+
+// Page components
+export * from './pages'
 
 // Feature components
-export { UserProfile } from './UserProfile'
-export { UserPanel } from './UserPanel'
-export { OrgTeamManagement } from './OrgTeamManagement'
-export { SeriesDashboard } from './SeriesDashboard'
-export { EventsDashboard } from './EventsDashboard'
-export { SeriesForm } from './SeriesForm'
+export { AttendeeDashboard } from './AttendeeDashboard'
+export { CloudManagementConsole } from './CloudManagementConsole'
 export { EventForm } from './EventForm'
-export { RegistrationDashboard } from './RegistrationDashboard'
+export { EventsDashboard } from './EventsDashboard'
+export { SeriesDashboard } from './SeriesDashboard'
+export { SeriesForm } from './SeriesForm'
+
+// User components
+export * from './user'
 
 // Dev components
-export { DevTokenButton } from './DevTokenButton'
-export { DevTokenDialog } from './DevTokenDialog'
+export * from './dev'
 
 // Shared components
 export * from './shared'
-

@@ -8,38 +8,83 @@ The frontend is a **React + TypeScript** application built with **Adobe React Sp
 
 ```
 web-src/src/
-├── components/              # React components
-│   ├── shared/             # Reusable UI components
-│   │   ├── DataTable.tsx   # Generic table with actions
-│   │   ├── FormWizard.tsx  # Multi-step form container
-│   │   ├── StatusBadge.tsx # Status indicators
-│   │   └── LoadingSpinner.tsx
-│   ├── App.tsx             # Main app component & routing
-│   ├── SideBar.tsx         # Navigation sidebar
-│   ├── Home.tsx            # Home page
-│   ├── About.tsx           # About page
-│   ├── ActionsForm.tsx     # Backend action tester
-│   ├── UserProfile.tsx     # IMS user profile display
-│   ├── OrgTeamManagement.tsx        # Org & team CRUD
-│   ├── ResourcesDashboard.tsx       # View all resources
-│   ├── SeriesForm.tsx               # Series create/edit
-│   ├── EventForm.tsx                # Event wizard
-│   └── RegistrationDashboard.tsx    # Registration management
+├── components/                 # React components
+│   ├── shared/                 # Reusable UI components
+│   │   ├── DataTable.tsx       # Generic table with actions
+│   │   ├── FormWizard.tsx      # Multi-step form container
+│   │   ├── FormCard.tsx        # Styled card for form sections
+│   │   ├── StatusBadge.tsx     # Status indicators
+│   │   ├── LoadingSpinner.tsx  # Loading states
+│   │   ├── RichTextEditor.tsx  # Rich text input
+│   │   ├── ImageUploader.tsx   # Image upload with drag & drop
+│   │   ├── TagSelector.tsx     # Tag/category picker
+│   │   ├── HeadingWithTooltip.tsx  # Heading with info tooltip
+│   │   ├── AutocompleteTextField.tsx  # Autocomplete input
+│   │   └── ResourceDashboardLayout.tsx  # Dashboard layout
+│   ├── EventForm/              # Modular event form components (13 components)
+│   │   ├── EventFormatComponent.tsx     # Cloud + Series selection
+│   │   ├── EventInfoComponent.tsx       # Title, dates, description
+│   │   ├── EventTagsComponent.tsx       # Tags and categories
+│   │   ├── VenueComponent.tsx           # Venue with Google Places
+│   │   ├── SpeakersComponent.tsx        # Speaker management
+│   │   ├── SponsorsComponent.tsx        # Sponsor management
+│   │   ├── AgendaComponent.tsx          # Agenda items
+│   │   ├── EventImagesComponent.tsx     # Image management
+│   │   ├── ProfilesComponent.tsx        # Speaker/host profiles
+│   │   ├── RegistrationConfigComponent.tsx  # Registration settings
+│   │   ├── RegistrationFieldsComponent.tsx  # RSVP form fields
+│   │   ├── PageMetadataComponent.tsx    # SEO metadata
+│   │   └── index.ts                     # Barrel exports
+│   ├── App.tsx                 # Main app component & routing
+│   ├── TopNav.tsx              # Top navigation bar
+│   ├── Home.tsx                # Home page
+│   ├── EventForm.tsx           # Event form wizard (main container)
+│   ├── EventsDashboard.tsx     # Events list dashboard
+│   ├── SeriesDashboard.tsx     # Series list dashboard
+│   ├── SeriesForm.tsx          # Series create/edit
+│   ├── OrgTeamManagement.tsx   # Org & team CRUD
+│   ├── RegistrationDashboard.tsx  # Registration management
+│   ├── UserProfile.tsx         # IMS user profile
+│   ├── UserPanel.tsx           # User panel dropdown
+│   ├── DevTokenButton.tsx      # Dev token status button
+│   └── DevTokenDialog.tsx      # Dev token input dialog
 ├── services/
-│   └── api.ts              # Centralized API service
+│   ├── api.ts                  # Centralized API service (ESP/ESL)
+│   ├── tokenStorage.ts         # Dev token storage
+│   ├── requestHelpers.ts       # HTTP request utilities
+│   ├── payloadBuilders.ts      # API payload construction
+│   ├── dataEnrichment.ts       # Data transformation utilities
+│   └── eventEnrichment.ts      # Event data enrichment
 ├── types/
-│   ├── domain.ts           # Domain type definitions
-│   ├── types.ts            # IMS & runtime types
-│   └── global.d.ts         # Global type declarations
+│   ├── domain.ts               # Domain type definitions
+│   └── google-places.d.ts      # Google Places API types
 ├── contexts/
-│   └── ApiContext.tsx      # API context provider
+│   ├── ApiContext.tsx          # API context provider
+│   └── EventFormContext.tsx    # Event form state context
 ├── hooks/
-│   ├── useLoadData.ts      # Data loading hook
-│   └── index.ts
-├── utils.ts                # Utility functions
-├── index.tsx               # Application entry point
-├── index.css               # Global styles
-└── config.json             # Runtime action URLs (generated)
+│   ├── useLoadData.ts          # Data loading hook
+│   ├── useDevToken.ts          # Dev token management hook
+│   ├── useEventFormComponent.ts  # Event form component hook
+│   ├── useEventFormSave.ts     # Event form save logic
+│   └── useEventTypeFeatures.ts # Event type feature flags
+├── config/
+│   ├── constants.ts            # API hosts, supported clouds
+│   ├── env.ts                  # Environment configuration
+│   └── eventTypeConfig.ts      # Event type configurations
+├── mocks/
+│   ├── list-series.ts          # Mock series data
+│   ├── list-events.ts          # Mock events data
+│   └── index.ts                # Mock exports
+├── utils/
+│   ├── formPersistence.ts      # Form auto-save utilities
+│   ├── loadGooglePlaces.ts     # Google Places API loader
+│   ├── socialPlatformDetector.ts  # Social link detection
+│   └── dataFilters.ts          # Data filtering utilities
+├── styles/
+│   └── designSystem.ts         # Design system tokens
+├── index.tsx                   # Application entry point
+├── index.css                   # Global styles
+└── types.ts                    # IMS & runtime types
 ```
 
 ## Core Components
@@ -749,5 +794,7 @@ npm run type-check    # Check for type errors
 - [Adobe React Spectrum Docs](https://react-spectrum.adobe.com/)
 - [React Router Docs](https://reactrouter.com/)
 - [TypeScript Handbook](https://www.typescriptlang.org/docs/)
-- [API Integration Guide](./API_INTEGRATION.md)
+- [Event Form Guide](./EVENT_FORM.md)
+- [Modular Component Pattern](./MODULAR_COMPONENT_PATTERN.md)
+- [Dev Token Guide](./DEV_TOKEN_GUIDE.md)
 

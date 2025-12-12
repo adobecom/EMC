@@ -17,62 +17,108 @@ import {
 import { HeadingWithTooltip, RichTextEditor } from '../shared'
 import Info from '@spectrum-icons/workflow/Info'
 import { RegistrationFieldsComponent } from './RegistrationFieldsComponent'
+import { useEventFormComponent } from '../../hooks/useEventFormComponent'
 
-interface RegistrationConfigComponentProps {
-  cloudType: 'CreativeCloud' | 'ExperienceCloud'
-  venueName?: string
-  capacity?: number
-  allowWaitlist?: boolean
-  allowGuestRegistration?: boolean
-  hostEmail?: string
-  rsvpDescription?: string
-  registrationType?: 'ESP' | 'Marketo'
-  marketoFormUrl?: string
-  visibleRsvpFields?: string[]
-  requiredRsvpFields?: string[]
-  onCapacityChange: (value: number) => void
-  onAllowWaitlistChange: (value: boolean) => void
-  onAllowGuestRegistrationChange: (value: boolean) => void
-  onHostEmailChange: (value: string) => void
-  onRsvpDescriptionChange: (value: string) => void
-  onRegistrationTypeChange: (type: 'ESP' | 'Marketo') => void
-  onMarketoFormUrlChange: (url: string) => void
-  onVisibleFieldsChange: (fields: string[]) => void
-  onRequiredFieldsChange: (fields: string[]) => void
-}
-
-export const RegistrationConfigComponent: React.FC<RegistrationConfigComponentProps> = ({
-  cloudType,
-  venueName,
-  capacity = 0,
-  allowWaitlist = false,
-  allowGuestRegistration = false,
-  hostEmail = '',
-  rsvpDescription = '',
-  registrationType = 'ESP',
-  marketoFormUrl = '',
-  visibleRsvpFields = [],
-  requiredRsvpFields = [],
-  onCapacityChange,
-  onAllowWaitlistChange,
-  onAllowGuestRegistrationChange,
-  onHostEmailChange,
-  onRsvpDescriptionChange,
-  onRegistrationTypeChange,
-  onMarketoFormUrlChange,
-  onVisibleFieldsChange,
-  onRequiredFieldsChange
-}) => {
+/**
+ * RegistrationConfigComponent - Manages event registration settings
+ * 
+ * Uses EventFormContext for state management.
+ * Handles capacity, waitlist, guest registration, host email, RSVP description,
+ * registration type, and RSVP form fields configuration.
+ */
+export const RegistrationConfigComponent: React.FC = () => {
+  // ============================================================================
+  // CONTEXT INTEGRATION
+  // ============================================================================
+  
+  const {
+    formData,
+    updateFormData,
+  } = useEventFormComponent({
+    componentId: 'registration-config',
+  })
+  
+  // Destructure form data
+  const cloudType = formData.cloudType || 'CreativeCloud'
+  const venueName = formData.venue?.venueName
+  const capacity = formData.capacity ?? 0
+  const allowWaitlist = formData.allowWaitlist ?? false
+  const allowGuestRegistration = formData.allowGuestRegistration ?? false
+  const hostEmail = formData.hostEmail || ''
+  const rsvpDescription = formData.rsvpDescription || ''
+  const registrationType = formData.registrationType || 'ESP'
+  const marketoFormUrl = formData.marketoFormUrl || ''
+  const visibleRsvpFields = formData.visibleRsvpFields || []
+  const requiredRsvpFields = formData.requiredRsvpFields || []
+  
+  // ============================================================================
+  // LOCAL STATE
+  // ============================================================================
+  
   const [contactHostEnabled, setContactHostEnabled] = useState(!!hostEmail)
 
-  // Sync contactHostEnabled when hostEmail prop changes from outside
   useEffect(() => {
     setContactHostEnabled(!!hostEmail)
   }, [hostEmail])
 
+  // ============================================================================
+  // COMPUTED VALUES
+  // ============================================================================
+  
   const isCreativeCloud = cloudType === 'CreativeCloud'
   const isExperienceCloud = cloudType === 'ExperienceCloud'
   const isWebinar = venueName === 'Webinar'
+
+  // ============================================================================
+  // EVENT HANDLERS
+  // ============================================================================
+  
+  const handleCapacityChange = (value: number) => {
+    updateFormData({ capacity: value })
+  }
+  
+  const handleAllowWaitlistChange = (value: boolean) => {
+    updateFormData({ allowWaitlist: value })
+  }
+  
+  const handleAllowGuestRegistrationChange = (value: boolean) => {
+    updateFormData({ allowGuestRegistration: value })
+  }
+  
+  const handleHostEmailChange = (value: string) => {
+    updateFormData({ hostEmail: value })
+  }
+  
+  const handleRsvpDescriptionChange = (value: string) => {
+    updateFormData({ rsvpDescription: value })
+  }
+  
+  const handleRegistrationTypeChange = (type: 'ESP' | 'Marketo') => {
+    updateFormData({ registrationType: type })
+  }
+  
+  const handleMarketoFormUrlChange = (url: string) => {
+    updateFormData({ marketoFormUrl: url })
+  }
+  
+  const handleVisibleFieldsChange = (fields: string[]) => {
+    updateFormData({ visibleRsvpFields: fields })
+  }
+  
+  const handleRequiredFieldsChange = (fields: string[]) => {
+    updateFormData({ requiredRsvpFields: fields })
+  }
+  
+  const handleContactHostToggle = (value: boolean) => {
+    setContactHostEnabled(value)
+    if (!value) {
+      updateFormData({ hostEmail: '' })
+    }
+  }
+
+  // ============================================================================
+  // RENDER
+  // ============================================================================
 
   return (
     <Flex direction="column" gap="size-300">
@@ -109,7 +155,7 @@ export const RegistrationConfigComponent: React.FC<RegistrationConfigComponentPr
           </Flex>
           <NumberField
             value={capacity}
-            onChange={onCapacityChange}
+            onChange={handleCapacityChange}
             minValue={0}
             hideStepper
             width="size-2000"
@@ -122,7 +168,7 @@ export const RegistrationConfigComponent: React.FC<RegistrationConfigComponentPr
           <Flex direction="row" gap="size-100" alignItems="center">
             <Switch
               isSelected={!allowWaitlist}
-              onChange={(value) => onAllowWaitlistChange(!value)}
+              onChange={(value) => handleAllowWaitlistChange(!value)}
             >
               When limit is reached, disable registration button
             </Switch>
@@ -149,7 +195,7 @@ export const RegistrationConfigComponent: React.FC<RegistrationConfigComponentPr
             <Flex direction="row" alignItems="center">
               <Switch
                 isSelected={allowGuestRegistration}
-                onChange={onAllowGuestRegistrationChange}
+                onChange={handleAllowGuestRegistrationChange}
               >
                 Allow guest registration
               </Switch>
@@ -172,18 +218,13 @@ export const RegistrationConfigComponent: React.FC<RegistrationConfigComponentPr
             </Flex>
           )}
 
-          {/* Contact Host Toggle and Email Field - Hide for ExperienceCloud Webinars */}
+          {/* Contact Host Toggle and Email Field */}
           {!(isExperienceCloud && isWebinar) && (
             <Flex direction="row" gap="size-200" alignItems="center" width="100%">
               <Flex direction="row" alignItems="center">
                 <Switch
                   isSelected={contactHostEnabled}
-                  onChange={(value) => {
-                    setContactHostEnabled(value)
-                    if (!value) {
-                      onHostEmailChange('')
-                    }
-                  }}
+                  onChange={handleContactHostToggle}
                 >
                   Contact host
                 </Switch>
@@ -205,13 +246,12 @@ export const RegistrationConfigComponent: React.FC<RegistrationConfigComponentPr
                 </TooltipTrigger>
               </Flex>
 
-              {/* Host Email Field - Show when Contact Host is enabled */}
               {contactHostEnabled && (
                 <TextField
                   type="email"
                   placeholder="Add host email"
                   value={hostEmail}
-                  onChange={onHostEmailChange}
+                  onChange={handleHostEmailChange}
                 />
               )}
             </Flex>
@@ -224,7 +264,7 @@ export const RegistrationConfigComponent: React.FC<RegistrationConfigComponentPr
         <RichTextEditor
           label="RSVP Description (Optional)"
           value={rsvpDescription}
-          onChange={onRsvpDescriptionChange}
+          onChange={handleRsvpDescriptionChange}
           height="200px"
           description="Add additional information about the RSVP process"
         />
@@ -239,13 +279,12 @@ export const RegistrationConfigComponent: React.FC<RegistrationConfigComponentPr
           requiredFields={requiredRsvpFields}
           registrationType={registrationType}
           marketoFormUrl={marketoFormUrl}
-          onVisibleFieldsChange={onVisibleFieldsChange}
-          onRequiredFieldsChange={onRequiredFieldsChange}
-          onRegistrationTypeChange={onRegistrationTypeChange}
-          onMarketoFormUrlChange={onMarketoFormUrlChange}
+          onVisibleFieldsChange={handleVisibleFieldsChange}
+          onRequiredFieldsChange={handleRequiredFieldsChange}
+          onRegistrationTypeChange={handleRegistrationTypeChange}
+          onMarketoFormUrlChange={handleMarketoFormUrlChange}
         />
       </View>
     </Flex>
   )
 }
-

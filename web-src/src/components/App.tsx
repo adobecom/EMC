@@ -6,17 +6,17 @@ import React from 'react'
 import { Provider, defaultTheme, Grid, View } from '@adobe/react-spectrum'
 import ErrorBoundary from 'react-error-boundary'
 import { HashRouter as Router, Routes, Route } from 'react-router-dom'
-import TopNav from './TopNav'
-import ActionsForm from './ActionsForm'
-import { Home } from './Home'
-import { About } from './About'
-import { UserProfile } from './UserProfile'
-import { OrgTeamManagement } from './OrgTeamManagement'
+import { TopNav } from './layout'
+import { Home, About } from './pages'
+import { UserProfile } from './user'
 import { SeriesDashboard } from './SeriesDashboard'
 import { EventsDashboard } from './EventsDashboard'
 import { SeriesForm } from './SeriesForm'
 import { EventForm } from './EventForm'
-import { RegistrationDashboard } from './RegistrationDashboard'
+import { AttendeeDashboard } from './AttendeeDashboard'
+import { CloudManagementConsole } from './CloudManagementConsole'
+import { ToastContainer } from './shared'
+import { ToastProvider } from '../contexts'
 import { Runtime, IMS } from '../types'
 
 interface AppProps {
@@ -59,36 +59,38 @@ const App: React.FC<AppProps> = (props) => {
     <ErrorBoundary onError={onError} FallbackComponent={fallbackComponent}>
       <Router>
         <Provider theme={defaultTheme} colorScheme={'light'} scale={'medium'}>
-          <Grid
-            areas={['header', 'content']}
-            columns={['1fr']}
-            rows={['auto', '1fr']}
-            gap='size-0'
-          >
-            <View gridArea='header' UNSAFE_style={{ position: 'sticky', top: 0, zIndex: 1000 }}>
-              <TopNav ims={props.ims} />
-            </View>
-            <View 
-              gridArea='content' 
-              UNSAFE_className='content-area'
+          <ToastProvider>
+            <Grid
+              areas={['header', 'content']}
+              columns={['1fr']}
+              rows={['auto', '1fr']}
+              gap='size-0'
             >
-              <Routes>
-                <Route path='/' element={<Home />} />
-                <Route path='/profile' element={<UserProfile ims={props.ims} />} />
-                <Route path='/organizations' element={<OrgTeamManagement ims={props.ims} />} />
-                <Route path='/series' element={<SeriesDashboard ims={props.ims} />} />
-                <Route path='/series/new' element={<SeriesForm ims={props.ims} />} />
-                <Route path='/series/edit/:id' element={<SeriesForm ims={props.ims} />} />
-                <Route path='/events' element={<EventsDashboard ims={props.ims} />} />
-                <Route path='/events/new/:eventType' element={<EventForm ims={props.ims} />} />
-                <Route path='/events/edit/:id' element={<EventForm ims={props.ims} />} />
-                <Route path='/registrations' element={<RegistrationDashboard ims={props.ims} />} />
-                <Route path='/registrations/:eventId' element={<RegistrationDashboard ims={props.ims} />} />
-                <Route path='/actions' element={<ActionsForm runtime={props.runtime} ims={props.ims} />}/>
-                <Route path='/about' element={<About />}/>
-              </Routes>
-            </View>
-          </Grid>
+              <View gridArea='header' UNSAFE_style={{ position: 'sticky', top: 0, zIndex: 1000 }}>
+                <TopNav ims={props.ims} />
+              </View>
+              <View 
+                gridArea='content' 
+                UNSAFE_className='content-area'
+              >
+                <Routes>
+                  <Route path='/' element={<Home />} />
+                  <Route path='/profile' element={<UserProfile ims={props.ims} />} />
+                  <Route path='/clouds' element={<CloudManagementConsole ims={props.ims} />} />
+                  <Route path='/series' element={<SeriesDashboard ims={props.ims} />} />
+                  <Route path='/series/new' element={<SeriesForm ims={props.ims} />} />
+                  <Route path='/series/edit/:id' element={<SeriesForm ims={props.ims} />} />
+                  <Route path='/events' element={<EventsDashboard ims={props.ims} />} />
+                  <Route path='/events/new/:eventType' element={<EventForm ims={props.ims} />} />
+                  <Route path='/events/edit/:id' element={<EventForm ims={props.ims} />} />
+                  <Route path='/attendees' element={<AttendeeDashboard ims={props.ims} />} />
+                  <Route path='/attendees/:eventId' element={<AttendeeDashboard ims={props.ims} />} />
+                  <Route path='/about' element={<About />}/>
+                </Routes>
+              </View>
+            </Grid>
+            <ToastContainer />
+          </ToastProvider>
         </Provider>
       </Router>
     </ErrorBoundary>
@@ -96,4 +98,3 @@ const App: React.FC<AppProps> = (props) => {
 }
 
 export default App
-

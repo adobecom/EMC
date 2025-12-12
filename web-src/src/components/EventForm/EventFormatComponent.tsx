@@ -13,6 +13,8 @@ import {
 import { apiService } from '../../services/api'
 import { LoadingSpinner, HeadingWithTooltip } from '../shared'
 import { SeriesApiResponse } from '../../types/domain'
+import { useEventFormComponent } from '../../hooks/useEventFormComponent'
+import { useEventFormContext } from '../../contexts/EventFormContext'
 
 interface CloudOption {
   key: string
@@ -25,23 +27,52 @@ interface SeriesOption {
   description?: string
 }
 
-interface EventFormatComponentProps {
-  cloudType: string
-  seriesId: string
-  onChange: (data: { cloudType?: string; seriesId?: string }) => void
-}
-
-export const EventFormatComponent: React.FC<EventFormatComponentProps> = ({
-  cloudType,
-  seriesId,
-  onChange
-}) => {
+/**
+ * EventFormatComponent - Manages cloud type and series selection
+ * 
+ * Uses EventFormContext for state management.
+ * No API calls needed in onAfterSave - just data collection.
+ * 
+ * Note: Cloud type and series are locked once the event is created (eventId exists).
+ * Marketers cannot change these fields after event creation.
+ */
+export const EventFormatComponent: React.FC = () => {
+  // ============================================================================
+  // CONTEXT INTEGRATION
+  // ============================================================================
+  
+  const {
+    formData,
+    updateFormData,
+    eventId,
+  } = useEventFormComponent({
+    componentId: 'event-format',
+  })
+  
+  // Get setSeriesId from context to properly update both state.seriesId and formData.seriesId
+  const { setSeriesId, seriesId: contextSeriesId } = useEventFormContext()
+  
+  const cloudType = formData.cloudType || 'CreativeCloud'
+  // Use context seriesId as source of truth (falls back to formData for initial load)
+  const seriesId = contextSeriesId || formData.seriesId || ''
+  
+  // Once the event is created (eventId exists), cloud and series are locked
+  const isLocked = !!eventId
+  
+  // ============================================================================
+  // LOCAL STATE
+  // ============================================================================
+  
   const [clouds, setClouds] = useState<CloudOption[]>([])
-  const [allSeries, setAllSeries] = useState<SeriesApiResponse[]>([]) // Store all series
-  const [series, setSeries] = useState<SeriesOption[]>([]) // Filtered series for display
+  const [allSeries, setAllSeries] = useState<SeriesApiResponse[]>([])
+  const [series, setSeries] = useState<SeriesOption[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
+  // ============================================================================
+  // DATA LOADING
+  // ============================================================================
+  
   useEffect(() => {
     let isMounted = true
 
@@ -50,7 +81,6 @@ export const EventFormatComponent: React.FC<EventFormatComponentProps> = ({
       setError(null)
 
       try {
-        // Fetch clouds and series in parallel
         const [cloudsResponse, seriesResponse] = await Promise.all([
           fetchClouds(),
           apiService.getSeriesList()
@@ -58,16 +88,13 @@ export const EventFormatComponent: React.FC<EventFormatComponentProps> = ({
 
         if (!isMounted) return
 
-        // Set clouds
         if (cloudsResponse) {
           setClouds(cloudsResponse)
-          // Auto-select first cloud if none selected
           if (!cloudType && cloudsResponse.length > 0) {
-            onChange({ cloudType: cloudsResponse[0].key })
+            updateFormData({ cloudType: cloudsResponse[0].key as 'CreativeCloud' | 'ExperienceCloud' })
           }
         }
 
-        // Set series
         if (seriesResponse && Array.isArray(seriesResponse)) {
           const publishedSeries = seriesResponse.filter(
             (s: SeriesApiResponse) => s.seriesStatus === 'published'
@@ -75,7 +102,6 @@ export const EventFormatComponent: React.FC<EventFormatComponentProps> = ({
           if (isMounted) {
             setAllSeries(publishedSeries)
             
-            // Filter by selected cloud type if available
             if (cloudType) {
               filterSeriesByCloud(cloudType, publishedSeries)
             }
@@ -101,15 +127,17 @@ export const EventFormatComponent: React.FC<EventFormatComponentProps> = ({
     return () => {
       isMounted = false
     }
-  }, []) // Only run once on mount
+  }, [])
 
-  // Re-filter series when cloudType changes
   useEffect(() => {
     if (allSeries.length > 0 && cloudType) {
       filterSeriesByCloud(cloudType)
     }
   }, [cloudType, allSeries])
 
+  // ============================================================================
+  // HELPERS
+  // ============================================================================
 
   const filterSeriesByCloud = (selectedCloudType: string, seriesList?: SeriesApiResponse[]) => {
     const seriesToFilter = seriesList || allSeries
@@ -126,40 +154,47 @@ export const EventFormatComponent: React.FC<EventFormatComponentProps> = ({
     
     setSeries(seriesOptions)
     
-    // Auto-select first series if none selected or if current selection is not in filtered list
     if (seriesOptions.length > 0) {
       const currentSeriesExists = seriesOptions.some(s => s.id === seriesId)
       if (!seriesId || !currentSeriesExists) {
-        onChange({ seriesId: seriesOptions[0].id })
+        setSeriesId(seriesOptions[0].id)
+      } else if (seriesId && contextSeriesId !== seriesId) {
+        // Sync state.seriesId with formData.seriesId (happens when loading existing event)
+        setSeriesId(seriesId)
       }
     } else {
-      // No series available for this cloud type, clear selection
       if (seriesId) {
-        onChange({ seriesId: '' })
+        setSeriesId('')
       }
     }
   }
 
   const fetchClouds = async (): Promise<CloudOption[]> => {
-    // TODO: Replace with actual API call when endpoint is available
-    // For now, return static list based on v1 reference
     return [
       { key: 'CreativeCloud', label: 'Creative Cloud' },
       { key: 'ExperienceCloud', label: 'Experience Cloud' }
     ]
   }
 
+  // ============================================================================
+  // EVENT HANDLERS
+  // ============================================================================
+
   const handleCloudChange = (key: React.Key | null) => {
     if (key) {
-      onChange({ cloudType: String(key) })
+      updateFormData({ cloudType: String(key) as 'CreativeCloud' | 'ExperienceCloud' })
     }
   }
 
   const handleSeriesChange = (key: React.Key | null) => {
     if (key) {
-      onChange({ seriesId: String(key) })
+      setSeriesId(String(key))
     }
   }
+
+  // ============================================================================
+  // RENDER
+  // ============================================================================
 
   if (isLoading) {
     return <LoadingSpinner message="Loading event format options..." />
@@ -186,7 +221,10 @@ export const EventFormatComponent: React.FC<EventFormatComponentProps> = ({
         >
           Event Format
         </HeadingWithTooltip>
-        <Text>Select the cloud type and event series for this event.</Text>
+        <Text>
+          Select the cloud type and event series for this event.
+          {isLocked && ' These fields are locked after the event is created.'}
+        </Text>
       </View>
 
       <Flex direction="row" gap="size-300" wrap>
@@ -195,6 +233,7 @@ export const EventFormatComponent: React.FC<EventFormatComponentProps> = ({
           isRequired
           selectedKey={cloudType}
           onSelectionChange={handleCloudChange}
+          isDisabled={isLocked}
         >
           {clouds.map((cloud) => (
             <Item key={cloud.key}>{cloud.label}</Item>
@@ -206,6 +245,7 @@ export const EventFormatComponent: React.FC<EventFormatComponentProps> = ({
           isRequired
           selectedKey={seriesId}
           onSelectionChange={handleSeriesChange}
+          isDisabled={isLocked}
           description={
             seriesId && series.find(s => s.id === seriesId)?.description || undefined
           }
@@ -220,7 +260,7 @@ export const EventFormatComponent: React.FC<EventFormatComponentProps> = ({
         </Picker>
       </Flex>
 
-      {series.length === 0 && (
+      {series.length === 0 && !isLocked && (
         <View
           padding="size-150"
           backgroundColor="notice"
@@ -234,4 +274,3 @@ export const EventFormatComponent: React.FC<EventFormatComponentProps> = ({
     </Flex>
   )
 }
-
