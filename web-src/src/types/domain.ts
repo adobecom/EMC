@@ -459,6 +459,12 @@ export interface SeriesSponsor {
   info?: string // Localizable description/info about sponsor
   link?: string // External URL (v1 uses 'link', some places use 'externalUrl')
   externalUrl?: string // Alias for link
+  // API returns image data under 'image' property
+  image?: {
+    imageId: string
+    imageUrl: string
+    altText?: string
+  }
   logo?: {
     imageId: string
     imageUrl: string

@@ -1134,6 +1134,13 @@ class ApiService {
     )
   }
 
+  async getEventSponsors(eventId: string): Promise<any | ErrorResponse> {
+    validateString(eventId, 'event ID')
+    return this.callExternalApi('esp', `/v1/events/${eventId}/sponsors`, 'GET', undefined,
+      { operationName: 'getEventSponsors', shouldReturnFullResponse: true }
+    )
+  }
+
   async getEventSponsor(eventId: string, sponsorId: string): Promise<any | ErrorResponse> {
     validateString(eventId, 'event ID')
     validateString(sponsorId, 'sponsor ID')

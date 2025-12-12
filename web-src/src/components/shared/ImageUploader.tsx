@@ -30,6 +30,19 @@ interface ImageUploaderProps {
   isDisabled?: boolean
   onChange: (imageUrl: string, imageId: string) => void
   onRemove?: () => void
+  /** Custom dropzone text - line 1 (e.g., "Add profile image") */
+  dropzoneTitle?: string
+  /** Custom dropzone text - line 2 (e.g., "Dimensions 584 x 300 px") */
+  dropzoneDimensions?: string
+  /** 
+   * If true, doesn't upload immediately. Instead stores file and calls onFileSelected.
+   * Use uploadPendingFile() to upload later.
+   */
+  deferUpload?: boolean
+  /** Called when a file is selected in deferred mode */
+  onFileSelected?: (file: File) => void
+  /** The pending file to show preview for (in deferred mode) */
+  pendingFile?: File
 }
 
 export const ImageUploader: React.FC<ImageUploaderProps> = ({
@@ -45,13 +58,30 @@ export const ImageUploader: React.FC<ImageUploaderProps> = ({
   width,
   isDisabled = false,
   onChange,
-  onRemove
+  onRemove,
+  dropzoneTitle,
+  dropzoneDimensions,
+  deferUpload = false,
+  onFileSelected,
+  pendingFile
 }) => {
   const [isDragging, setIsDragging] = useState(false)
   const [isUploading, setIsUploading] = useState(false)
   const [uploadProgress, setUploadProgress] = useState(0)
   const [error, setError] = useState<string | null>(null)
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
+
+  // Generate preview URL for pending file
+  React.useEffect(() => {
+    if (pendingFile) {
+      const url = URL.createObjectURL(pendingFile)
+      setPreviewUrl(url)
+      return () => URL.revokeObjectURL(url)
+    } else {
+      setPreviewUrl(null)
+    }
+  }, [pendingFile])
 
   const handleDragOver = (e: React.DragEvent) => {
     e.preventDefault()
@@ -95,6 +125,20 @@ export const ImageUploader: React.FC<ImageUploaderProps> = ({
     }
 
     setError(null)
+
+    // In deferred mode, just store the file and notify parent
+    if (deferUpload) {
+      if (onFileSelected) {
+        onFileSelected(file)
+      }
+      // Reset file input
+      if (fileInputRef.current) {
+        fileInputRef.current.value = ''
+      }
+      return
+    }
+
+    // Immediate upload mode
     setIsUploading(true)
     setUploadProgress(0)
 
@@ -169,8 +213,8 @@ export const ImageUploader: React.FC<ImageUploaderProps> = ({
         </Text>
       )}
 
-      {imageUrl ? (
-        // Show uploaded image
+      {imageUrl || previewUrl ? (
+        // Show uploaded image or pending file preview
         <View
           borderWidth="thin"
           borderColor="default"
@@ -178,7 +222,7 @@ export const ImageUploader: React.FC<ImageUploaderProps> = ({
           UNSAFE_style={{ position: 'relative', overflow: 'hidden' }}
         >
           <img 
-            src={imageUrl} 
+            src={imageUrl || previewUrl || ''} 
             alt={altText || label}
             style={{ 
               width: '100%', 
@@ -186,6 +230,23 @@ export const ImageUploader: React.FC<ImageUploaderProps> = ({
               display: 'block'
             }}
           />
+          {previewUrl && !imageUrl && (
+            <View
+              UNSAFE_style={{
+                position: 'absolute',
+                bottom: 0,
+                left: 0,
+                right: 0,
+                backgroundColor: 'rgba(255, 193, 7, 0.9)',
+                padding: '4px 8px',
+                textAlign: 'center'
+              }}
+            >
+              <Text UNSAFE_style={{ fontSize: '12px', fontWeight: 'bold' }}>
+                Pending upload - save to upload
+              </Text>
+            </View>
+          )}
           {!isDisabled && (
             <ActionButton 
               onPress={handleRemove} 
@@ -237,16 +298,16 @@ export const ImageUploader: React.FC<ImageUploaderProps> = ({
             <Flex direction="column" alignItems="center" gap="size-150">
               <ImageAdd size="XXL" UNSAFE_style={{ color: 'var(--spectrum-global-color-gray-600)' }} />
               <Text UNSAFE_style={{ fontSize: '14px', color: 'var(--spectrum-global-color-gray-700)' }}>
-                Drop image here or click to browse
+                {dropzoneTitle || 'Drop image here or click to browse'}
               </Text>
               <Flex direction="column" alignItems="center" gap="size-50">
-                {recommendedDimensions && (
+                {(dropzoneDimensions || recommendedDimensions) && (
                   <Text UNSAFE_style={{ fontSize: '12px', color: 'var(--spectrum-global-color-gray-500)' }}>
-                    {recommendedDimensions}
+                    {dropzoneDimensions || recommendedDimensions}
                   </Text>
                 )}
                 <Text UNSAFE_style={{ fontSize: '12px', color: 'var(--spectrum-global-color-gray-500)' }}>
-                  Max {maxSizeMB}MB
+                  Does not exceed <strong>{maxSizeMB}</strong> MB
                 </Text>
               </Flex>
             </Flex>

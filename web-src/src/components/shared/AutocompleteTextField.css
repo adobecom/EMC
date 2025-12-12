@@ -1,4 +1,4 @@
-/* AutocompleteTextField - styled to match Spectrum quiet text field */
+/* AutocompleteTextField - styled to match Spectrum standard text field */
 
 .autocomplete-container {
   position: relative;
@@ -13,31 +13,35 @@
   margin-bottom: 4px;
 }
 
+.autocomplete-required {
+  color: var(--spectrum-global-color-red-600);
+}
+
 .autocomplete-input {
   width: 100%;
-  padding: 7px 0;
+  padding: 7px 10px;
   font-size: 14px;
   font-family: inherit;
   color: var(--spectrum-global-color-gray-800);
-  background: transparent;
-  border: none;
-  border-bottom: 1px solid var(--spectrum-global-color-gray-400);
+  background: var(--spectrum-global-color-gray-50);
+  border: 1px solid var(--spectrum-global-color-gray-400);
+  border-radius: 4px;
   outline: none;
-  transition: border-color 0.2s ease;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
   box-sizing: border-box;
 }
 
 .autocomplete-input:hover {
-  border-bottom-color: var(--spectrum-global-color-gray-500);
+  border-color: var(--spectrum-global-color-gray-500);
 }
 
 .autocomplete-input:focus {
-  border-bottom-color: var(--spectrum-global-color-blue-500);
-  border-bottom-width: 2px;
-  padding-bottom: 6px;
+  border-color: var(--spectrum-global-color-blue-500);
+  box-shadow: 0 0 0 1px var(--spectrum-global-color-blue-500);
 }
 
 .autocomplete-input:disabled {
+  background: var(--spectrum-global-color-gray-200);
   color: var(--spectrum-global-color-gray-500);
   cursor: not-allowed;
 }

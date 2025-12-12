@@ -27,7 +27,8 @@ import {
   SponsorsComponent, 
   EventImagesComponent, 
   RegistrationConfigComponent, 
-  PageMetadataComponent 
+  PageMetadataComponent,
+  PromotionalContentComponent 
 } from './index'
 import { fromApiSocialLink } from '../../utils/socialPlatformDetector'
 import { useEventFeatureFlags } from '../../hooks/useEventTypeFeatures'
@@ -150,7 +151,9 @@ function mapApiResponseToFormData(event: EventApiResponse, locale: string): Part
     allowGuestRegistration: event.allowGuestRegistration || false,
     hostEmail: event.hostEmail || '',
     rsvpDescription: localized.rsvpDescription || '',
-    registrationType: event.registration?.type || 'ESP',
+    registrationType: (event.registration?.type === 'ESP' || event.registration?.type === 'Marketo') 
+      ? event.registration.type 
+      : 'ESP',
     marketoFormUrl: event.registration?.formData || '',
     visibleRsvpFields: event.rsvpFormFields?.visible || [],
     requiredRsvpFields: event.rsvpFormFields?.required || [],
@@ -160,7 +163,18 @@ function mapApiResponseToFormData(event: EventApiResponse, locale: string): Part
     secondaryLinkTitle: cta?.label || '',
     agendaItems: agendaItems,
     showAgendaPostEvent: event.showAgendaPostEvent || false,
-    sponsors: mapSponsorsToFormData(event.sponsors || [], locale)
+    sponsors: mapSponsorsToFormData(event.sponsors || [], locale),
+    // Map promotional items from localized data
+    // API can return either string[] or PromotionalItem[] depending on context
+    promotionalItems: (localized.promotionalItems || [])
+      .filter((item: any) => {
+        if (typeof item === 'string') return item.trim() !== ''
+        return item && item.title
+      })
+      .map((item: any) => {
+        if (typeof item === 'string') return { title: item }
+        return item
+      })
   }
 }
 
@@ -434,6 +448,10 @@ const EventFormInner: React.FC<EventFormInnerProps> = ({ ims }) => {
   // ============================================================================
   const step3Component = (
     <>
+      <FormCard>
+        <PromotionalContentComponent />
+      </FormCard>
+
       <FormCard>
         <SponsorsComponent />
       </FormCard>

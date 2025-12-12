@@ -94,7 +94,7 @@ export function useEventFormSave() {
     
     // Process each field according to the data filter
     // Note: Some fields are handled specially below (tags, eventType, dates, etc.)
-    const speciallyHandledFields = new Set(['tags', 'eventType', 'startDateTime', 'endDateTime', 'agendaItems'])
+    const speciallyHandledFields = new Set(['tags', 'eventType', 'startDateTime', 'endDateTime', 'agendaItems', 'promotionalItems'])
     
     Object.entries(mergedData).forEach(([key, value]) => {
       const descriptor = EVENT_DATA_FILTER[key]
@@ -213,6 +213,22 @@ export function useEventFormSave() {
     // RSVP description
     if (mergedData.rsvpDescription) {
       setEventAttribute(payload, 'rsvpDescription', mergedData.rsvpDescription, locale)
+    }
+    
+    // Promotional items transformation
+    // Form stores as PromotionalItem[] (objects with title), API expects string[] (names only)
+    // Per v1 reference: promotionalItems is stored as array of strings in the API
+    if (mergedData.promotionalItems && mergedData.promotionalItems.length > 0) {
+      const promotionalItemsForApi = mergedData.promotionalItems
+        .map((item: any) => {
+          if (typeof item === 'string') return item
+          return item.title || item.name || ''
+        })
+        .filter((name: string) => name.trim() !== '')
+      
+      if (promotionalItemsForApi.length > 0) {
+        setEventAttribute(payload, 'promotionalItems', promotionalItemsForApi, locale)
+      }
     }
     
     // Capacity -> attendeeLimit

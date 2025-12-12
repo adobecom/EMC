@@ -14,6 +14,7 @@ import { apiService } from '../../services/api'
 import { LoadingSpinner, HeadingWithTooltip } from '../shared'
 import { SeriesApiResponse } from '../../types/domain'
 import { useEventFormComponent } from '../../hooks/useEventFormComponent'
+import { useEventFormContext } from '../../contexts/EventFormContext'
 
 interface CloudOption {
   key: string
@@ -44,8 +45,12 @@ export const EventFormatComponent: React.FC = () => {
     componentId: 'event-format',
   })
   
+  // Get setSeriesId from context to properly update both state.seriesId and formData.seriesId
+  const { setSeriesId, seriesId: contextSeriesId } = useEventFormContext()
+  
   const cloudType = formData.cloudType || 'CreativeCloud'
-  const seriesId = formData.seriesId || ''
+  // Use context seriesId as source of truth (falls back to formData for initial load)
+  const seriesId = contextSeriesId || formData.seriesId || ''
   
   // ============================================================================
   // LOCAL STATE
@@ -145,11 +150,14 @@ export const EventFormatComponent: React.FC = () => {
     if (seriesOptions.length > 0) {
       const currentSeriesExists = seriesOptions.some(s => s.id === seriesId)
       if (!seriesId || !currentSeriesExists) {
-        updateFormData({ seriesId: seriesOptions[0].id })
+        setSeriesId(seriesOptions[0].id)
+      } else if (seriesId && contextSeriesId !== seriesId) {
+        // Sync state.seriesId with formData.seriesId (happens when loading existing event)
+        setSeriesId(seriesId)
       }
     } else {
       if (seriesId) {
-        updateFormData({ seriesId: '' })
+        setSeriesId('')
       }
     }
   }
@@ -173,7 +181,7 @@ export const EventFormatComponent: React.FC = () => {
 
   const handleSeriesChange = (key: React.Key | null) => {
     if (key) {
-      updateFormData({ seriesId: String(key) })
+      setSeriesId(String(key))
     }
   }
 

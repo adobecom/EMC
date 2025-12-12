@@ -19,6 +19,11 @@ import { Time } from '@internationalized/date'
 import { parseDateTime, CalendarDateTime } from '@internationalized/date'
 import Add from '@spectrum-icons/workflow/Add'
 import Delete from '@spectrum-icons/workflow/Delete'
+import Edit from '@spectrum-icons/workflow/Edit'
+import Remove from '@spectrum-icons/workflow/Remove'
+import DragHandle from '@spectrum-icons/workflow/DragHandle'
+import ChevronDown from '@spectrum-icons/workflow/ChevronDown'
+// @ts-ignore - uuid types not installed
 import { v4 as uuidv4 } from 'uuid'
 import { HeadingWithTooltip, RichTextEditor } from '../shared'
 import { AgendaItem } from '../../types/domain'
@@ -190,6 +195,13 @@ export const AgendaComponent: React.FC = () => {
   const [orderByTime, setOrderByTime] = useState(false)
   // By default, agenda items are constrained to the event date/time window
   const [allowDatesOutsideEvent, setAllowDatesOutsideEvent] = useState(false)
+  // Collapsed state per item (true = collapsed, showing only summary)
+  const [collapsedIndices, setCollapsedIndices] = useState<Set<number>>(new Set())
+  // Editing state per item (true = expanded for editing)
+  const [editingIndices, setEditingIndices] = useState<Set<number>>(new Set())
+  // Drag and drop state
+  const [draggedIndex, setDraggedIndex] = useState<number | null>(null)
+  const [dragOverIndex, setDragOverIndex] = useState<number | null>(null)
   
   // Computed: is clamping active (default true unless user opts out)
   const isClampingActive = !allowDatesOutsideEvent && eventStartDateTime && eventEndDateTime
@@ -238,15 +250,119 @@ export const AgendaComponent: React.FC = () => {
     updateFormData({ agendaItems: agendaItems.filter((_, i) => i !== index) })
   }
 
-  const moveAgendaItem = (fromIndex: number, toIndex: number) => {
-    const updated = [...agendaItems]
-    const [moved] = updated.splice(fromIndex, 1)
-    updated.splice(toIndex, 0, moved)
-    updateFormData({ agendaItems: updated })
-  }
-
   const handleShowAgendaPostEventChange = (value: boolean) => {
     updateFormData({ showAgendaPostEvent: value })
+  }
+
+  const handleToggleCollapse = (index: number) => {
+    setCollapsedIndices(prev => {
+      const next = new Set(prev)
+      if (next.has(index)) {
+        next.delete(index)
+      } else {
+        next.add(index)
+      }
+      return next
+    })
+    // Exit editing mode when collapsing
+    setEditingIndices(prev => {
+      const next = new Set(prev)
+      next.delete(index)
+      return next
+    })
+  }
+
+  const handleToggleEdit = (index: number) => {
+    setEditingIndices(prev => {
+      const next = new Set(prev)
+      if (next.has(index)) {
+        next.delete(index)
+      } else {
+        next.add(index)
+      }
+      return next
+    })
+    // Expand when entering edit mode
+    setCollapsedIndices(prev => {
+      const next = new Set(prev)
+      next.delete(index)
+      return next
+    })
+  }
+
+  // ============================================================================
+  // DRAG AND DROP HANDLERS
+  // ============================================================================
+
+  const handleDragStart = (e: React.DragEvent, index: number) => {
+    if (orderByTime) return // Disable drag when auto-ordering by time
+    setDraggedIndex(index)
+    e.dataTransfer.effectAllowed = 'move'
+    e.dataTransfer.setData('text/plain', String(index))
+  }
+
+  const handleDragOver = (e: React.DragEvent, index: number) => {
+    if (orderByTime) return
+    e.preventDefault()
+    e.dataTransfer.dropEffect = 'move'
+    if (draggedIndex !== null && draggedIndex !== index) {
+      setDragOverIndex(index)
+    }
+  }
+
+  const handleDragLeave = () => {
+    setDragOverIndex(null)
+  }
+
+  const handleDrop = (e: React.DragEvent, dropIndex: number) => {
+    e.preventDefault()
+    
+    if (orderByTime || draggedIndex === null || draggedIndex === dropIndex) {
+      setDraggedIndex(null)
+      setDragOverIndex(null)
+      return
+    }
+
+    // Reorder the agenda items array
+    const newItems = [...agendaItems]
+    const [draggedItem] = newItems.splice(draggedIndex, 1)
+    newItems.splice(dropIndex, 0, draggedItem)
+    
+    updateFormData({ agendaItems: newItems })
+    
+    // Update collapsed/editing indices to follow the items
+    const updateIndices = (prev: Set<number>) => {
+      const newSet = new Set<number>()
+      prev.forEach(oldIndex => {
+        if (oldIndex === draggedIndex) {
+          newSet.add(dropIndex)
+        } else if (draggedIndex < dropIndex) {
+          if (oldIndex > draggedIndex && oldIndex <= dropIndex) {
+            newSet.add(oldIndex - 1)
+          } else {
+            newSet.add(oldIndex)
+          }
+        } else {
+          if (oldIndex >= dropIndex && oldIndex < draggedIndex) {
+            newSet.add(oldIndex + 1)
+          } else {
+            newSet.add(oldIndex)
+          }
+        }
+      })
+      return newSet
+    }
+    
+    setCollapsedIndices(updateIndices)
+    setEditingIndices(updateIndices)
+
+    setDraggedIndex(null)
+    setDragOverIndex(null)
+  }
+
+  const handleDragEnd = () => {
+    setDraggedIndex(null)
+    setDragOverIndex(null)
   }
 
   // ============================================================================
@@ -268,6 +384,52 @@ export const AgendaComponent: React.FC = () => {
   // Determine if we should show time-only pickers (when clamped and same-day event)
   const showTimeOnly = isClampingActive && isSameDayEvent
 
+  /**
+   * Format datetime string to display time (e.g., "1:00 PM")
+   */
+  const formatTimeDisplay = (dateTimeStr: string | undefined): string => {
+    if (!dateTimeStr) return ''
+    const dt = safeParseDateTimeString(dateTimeStr)
+    if (!dt) return ''
+    
+    const hour12 = dt.hour % 12 || 12
+    const ampm = dt.hour >= 12 ? 'PM' : 'AM'
+    const minute = dt.minute.toString().padStart(2, '0')
+    return `${hour12}:${minute} ${ampm}`
+  }
+
+  /**
+   * Get time range display string (e.g., "1:00 PM - 2:00 PM")
+   */
+  const getTimeRangeDisplay = (item: AgendaItem): string => {
+    const start = formatTimeDisplay(item.startDateTime)
+    const end = formatTimeDisplay(item.endDateTime)
+    if (start && end) {
+      return `${start} - ${end}`
+    } else if (start) {
+      return start
+    }
+    return ''
+  }
+
+  /**
+   * Strip HTML tags and truncate text for collapsed view
+   */
+  const truncateDescription = (html: string | undefined, maxLength: number = 80): string => {
+    if (!html) return ''
+    // Strip HTML tags
+    const text = html.replace(/<[^>]*>/g, '').trim()
+    if (text.length <= maxLength) return text
+    return text.substring(0, maxLength) + '...'
+  }
+
+  /**
+   * Check if an item has content (time or title filled in)
+   */
+  const isItemComplete = (item: AgendaItem): boolean => {
+    return !!(item.startDateTime && item.title)
+  }
+
   // ============================================================================
   // RENDER
   // ============================================================================
@@ -275,7 +437,7 @@ export const AgendaComponent: React.FC = () => {
   return (
     <Flex direction="column" gap="size-200">
       {/* Header with toggles */}
-      <Flex direction="row" justifyContent="space-between" alignItems="flex-start">
+      <Flex direction="row" justifyContent="space-between" alignItems="start">
         <HeadingWithTooltip 
           level={3}
           tooltip="What is happening at your event and when? You can also specify whether the agenda should be shown post-event."
@@ -283,7 +445,7 @@ export const AgendaComponent: React.FC = () => {
           Agenda
         </HeadingWithTooltip>
         
-        <Flex direction="column" gap="size-100" alignItems="flex-end">
+        <Flex direction="column" gap="size-100" alignItems="end">
           <View UNSAFE_style={{ display: 'inline-block' }}>
             <Switch
               isSelected={orderByTime}
@@ -305,46 +467,158 @@ export const AgendaComponent: React.FC = () => {
         </Flex>
       </Flex>
 
-      {/* Agenda Items */}
+      {/* Agenda Items - Empty State */}
       {agendaItems.length === 0 && (
-        <View padding="size-200" backgroundColor="gray-100" borderRadius="medium">
-          <Text>No agenda items added yet. Click "Add agenda item" to add one.</Text>
+        <View 
+          padding="size-400" 
+          backgroundColor="gray-100" 
+          borderRadius="medium"
+          UNSAFE_style={{ textAlign: 'center' }}
+        >
+          <Flex direction="column" alignItems="center" gap="size-200">
+            <Text>Create a new time slot to add to your agenda</Text>
+            <Button 
+              variant="secondary" 
+              onPress={addAgendaItem}
+            >
+              <Add />
+              <Text>Add slot</Text>
+            </Button>
+          </Flex>
         </View>
       )}
 
-      {agendaItems.map((item, index) => (
-        <View 
-          key={item.id} 
-          padding="size-200" 
-          borderWidth="thin" 
-          borderColor="dark" 
-          borderRadius="medium"
-          position="relative"
-        >
-          {/* Header with drag handle and delete */}
-          <Flex justifyContent="space-between" alignItems="center" marginBottom="size-200">
-            <Heading level={4}>Agenda Item {index + 1}</Heading>
-            <Flex gap="size-100" alignItems="center">
-              {!orderByTime && agendaItems.length > 1 && (
-                <>
+      {agendaItems.map((item, index) => {
+        const isCollapsed = collapsedIndices.has(index) && isItemComplete(item) && !editingIndices.has(index)
+        const isDragging = draggedIndex === index
+        const isDragOver = dragOverIndex === index
+        const timeRange = getTimeRangeDisplay(item)
+        const truncatedDesc = truncateDescription(item.description)
+
+        // ==================== COLLAPSED VIEW ====================
+        if (isCollapsed) {
+          return (
+            <div 
+              key={item.id}
+              draggable={!orderByTime}
+              onDragStart={(e: React.DragEvent) => handleDragStart(e, index)}
+              onDragOver={(e: React.DragEvent) => handleDragOver(e, index)}
+              onDragLeave={handleDragLeave}
+              onDrop={(e: React.DragEvent) => handleDrop(e, index)}
+              onDragEnd={handleDragEnd}
+              style={{
+                padding: '16px 20px',
+                border: isDragOver 
+                  ? '2px solid var(--spectrum-global-color-blue-500)' 
+                  : '1px solid var(--spectrum-global-color-gray-300)',
+                borderRadius: '8px',
+                backgroundColor: isDragging 
+                  ? 'var(--spectrum-global-color-gray-100)' 
+                  : 'white',
+                opacity: isDragging ? 0.5 : 1,
+                cursor: 'default',
+                transition: 'border-color 0.2s, background-color 0.2s'
+              }}
+            >
+              <Flex gap="size-200">
+                {/* Content area */}
+                <div 
+                  style={{ 
+                    display: 'flex',
+                    flexDirection: 'column', 
+                    gap: '4px', 
+                    flex: 1,
+                    cursor: 'pointer'
+                  }}
+                  onClick={() => handleToggleCollapse(index)}
+                >
+                  {/* Time range */}
+                  {timeRange && (
+                    <Text UNSAFE_style={{ 
+                      fontSize: '13px', 
+                      color: 'var(--spectrum-global-color-gray-700)'
+                    }}>
+                      {timeRange}
+                    </Text>
+                  )}
+                  {/* Title */}
+                  <Text UNSAFE_style={{ 
+                    fontWeight: 'bold', 
+                    fontSize: '16px',
+                    color: 'var(--spectrum-global-color-gray-900)'
+                  }}>
+                    {item.title || 'Untitled'}
+                  </Text>
+                  {/* Truncated description */}
+                  {truncatedDesc && (
+                    <Text UNSAFE_style={{ 
+                      fontSize: '14px', 
+                      color: 'var(--spectrum-global-color-gray-700)'
+                    }}>
+                      {truncatedDesc}
+                    </Text>
+                  )}
+                </div>
+
+                {/* Action buttons */}
+                <Flex gap="size-100" alignItems="center" UNSAFE_style={{ flexShrink: 0 }}>
                   <ActionButton 
-                    isQuiet
-                    onPress={() => index > 0 && moveAgendaItem(index, index - 1)}
-                    isDisabled={index === 0}
-                    aria-label="Move up"
+                    onPress={() => removeAgendaItem(index)} 
+                    isQuiet 
+                    aria-label="Remove"
                   >
-                    ↑
+                    <Remove />
                   </ActionButton>
                   <ActionButton 
-                    isQuiet
-                    onPress={() => index < agendaItems.length - 1 && moveAgendaItem(index, index + 1)}
-                    isDisabled={index === agendaItems.length - 1}
-                    aria-label="Move down"
+                    onPress={() => handleToggleEdit(index)} 
+                    isQuiet 
+                    aria-label="Edit"
                   >
-                    ↓
+                    <Edit />
                   </ActionButton>
-                </>
-              )}
+                  {/* Drag Handle - only show when not auto-ordering */}
+                  {!orderByTime && (
+                    <DragHandle />
+                  )}
+                </Flex>
+              </Flex>
+            </div>
+          )
+        }
+
+        // ==================== EXPANDED/EDIT VIEW ====================
+        return (
+          <div 
+            key={item.id}
+            onDragOver={(e: React.DragEvent) => handleDragOver(e, index)}
+            onDragLeave={handleDragLeave}
+            onDrop={(e: React.DragEvent) => handleDrop(e, index)}
+            style={{
+              padding: '20px',
+              border: isDragOver 
+                ? '2px solid var(--spectrum-global-color-blue-500)' 
+                : '1px solid var(--spectrum-global-color-gray-400)',
+              borderRadius: '8px',
+              transition: 'border-color 0.2s'
+            }}
+          >
+            {/* Header with collapse toggle and delete */}
+            <Flex justifyContent="space-between" alignItems="center" marginBottom="size-200">
+              <Flex alignItems="center" gap="size-100">
+                {isItemComplete(item) && (
+                  <ActionButton 
+                    onPress={() => handleToggleCollapse(index)} 
+                    isQuiet 
+                    aria-label="Collapse"
+                    UNSAFE_style={{ padding: 0 }}
+                  >
+                    <ChevronDown size="S" />
+                  </ActionButton>
+                )}
+                <Heading level={4} UNSAFE_style={{ margin: 0 }}>
+                  {item.title || `Agenda Item ${index + 1}`}
+                </Heading>
+              </Flex>
               <ActionButton 
                 isQuiet
                 onPress={() => removeAgendaItem(index)}
@@ -353,93 +627,107 @@ export const AgendaComponent: React.FC = () => {
                 <Delete />
               </ActionButton>
             </Flex>
-          </Flex>
 
-          <Flex direction="column" gap="size-200">
-            {/* Date/Time Row - shows TimeField only for same-day events when clamped */}
-            <Flex direction="row" gap="size-200" wrap>
-              {showTimeOnly ? (
-                <>
-                  <TimeField
-                    label="Start Time"
-                    isRequired
-                    granularity="minute"
-                    value={parseTimeFromDateTime(item.startDateTime)}
-                    onChange={(time) => updateAgendaItem(index, { 
-                      startDateTime: timeToDateTimeString(time, eventStartDateTime) 
-                    })}
-                  />
-                  <TimeField
-                    label="End Time"
-                    isRequired
-                    granularity="minute"
-                    value={parseTimeFromDateTime(item.endDateTime)}
-                    onChange={(time) => updateAgendaItem(index, { 
-                      endDateTime: timeToDateTimeString(time, eventStartDateTime) 
-                    })}
-                    minValue={getMinEndTime(item.startDateTime)}
-                  />
-                </>
-              ) : (
-                <>
-                  <DatePicker
-                    label="Start Date & Time"
-                    isRequired
-                    granularity="minute"
-                    value={safeParseDateTimeString(item.startDateTime)}
-                    onChange={(date) => updateAgendaItem(index, { startDateTime: date?.toString() || '' })}
-                    minValue={minValue}
-                    maxValue={maxValue}
-                  />
-                  <DatePicker
-                    label="End Date & Time"
-                    isRequired
-                    granularity="minute"
-                    value={safeParseDateTimeString(item.endDateTime)}
-                    onChange={(date) => updateAgendaItem(index, { endDateTime: date?.toString() || '' })}
-                    minValue={getMinEndDateTime(item.startDateTime) || minValue}
-                    maxValue={maxValue}
-                  />
-                </>
+            <Flex direction="column" gap="size-200">
+              {/* Date/Time Row - shows TimeField only for same-day events when clamped */}
+              <Flex direction="row" gap="size-200" wrap>
+                {showTimeOnly ? (
+                  <>
+                    <TimeField
+                      label="Start Time"
+                      isRequired
+                      granularity="minute"
+                      value={parseTimeFromDateTime(item.startDateTime)}
+                      onChange={(time) => updateAgendaItem(index, { 
+                        startDateTime: timeToDateTimeString(time, eventStartDateTime) 
+                      })}
+                    />
+                    <TimeField
+                      label="End Time"
+                      isRequired
+                      granularity="minute"
+                      value={parseTimeFromDateTime(item.endDateTime)}
+                      onChange={(time) => updateAgendaItem(index, { 
+                        endDateTime: timeToDateTimeString(time, eventStartDateTime) 
+                      })}
+                      minValue={getMinEndTime(item.startDateTime)}
+                    />
+                  </>
+                ) : (
+                  <>
+                    <DatePicker
+                      label="Start Date & Time"
+                      isRequired
+                      granularity="minute"
+                      value={safeParseDateTimeString(item.startDateTime)}
+                      onChange={(date) => updateAgendaItem(index, { startDateTime: date?.toString() || '' })}
+                      minValue={minValue}
+                      maxValue={maxValue}
+                    />
+                    <DatePicker
+                      label="End Date & Time"
+                      isRequired
+                      granularity="minute"
+                      value={safeParseDateTimeString(item.endDateTime)}
+                      onChange={(date) => updateAgendaItem(index, { endDateTime: date?.toString() || '' })}
+                      minValue={getMinEndDateTime(item.startDateTime) || minValue}
+                      maxValue={maxValue}
+                    />
+                  </>
+                )}
+              </Flex>
+
+              {/* Title */}
+              <TextField
+                label="Agenda Title"
+                isRequired
+                value={item.title}
+                onChange={(value) => updateAgendaItem(index, { title: value })}
+                width="100%"
+              />
+
+              {/* Description */}
+              <View width="100%">
+                <RichTextEditor
+                  label="Agenda Description"
+                  value={item.description || ''}
+                  onChange={(value) => updateAgendaItem(index, { description: value })}
+                  height="200px"
+                />
+              </View>
+
+              {/* Done button - collapse when complete */}
+              {isItemComplete(item) && (
+                <Flex justifyContent="end">
+                  <Button 
+                    variant="secondary" 
+                    onPress={() => handleToggleCollapse(index)}
+                  >
+                    Done
+                  </Button>
+                </Flex>
               )}
             </Flex>
+          </div>
+        )
+      })}
 
-            {/* Title */}
-            <TextField
-              label="Agenda Title"
-              isRequired
-              value={item.title}
-              onChange={(value) => updateAgendaItem(index, { title: value })}
-              width="100%"
-            />
-
-            {/* Description */}
-            <View width="100%">
-              <RichTextEditor
-                label="Agenda Description"
-                value={item.description || ''}
-                onChange={(value) => updateAgendaItem(index, { description: value })}
-                height="200px"
-              />
-            </View>
-          </Flex>
-        </View>
-      ))}
-
-      {/* Add Button */}
-      <Button 
-        variant="secondary" 
-        onPress={addAgendaItem}
-        width="100%"
-        UNSAFE_style={{
-          border: '2px dotted var(--spectrum-global-color-gray-500)',
-          color: 'var(--spectrum-global-color-gray-700)',
-          backgroundColor: 'transparent'
-        }}
-      >
-        <Add />
-        <Flex>Add agenda item</Flex>
-      </Button>
+      {/* Add Button - only show when items exist */}
+      {agendaItems.length > 0 && (
+        <Button 
+          variant="secondary" 
+          onPress={addAgendaItem}
+          width="100%"
+          UNSAFE_style={{
+            backgroundColor: 'var(--spectrum-global-color-gray-200)',
+            border: 'none',
+            color: 'var(--spectrum-global-color-gray-800)'
+          }}
+        >
+          <Add />
+          <Text>Add another time slot</Text>
+        </Button>
+      )}
 
       {/* Show Agenda Post-Event Toggle */}
       <View UNSAFE_style={{ display: 'inline-block' }}>
