@@ -18,6 +18,7 @@ import {
   useToast,
   SeriesFormData 
 } from '../../contexts'
+import { filterSeriesData } from '../../utils/dataFilters'
 
 // ============================================================================
 // HELPERS
@@ -41,26 +42,32 @@ function mapApiResponseToFormData(series: SeriesApiResponse): SeriesFormData {
 }
 
 /**
- * Build API payload from form data
+ * Build API payload from form data using data filter validation
  */
-function buildApiPayload(formData: SeriesFormData, modificationTime?: number): any {
-  const payload: any = {
+function buildApiPayload(formData: SeriesFormData, modificationTime?: number, isUpdate: boolean = false): any {
+  // Convert SeriesFormData to a plain object for filtering
+  const dataObject: Record<string, any> = {
     seriesName: formData.seriesName,
     cloudType: formData.cloudType,
     targetCms: formData.targetCms,
-    templateId: formData.templateId || null,
-    seriesDescription: formData.seriesDescription || undefined,
-    externalThemeId: formData.externalThemeId || undefined,
-    susiContextId: formData.susiContextId || undefined,
-    relatedDomain: formData.relatedDomain || undefined,
-    contentRoot: formData.contentRoot || undefined,
+    templateId: formData.templateId,
+    seriesDescription: formData.seriesDescription,
+    externalThemeId: formData.externalThemeId,
+    susiContextId: formData.susiContextId,
+    relatedDomain: formData.relatedDomain,
+    contentRoot: formData.contentRoot,
   }
   
   if (modificationTime !== undefined) {
-    payload.modificationTime = modificationTime
+    dataObject.modificationTime = modificationTime
   }
   
-  return payload
+  // Use the data filter to ensure only submittable fields are included
+  // and empty/null values are removed
+  const mode = isUpdate ? 'update' : 'submission'
+  const filteredPayload = filterSeriesData(dataObject, mode)
+  
+  return filteredPayload
 }
 
 // ============================================================================
@@ -164,7 +171,7 @@ const SeriesFormInner: React.FC<SeriesFormInnerProps> = ({ ims }) => {
     
     try {
       const modificationTime = state.seriesDataResp?.modificationTime
-      const payload = buildApiPayload(formData, isEditMode ? modificationTime : undefined)
+      const payload = buildApiPayload(formData, modificationTime, isEditMode)
       
       let result
       if (isEditMode && seriesId) {
@@ -206,29 +213,40 @@ const SeriesFormInner: React.FC<SeriesFormInnerProps> = ({ ims }) => {
     setSaveError(null)
     
     try {
-      const modificationTime = state.seriesDataResp?.modificationTime
-      const payload = {
-        ...buildApiPayload(formData, isEditMode ? modificationTime : undefined),
-        seriesStatus: 'published'
-      }
-      
       let result
-      if (isEditMode && seriesId) {
-        result = await apiService.updateSeriesExternal(seriesId, payload)
+      
+      // For new series: first create as draft, then publish
+      if (!isEditMode || !seriesId) {
+        // Step 1: Create the series first (as draft)
+        const createPayload = buildApiPayload(formData, undefined, false)
+        const createResult = await apiService.createSeriesExternal(createPayload)
+        
+        if ('error' in createResult) {
+          throw new Error(createResult.error?.message || 'Failed to create series')
+        }
+        
+        if (!createResult.seriesId) {
+          throw new Error('No series ID returned from create')
+        }
+        
+        const newSeriesId = createResult.seriesId
+        setSeriesId(newSeriesId)
+        
+        // Step 2: Publish the newly created series
+        const publishPayload = buildApiPayload(formData, createResult.modificationTime, true)
+        result = await apiService.publishSeries(newSeriesId, publishPayload)
       } else {
-        result = await apiService.createSeriesExternal(payload)
+        // For existing series: use publishSeries directly
+        const modificationTime = state.seriesDataResp?.modificationTime
+        const publishPayload = buildApiPayload(formData, modificationTime, true)
+        result = await apiService.publishSeries(seriesId, publishPayload)
       }
       
       if ('error' in result) {
         throw new Error(result.error?.message || 'Failed to publish series')
       }
       
-      // Update series ID if this was a create
-      if (!isEditMode && result.seriesId) {
-        setSeriesId(result.seriesId)
-      }
       setSeriesResponse(result as SeriesApiResponse)
-      
       setPublished(true)
       setSaveStatus('success')
       toast.success(
@@ -253,7 +271,7 @@ const SeriesFormInner: React.FC<SeriesFormInnerProps> = ({ ims }) => {
       setSaveError(errorMessage)
       setSaveStatus('error')
     }
-  }, [formData, seriesId, isEditMode, isPublished, state.seriesDataResp, navigate, toast])
+  }, [formData, seriesId, isEditMode, isPublished, state.seriesDataResp, navigate, toast, setSeriesId, setSeriesResponse, setPublished, setSaveStatus, setSaveError])
   
   // ============================================================================
   // VALIDATION
