@@ -8,13 +8,90 @@ import {
   Flex,
   Text,
   ProgressCircle,
-  ActionButton
+  ActionButton,
+  AlertDialog,
+  DialogTrigger
 } from '@adobe/react-spectrum'
 import Delete from '@spectrum-icons/workflow/Delete'
 import ImageAdd from '@spectrum-icons/workflow/ImageAdd'
 import { uploadImage, UploadTracker } from '../../services/requestHelpers'
 import { tokenStorage } from '../../services/tokenStorage'
 import { getCurrentEnvironment, getApiHost } from '../../config/constants'
+import { apiService } from '../../services/api'
+
+// ============================================================================
+// IMAGE VALIDATION UTILITIES
+// ============================================================================
+
+/** Allowed image types for upload */
+const VALID_IMAGE_TYPES = ['jpeg', 'jpg', 'png', 'svg'] as const
+type ValidImageType = typeof VALID_IMAGE_TYPES[number]
+
+/** File input accept attribute for allowed types */
+const ACCEPTED_FILE_TYPES = '.jpg,.jpeg,.png,.svg,image/jpeg,image/png,image/svg+xml'
+
+/**
+ * Validate image type by checking file signature (magic bytes)
+ * This prevents spoofed file extensions from bypassing validation
+ */
+async function isImageTypeValid(file: File): Promise<{ valid: boolean; detectedType: string | null }> {
+  const blob = file.slice(0, 128)
+  const arrayBuffer = await blob.arrayBuffer()
+  const bytes = new Uint8Array(arrayBuffer)
+  
+  let detectedType: string | null = null
+
+  // Magic byte signatures for image formats
+  const signatures = {
+    jpeg: [0xFF, 0xD8, 0xFF],
+    png: [0x89, 0x50, 0x4E, 0x47]
+  }
+
+  // Check for JPEG signature
+  if (signatures.jpeg.every((byte, i) => byte === bytes[i])) {
+    const extension = file.name.split('.').pop()?.toLowerCase()
+    if (extension === 'jpg' || extension === 'jpeg') {
+      detectedType = extension
+    } else {
+      detectedType = 'jpg'
+    }
+  }
+
+  // Check for PNG signature
+  if (signatures.png.every((byte, i) => byte === bytes[i])) {
+    detectedType = 'png'
+  }
+
+  // Check for SVG (text-based, starts with <svg)
+  if (!detectedType) {
+    const text = await blob.text()
+    if (text.trim().startsWith('<svg') || text.trim().startsWith('<?xml')) {
+      // For XML declaration, check if it contains SVG
+      if (text.trim().startsWith('<?xml')) {
+        const fullText = await file.text()
+        if (fullText.includes('<svg')) {
+          detectedType = 'svg'
+        }
+      } else {
+        detectedType = 'svg'
+      }
+    }
+  }
+
+  const valid = detectedType !== null && VALID_IMAGE_TYPES.includes(detectedType as ValidImageType)
+  return { valid, detectedType }
+}
+
+/**
+ * Validate image file size
+ */
+function isImageSizeValid(file: File, maxSizeBytes: number): boolean {
+  return file.size <= maxSizeBytes
+}
+
+// ============================================================================
+// COMPONENT INTERFACE
+// ============================================================================
 
 interface ImageUploaderProps {
   label: string
@@ -70,6 +147,8 @@ export const ImageUploader: React.FC<ImageUploaderProps> = ({
   const [uploadProgress, setUploadProgress] = useState(0)
   const [error, setError] = useState<string | null>(null)
   const [previewUrl, setPreviewUrl] = useState<string | null>(null)
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false)
+  const [isDeleting, setIsDeleting] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   // Generate preview URL for pending file
@@ -78,9 +157,9 @@ export const ImageUploader: React.FC<ImageUploaderProps> = ({
       const url = URL.createObjectURL(pendingFile)
       setPreviewUrl(url)
       return () => URL.revokeObjectURL(url)
-    } else {
-      setPreviewUrl(null)
     }
+    setPreviewUrl(null)
+    return undefined
   }, [pendingFile])
 
   const handleDragOver = (e: React.DragEvent) => {
@@ -111,20 +190,28 @@ export const ImageUploader: React.FC<ImageUploaderProps> = ({
   }
 
   const handleFile = async (file: File) => {
-    // Validate file type
-    if (!file.type.startsWith('image/')) {
-      setError('Please upload an image file (PNG, JPEG, etc.)')
-      return
-    }
-
-    // Validate file size
-    const fileSizeMB = file.size / (1024 * 1024)
-    if (fileSizeMB > maxSizeMB) {
+    setError(null)
+    
+    // Validate file size first (quick check)
+    const maxSizeBytes = maxSizeMB * 1024 * 1024
+    if (!isImageSizeValid(file, maxSizeBytes)) {
       setError(`File size exceeds ${maxSizeMB}MB limit`)
       return
     }
 
-    setError(null)
+    // Validate image type using magic byte signature checking
+    // This prevents spoofed file extensions from bypassing validation
+    const { valid, detectedType } = await isImageTypeValid(file)
+    
+    if (!valid) {
+      const allowedTypesStr = VALID_IMAGE_TYPES.join(', ').toUpperCase()
+      if (detectedType) {
+        setError(`Invalid image type: ${detectedType.toUpperCase()}. Allowed types: ${allowedTypesStr}`)
+      } else {
+        setError(`Please upload a valid image file. Allowed types: ${allowedTypesStr}`)
+      }
+      return
+    }
 
     // In deferred mode, just store the file and notify parent
     if (deferUpload) {
@@ -192,11 +279,64 @@ export const ImageUploader: React.FC<ImageUploaderProps> = ({
     fileInputRef.current?.click()
   }
 
-  const handleRemove = () => {
-    if (onRemove) {
-      onRemove()
+  const handleRemoveClick = () => {
+    // For pending files (not yet uploaded), just remove without dialog
+    if (pendingFile && !imageUrl) {
+      if (onRemove) {
+        onRemove()
+      }
+      setError(null)
+      return
+    }
+    // For uploaded images, show confirmation dialog
+    setIsDeleteDialogOpen(true)
+  }
+
+  const handleDeleteConfirm = async () => {
+    // If we have an uploaded image with an ID, make the DELETE API call
+    if (imageId && eventId) {
+      setIsDeleting(true)
+      setError(null)
+      
+      try {
+        // Note: targetUrl should be relative path - callExternalApi adds the host
+        const config = {
+          targetUrl: `/v1/events/${eventId}/images`,
+          type: imageKind
+        }
+        
+        const result = await apiService.deleteImage(config, imageId)
+        
+        if ('error' in result) {
+          console.error('Failed to delete image:', result.error)
+          setError(result.error || 'Failed to delete image')
+          setIsDeleting(false)
+          return
+        }
+        
+        // Success - call onRemove to update local state
+        if (onRemove) {
+          onRemove()
+        }
+      } catch (err) {
+        console.error('Delete image error:', err)
+        setError(err instanceof Error ? err.message : 'Failed to delete image')
+      } finally {
+        setIsDeleting(false)
+        setIsDeleteDialogOpen(false)
+      }
+    } else {
+      // No imageId or eventId - just remove from local state
+      if (onRemove) {
+        onRemove()
+      }
+      setIsDeleteDialogOpen(false)
     }
     setError(null)
+  }
+
+  const handleDeleteCancel = () => {
+    setIsDeleteDialogOpen(false)
   }
 
   const containerWidth = width ?? '100%'
@@ -249,9 +389,10 @@ export const ImageUploader: React.FC<ImageUploaderProps> = ({
           )}
           {!isDisabled && (
             <ActionButton 
-              onPress={handleRemove} 
+              onPress={handleRemoveClick} 
               isQuiet
               aria-label="Remove image"
+              isDisabled={isDeleting}
               UNSAFE_style={{
                 position: 'absolute',
                 top: '8px',
@@ -262,6 +403,23 @@ export const ImageUploader: React.FC<ImageUploaderProps> = ({
             >
               <Delete />
             </ActionButton>
+          )}
+          {isDeleting && (
+            <View
+              UNSAFE_style={{
+                position: 'absolute',
+                top: 0,
+                left: 0,
+                right: 0,
+                bottom: 0,
+                backgroundColor: 'rgba(255, 255, 255, 0.7)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center'
+              }}
+            >
+              <ProgressCircle aria-label="Deleting image" isIndeterminate size="M" />
+            </View>
           )}
         </View>
       ) : (
@@ -307,7 +465,10 @@ export const ImageUploader: React.FC<ImageUploaderProps> = ({
                   </Text>
                 )}
                 <Text UNSAFE_style={{ fontSize: '12px', color: 'var(--spectrum-global-color-gray-500)' }}>
-                  Does not exceed <strong>{maxSizeMB}</strong> MB
+                  Supported formats: <strong>JPG, PNG, SVG</strong>
+                </Text>
+                <Text UNSAFE_style={{ fontSize: '12px', color: 'var(--spectrum-global-color-gray-500)' }}>
+                  Max size: <strong>{maxSizeMB}</strong> MB
                 </Text>
               </Flex>
             </Flex>
@@ -316,7 +477,7 @@ export const ImageUploader: React.FC<ImageUploaderProps> = ({
           <input
             ref={fileInputRef}
             type="file"
-            accept="image/*"
+            accept={ACCEPTED_FILE_TYPES}
             onChange={handleFileInputChange}
             style={{ display: 'none' }}
           />
@@ -328,6 +489,25 @@ export const ImageUploader: React.FC<ImageUploaderProps> = ({
           {error}
         </Text>
       )}
+
+      {/* Delete Confirmation Dialog */}
+      <DialogTrigger
+        isOpen={isDeleteDialogOpen}
+        onOpenChange={(isOpen) => !isOpen && handleDeleteCancel()}
+      >
+        <div style={{ display: 'none' }} />
+        <AlertDialog
+          title="You are deleting this image."
+          variant="destructive"
+          primaryActionLabel="Yes, I want to delete this image"
+          cancelLabel="Do not delete"
+          onPrimaryAction={handleDeleteConfirm}
+          onCancel={handleDeleteCancel}
+          isPrimaryActionDisabled={isDeleting}
+        >
+          Are you sure you want to do this? This cannot be undone.
+        </AlertDialog>
+      </DialogTrigger>
     </View>
   )
 }

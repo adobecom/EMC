@@ -141,7 +141,7 @@ export const EventInfoComponent: React.FC = () => {
   const {
     language = 'en',
     name = '',
-    urlTitle = '',
+    enTitle = '',
     description = '',
     shortDescription = '',
     startDateTime = '',
@@ -170,7 +170,7 @@ export const EventInfoComponent: React.FC = () => {
   
   const handleNameChange = (value: string) => {
     // Sync URL title if they match
-    if (name === urlTitle) {
+    if (name === enTitle) {
       updateFormData({ name: value, urlTitle: value })
     } else {
       updateFormData({ name: value })
@@ -265,8 +265,8 @@ export const EventInfoComponent: React.FC = () => {
         </Flex>
         <TextField
           aria-label="English title for page URL"
-          value={urlTitle || ''}
-          onChange={(value) => updateFormData({ urlTitle: value })}
+          value={enTitle || ''}
+          onChange={(value) => updateFormData({ enTitle: value })}
           width="100%"
         />
       </View>
