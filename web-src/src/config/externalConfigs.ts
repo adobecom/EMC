@@ -18,6 +18,12 @@
 export const ADOBE_EVENT_LIBS_BASE = 'https://www.adobe.com/event-libs/assets/configs'
 
 /**
+ * Base URL for ECC v1 hosted JSON configs
+ * Always uses dev environment - these are static config files
+ */
+export const ECC_CONFIG_BASE = 'https://dev--ecc-milo--adobecom.aem.live'
+
+/**
  * External configuration URLs for various features
  */
 export const EXTERNAL_CONFIG_URLS = {
@@ -44,6 +50,20 @@ export const EXTERNAL_CONFIG_URLS = {
    * Structure: Array of promotional content items
    */
   promotionalContent: `${ADOBE_EVENT_LIBS_BASE}/promotional-content.json`,
+  
+  /**
+   * Target CMS options for series creation
+   * Used by: SeriesDetailsComponent
+   * Structure: { data: [{ Code, Provider, Instance }] }
+   */
+  targetCmsMap: `${ECC_CONFIG_BASE}/ecc/system/target-cms-map.json`,
+  
+  /**
+   * Series templates for template picker
+   * Used by: SeriesTemplateComponent
+   * Structure: { data: [{ template-path, template-name, template-image, supported-event-type }] }
+   */
+  seriesTemplates: `${ECC_CONFIG_BASE}/ecc/system/series-templates.json`,
 } as const
 
 /**

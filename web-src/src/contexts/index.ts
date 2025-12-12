@@ -18,4 +18,15 @@ export type {
 } from './EventFormContext'
 export { ToastProvider, useToast } from './ToastContext'
 export type { Toast, ToastVariant, ToastOptions } from './ToastContext'
+export {
+  SeriesFormProvider,
+  useSeriesFormContext,
+  useSeriesFormData,
+  createDefaultSeriesFormData,
+} from './SeriesFormContext'
+export type {
+  SeriesFormState,
+  SeriesFormContextValue,
+  SeriesFormData,
+} from './SeriesFormContext'
 
