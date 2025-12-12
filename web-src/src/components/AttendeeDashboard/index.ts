@@ -17,5 +17,4 @@ export { EventSelectorComponent } from './EventSelectorComponent'
 export { EventInfoComponent } from './EventInfoComponent'
 export { AttendeeFiltersComponent } from './AttendeeFiltersComponent'
 export { AttendeeTableComponent } from './AttendeeTableComponent'
-export { BulkActionsToolbar } from './BulkActionsToolbar'
 

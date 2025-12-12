@@ -126,32 +126,32 @@ export const AttendeeFiltersComponent: React.FC<AttendeeFiltersComponentProps> =
     >
       <Flex direction="column" gap="size-200">
         {/* Back Button */}
-        {onBackClick && (
-          <ActionButton
-            onPress={onBackClick}
-            isQuiet
-            UNSAFE_style={{ 
-              justifyContent: 'flex-start',
-              marginLeft: '-4px'
-            }}
-          >
-            <ChevronLeft size="S" />
-            <Text UNSAFE_style={{ fontWeight: 700 }}>{backLabel}</Text>
-          </ActionButton>
+        {onBackClick && backLabel && (
+          <>
+            <ActionButton
+              onPress={onBackClick}
+              isQuiet
+              UNSAFE_style={{ 
+                justifyContent: 'flex-start',
+                marginLeft: '-4px'
+              }}
+            >
+              <ChevronLeft size="S" />
+              <Text UNSAFE_style={{ fontWeight: 700 }}>{backLabel}</Text>
+            </ActionButton>
+            <Divider size="S" />
+          </>
         )}
-
-        <Divider size="S" />
 
         {/* Clear All Button */}
-        {hasActiveFilters && (
-          <Button
-            variant="primary"
-            onPress={handleClearAll}
-            UNSAFE_style={{ width: '100%' }}
-          >
-            Clear all filters
-          </Button>
-        )}
+        <Button
+          variant="primary"
+          onPress={handleClearAll}
+          isDisabled={!hasActiveFilters}
+          UNSAFE_style={{ width: '100%' }}
+        >
+          Clear all filters
+        </Button>
 
         {/* Filter Menus */}
         {filterMenus.length === 0 ? (

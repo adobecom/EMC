@@ -2,7 +2,7 @@
 * <license header>
 */
 
-import React from 'react'
+import React, { useState, useEffect } from 'react'
 import {
   View,
   Flex,
@@ -11,6 +11,7 @@ import {
 import type { EventApiResponse } from '../../types/domain'
 import type { AttendeeStats } from '../../types/attendee'
 import { COLORS } from '../../styles/designSystem'
+import { apiService } from '../../services/api'
 
 interface EventInfoComponentProps {
   event: EventApiResponse | null
@@ -18,19 +19,25 @@ interface EventInfoComponentProps {
   isLoading?: boolean
 }
 
+interface EventImage {
+  imageKind: string
+  imageUrl?: string
+  sharepointUrl?: string
+}
+
 /**
  * Get event thumbnail/hero image URL
+ * Priority: thumbnail > hero > card > first available
  */
-function getEventImageUrl(event: EventApiResponse): string | null {
-  if (!event.images || event.images.length === 0) return null
+function getEventImageUrl(images: EventImage[] | null): string | null {
+  if (!images || images.length === 0) return null
   
-  // Priority: hero > thumbnail > card > first available
-  const heroImg = event.images.find(img => img.imageKind === 'event-hero-image')
-  const thumbnailImg = event.images.find(img => img.imageKind === 'event-thumbnail-image')
-  const cardImg = event.images.find(img => img.imageKind === 'event-card-image')
-  const firstImg = event.images[0]
+  const thumbnailImg = images.find(img => img.imageKind === 'event-thumbnail-image')
+  const heroImg = images.find(img => img.imageKind === 'event-hero-image')
+  const cardImg = images.find(img => img.imageKind === 'event-card-image')
+  const firstImg = images[0]
   
-  const img = heroImg || thumbnailImg || cardImg || firstImg
+  const img = thumbnailImg || heroImg || cardImg || firstImg
   return img?.imageUrl || null
 }
 
@@ -69,7 +76,7 @@ function getEventTypeDisplay(event: EventApiResponse): string {
  */
 function calculatePercentage(part: number, total: number): string {
   if (total === 0) return '0%'
-  return `${((part / total) * 100).toFixed(0)}%`
+  return `${((part / total) * 100).toFixed(2)}%`
 }
 
 /**
@@ -79,6 +86,39 @@ export const EventInfoComponent: React.FC<EventInfoComponentProps> = ({
   event,
   stats
 }) => {
+  const [eventImages, setEventImages] = useState<EventImage[] | null>(null)
+
+  // Fetch event images when event changes
+  useEffect(() => {
+    const eventId = event?.eventId
+    const fallbackImages = event?.images
+    
+    if (!eventId) {
+      setEventImages(null)
+      return
+    }
+
+    const fetchImages = async () => {
+      try {
+        const response = await apiService.getEventImages(eventId)
+        
+        if (response && !('error' in response) && response.images) {
+          setEventImages(response.images)
+        } else {
+          // Fallback to event.images if API call fails
+          setEventImages(fallbackImages || null)
+        }
+      } catch (error) {
+        console.error('Failed to fetch event images:', error)
+        // Fallback to event.images
+        setEventImages(fallbackImages || null)
+      }
+    }
+
+    fetchImages()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [event?.eventId])
+
   if (!event) {
     return (
       <View
@@ -91,7 +131,7 @@ export const EventInfoComponent: React.FC<EventInfoComponentProps> = ({
     )
   }
 
-  const imageUrl = getEventImageUrl(event)
+  const imageUrl = getEventImageUrl(eventImages)
   const eventTitle = event.enTitle || event.title || event.eventId
   const capacityTotal = event.attendeeLimit || 0
   const rsvpPercentage = capacityTotal > 0 
@@ -210,22 +250,35 @@ const StatItem: React.FC<{
     >
       {label}
     </Text>
-    <Flex direction="row" gap="size-100" alignItems="baseline">
+    {variant === 'primary' ? (
+      <Flex direction="column" gap="size-50">
+        <Text 
+          UNSAFE_style={{ 
+            fontSize: '48px',
+            fontWeight: 700,
+            lineHeight: '1',
+            color: COLORS.ADOBE_RED
+          }}
+        >
+          {value}
+        </Text>
+        {subtext && (
+          <Text UNSAFE_style={{ fontSize: '14px', color: COLORS.GRAY_600 }}>
+            {subtext}
+          </Text>
+        )}
+      </Flex>
+    ) : (
       <Text 
         UNSAFE_style={{ 
-          fontSize: variant === 'primary' ? '28px' : '20px',
+          fontSize: '20px',
           fontWeight: 700,
-          color: variant === 'primary' ? COLORS.ADOBE_RED : COLORS.GRAY_800
+          color: COLORS.GRAY_800
         }}
       >
         {value}
       </Text>
-      {subtext && (
-        <Text UNSAFE_style={{ fontSize: '12px', color: COLORS.GRAY_600 }}>
-          {subtext}
-        </Text>
-      )}
-    </Flex>
+    )}
   </Flex>
 )
 

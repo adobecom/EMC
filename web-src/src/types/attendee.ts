@@ -167,7 +167,7 @@ export function mapRegistrationStatusToDisplay(
 export function calculateAttendeeStats(attendees: Attendee[]): AttendeeStats {
   return {
     total: attendees.length,
-    registered: attendees.filter(a => a.registrationStatus === 'registered').length,
+    registered: attendees.filter(a => a.registrationStatus === 'registered' || !a.registrationStatus).length,
     waitlisted: attendees.filter(a => a.registrationStatus === 'waitlisted').length,
     checkedIn: attendees.filter(a => a.checkedIn === true).length
   }

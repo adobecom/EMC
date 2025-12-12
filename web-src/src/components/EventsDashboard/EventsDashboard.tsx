@@ -18,7 +18,8 @@ import { TableColumn } from '../shared/DataTable'
 import { StatusBadge, ResourceDashboardLayout } from '../shared'
 import { EventDashboardItem } from '../../types/domain'
 import { apiService } from '../../services/api'
-import { thumbnailEnrichmentManager, venueEnrichmentManager, seriesEnrichmentManager, historyEnrichmentManager, EventThumbnail, EventVenueInfo, EventSeriesInfo, EventHistoryInfo } from '../../services/eventEnrichment'
+import { thumbnailEnrichmentManager, venueEnrichmentManager, historyEnrichmentManager, EventThumbnail, EventVenueInfo, EventHistoryInfo } from '../../services/eventEnrichment'
+import { seriesEnrichmentManager, SeriesInfo } from '../../services/seriesEnrichment'
 import { IMS } from '../../types'
 
 interface EventsDashboardProps {
@@ -31,7 +32,7 @@ export const EventsDashboard: React.FC<EventsDashboardProps> = () => {
   const [error, setError] = useState<string | null>(null)
   const [thumbnails, setThumbnails] = useState<Map<string, EventThumbnail>>(new Map())
   const [venues, setVenues] = useState<Map<string, EventVenueInfo>>(new Map())
-  const [series, setSeries] = useState<Map<string, EventSeriesInfo>>(new Map())
+  const [series, setSeries] = useState<Map<string, SeriesInfo>>(new Map())
   const [history, setHistory] = useState<Map<string, EventHistoryInfo>>(new Map())
   const [visibleEventIds, setVisibleEventIds] = useState<string[]>([])
   const [loadingThumbnails, setLoadingThumbnails] = useState<Set<string>>(new Set())
@@ -392,7 +393,21 @@ export const EventsDashboard: React.FC<EventsDashboardProps> = () => {
       width: 200,
       sortable: true,
       render: (item) => (
-        <Text><strong>{item.eventName}</strong></Text>
+        <Text>
+          <a 
+            href={`#/events/edit/${item.eventId}`}
+            style={{ 
+              color: 'var(--spectrum-global-color-blue-600)',
+              textDecoration: 'none',
+              fontWeight: 'bold',
+              cursor: 'pointer'
+            }}
+            onMouseEnter={(e) => e.currentTarget.style.textDecoration = 'underline'}
+            onMouseLeave={(e) => e.currentTarget.style.textDecoration = 'none'}
+          >
+            {item.eventName}
+          </a>
+        </Text>
       )
     },
     {

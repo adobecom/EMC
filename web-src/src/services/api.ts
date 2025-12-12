@@ -547,6 +547,55 @@ class ApiService {
   }
 
   /**
+   * Fetch series history in batch for enrichment
+   */
+  async getSeriesHistoryBatch(seriesIds: string[]): Promise<Map<string, EventHistoryResponse>> {
+    const token = tokenStorage.getValidToken()
+    const results = new Map<string, EventHistoryResponse>()
+    
+    if (!token) {
+      console.warn('⚠️ No valid authentication token for series history')
+      return results
+    }
+
+    try {
+      const env = getCurrentEnvironment()
+      const headers = constructRequestHeaders(token, 'GET')
+      const host = getApiHost('esp', env)
+
+      const promises = seriesIds.map(async (seriesId) => {
+        try {
+          const url = `${host}/v1/series/${seriesId}/history`
+          const response = await safeFetch(url, {
+            method: 'GET',
+            headers: headers as any
+          })
+
+          if (response.ok) {
+            const data = await response.json()
+            return { seriesId, history: data }
+          }
+          return null
+        } catch (error) {
+          console.error(`Error fetching series history ${seriesId}:`, error)
+          return null
+        }
+      })
+
+      const responses = await Promise.all(promises)
+      responses.forEach((result) => {
+        if (result) {
+          results.set(result.seriesId, result.history)
+        }
+      })
+    } catch (error) {
+      console.error('Error fetching series history batch:', error)
+    }
+
+    return results
+  }
+
+  /**
    * Fetch series details for enrichment
    */
   async getSeriesBatch(seriesIds: string[]): Promise<Map<string, SeriesApiResponse>> {

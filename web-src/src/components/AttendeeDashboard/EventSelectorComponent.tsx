@@ -81,9 +81,11 @@ export const EventSelectorComponent: React.FC<EventSelectorComponentProps> = ({
         width="100%"
         placeholder={events.length === 0 ? 'No events available' : 'Search events...'}
         items={eventItems}
+        menuTrigger="input"
+        allowsCustomValue={false}
       >
         {(item) => (
-          <Item key={item.id} textValue={`${item.name} - ${item.date}`}>
+          <Item key={item.id} textValue={`${item.name} ${item.date}`}>
             <Text>{item.name}</Text>
             <Text slot="description">{item.date}</Text>
           </Item>

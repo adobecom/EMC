@@ -64,13 +64,13 @@ body {
 /** Custom Data Table Styling **/
 .custom-data-table {
   width: 100%;
+  max-width: 100%;
   overflow-x: auto;
   position: relative;
 }
 
 .custom-data-table table {
-  width: max-content;
-  min-width: 100%;
+  width: 100%;
   border-collapse: collapse;
   background-color: #FFFFFF;
   table-layout: auto;

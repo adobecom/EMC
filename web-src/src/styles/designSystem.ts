@@ -338,6 +338,35 @@ export const BORDERS = {
 } as const
 
 // ============================================================
+// Loading Animations
+// ============================================================
+
+/**
+ * Shimmer loading skeleton styles
+ * Used for loading states in tables and cards
+ * 
+ * @example
+ * <div style={{ ...createShimmerStyle(120, 16) }} />
+ */
+export const SHIMMER_BASE = {
+  background: 'linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%)',
+  backgroundSize: '200% 100%',
+  animation: 'shimmer 1.5s infinite',
+  borderRadius: '4px',
+} as const
+
+/**
+ * Creates a shimmer loading skeleton with specified dimensions
+ * @param width - Width in pixels or CSS string
+ * @param height - Height in pixels (default 16)
+ */
+export const createShimmerStyle = (width: number | string, height: number = 16) => ({
+  ...SHIMMER_BASE,
+  width: typeof width === 'number' ? `${width}px` : width,
+  height: `${height}px`,
+})
+
+// ============================================================
 // Helper Functions
 // ============================================================
 

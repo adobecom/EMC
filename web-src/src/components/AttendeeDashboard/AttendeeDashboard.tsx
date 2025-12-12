@@ -5,7 +5,6 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react'
 import {
   View,
-  Flex,
   Heading,
   SearchField,
   AlertDialog,
@@ -24,7 +23,6 @@ import {
   EventInfoComponent,
   AttendeeFiltersComponent,
   AttendeeTableComponent,
-  BulkActionsToolbar
 } from './index'
 
 interface AttendeeDashboardProps {
@@ -183,10 +181,11 @@ export const AttendeeDashboard: React.FC<AttendeeDashboardProps> = ({ ims: _ims 
     return result
   }, [attendees, searchQuery, filters])
 
-  // Calculate statistics
+  // Calculate statistics from ALL attendees (not filtered)
+  // Stats should reflect the total event numbers, not the filtered view
   const stats: AttendeeStats = useMemo(() => 
-    calculateAttendeeStats(filteredAttendees),
-    [filteredAttendees]
+    calculateAttendeeStats(attendees),
+    [attendees]
   )
 
   // Handle event selection change
@@ -239,21 +238,16 @@ export const AttendeeDashboard: React.FC<AttendeeDashboardProps> = ({ ims: _ims 
   }
 
   return (
-    <View width="100%" padding="size-400">
+    <View width="100%" padding="size-400" UNSAFE_style={{ boxSizing: 'border-box' }}>
       {/* Header */}
-      <Flex direction="row" justifyContent="space-between" alignItems="center" marginBottom="size-300">
-        <Heading level={1}>Attendee Management</Heading>
-      </Flex>
-
-      {/* Event Selector */}
-      <View marginBottom="size-300">
-        <EventSelectorComponent
-          events={events}
-          selectedEventId={selectedEventId}
-          onChange={handleEventChange}
-          isLoading={isLoadingEvents}
-        />
-      </View>
+      <div style={{ 
+        display: 'flex',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        marginBottom: '24px'
+      }}>
+        <Heading level={1}>Event report</Heading>
+      </div>
 
       {/* Event Info Panel */}
       {selectedEvent && (
@@ -267,46 +261,87 @@ export const AttendeeDashboard: React.FC<AttendeeDashboardProps> = ({ ims: _ims 
       )}
 
       {/* Main Content Area */}
-      <Flex direction="row" gap="size-300">
-        {/* Side Panel - Filters */}
-        {selectedEventId && attendees.length > 0 && (
-          <AttendeeFiltersComponent
-            columnConfig={columnConfig}
-            attendees={attendees}
-            filters={filters}
-            onFiltersChange={setFilters}
-            onBackClick={handleBackClick}
-            backLabel="Back to Events"
-          />
-        )}
+      <div style={{ 
+        display: 'grid', 
+        gridTemplateColumns: '240px 1fr', 
+        gap: '24px',
+        alignItems: 'start'
+      }}>
+        {/* Side Panel - Back, Event Selector, Filters */}
+        <div style={{ width: '240px' }}>
+          <div style={{ 
+            display: 'grid',
+            gap: '24px'
+          }}>
+            {/* Back Button */}
+            <div>
+              <button
+                onClick={handleBackClick}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  padding: '8px 12px',
+                  background: 'transparent',
+                  border: 'none',
+                  cursor: 'pointer',
+                  fontSize: '14px',
+                  fontWeight: 600,
+                  color: 'var(--spectrum-global-color-gray-800)'
+                }}
+              >
+                <span style={{ fontSize: '18px' }}>←</span>
+                <span>Back</span>
+              </button>
+            </div>
+
+            {/* Event Selector - "Search other events" */}
+            <div>
+              <EventSelectorComponent
+                events={events}
+                selectedEventId={selectedEventId}
+                onChange={handleEventChange}
+                isLoading={isLoadingEvents}
+                label="Search other events"
+              />
+            </div>
+
+            {/* Filters */}
+            {selectedEventId && attendees.length > 0 && (
+              <AttendeeFiltersComponent
+                columnConfig={columnConfig}
+                attendees={attendees}
+                filters={filters}
+                onFiltersChange={setFilters}
+                onBackClick={handleBackClick}
+                backLabel=""
+              />
+            )}
+          </div>
+        </div>
 
         {/* Main Table Area */}
-        <View flex={1}>
+        <div style={{ minWidth: 0 }}>
           {/* Search and Bulk Actions */}
           {selectedEventId && (
             <>
-              <Flex direction="row" gap="size-200" marginBottom="size-200" alignItems="end">
-                <View flex={1}>
+              <div style={{ 
+                display: 'flex',
+                justifyContent: 'flex-end',
+                marginBottom: '16px'
+              }}>
+                <div style={{ width: '240px' }}>
                   <SearchField
                     label="Search attendees"
-                    placeholder="Search by name, email, company..."
+                    placeholder="Search"
                     value={searchQuery}
                     onChange={setSearchQuery}
                     onClear={() => setSearchQuery('')}
                     width="100%"
+                    isQuiet
                   />
-                </View>
-              </Flex>
-
-              <BulkActionsToolbar
-                selectedCount={selectedIds.size}
-                totalCount={filteredAttendees.length}
-                attendees={filteredAttendees}
-                selectedIds={selectedIds}
-                columnConfig={columnConfig}
-                eventId={selectedEventId}
-                onClearSelection={handleClearSelection}
-              />
+                </div>
+              </div>
             </>
           )}
 
@@ -326,8 +361,8 @@ export const AttendeeDashboard: React.FC<AttendeeDashboardProps> = ({ ims: _ims 
                   : 'No attendees registered for this event'
             }
           />
-        </View>
-      </Flex>
+        </div>
+      </div>
 
       {/* Delete Confirmation Dialog */}
       <DialogTrigger
