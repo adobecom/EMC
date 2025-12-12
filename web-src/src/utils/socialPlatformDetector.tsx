@@ -4,17 +4,44 @@
 
 /**
  * Social Platform Detection Utility
- * Detects social media platform from URL
+ * Detects social media platform from URL and provides branded icons
  */
 
+import React from 'react'
 import { SocialServiceName } from '../types/domain'
+import {
+  SiLinkedin,
+  SiX,
+  SiFacebook,
+  SiInstagram,
+  SiYoutube,
+  SiGithub,
+  SiMedium,
+  SiBehance,
+  SiDribbble,
+  SiPinterest,
+  SiTiktok,
+  SiTwitch,
+  SiReddit,
+  SiDiscord,
+  SiSlack,
+  SiSpotify,
+} from 'react-icons/si'
 
 export interface SocialPlatform {
   name: string
   serviceName: SocialServiceName | null // API-compatible enum value
   color: string
-  icon: string // Unicode emoji or symbol
+  icon: React.ReactElement // SVG icon element
 }
+
+// Uniform dark gray background for all social icons
+const SOCIAL_ICON_BG = '#4a4a4a'
+
+// Helper to create icon element (fixes React 16/18 type compatibility)
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const icon = (Icon: any): React.ReactElement => 
+  React.createElement(Icon, { size: 18, color: 'white' }) as React.ReactElement
 
 // OpenAPI SocialLink schema serviceName enum values:
 // "YouTube", "LinkedIn", "Web", "X", "TikTok", "Instagram", "Facebook", "Pinterest"
@@ -22,104 +49,104 @@ const PLATFORM_PATTERNS: Record<string, SocialPlatform> = {
   twitter: {
     name: 'Twitter/X',
     serviceName: 'X',
-    color: '#1DA1F2',
-    icon: '𝕏'
+    color: SOCIAL_ICON_BG,
+    icon: icon(SiX)
   },
   'x.com': {
     name: 'X',
     serviceName: 'X',
-    color: '#000000',
-    icon: '𝕏'
+    color: SOCIAL_ICON_BG,
+    icon: icon(SiX)
   },
   linkedin: {
     name: 'LinkedIn',
     serviceName: 'LinkedIn',
-    color: '#0A66C2',
-    icon: 'in'
+    color: SOCIAL_ICON_BG,
+    icon: icon(SiLinkedin)
   },
   facebook: {
     name: 'Facebook',
     serviceName: 'Facebook',
-    color: '#1877F2',
-    icon: 'f'
+    color: SOCIAL_ICON_BG,
+    icon: icon(SiFacebook)
   },
   instagram: {
     name: 'Instagram',
     serviceName: 'Instagram',
-    color: '#E4405F',
-    icon: '📷'
+    color: SOCIAL_ICON_BG,
+    icon: icon(SiInstagram)
   },
   youtube: {
     name: 'YouTube',
     serviceName: 'YouTube',
-    color: '#FF0000',
-    icon: '▶'
+    color: SOCIAL_ICON_BG,
+    icon: icon(SiYoutube)
   },
   github: {
     name: 'GitHub',
-    serviceName: 'Web', // Not in API enum, use Web
-    color: '#181717',
-    icon: '⚡'
+    serviceName: 'Web',
+    color: SOCIAL_ICON_BG,
+    icon: icon(SiGithub)
   },
   medium: {
     name: 'Medium',
-    serviceName: 'Web', // Not in API enum, use Web
-    color: '#000000',
-    icon: 'M'
+    serviceName: 'Web',
+    color: SOCIAL_ICON_BG,
+    icon: icon(SiMedium)
   },
   behance: {
     name: 'Behance',
-    serviceName: 'Web', // Not in API enum, use Web
-    color: '#1769FF',
-    icon: 'Bē'
+    serviceName: 'Web',
+    color: SOCIAL_ICON_BG,
+    icon: icon(SiBehance)
   },
   dribbble: {
     name: 'Dribbble',
-    serviceName: 'Web', // Not in API enum, use Web
-    color: '#EA4C89',
-    icon: '🏀'
+    serviceName: 'Web',
+    color: SOCIAL_ICON_BG,
+    icon: icon(SiDribbble)
   },
   pinterest: {
     name: 'Pinterest',
     serviceName: 'Pinterest',
-    color: '#E60023',
-    icon: 'P'
+    color: SOCIAL_ICON_BG,
+    icon: icon(SiPinterest)
   },
   tiktok: {
     name: 'TikTok',
     serviceName: 'TikTok',
-    color: '#000000',
-    icon: '♪'
+    color: SOCIAL_ICON_BG,
+    icon: icon(SiTiktok)
   },
   twitch: {
     name: 'Twitch',
-    serviceName: 'Web', // Not in API enum, use Web
-    color: '#9146FF',
-    icon: '📺'
+    serviceName: 'Web',
+    color: SOCIAL_ICON_BG,
+    icon: icon(SiTwitch)
   },
   reddit: {
     name: 'Reddit',
-    serviceName: 'Web', // Not in API enum, use Web
-    color: '#FF4500',
-    icon: '👾'
+    serviceName: 'Web',
+    color: SOCIAL_ICON_BG,
+    icon: icon(SiReddit)
   },
   discord: {
     name: 'Discord',
-    serviceName: 'Web', // Not in API enum, use Web
-    color: '#5865F2',
-    icon: '💬'
+    serviceName: 'Web',
+    color: SOCIAL_ICON_BG,
+    icon: icon(SiDiscord)
   },
   slack: {
     name: 'Slack',
-    serviceName: 'Web', // Not in API enum, use Web
-    color: '#4A154B',
-    icon: '#'
+    serviceName: 'Web',
+    color: SOCIAL_ICON_BG,
+    icon: icon(SiSlack)
   },
   spotify: {
     name: 'Spotify',
-    serviceName: 'Web', // Not in API enum, use Web
-    color: '#1DB954',
-    icon: '🎵'
+    serviceName: 'Web',
+    color: SOCIAL_ICON_BG,
+    icon: icon(SiSpotify)
   }
 }
 
@@ -201,5 +228,3 @@ export function fromApiSocialLink(apiLink: { serviceName: SocialServiceName; lin
     platform: platform?.name || apiLink.serviceName
   }
 }
-
-

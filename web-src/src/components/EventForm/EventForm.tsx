@@ -376,18 +376,29 @@ const EventFormInner: React.FC<EventFormInnerProps> = ({ ims }) => {
   
   /**
    * Handle preview requests
+   * Uses detailPagePath from event response with preview parameters
    */
   const handlePreview = useCallback((previewType: 'pre-event' | 'post-event') => {
-    if (!eventId) {
-      console.warn('Cannot preview - event has not been saved yet')
+    const eventResponse = state.eventDataResp
+    
+    if (!eventResponse?.detailPagePath) {
+      console.warn('Cannot preview - event has no detail page path')
       return
     }
     
-    // TODO: Implement actual preview URL generation
-    const baseUrl = window.location.origin
-    const previewUrl = `${baseUrl}/preview/${eventId}/${previewType}`
+    const localStartTimeMillis = eventResponse.localStartTimeMillis || 0
+    // Pre-event: timing before event start, Post-event: timing after event start
+    const timing = previewType === 'pre-event' 
+      ? localStartTimeMillis - 10 
+      : localStartTimeMillis + 10
+    
+    // Build the preview URL with parameters
+    const detailPagePath = eventResponse.detailPagePath
+    const separator = detailPagePath.includes('?') ? '&' : '?'
+    const previewUrl = `${detailPagePath}${separator}previewMode=true&timing=${timing}`
+    
     window.open(previewUrl, '_blank')
-  }, [eventId])
+  }, [state.eventDataResp])
   
   // ============================================================================
   // STEP 1: Basic Info

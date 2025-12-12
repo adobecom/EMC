@@ -887,7 +887,7 @@ export const SpeakersComponent: React.FC = () => {
               </Picker>
 
               {/* Name as heading */}
-              <Heading level={4} UNSAFE_style={{ marginBottom: '16px', marginTop: '8px' }}>
+              <Heading level={3} UNSAFE_style={{ marginBottom: '16px', marginTop: '8px', fontSize: '22px' }}>
                 {displayName}
               </Heading>
 
@@ -911,7 +911,7 @@ export const SpeakersComponent: React.FC = () => {
               {(profile.title || profile.bio) && (
                 <View marginBottom="size-300">
                   {profile.title && (
-                    <Text UNSAFE_style={{ display: 'block', marginBottom: '8px' }}>
+                    <Text UNSAFE_style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold' }}>
                       {profile.title}
                     </Text>
                   )}

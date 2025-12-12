@@ -14,6 +14,7 @@ import {
 } from '@adobe/react-spectrum'
 import { HeadingWithTooltip } from '../shared'
 import LinkOut from '@spectrum-icons/workflow/LinkOut'
+import DragHandle from '@spectrum-icons/workflow/DragHandle'
 
 /**
  * Configuration field structure from the JSON configs
@@ -27,6 +28,15 @@ interface RsvpConfigField {
 interface RsvpConfig {
   cloudType: string
   config: RsvpConfigField[] | null
+}
+
+/**
+ * Extended field with display info
+ */
+interface DisplayField {
+  fieldName: string
+  isMandated: boolean
+  originalIndex: number
 }
 
 interface RegistrationFieldsComponentProps {
@@ -97,6 +107,10 @@ export const RegistrationFieldsComponent: React.FC<RegistrationFieldsComponentPr
   const [configs, setConfigs] = useState<RsvpConfig[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  
+  // Drag and drop state
+  const [draggedIndex, setDraggedIndex] = useState<number | null>(null)
+  const [dragOverIndex, setDragOverIndex] = useState<number | null>(null)
 
   // Fetch configs on mount
   useEffect(() => {
@@ -121,14 +135,154 @@ export const RegistrationFieldsComponent: React.FC<RegistrationFieldsComponentPr
   const cloudConfig = configs.find((c) => c.cloudType === cloudType)
   const currentConfig = Array.isArray(cloudConfig?.config) ? cloudConfig.config : []
   
-  // Filter out items with null-ish Field attribute, mandated fields, and submit buttons
-  const validFields = currentConfig.filter((f) => f.Field && f.Field.trim() !== '')
-  const mandatedFields = validFields.filter((f) => f.Required === 'x').map((f) => f.Field)
-  const configurableFields = validFields.filter((f) => f.Required !== 'x' && f.Type !== 'submit')
+  // Filter out items with null-ish Field attribute and submit buttons
+  const validFields = currentConfig.filter((f) => f.Field && f.Field.trim() !== '' && f.Type !== 'submit')
+  const mandatedFieldNames = validFields.filter((f) => f.Required === 'x').map((f) => f.Field)
+  
+  // Build display fields list with original order preserved
+  const allDisplayFields: DisplayField[] = validFields.map((f, idx) => ({
+    fieldName: f.Field,
+    isMandated: f.Required === 'x',
+    originalIndex: idx
+  }))
+
+  // Sort fields: selected (visible) fields first, then unselected
+  // Within each group, maintain order based on visibleFields array (for selected) or original config order (for unselected)
+  const sortedDisplayFields = [...allDisplayFields].sort((a, b) => {
+    const aIsSelected = visibleFields.includes(a.fieldName)
+    const bIsSelected = visibleFields.includes(b.fieldName)
+    
+    if (aIsSelected && !bIsSelected) return -1
+    if (!aIsSelected && bIsSelected) return 1
+    
+    // Both selected: sort by position in visibleFields array
+    if (aIsSelected && bIsSelected) {
+      return visibleFields.indexOf(a.fieldName) - visibleFields.indexOf(b.fieldName)
+    }
+    
+    // Both unselected: maintain original config order
+    return a.originalIndex - b.originalIndex
+  })
+
+  // Ensure mandated fields are always included in visible and required arrays
+  useEffect(() => {
+    if (mandatedFieldNames.length === 0) return
+
+    // Check if any mandated fields are missing from visibleFields
+    const missingVisibleMandated = mandatedFieldNames.filter((f) => !visibleFields.includes(f))
+    if (missingVisibleMandated.length > 0) {
+      const newVisibleFields = [...visibleFields, ...missingVisibleMandated]
+      onVisibleFieldsChange(newVisibleFields)
+      
+      // Also ensure requiredFields is ordered consistently with newVisibleFields
+      const missingRequiredMandated = mandatedFieldNames.filter((f) => !requiredFields.includes(f))
+      if (missingRequiredMandated.length > 0) {
+        // Build required array in the same order as visible
+        const newRequiredFields = newVisibleFields.filter((f) => 
+          requiredFields.includes(f) || missingRequiredMandated.includes(f)
+        )
+        onRequiredFieldsChange(newRequiredFields)
+      }
+    } else {
+      // Check if any mandated fields are missing from requiredFields (visible was already complete)
+      const missingRequiredMandated = mandatedFieldNames.filter((f) => !requiredFields.includes(f))
+      if (missingRequiredMandated.length > 0) {
+        // Build required array in the same order as visible
+        const newRequiredFields = visibleFields.filter((f) => 
+          requiredFields.includes(f) || missingRequiredMandated.includes(f)
+        )
+        onRequiredFieldsChange(newRequiredFields)
+      }
+    }
+  }, [mandatedFieldNames.join(','), visibleFields, requiredFields, onVisibleFieldsChange, onRequiredFieldsChange])
+
+  // ============================================================================
+  // DRAG AND DROP HANDLERS
+  // ============================================================================
+
+  const handleDragStart = (e: React.DragEvent, displayIndex: number) => {
+    const field = sortedDisplayFields[displayIndex]
+    // Only allow dragging selected (visible) fields
+    if (!visibleFields.includes(field.fieldName)) return
+    
+    setDraggedIndex(displayIndex)
+    e.dataTransfer.effectAllowed = 'move'
+    e.dataTransfer.setData('text/plain', String(displayIndex))
+  }
+
+  const handleDragOver = (e: React.DragEvent, displayIndex: number) => {
+    e.preventDefault()
+    const field = sortedDisplayFields[displayIndex]
+    // Only allow dropping on selected (visible) fields
+    if (!visibleFields.includes(field.fieldName)) return
+    
+    e.dataTransfer.dropEffect = 'move'
+    if (draggedIndex !== null && draggedIndex !== displayIndex) {
+      setDragOverIndex(displayIndex)
+    }
+  }
+
+  const handleDragLeave = () => {
+    setDragOverIndex(null)
+  }
+
+  const handleDrop = (e: React.DragEvent, dropDisplayIndex: number) => {
+    e.preventDefault()
+    
+    if (draggedIndex === null || draggedIndex === dropDisplayIndex) {
+      setDraggedIndex(null)
+      setDragOverIndex(null)
+      return
+    }
+
+    const draggedField = sortedDisplayFields[draggedIndex]
+    const dropField = sortedDisplayFields[dropDisplayIndex]
+    
+    // Only reorder within visible fields
+    if (!visibleFields.includes(draggedField.fieldName) || !visibleFields.includes(dropField.fieldName)) {
+      setDraggedIndex(null)
+      setDragOverIndex(null)
+      return
+    }
+
+    // Reorder visibleFields array
+    const newVisibleFields = [...visibleFields]
+    const draggedVisibleIdx = newVisibleFields.indexOf(draggedField.fieldName)
+    const dropVisibleIdx = newVisibleFields.indexOf(dropField.fieldName)
+    
+    const [removed] = newVisibleFields.splice(draggedVisibleIdx, 1)
+    newVisibleFields.splice(dropVisibleIdx, 0, removed)
+    
+    onVisibleFieldsChange(newVisibleFields)
+    
+    // Also reorder requiredFields to match the new visibleFields order
+    // Filter requiredFields to only include fields that are in newVisibleFields, maintaining the new order
+    const newRequiredFields = newVisibleFields.filter((f) => requiredFields.includes(f))
+    onRequiredFieldsChange(newRequiredFields)
+    
+    setDraggedIndex(null)
+    setDragOverIndex(null)
+  }
+
+  const handleDragEnd = () => {
+    setDraggedIndex(null)
+    setDragOverIndex(null)
+  }
+
+  // ============================================================================
+  // FIELD TOGGLE HANDLERS
+  // ============================================================================
 
   const handleVisibleToggle = (fieldName: string, checked: boolean) => {
     if (checked) {
-      onVisibleFieldsChange([...visibleFields, fieldName])
+      const newVisibleFields = [...visibleFields, fieldName]
+      onVisibleFieldsChange(newVisibleFields)
+      // Re-order requiredFields to match visible order (in case field was previously required)
+      const newRequiredFields = newVisibleFields.filter((f) => requiredFields.includes(f))
+      if (newRequiredFields.length !== requiredFields.length || 
+          !newRequiredFields.every((f, i) => f === requiredFields[i])) {
+        onRequiredFieldsChange(newRequiredFields)
+      }
     } else {
       // Remove from both visible and required
       onVisibleFieldsChange(visibleFields.filter((f) => f !== fieldName))
@@ -141,7 +295,9 @@ export const RegistrationFieldsComponent: React.FC<RegistrationFieldsComponentPr
       // Add to both visible and required
       const newVisible = visibleFields.includes(fieldName) ? visibleFields : [...visibleFields, fieldName]
       onVisibleFieldsChange(newVisible)
-      onRequiredFieldsChange([...requiredFields, fieldName])
+      // Insert the field in the required array at the position matching its order in visibleFields
+      const newRequired = newVisible.filter((f) => requiredFields.includes(f) || f === fieldName)
+      onRequiredFieldsChange(newRequired)
     } else {
       // Remove from required only
       onRequiredFieldsChange(requiredFields.filter((f) => f !== fieldName))
@@ -150,20 +306,12 @@ export const RegistrationFieldsComponent: React.FC<RegistrationFieldsComponentPr
 
   const renderBasicFormTable = () => {
     // Format mandated fields for display
-    const mandatedFieldsDisplay = mandatedFields.map((field) => convertString(field)).join(', ')
+    const mandatedFieldsDisplay = mandatedFieldNames.map((field) => convertString(field)).join(', ')
     const cloudName = cloudType === 'CreativeCloud' ? 'Creative Cloud' : 'Experience Cloud'
-
-    // Grid style for consistent 3-column layout
-    const gridStyle: React.CSSProperties = {
-      display: 'grid',
-      gridTemplateColumns: '1fr 1fr 1fr',
-      gap: '24px',
-      alignItems: 'center'
-    }
     
     return (
       <Flex direction="column" gap="size-200">
-        {mandatedFields.length > 0 && (
+        {mandatedFieldNames.length > 0 && (
           <Text UNSAFE_style={{ color: 'var(--spectrum-global-color-gray-700)' }}>
             Note: <strong>{cloudName}</strong> required fields include <strong>{mandatedFieldsDisplay}</strong>
           </Text>
@@ -176,8 +324,14 @@ export const RegistrationFieldsComponent: React.FC<RegistrationFieldsComponentPr
             padding: 'var(--spectrum-global-dimension-size-600)'
           }}
         >
-          {/* Header row */}
-          <div style={{ ...gridStyle, marginBottom: '12px' }}>
+          {/* Header row - 4 columns now with drag handle */}
+          <div style={{ 
+            display: 'grid',
+            gridTemplateColumns: '1fr 1fr 1fr 40px',
+            gap: '16px',
+            alignItems: 'center',
+            marginBottom: '12px'
+          }}>
             <Text UNSAFE_style={{ fontWeight: 600, fontSize: '12px', color: 'var(--spectrum-global-color-gray-600)' }}>
               FIELD CATEGORIES
             </Text>
@@ -187,37 +341,98 @@ export const RegistrationFieldsComponent: React.FC<RegistrationFieldsComponentPr
             <Text UNSAFE_style={{ fontWeight: 600, fontSize: '12px', color: 'var(--spectrum-global-color-gray-600)' }}>
               MAKE IT REQUIRED
             </Text>
+            <Text UNSAFE_style={{ fontWeight: 600, fontSize: '12px', color: 'var(--spectrum-global-color-gray-600)' }}>
+              {/* Drag handle header - empty */}
+            </Text>
           </div>
 
           {/* Field rows */}
-          <div style={gridStyle}>
-            {configurableFields.map((field) => {
-              const fieldName = field.Field
-              const isVisible = visibleFields.includes(fieldName) || mandatedFields.includes(fieldName)
-              const isRequired = requiredFields.includes(fieldName) || mandatedFields.includes(fieldName)
+          <Flex direction="column" gap="size-100">
+            {sortedDisplayFields.map((displayField, displayIndex) => {
+              const { fieldName, isMandated } = displayField
+              const isVisible = visibleFields.includes(fieldName)
+              const isRequired = requiredFields.includes(fieldName)
+              const isDragging = draggedIndex === displayIndex
+              const isDragOver = dragOverIndex === displayIndex
+              const canDrag = isVisible
 
               return (
-                <React.Fragment key={fieldName}>
+                <div
+                  key={fieldName}
+                  draggable={canDrag}
+                  onDragStart={(e) => handleDragStart(e, displayIndex)}
+                  onDragOver={(e) => handleDragOver(e, displayIndex)}
+                  onDragLeave={handleDragLeave}
+                  onDrop={(e) => handleDrop(e, displayIndex)}
+                  onDragEnd={handleDragEnd}
+                  style={{
+                    display: 'grid',
+                    gridTemplateColumns: '1fr 1fr 1fr 40px',
+                    gap: '16px',
+                    alignItems: 'center',
+                    padding: '12px 16px',
+                    borderRadius: '6px',
+                    backgroundColor: isDragging 
+                      ? 'var(--spectrum-global-color-gray-200)' 
+                      : isVisible
+                        ? 'var(--spectrum-global-color-gray-50)'
+                        : 'transparent',
+                    border: isDragOver 
+                      ? '2px solid var(--spectrum-global-color-blue-500)' 
+                      : isVisible
+                        ? '1px solid var(--spectrum-global-color-gray-300)'
+                        : '1px solid transparent',
+                    opacity: isDragging ? 0.5 : 1,
+                    transition: 'border-color 0.2s, background-color 0.2s',
+                    cursor: canDrag ? 'default' : 'default'
+                  }}
+                >
                   <Text UNSAFE_style={{ fontWeight: 500 }}>
                     {convertString(fieldName)}
+                    {isMandated && (
+                      <Text UNSAFE_style={{ 
+                        fontSize: '11px', 
+                        color: 'var(--spectrum-global-color-gray-500)',
+                        marginLeft: '8px',
+                        fontWeight: 400
+                      }}>
+                        (Always required)
+                      </Text>
+                    )}
                   </Text>
                   <Switch
                     isSelected={isVisible}
                     onChange={(checked) => handleVisibleToggle(fieldName, checked)}
+                    isDisabled={isMandated}
                   >
                     Appears on form
                   </Switch>
                   <Switch
                     isSelected={isRequired}
                     onChange={(checked) => handleRequiredToggle(fieldName, checked)}
-                    isDisabled={!isVisible}
+                    isDisabled={!isVisible || isMandated}
                   >
                     Required field
                   </Switch>
-                </React.Fragment>
+                  {/* Drag handle - only visible for selected fields */}
+                  <View
+                    UNSAFE_style={{
+                      display: 'flex',
+                      justifyContent: 'center',
+                      alignItems: 'center',
+                      cursor: canDrag ? 'grab' : 'default',
+                      color: canDrag 
+                        ? 'var(--spectrum-global-color-gray-600)' 
+                        : 'var(--spectrum-global-color-gray-300)',
+                      opacity: canDrag ? 1 : 0.3
+                    }}
+                  >
+                    <DragHandle size="S" />
+                  </View>
+                </div>
               )
             })}
-          </div>
+          </Flex>
         </View>
       </Flex>
     )
