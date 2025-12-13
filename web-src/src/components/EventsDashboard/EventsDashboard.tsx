@@ -22,7 +22,7 @@ import { thumbnailEnrichmentManager, venueEnrichmentManager, historyEnrichmentMa
 import { seriesEnrichmentManager, SeriesInfo } from '../../services/seriesEnrichment'
 import { IMS } from '../../types'
 import { useToast } from '../../contexts'
-import { getEventPayload, filterEventData } from '../../utils/dataFilters'
+import { filterEventData } from '../../utils/dataFilters'
 
 interface EventsDashboardProps {
   ims: IMS
@@ -318,12 +318,9 @@ export const EventsDashboard: React.FC<EventsDashboardProps> = () => {
             break
           }
 
-          // Get the locale from the event
-          const locale = eventResponse.defaultLocale || 'en-US'
-
           // Filter the event data to only include submittable fields
-          // This properly handles localizations and excludes read-only fields
-          const filteredPayload = getEventPayload(eventResponse, locale)
+          // filterEventData preserves ALL localizations (unlike getEventPayload which only keeps one locale)
+          const filteredPayload = filterEventData(eventResponse, 'submission')
 
           // Prepare final payload with publish flags
           const payload = {
