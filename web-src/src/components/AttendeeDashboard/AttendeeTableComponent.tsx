@@ -5,9 +5,7 @@
 import React, { useMemo } from 'react'
 import {
   View,
-  Flex,
   Text,
-  Checkbox,
   Heading
 } from '@adobe/react-spectrum'
 import type { Attendee, AttendeeColumnConfig } from '../../types/attendee'
@@ -23,6 +21,14 @@ interface AttendeeTableComponentProps {
   onAttendeeAction?: (action: 'view' | 'edit' | 'delete', attendee: Attendee) => void
   isLoading?: boolean
   emptyMessage?: string
+}
+
+/**
+ * Convert camelCase to Sentence Case for display
+ */
+function camelToSentenceCase(str: string): string {
+  const result = str.replace(/([a-z])([A-Z])/g, '$1 $2')
+  return result.charAt(0).toUpperCase() + result.slice(1)
 }
 
 /**
@@ -136,7 +142,7 @@ export const AttendeeTableComponent: React.FC<AttendeeTableComponentProps> = ({
     
     const buildColumn = (config: AttendeeColumnConfig): TableColumn<Attendee> => ({
       key: config.key,
-      name: config.label.toUpperCase(),
+      name: camelToSentenceCase(config.key).toUpperCase(),
       width: config.width || 150,
       sortable: config.sortable !== false,
       render: (item) => renderCellValue(item, config),

@@ -2,7 +2,7 @@
 * <license header>
 */
 
-import React, { useMemo } from 'react'
+import React, { useMemo, useState } from 'react'
 import {
   View,
   ComboBox,
@@ -55,6 +55,8 @@ export const EventSelectorComponent: React.FC<EventSelectorComponentProps> = ({
   isLoading = false,
   label = 'Select Event'
 }) => {
+  const [filterText, setFilterText] = useState('')
+
   // Create items with combined title and date for searching
   const eventItems = useMemo(() => {
     return events.map(event => ({
@@ -65,10 +67,25 @@ export const EventSelectorComponent: React.FC<EventSelectorComponentProps> = ({
     }))
   }, [events])
 
+  // Filter items based on search text
+  const filteredItems = useMemo(() => {
+    if (!filterText) return eventItems
+    
+    const searchLower = filterText.toLowerCase()
+    return eventItems.filter(item => 
+      item.searchText.includes(searchLower)
+    )
+  }, [eventItems, filterText])
+
   const handleSelectionChange = (key: React.Key | null) => {
     if (key) {
       onChange(String(key))
+      setFilterText('') // Clear filter after selection
     }
+  }
+
+  const handleInputChange = (value: string) => {
+    setFilterText(value)
   }
 
   return (
@@ -77,10 +94,10 @@ export const EventSelectorComponent: React.FC<EventSelectorComponentProps> = ({
         label={label}
         selectedKey={selectedEventId || null}
         onSelectionChange={handleSelectionChange}
+        onInputChange={handleInputChange}
         isDisabled={isLoading || events.length === 0}
         width="100%"
-        placeholder={events.length === 0 ? 'No events available' : 'Search events...'}
-        items={eventItems}
+        items={filteredItems}
         menuTrigger="input"
         allowsCustomValue={false}
       >
