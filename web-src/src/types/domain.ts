@@ -293,6 +293,7 @@ export interface EventDashboardItem {
   startDate?: string
   localStartDate?: string
   localStartTime?: string
+  localStartTimeMillis?: number
   timezone?: string
   attendeeLimit?: number
   attendeeCount?: number
@@ -306,6 +307,8 @@ export interface EventDashboardItem {
   language?: string
   thumbnail?: string
   contributor?: string
+  detailPagePath?: string
+  defaultLocale?: string
 }
 
 // Enhanced Series type for dashboard display

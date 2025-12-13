@@ -3,7 +3,7 @@
 */
 
 import React, { useEffect, useState, useMemo, useCallback } from 'react'
-import { Text, ActionButton, MenuTrigger, Menu, Item, Flex, Button } from '@adobe/react-spectrum'
+import { Text, ActionButton, MenuTrigger, Menu, Item, Flex, Button, DialogTrigger, AlertDialog, ProgressCircle, View } from '@adobe/react-spectrum'
 import MoreSmallList from '@spectrum-icons/workflow/MoreSmallList'
 import PublishRemove from '@spectrum-icons/workflow/PublishRemove'
 import ViewDetail from '@spectrum-icons/workflow/ViewDetail'
@@ -21,12 +21,15 @@ import { apiService } from '../../services/api'
 import { thumbnailEnrichmentManager, venueEnrichmentManager, historyEnrichmentManager, EventThumbnail, EventVenueInfo, EventHistoryInfo } from '../../services/eventEnrichment'
 import { seriesEnrichmentManager, SeriesInfo } from '../../services/seriesEnrichment'
 import { IMS } from '../../types'
+import { useToast } from '../../contexts'
+import { getEventPayload, filterEventData } from '../../utils/dataFilters'
 
 interface EventsDashboardProps {
   ims: IMS
 }
 
 export const EventsDashboard: React.FC<EventsDashboardProps> = () => {
+  const toast = useToast()
   const [events, setEvents] = useState<EventDashboardItem[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -39,6 +42,8 @@ export const EventsDashboard: React.FC<EventsDashboardProps> = () => {
   const [loadingVenues, setLoadingVenues] = useState<Set<string>>(new Set())
   const [loadingSeries, setLoadingSeries] = useState<Set<string>>(new Set())
   const [loadingHistory, setLoadingHistory] = useState<Set<string>>(new Set())
+  const [itemToDelete, setItemToDelete] = useState<EventDashboardItem | null>(null)
+  const [actionInProgress, setActionInProgress] = useState<string | null>(null)
 
   const loadEventsData = async () => {
     setIsLoading(true)
@@ -59,6 +64,8 @@ export const EventsDashboard: React.FC<EventsDashboardProps> = () => {
         startDate: item.startDate,
         localStartDate: item.localStartDate,
         localStartTime: item.localStartTime,
+        localStartTimeMillis: item.localStartTimeMillis,
+        detailPagePath: item.detailPagePath,
         timezone: item.timezone,
         attendeeLimit: item.attendeeLimit,
         attendeeCount: item.attendeeCount,
@@ -68,6 +75,7 @@ export const EventsDashboard: React.FC<EventsDashboardProps> = () => {
         publishTime: undefined, // TODO: Add if available from API
         venueName: item.venue?.venueName,
         language: item.defaultLocale,
+        defaultLocale: item.defaultLocale,
         thumbnail: undefined, // TODO: Add if available from API
         contributor: item.hostEmail, // Using hostEmail as contributor for now
         // These will be fetched later from different endpoints
@@ -289,48 +297,183 @@ export const EventsDashboard: React.FC<EventsDashboardProps> = () => {
     return dateString
   }, [])
 
-  const handleMenuAction = useCallback((action: string, item: EventDashboardItem) => {
+  const handleMenuAction = useCallback(async (action: string, item: EventDashboardItem) => {
+    // Prevent multiple simultaneous actions
+    if (actionInProgress) {
+      return
+    }
+
     switch (action) {
       case 'publish':
-        console.log(item.published ? 'Unpublish event:' : 'Publish event:', item)
-        // TODO: Implement publish/unpublish
-        alert(`${item.published ? 'Unpublish' : 'Publish'} functionality will be implemented for: ${item.eventName}`)
-        break
-      case 'preview-pre':
-        console.log('Preview pre-event:', item)
-        // TODO: Open preview URL in new tab
-        alert(`Preview pre-event will be implemented for: ${item.eventName}`)
-        break
-      case 'preview-post':
-        console.log('Preview post-event:', item)
-        // TODO: Open preview URL in new tab
-        alert(`Preview post-event will be implemented for: ${item.eventName}`)
-        break
-      case 'copy-url':
-        console.log('Copy URL:', item)
-        // TODO: Copy event URL to clipboard
-        if (item.eventName) {
-          alert(`Copy URL will be implemented for: ${item.eventName}`)
+      case 'unpublish': {
+        const isPublish = !item.published
+        setActionInProgress(item.eventId)
+        
+        try {
+          // Fetch full event data (needed for complete payload with all localizations)
+          const eventResponse = await apiService.getEventFull(item.eventId)
+          
+          if ('error' in eventResponse) {
+            toast.error(`Failed to load event data: ${eventResponse.error}`)
+            break
+          }
+
+          // Get the locale from the event
+          const locale = eventResponse.defaultLocale || 'en-US'
+
+          // Filter the event data to only include submittable fields
+          // This properly handles localizations and excludes read-only fields
+          const filteredPayload = getEventPayload(eventResponse, locale)
+
+          // Prepare final payload with publish flags
+          const payload = {
+            ...filteredPayload,
+            published: isPublish,
+            liveUpdate: true,
+            forceSpWrite: false
+          }
+
+          // Call publish or unpublish API
+          const result = isPublish
+            ? await apiService.publishEvent(item.eventId, payload)
+            : await apiService.unpublishEvent(item.eventId, payload)
+
+          if ('error' in result) {
+            toast.error(`Failed to ${isPublish ? 'publish' : 'unpublish'} event: ${result.error}`)
+          } else {
+            toast.success(`Event ${isPublish ? 'published' : 'unpublished'} successfully!`)
+            // Refresh events list
+            await loadEventsData()
+          }
+        } catch (err) {
+          console.error(`Error ${isPublish ? 'publishing' : 'unpublishing'} event:`, err)
+          toast.error(`Failed to ${isPublish ? 'publish' : 'unpublish'} event`)
+        } finally {
+          setActionInProgress(null)
         }
         break
+      }
+
+      case 'preview-pre':
+      case 'preview-post': {
+        // Use data we already have from the events list - no fetch needed!
+        if (!item.detailPagePath) {
+          toast.error('Event does not have a detail page URL')
+          break
+        }
+
+        const previewType = action === 'preview-pre' ? 'pre-event' : 'post-event'
+        const localStartTimeMillis = item.localStartTimeMillis || 0
+        
+        // Pre-event: timing before event start, Post-event: timing after event start
+        const timing = previewType === 'pre-event' 
+          ? localStartTimeMillis - 10 
+          : localStartTimeMillis + 10
+
+        // Build the preview URL with parameters
+        const separator = item.detailPagePath.includes('?') ? '&' : '?'
+        const previewUrl = `${item.detailPagePath}${separator}previewMode=true&timing=${timing}`
+
+        // Open in new tab
+        window.open(previewUrl, '_blank')
+        break
+      }
+
+      case 'copy-url': {
+        // Use data we already have from the events list - no fetch needed!
+        if (!item.detailPagePath) {
+          toast.error('Event does not have a detail page URL')
+          break
+        }
+
+        try {
+          // Copy to clipboard
+          await navigator.clipboard.writeText(item.detailPagePath)
+          toast.success('Event URL copied to clipboard!')
+        } catch (err) {
+          console.error('Error copying URL:', err)
+          toast.error('Failed to copy URL to clipboard')
+        }
+        break
+      }
+
       case 'edit':
-        console.log('Edit event:', item)
         window.location.hash = `#/events/edit/${item.eventId}`
         break
-      case 'clone':
-        console.log('Clone event:', item)
-        // TODO: Implement clone functionality
-        alert(`Clone functionality will be implemented for: ${item.eventName}`)
+
+      case 'clone': {
+        setActionInProgress(item.eventId)
+        
+        try {
+          // Fetch full event data to get all fields for cloning
+          const eventResponse = await apiService.getEventFull(item.eventId)
+          
+          if ('error' in eventResponse) {
+            toast.error('Failed to load event data for cloning')
+            break
+          }
+
+          // Filter the event data for cloning (excludes eventId, published, timestamps, etc.)
+          const cloneableData = filterEventData(eventResponse, 'clone')
+          
+          // Get the locale for proper localization handling
+          const locale = eventResponse.defaultLocale || 'en-US'
+          
+          // Get the localized title from the response
+          const originalTitle = eventResponse.localizations?.[locale]?.title || 
+                               eventResponse.enTitle || 
+                               'Untitled Event'
+          
+          // Prepare the cloned event data with "- copy" suffix
+          const clonedEventData: Record<string, any> = {
+            ...cloneableData,
+            enTitle: `${originalTitle} - copy`,
+            published: false,
+            liveUpdate: false,
+          }
+          
+          // Update the localized title
+          if (clonedEventData.localizations && clonedEventData.localizations[locale]) {
+            clonedEventData.localizations[locale].title = `${originalTitle} - copy`
+          }
+          
+          // Create the event directly via API
+          const result = await apiService.createEventExternal(clonedEventData, locale)
+          
+          if ('error' in result) {
+            toast.error(`Failed to clone event: ${result.error}`)
+          } else {
+            const newEventId = result.event?.eventId || result.eventId
+            toast.success('Event cloned successfully!', {
+              duration: 5000,
+              action: {
+                label: 'View',
+                onPress: () => {
+                  window.location.hash = `#/events/edit/${newEventId}`
+                }
+              }
+            })
+            // Refresh events list
+            await loadEventsData()
+          }
+        } catch (err) {
+          console.error('Error cloning event:', err)
+          toast.error('Failed to clone event')
+        } finally {
+          setActionInProgress(null)
+        }
         break
+      }
+
       case 'delete':
-        console.log('Delete event:', item)
-        // TODO: Implement delete confirmation dialog
-        alert(`Delete functionality will be implemented for: ${item.eventName}`)
+        // Show delete confirmation dialog
+        setItemToDelete(item)
         break
+
       default:
         console.log('Unknown action:', action)
     }
-  }, [])
+  }, [actionInProgress, toast])
 
   const columns = useMemo<TableColumn<EventDashboardItem>[]>(() => [
     {
@@ -698,6 +841,28 @@ export const EventsDashboard: React.FC<EventsDashboardProps> = () => {
     }
   ], [formatDate, formatLocalDate, thumbnails, loadingThumbnails, venues, loadingVenues, series, loadingSeries, history, loadingHistory, handleMenuAction])
 
+  const handleDeleteEvent = useCallback(async (event: EventDashboardItem) => {
+    setActionInProgress(event.eventId)
+    
+    try {
+      const result = await apiService.deleteEventExternal(event.eventId)
+      
+      if ('error' in result) {
+        toast.error(`Failed to delete event: ${result.error}`)
+      } else {
+        toast.success('Event deleted successfully!')
+        // Refresh events list
+        await loadEventsData()
+      }
+    } catch (err) {
+      console.error('Error deleting event:', err)
+      toast.error('Failed to delete event')
+    } finally {
+      setItemToDelete(null)
+      setActionInProgress(null)
+    }
+  }, [toast])
+
   const handleCreateEvent = useCallback((eventType: EventType) => {
     // Navigate to create event form with event type
     window.location.hash = `#/events/new/${eventType}`
@@ -728,23 +893,91 @@ export const EventsDashboard: React.FC<EventsDashboardProps> = () => {
   ), [handleCreateEvent, eventTypeOptions])
 
   return (
-    <ResourceDashboardLayout
-      title="All Events"
-      totalCount={events.length}
-      isLoading={isLoading}
-      error={error}
-      data={events}
-      columns={columns}
-      getItemKey={(item) => item.eventId}
-      onVisibleItemsChange={handleVisibleEventsChange}
-      onRefresh={loadEventsData}
-      createButton={createEventButton}
-      emptyStateTitle="No Events Found"
-      emptyStateDescription="Get started by creating your first event"
-      loadingMessage="Loading events..."
-      searchPlaceholder="Search events..."
-      searchKeys={['eventName', 'eventType', 'cloudType', 'hostEmail', 'seriesId']}
-    />
+    <>
+      <ResourceDashboardLayout
+        title="All Events"
+        totalCount={events.length}
+        isLoading={isLoading}
+        error={error}
+        data={events}
+        columns={columns}
+        getItemKey={(item) => item.eventId}
+        onVisibleItemsChange={handleVisibleEventsChange}
+        onRefresh={loadEventsData}
+        createButton={createEventButton}
+        emptyStateTitle="No Events Found"
+        emptyStateDescription="Get started by creating your first event"
+        loadingMessage="Loading events..."
+        searchPlaceholder="Search events..."
+        searchKeys={['eventName', 'eventType', 'cloudType', 'hostEmail', 'seriesId']}
+      />
+
+      {/* Loading Overlay for Actions */}
+      {actionInProgress && (
+        <View
+          position="fixed"
+          top="size-0"
+          left="size-0"
+          right="size-0"
+          bottom="size-0"
+          UNSAFE_style={{
+            backgroundColor: 'rgba(0, 0, 0, 0.4)',
+            backdropFilter: 'blur(2px)',
+            zIndex: 9999,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            pointerEvents: 'all',
+            cursor: 'wait'
+          }}
+        >
+          <View
+            backgroundColor="gray-50"
+            padding="size-400"
+            borderRadius="medium"
+            UNSAFE_style={{
+              boxShadow: '0 8px 32px rgba(0, 0, 0, 0.2)',
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              gap: '16px'
+            }}
+          >
+            <ProgressCircle size="L" isIndeterminate aria-label="Processing action" />
+            <Text UNSAFE_style={{ fontSize: '16px', fontWeight: 500 }}>
+              Processing...
+            </Text>
+          </View>
+        </View>
+      )}
+
+      {/* Delete Confirmation Dialog */}
+      <DialogTrigger
+        isOpen={!!itemToDelete}
+        onOpenChange={(isOpen) => !isOpen && setItemToDelete(null)}
+      >
+        <div style={{ display: 'none' }} />
+        {(close) => (
+          <AlertDialog
+            title="Delete Event"
+            variant="destructive"
+            primaryActionLabel="Delete"
+            secondaryActionLabel="Cancel"
+            onPrimaryAction={() => {
+              if (itemToDelete) {
+                handleDeleteEvent(itemToDelete)
+              }
+              close()
+            }}
+            onSecondaryAction={close}
+            isPrimaryActionDisabled={!!actionInProgress}
+          >
+            Are you sure you want to delete <strong>{itemToDelete?.eventName}</strong>? 
+            This action cannot be undone and will permanently remove the event and all associated data.
+          </AlertDialog>
+        )}
+      </DialogTrigger>
+    </>
   )
 }
 

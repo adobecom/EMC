@@ -260,6 +260,47 @@ export function filterSeriesData(
 }
 
 // ============================================================================
+// EVENT FILTERING
+// ============================================================================
+
+export type EventFilterMode = 'submission' | 'clone'
+
+const EVENT_FILTER_STRATEGIES: Record<EventFilterMode, (descriptor: DataFieldDescriptor | undefined) => boolean> = {
+  submission: (descriptor) => descriptor?.submittable === true,
+  clone: (descriptor) => descriptor?.submittable === true && descriptor?.cloneable !== false,
+}
+
+/**
+ * Filter event data based on mode (submission, clone)
+ * 
+ * - submission: Include all submittable fields (for publish/unpublish/update)
+ * - clone: Include only submittable AND cloneable fields (excludes eventId, published, etc.)
+ */
+export function filterEventData(
+  data: Record<string, any>,
+  mode: EventFilterMode = 'submission',
+  options: FilterOptions = {}
+): Record<string, any> {
+  if (!data || typeof data !== 'object') return {}
+
+  const strategy = EVENT_FILTER_STRATEGIES[mode] || EVENT_FILTER_STRATEGIES.submission
+  const { excludeKeys = [] } = options
+
+  return Object.entries(data).reduce((acc, [key, value]) => {
+    if (excludeKeys.includes(key)) return acc
+
+    const descriptor = EVENT_DATA_FILTER[key]
+
+    if (!descriptor) return acc
+    if (!strategy(descriptor)) return acc
+    if (!isValidAttribute(value)) return acc
+
+    acc[key] = value
+    return acc
+  }, {} as Record<string, any>)
+}
+
+// ============================================================================
 // PUBLISHING PROFILE FILTERING
 // ============================================================================
 
