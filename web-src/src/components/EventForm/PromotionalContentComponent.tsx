@@ -2,7 +2,7 @@
 * <license header>
 */
 
-import React, { useState, useEffect, useCallback } from 'react'
+import React, { useState, useEffect, useCallback, useRef } from 'react'
 import {
   View,
   Flex,
@@ -80,24 +80,36 @@ export const PromotionalContentComponent: React.FC = () => {
   })
   
   // ============================================================================
-  // SYNC FORM DATA WITH LOCAL STATE
+  // SYNC FORM DATA WITH LOCAL STATE (only on external changes from API)
   // ============================================================================
   
+  // Use ref to track the serialized version for comparison without causing re-renders
+  const prevPromotionalItemsRef = useRef<string>(JSON.stringify(promotionalItems))
+  const localUpdateRef = useRef(false)
+  
   useEffect(() => {
-    // When form data changes externally, sync local state
-    const currentNames = selectedItems.map(item => item.name)
-    const formNames = promotionalItems
-    
-    // Check if they're different
-    const isDifferent = formNames.length !== currentNames.length ||
-      formNames.some((name, i) => name !== currentNames[i])
-    
-    if (isDifferent && formNames.length > 0) {
-      setSelectedItems(formNames.map((name, index) => ({
-        id: `promo-${Date.now()}-${index}`,
-        name
-      })))
+    // If this was a local update (from user interaction), skip sync
+    if (localUpdateRef.current) {
+      localUpdateRef.current = false
+      prevPromotionalItemsRef.current = JSON.stringify(promotionalItems)
+      return
     }
+    
+    // Check if promotionalItems actually changed
+    const serializedNew = JSON.stringify(promotionalItems)
+    const serializedPrev = prevPromotionalItemsRef.current
+    
+    if (serializedNew === serializedPrev) {
+      return
+    }
+    
+    // This is an external change (API load) - sync it
+    setSelectedItems(promotionalItems.map((name, index) => ({
+      id: `promo-${Date.now()}-${index}`,
+      name
+    })))
+    
+    prevPromotionalItemsRef.current = serializedNew
   }, [promotionalItems])
   
   // ============================================================================
@@ -149,6 +161,9 @@ export const PromotionalContentComponent: React.FC = () => {
   // ============================================================================
   
   const updateFormPromotionalItems = useCallback((items: SelectedPromotion[]) => {
+    // Mark this as a local update to prevent sync effect from running
+    localUpdateRef.current = true
+    
     // Convert to the format expected by the API (array of strings - promotion names)
     // Per v1 reference: promotionalItems is stored as string[] in the API
     const promotionalItemsPayload = items
