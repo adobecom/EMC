@@ -94,7 +94,7 @@ export function useEventFormSave() {
     
     // Process each field according to the data filter
     // Note: Some fields are handled specially below (tags, eventType, dates, etc.)
-    const speciallyHandledFields = new Set(['tags', 'eventType', 'startDateTime', 'endDateTime', 'agendaItems', 'promotionalItems'])
+    const speciallyHandledFields = new Set(['tags', 'eventType', 'startDateTime', 'endDateTime', 'agendaItems', 'promotionalItems', 'timezone'])
     
     Object.entries(mergedData).forEach(([key, value]) => {
       const descriptor = EVENT_DATA_FILTER[key]
@@ -158,6 +158,11 @@ export function useEventFormSave() {
       // Ensure HH:MM:SS format - append :00 if only HH:MM provided
       const formattedEndTime = endTime?.slice(0, 5) || '17:00'
       payload.localEndTime = formattedEndTime.length === 5 ? `${formattedEndTime}:00` : formattedEndTime
+    }
+    
+    // Timezone handling (required field) - ensure it's set explicitly
+    if (mergedData.timezone && mergedData.timezone.trim() !== '') {
+      payload.timezone = mergedData.timezone
     }
     
     // Title mapping
@@ -229,11 +234,6 @@ export function useEventFormSave() {
       if (promotionalItemsForApi.length > 0) {
         setEventAttribute(payload, 'promotionalItems', promotionalItemsForApi, locale)
       }
-    }
-    
-    // Capacity -> attendeeLimit
-    if (mergedData.capacity !== undefined) {
-      payload.attendeeLimit = mergedData.capacity
     }
     
     // Waitlist mapping

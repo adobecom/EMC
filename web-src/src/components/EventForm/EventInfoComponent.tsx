@@ -169,12 +169,22 @@ export const EventInfoComponent: React.FC = () => {
   // ============================================================================
   
   const handleNameChange = (value: string) => {
-    // Sync URL title if they match
-    if (name === enTitle) {
-      updateFormData({ name: value, urlTitle: value })
-    } else {
-      updateFormData({ name: value })
+    // Sync enTitle and urlTitle if they currently match the name
+    // (i.e., they haven't been manually customized yet)
+    const shouldSyncEnTitle = name === enTitle || !enTitle
+    const shouldSyncUrlTitle = name === (formData.urlTitle || '') || !formData.urlTitle
+    
+    const updates: Partial<typeof formData> = { name: value }
+    
+    if (shouldSyncEnTitle) {
+      updates.enTitle = value
     }
+    
+    if (shouldSyncUrlTitle) {
+      updates.urlTitle = value
+    }
+    
+    updateFormData(updates)
   }
   
   const handleSecondaryLinkToggle = (value: boolean) => {

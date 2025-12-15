@@ -9,6 +9,7 @@ import {
   type RsvpCloudType 
 } from '../config/externalConfigs'
 import type { RsvpConfigField } from '../types/attendee'
+import type { SeriesTemplatesConfig } from '../types/domain'
 
 /**
  * Cache entry with data and timestamp
@@ -173,6 +174,23 @@ class ConfigService {
     return this.fetchDeduplicated<any[]>(url, (rawData) => {
       const data = rawData.data || rawData
       return Array.isArray(data) ? data : []
+    })
+  }
+
+  /**
+   * Get series templates configuration
+   * Returns configuration with template definitions and supported event types
+   */
+  async getSeriesTemplates(): Promise<SeriesTemplatesConfig> {
+    const url = EXTERNAL_CONFIG_URLS.seriesTemplates
+    
+    return this.fetchDeduplicated<SeriesTemplatesConfig>(url, (rawData) => {
+      // Expected structure: { data: [...], total, offset, limit }
+      if (!rawData.data || !Array.isArray(rawData.data)) {
+        console.warn('⚠️ Unexpected series templates structure:', rawData)
+        return { total: 0, offset: 0, limit: 0, data: [] }
+      }
+      return rawData
     })
   }
 

@@ -23,7 +23,7 @@ import { useEventFormComponent } from '../../hooks/useEventFormComponent'
  * RegistrationConfigComponent - Manages event registration settings
  * 
  * Uses EventFormContext for state management.
- * Handles capacity, waitlist, guest registration, host email, RSVP description,
+ * Handles attendee limit, waitlist, guest registration, host email, RSVP description,
  * registration type, and RSVP form fields configuration.
  */
 export const RegistrationConfigComponent: React.FC = () => {
@@ -41,7 +41,7 @@ export const RegistrationConfigComponent: React.FC = () => {
   // Destructure form data
   const cloudType = formData.cloudType || 'CreativeCloud'
   const venueName = formData.venue?.venueName
-  const capacity = formData.capacity ?? 0
+  const attendeeLimit = formData.attendeeLimit ?? 0
   const allowWaitlist = formData.allowWaitlist ?? false
   const allowGuestRegistration = formData.allowGuestRegistration ?? false
   const hostEmail = formData.hostEmail || ''
@@ -73,8 +73,8 @@ export const RegistrationConfigComponent: React.FC = () => {
   // EVENT HANDLERS
   // ============================================================================
   
-  const handleCapacityChange = (value: number) => {
-    updateFormData({ capacity: value })
+  const handleAttendeeLimitChange = (value: number) => {
+    updateFormData({ attendeeLimit: value })
   }
   
   const handleAllowWaitlistChange = (value: boolean) => {
@@ -154,8 +154,8 @@ export const RegistrationConfigComponent: React.FC = () => {
             </TooltipTrigger>
           </Flex>
           <NumberField
-            value={capacity}
-            onChange={handleCapacityChange}
+            value={attendeeLimit}
+            onChange={handleAttendeeLimitChange}
             minValue={0}
             hideStepper
             width="size-2000"

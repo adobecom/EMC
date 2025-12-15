@@ -11,8 +11,9 @@ import {
   Text
 } from '@adobe/react-spectrum'
 import { apiService } from '../../services/api'
+import { configService } from '../../services/configService'
 import { LoadingSpinner, HeadingWithTooltip } from '../shared'
-import { SeriesApiResponse } from '../../types/domain'
+import { SeriesApiResponse, SeriesTemplate } from '../../types/domain'
 import { useEventFormComponent } from '../../hooks/useEventFormComponent'
 import { useEventFormContext } from '../../contexts/EventFormContext'
 
@@ -53,6 +54,7 @@ export const EventFormatComponent: React.FC = () => {
   const { setSeriesId, seriesId: contextSeriesId } = useEventFormContext()
   
   const cloudType = formData.cloudType || 'CreativeCloud'
+  const eventType = formData.eventType || 'in-person'
   // Use context seriesId as source of truth (falls back to formData for initial load)
   const seriesId = contextSeriesId || formData.seriesId || ''
   
@@ -65,6 +67,7 @@ export const EventFormatComponent: React.FC = () => {
   
   const [clouds, setClouds] = useState<CloudOption[]>([])
   const [allSeries, setAllSeries] = useState<SeriesApiResponse[]>([])
+  const [seriesTemplates, setSeriesTemplates] = useState<SeriesTemplate[]>([])
   const [series, setSeries] = useState<SeriesOption[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -81,9 +84,10 @@ export const EventFormatComponent: React.FC = () => {
       setError(null)
 
       try {
-        const [cloudsResponse, seriesResponse] = await Promise.all([
+        const [cloudsResponse, seriesResponse, templatesConfig] = await Promise.all([
           fetchClouds(),
-          apiService.getSeriesList()
+          apiService.getSeriesList(),
+          configService.getSeriesTemplates()
         ])
 
         if (!isMounted) return
@@ -95,6 +99,11 @@ export const EventFormatComponent: React.FC = () => {
           }
         }
 
+        // Load series templates for filtering
+        if (templatesConfig?.data) {
+          setSeriesTemplates(templatesConfig.data)
+        }
+
         if (seriesResponse && Array.isArray(seriesResponse)) {
           const publishedSeries = seriesResponse.filter(
             (s: SeriesApiResponse) => s.seriesStatus === 'published'
@@ -103,7 +112,7 @@ export const EventFormatComponent: React.FC = () => {
             setAllSeries(publishedSeries)
             
             if (cloudType) {
-              filterSeriesByCloud(cloudType, publishedSeries)
+              filterSeries(cloudType, eventType, publishedSeries, templatesConfig?.data || [])
             }
           }
         } else {
@@ -131,20 +140,74 @@ export const EventFormatComponent: React.FC = () => {
 
   useEffect(() => {
     if (allSeries.length > 0 && cloudType) {
-      filterSeriesByCloud(cloudType)
+      filterSeries(cloudType, eventType)
     }
-  }, [cloudType, allSeries])
+  }, [cloudType, eventType, allSeries, seriesTemplates])
 
   // ============================================================================
   // HELPERS
   // ============================================================================
 
-  const filterSeriesByCloud = (selectedCloudType: string, seriesList?: SeriesApiResponse[]) => {
-    const seriesToFilter = seriesList || allSeries
+  /**
+   * Map form event type to API event type format
+   * Form: 'in-person' | 'webinar' -> API: 'InPerson' | 'Webinar'
+   */
+  const mapEventTypeToApiFormat = (type: string): string => {
+    const mapping: Record<string, string> = {
+      'in-person': 'InPerson',
+      'webinar': 'Webinar',
+      'hybrid': 'Hybrid'
+    }
+    return mapping[type] || type
+  }
+
+  /**
+   * Check if a series template supports the current event type
+   */
+  const templateSupportsEventType = (templateId: string, currentEventType: string, templates: SeriesTemplate[]): boolean => {
+    const apiEventType = mapEventTypeToApiFormat(currentEventType)
     
-    const filteredSeries = seriesToFilter.filter(
+    // Find the template by matching template-path with templateId
+    const template = templates.find(t => t['template-path'] === templateId)
+    
+    if (!template) {
+      // If template not found in config, allow it (backward compatibility)
+      console.warn(`Template not found in config: ${templateId}`)
+      return true
+    }
+    
+    const supportedType = template['supported-event-type']
+    
+    // Hybrid templates support both InPerson and Webinar
+    if (supportedType === 'Hybrid') return true
+    
+    // Otherwise, must match exactly
+    return supportedType === apiEventType
+  }
+
+  /**
+   * Filter series by cloud type AND event type (using template mapping)
+   */
+  const filterSeries = (
+    selectedCloudType: string, 
+    selectedEventType: string,
+    seriesList?: SeriesApiResponse[],
+    templates?: SeriesTemplate[]
+  ) => {
+    const seriesToFilter = seriesList || allSeries
+    const templatesToUse = templates || seriesTemplates
+    
+    // First filter by cloud type
+    let filteredSeries = seriesToFilter.filter(
       (s: SeriesApiResponse) => s.cloudType === selectedCloudType
     )
+    
+    // Then filter by event type using template matching
+    if (templatesToUse.length > 0) {
+      filteredSeries = filteredSeries.filter((s: SeriesApiResponse) => 
+        templateSupportsEventType(s.templateId, selectedEventType, templatesToUse)
+      )
+    }
     
     const seriesOptions = filteredSeries.map((s: SeriesApiResponse) => ({
       id: s.seriesId,
@@ -157,12 +220,14 @@ export const EventFormatComponent: React.FC = () => {
     if (seriesOptions.length > 0) {
       const currentSeriesExists = seriesOptions.some(s => s.id === seriesId)
       if (!seriesId || !currentSeriesExists) {
+        // Select first available series
         setSeriesId(seriesOptions[0].id)
       } else if (seriesId && contextSeriesId !== seriesId) {
         // Sync state.seriesId with formData.seriesId (happens when loading existing event)
         setSeriesId(seriesId)
       }
     } else {
+      // No series available for this combination
       if (seriesId) {
         setSeriesId('')
       }

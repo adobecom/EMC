@@ -152,7 +152,7 @@ function mapApiResponseToFormData(event: EventApiResponse, locale: string): Part
       : '',
     timezone: event.timezone,
     venue: venueData,
-    capacity: event.attendeeLimit,
+    attendeeLimit: event.attendeeLimit,
     status: event.published ? 'published' : 'draft',
     registrationOpen: true,
     allowWaitlist: event.allowWaitlisting || false,

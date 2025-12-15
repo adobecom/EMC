@@ -75,6 +75,23 @@ export interface SeriesApiResponse {
   modificationTime: number
 }
 
+// Series template configuration types
+export interface SeriesTemplate {
+  'template-path': string
+  'template-name': string
+  'template-image': string
+  'supported-event-type': 'InPerson' | 'Webinar' | 'Hybrid'
+}
+
+export interface SeriesTemplatesConfig {
+  total: number
+  offset: number
+  limit: number
+  data: SeriesTemplate[]
+  columns?: string[]
+  ':type'?: string
+}
+
 // Event image types
 export interface EventImage {
   imageKind: 'event-card-image' | 'event-hero-image' | 'venue-image' | string
@@ -566,7 +583,6 @@ export interface EventFormData {
   showVenueAdditionalInfoPostEvent?: boolean
   
   // Step 5: Attendance & Registration
-  capacity?: number
   attendeeLimit?: number
   status: 'draft' | 'published' | 'ongoing' | 'completed' | 'cancelled'
   registrationOpen: boolean

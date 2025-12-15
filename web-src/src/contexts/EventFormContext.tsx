@@ -182,7 +182,7 @@ export const createDefaultFormData = (): EventFormData => ({
     showVenuePostEvent: false,
     showAdditionalInfoPostEvent: false
   },
-  capacity: undefined,
+  attendeeLimit: undefined,
   status: 'draft',
   registrationOpen: false,
   allowWaitlist: false,
