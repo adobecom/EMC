@@ -20,6 +20,12 @@ export const env = {
   // API Key for external requests
   API_KEY: process.env.API_KEY || 'acom_event_service',
   
+  // Google Places API Keys (environment-specific)
+  // Loaded from .env file: DEV_GOOGLE_PLACES_API, STAGE_GOOGLE_PLACES_API, PROD_GOOGLE_PLACES_API
+  DEV_GOOGLE_PLACES_API: process.env.DEV_GOOGLE_PLACES_API || '',
+  STAGE_GOOGLE_PLACES_API: process.env.STAGE_GOOGLE_PLACES_API || '',
+  PROD_GOOGLE_PLACES_API: process.env.PROD_GOOGLE_PLACES_API || '',
+  
   // Environment mode
   NODE_ENV: process.env.NODE_ENV || 'development',
   
@@ -41,10 +47,19 @@ if (typeof window !== 'undefined' && env.isDevelopment()) {
   console.log('   CLIENT_IDENTITY:', env.CLIENT_IDENTITY)
   console.log('   API_KEY:', env.API_KEY)
   console.log('   NODE_ENV:', env.NODE_ENV)
+  console.log('   DEV_GOOGLE_PLACES_API:', env.DEV_GOOGLE_PLACES_API ? '✓ Configured' : '✗ Not configured')
+  console.log('   STAGE_GOOGLE_PLACES_API:', env.STAGE_GOOGLE_PLACES_API ? '✓ Configured' : '✗ Not configured')
+  console.log('   PROD_GOOGLE_PLACES_API:', env.PROD_GOOGLE_PLACES_API ? '✓ Configured' : '✗ Not configured')
   
   if (env.CLIENT_IDENTITY === 'emc-console-dev') {
     console.warn('⚠️ Using default CLIENT_IDENTITY')
     console.warn('   Add CLIENT_IDENTITY to your .env file to set a custom value')
+  }
+  
+  if (!env.DEV_GOOGLE_PLACES_API && !env.STAGE_GOOGLE_PLACES_API && !env.PROD_GOOGLE_PLACES_API) {
+    console.warn('⚠️ No Google Places API keys configured')
+    console.warn('   Add DEV_GOOGLE_PLACES_API, STAGE_GOOGLE_PLACES_API, or PROD_GOOGLE_PLACES_API to your .env file')
+    console.warn('   See docs/GOOGLE_PLACES_SETUP.md for setup instructions')
   }
 }
 

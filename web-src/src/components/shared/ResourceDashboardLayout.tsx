@@ -37,7 +37,9 @@ interface ResourceDashboardLayoutProps<T> {
   onRefresh: () => void
   onCreate?: () => void
   createLabel?: string
+  createButton?: React.ReactNode // Custom create button (overrides onCreate/createLabel)
   onVisibleItemsChange?: (items: T[]) => void
+  onVisibleIdsChange?: (ids: string[]) => void // Callback for visible item IDs
   
   // Empty state
   emptyStateTitle?: string
@@ -64,7 +66,9 @@ export function ResourceDashboardLayout<T extends Record<string, any>>({
   onRefresh,
   onCreate,
   createLabel = 'Create',
+  createButton,
   onVisibleItemsChange,
+  onVisibleIdsChange,
   emptyStateTitle = 'No Items Found',
   emptyStateDescription = 'Get started by creating your first item',
   loadingMessage = 'Loading...',
@@ -118,6 +122,17 @@ export function ResourceDashboardLayout<T extends Record<string, any>>({
     })
   }, [data, debouncedQuery, searchKeys])
   
+  // Handle visible items change and extract IDs
+  const handleVisibleItemsChange = useCallback((items: T[]) => {
+    if (onVisibleItemsChange) {
+      onVisibleItemsChange(items)
+    }
+    if (onVisibleIdsChange) {
+      const ids = items.map(item => getItemKey(item))
+      onVisibleIdsChange(ids)
+    }
+  }, [onVisibleItemsChange, onVisibleIdsChange, getItemKey])
+  
   if (error) {
     return (
       <View height="100%">
@@ -137,7 +152,7 @@ export function ResourceDashboardLayout<T extends Record<string, any>>({
   const isSearching = inputValue !== debouncedQuery
 
   return (
-    <View height="100%">
+    <View padding="size-400">
       <Flex direction="column" gap="size-150" height="100%">
         {/* Header */}
         <Flex direction="row" justifyContent="space-between" alignItems="center">
@@ -166,7 +181,9 @@ export function ResourceDashboardLayout<T extends Record<string, any>>({
               <ActionButton onPress={onRefresh} isQuiet>
                 <Refresh />
               </ActionButton>
-              {onCreate && (
+              {createButton ? (
+                createButton
+              ) : onCreate && (
                 <Button onPress={onCreate} variant="accent">
                   {createLabel}
                 </Button>
@@ -194,7 +211,7 @@ export function ResourceDashboardLayout<T extends Record<string, any>>({
                 getItemKey={getItemKey}
                 actions={actions}
                 pageSize={pageSize}
-                onVisibleItemsChange={onVisibleItemsChange}
+                onVisibleItemsChange={handleVisibleItemsChange}
               emptyState={
                 <Flex direction="column" gap="size-150" alignItems="center">
                   <Heading level={3}>
@@ -211,7 +228,7 @@ export function ResourceDashboardLayout<T extends Record<string, any>>({
                       Clear Search
                     </ActionButton>
                   ) : (
-                    onCreate && (
+                    createButton ? createButton : onCreate && (
                       <Button onPress={onCreate} variant="accent">
                         {createLabel}
                       </Button>

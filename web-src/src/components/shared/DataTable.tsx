@@ -21,6 +21,7 @@ export interface TableColumn<T> {
   render?: (item: T) => React.ReactNode
   sortable?: boolean
   sortFn?: (a: T, b: T) => number
+  isSticky?: boolean
 }
 
 export interface TableAction<T> {
@@ -180,6 +181,23 @@ export function DataTable<T extends Record<string, any>>({
     }
   }, [handlePageInputBlur])
 
+  // Must define all hooks before any conditional returns (Rules of Hooks)
+  const allColumns = React.useMemo(() => {
+    const cols = [...columns]
+    if (actions && actions.length > 0) {
+      cols.push({ key: 'actions', name: 'Actions', sortable: false })
+    }
+    return cols
+  }, [columns, actions])
+
+  // Get sticky column classes
+  const getStickyClass = (columnKey: string): string => {
+    const stickyColumns = allColumns.filter(c => c.isSticky).reverse()
+    const index = stickyColumns.findIndex(c => c.key === columnKey)
+    if (index === -1) return ''
+    return `sticky-right-${index + 1}`
+  }
+
   const renderCell = (item: T, column: TableColumn<T>) => {
     if (column.render) {
       return column.render(item)
@@ -189,25 +207,18 @@ export function DataTable<T extends Record<string, any>>({
     return <Text>{value != null ? String(value) : '-'}</Text>
   }
 
+  // Empty state check AFTER all hooks are defined
   if (data.length === 0 && !isLoading) {
     return (
-      <Flex justifyContent="center" alignItems="center" height="size-3000">
+      <div style={{ width: '100%', minHeight: '400px' }}>
         {emptyState || <Text>No data available</Text>}
-      </Flex>
+      </div>
     )
   }
 
-  const allColumns = React.useMemo(() => {
-    const cols = [...columns]
-    if (actions && actions.length > 0) {
-      cols.push({ key: 'actions', name: 'Actions', sortable: false })
-    }
-    return cols
-  }, [columns, actions])
-
   return (
     <Flex direction="column" gap="size-150" height="100%" width="100%">
-      <div className="custom-data-table" style={{ overflowX: 'auto', width: '100%' }}>
+      <div className="custom-data-table" style={{ overflowX: 'auto', width: '100%', maxWidth: '100%' }}>
         <table>
           <thead>
             <tr>
@@ -215,12 +226,17 @@ export function DataTable<T extends Record<string, any>>({
                 const isSortable = column.sortable !== false && column.key !== 'actions'
                 const isSorted = sortColumn === column.key
                 const minWidth = Math.max(column.width || 100, 100)
+                const stickyClass = column.isSticky ? getStickyClass(column.key) : ''
+                const className = [
+                  isSortable ? 'sortable' : '',
+                  stickyClass
+                ].filter(Boolean).join(' ')
                 
                 return (
                   <th 
                     key={column.key}
                     onClick={() => isSortable && handleSort(column.key)}
-                    className={isSortable ? 'sortable' : ''}
+                    className={className}
                     style={{ 
                       textAlign: column.key === 'actions' ? 'right' : 'left',
                       minWidth: `${minWidth}px`,
@@ -261,9 +277,11 @@ export function DataTable<T extends Record<string, any>>({
               <tr key={getItemKey(item)}>
                 {allColumns.map((column) => {
                   const minWidth = Math.max(column.width || 100, 100)
+                  const stickyClass = column.isSticky ? getStickyClass(column.key) : ''
                   return (
                   <td 
                     key={column.key}
+                    className={stickyClass}
                     style={{ 
                       textAlign: column.key === 'actions' ? 'right' : 'left',
                       minWidth: `${minWidth}px`,

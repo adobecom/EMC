@@ -19,25 +19,36 @@ Welcome to the Event Management Cloud (EMC) documentation! This index will help 
   - Routing with React Router
   - Adobe Spectrum UI components
 
-### Backend Development
-- **[Backend Guide](./BACKEND.md)** - Adobe I/O Runtime actions guide
-  - Creating actions
-  - Action structure
-  - Deployment
-  - State management with Adobe I/O State
+- **[Event Form Guide](./EVENT_FORM.md)** - Complete event form implementation
+  - Multi-step wizard with 4 main steps
+  - Modular component architecture
+  - Validation and data flow
+  - Create and edit modes
 
-### API Integration
-- **[API Integration](./API_INTEGRATION.md)** - Connecting frontend to backend
-  - API service layer
-  - Authentication
-  - Error handling
-  - Mock data for development
+- **[Modular Component Pattern](./MODULAR_COMPONENT_PATTERN.md)** - Component extraction patterns
+  - Breaking down complex forms
+  - Self-contained, reusable components
+  - External API integration patterns
+  - Image upload with drag & drop
 
+- **[Design System](./DESIGN_SYSTEM.md)** - Centralized design tokens and style utilities
+  - Layout dimensions and calculations
+  - Color palette and semantic colors
+  - Z-index scale for layering
+  - Common style objects and helpers
+
+### API & Services
 - **[API Centralization](./API_CENTRALIZATION.md)** - Centralized API management system
   - ApiService architecture
   - Type safety
   - Mock support
   - Consistent error handling
+
+- **[Google Places API Setup](./GOOGLE_PLACES_SETUP.md)** - Google Places integration
+  - API key setup and security
+  - Venue autocomplete configuration
+  - Cost optimization
+  - Troubleshooting guide
 
 ### Testing
 - **[Testing Guide](./TESTING.md)** - Unit and E2E testing patterns
@@ -89,16 +100,18 @@ A system that lets you use real Adobe IMS tokens from production sites in your l
 ### Development Workflow
 - [Development Workflow](./DEVELOPMENT_WORKFLOW.md)
 - [Frontend Guide](./FRONTEND.md)
-- [Backend Guide](./BACKEND.md)
+- [Event Form Guide](./EVENT_FORM.md)
 - [Testing Guide](./TESTING.md)
 
 ### Integration & APIs
-- [API Integration](./API_INTEGRATION.md)
 - [API Centralization](./API_CENTRALIZATION.md)
 - [Dev Token Guide](./DEV_TOKEN_GUIDE.md)
+- [Google Places API Setup](./GOOGLE_PLACES_SETUP.md)
 
 ### UI Components
 - [Frontend Guide](./FRONTEND.md)
+- [Event Form Guide](./EVENT_FORM.md)
+- [Modular Component Pattern](./MODULAR_COMPONENT_PATTERN.md)
 - [User Panel Implementation](./USER_PANEL_IMPLEMENTATION.md)
 - [Top Nav Layout](./TOP_NAV_LAYOUT.md)
 
@@ -132,9 +145,10 @@ aio app undeploy         # Remove deployment
 | Task | Documentation |
 |------|---------------|
 | Set up local dev with API access | [Dev Token Quick Start](./DEV_TOKEN_QUICKSTART.md) |
+| Set up Google Places API | [Google Places Setup](./GOOGLE_PLACES_SETUP.md) |
 | Create a new component | [Frontend Guide](./FRONTEND.md) |
-| Create a new backend action | [Backend Guide](./BACKEND.md) |
-| Connect frontend to backend | [API Integration](./API_INTEGRATION.md) |
+| Create modular form component | [Modular Component Pattern](./MODULAR_COMPONENT_PATTERN.md) |
+| Use API services | [API Centralization](./API_CENTRALIZATION.md) |
 | Write tests | [Testing Guide](./TESTING.md) |
 | Understand the architecture | [Project Overview](./PROJECT_OVERVIEW.md) |
 
@@ -147,8 +161,8 @@ EMC/
 │   ├── PROJECT_OVERVIEW.md         # Start here!
 │   ├── DEVELOPMENT_WORKFLOW.md     # How to develop
 │   ├── FRONTEND.md                 # Frontend guide
-│   ├── BACKEND.md                  # Backend guide
-│   ├── API_INTEGRATION.md          # API guide
+│   ├── EVENT_FORM.md               # Event form guide
+│   ├── MODULAR_COMPONENT_PATTERN.md # Component patterns
 │   ├── API_CENTRALIZATION.md       # API architecture
 │   ├── TESTING.md                  # Testing guide
 │   ├── TOP_NAV_LAYOUT.md          # Nav structure
@@ -179,22 +193,19 @@ EMC/
 ### Frontend Developer
 1. [Project Overview](./PROJECT_OVERVIEW.md)
 2. [Dev Token Quick Start](./DEV_TOKEN_QUICKSTART.md) ⚡
-3. [Frontend Guide](./FRONTEND.md)
-4. [API Integration](./API_INTEGRATION.md)
-
-### Backend Developer
-1. [Project Overview](./PROJECT_OVERVIEW.md)
-2. [Backend Guide](./BACKEND.md)
-3. [API Integration](./API_INTEGRATION.md)
-4. [Testing Guide](./TESTING.md)
+3. [Google Places API Setup](./GOOGLE_PLACES_SETUP.md)
+4. [Frontend Guide](./FRONTEND.md)
+5. [Event Form Guide](./EVENT_FORM.md)
+6. [Modular Component Pattern](./MODULAR_COMPONENT_PATTERN.md)
+7. [API Centralization](./API_CENTRALIZATION.md)
 
 ### Full-Stack Developer
 1. [Project Overview](./PROJECT_OVERVIEW.md)
 2. [Dev Token Quick Start](./DEV_TOKEN_QUICKSTART.md) ⚡
 3. [Development Workflow](./DEVELOPMENT_WORKFLOW.md)
 4. [Frontend Guide](./FRONTEND.md)
-5. [Backend Guide](./BACKEND.md)
-6. [API Integration](./API_INTEGRATION.md)
+5. [Event Form Guide](./EVENT_FORM.md)
+6. [API Centralization](./API_CENTRALIZATION.md)
 7. [Testing Guide](./TESTING.md)
 
 ### QA Engineer
@@ -208,6 +219,24 @@ EMC/
 3. [User Panel Implementation](./USER_PANEL_IMPLEMENTATION.md)
 
 ## 🆕 Recent Updates
+
+### Design System (November 25, 2025)
+- ✨ **Centralized Design System** - Single source of truth for styles
+  - Layout dimensions and calculated heights
+  - Color palette (Adobe brand + Spectrum variables)
+  - Z-index scale for proper layering
+  - Common style objects (sticky nav, action bars, scrollable areas)
+  - Border styles and helper functions
+  - See [Design System Guide](./DESIGN_SYSTEM.md)
+
+### Event Form Implementation (November 2025)
+- ✨ **Production-Ready Multi-Step Form** - Complete event creation/editing
+  - 4-step wizard matching v1 reference structure
+  - Modular component architecture (EventFormatComponent, EventInfoComponent)
+  - Full TypeScript type safety
+  - Comprehensive validation
+  - See [Event Form Guide](./EVENT_FORM.md)
+  - See [Modular Component Pattern](./MODULAR_COMPONENT_PATTERN.md)
 
 ### Event Dashboard Enhancements
 - ✨ **Data Enrichment System** - Intelligent caching and batching for API calls
@@ -233,7 +262,7 @@ EMC/
 | Can't make API calls locally | [Dev Token Quick Start](./DEV_TOKEN_QUICKSTART.md) |
 | Don't understand the architecture | [Project Overview](./PROJECT_OVERVIEW.md) |
 | Component not rendering | [Frontend Guide](./FRONTEND.md) |
-| Action not working | [Backend Guide](./BACKEND.md) |
+| Form component extraction | [Modular Component Pattern](./MODULAR_COMPONENT_PATTERN.md) |
 | Tests failing | [Testing Guide](./TESTING.md) |
 | Token expired | [Dev Token Guide](./DEV_TOKEN_GUIDE.md#troubleshooting) |
 
@@ -254,8 +283,8 @@ When updating documentation:
 
 ---
 
-**Last Updated:** November 6, 2025
-**Version:** 1.2.0
+**Last Updated:** December 8, 2025
+**Version:** 1.5.0
 
 Happy coding! 🚀
 

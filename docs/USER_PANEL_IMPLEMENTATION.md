@@ -271,7 +271,8 @@ Works in all modern browsers:
 ## Related Documentation
 
 - [Frontend Guide](./FRONTEND.md) - Component development patterns
-- [API Integration](./API_INTEGRATION.md) - Using IMS in API calls
+- [API Centralization](./API_CENTRALIZATION.md) - Using IMS in API calls
+- [Dev Token Guide](./DEV_TOKEN_GUIDE.md) - Local development with IMS tokens
 - [Project Overview](./PROJECT_OVERVIEW.md) - IMS authentication flow
 
 ## Summary

@@ -4,7 +4,8 @@
 
 import { createEnrichmentManager } from './dataEnrichment'
 import { apiService } from './api'
-import { EventApiResponse, Venue, SeriesApiResponse, EventHistoryResponse, HistoryUser } from '../types/domain'
+import { EventApiResponse, Venue, EventHistoryResponse, HistoryUser } from '../types/domain'
+import { clearSeriesEnrichmentCaches } from './seriesEnrichment'
 
 /**
  * Enriched data types for events
@@ -21,12 +22,6 @@ export interface EventVenueInfo {
   state?: string
   country?: string
   formattedAddress?: string
-}
-
-export interface EventSeriesInfo {
-  seriesName: string
-  seriesDescription?: string
-  seriesStatus?: 'published' | 'draft' | 'archived'
 }
 
 export interface EventHistoryInfo {
@@ -153,48 +148,6 @@ export const venueEnrichmentManager = createEnrichmentManager<string, EventVenue
 )
 
 /**
- * Extract series information from series API response
- */
-export function extractSeriesInfo(series: SeriesApiResponse): EventSeriesInfo {
-  return {
-    seriesName: series.seriesName,
-    seriesDescription: series.seriesDescription,
-    seriesStatus: series.seriesStatus
-  }
-}
-
-/**
- * Series enrichment manager
- * Handles fetching, caching, and batching series requests
- */
-export const seriesEnrichmentManager = createEnrichmentManager<string, EventSeriesInfo>(
-  async (seriesIds: string[]) => {
-    const results = new Map<string, EventSeriesInfo>()
-    
-    try {
-      // Fetch series in batch
-      const seriesData = await apiService.getSeriesBatch(seriesIds)
-      
-      // Extract series info from each series
-      seriesData.forEach((series, seriesId) => {
-        const seriesInfo = extractSeriesInfo(series)
-        results.set(seriesId, seriesInfo)
-      })
-      
-    } catch (error) {
-      console.error('Error enriching series:', error)
-    }
-    
-    return results
-  },
-  {
-    cacheDuration: 15 * 60 * 1000, // Cache for 15 minutes (series change less frequently than events)
-    batchDelay: 150, // Wait 150ms to batch requests
-    maxBatchSize: 20 // Fetch up to 20 series at once
-  }
-)
-
-/**
  * Extract history information from event history response
  * - Creator: User from the first history record
  * - Modifier: User from the last history record
@@ -287,13 +240,20 @@ export const userEnrichmentManager = createEnrichmentManager<string, UserInfo>(
 )
 
 /**
- * Clear all enrichment caches
+ * Clear all enrichment caches (events only)
  */
-export function clearAllEnrichmentCaches(): void {
+export function clearEventEnrichmentCaches(): void {
   thumbnailEnrichmentManager.clearCache()
   venueEnrichmentManager.clearCache()
-  seriesEnrichmentManager.clearCache()
   historyEnrichmentManager.clearCache()
   userEnrichmentManager.clearCache()
+}
+
+/**
+ * Clear all enrichment caches (events and series)
+ */
+export function clearAllEnrichmentCaches(): void {
+  clearEventEnrichmentCaches()
+  clearSeriesEnrichmentCaches()
 }
 

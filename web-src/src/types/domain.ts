@@ -66,9 +66,30 @@ export interface SeriesApiResponse {
   targetCms: TargetCms
   templateId: string
   externalThemeId?: string
-  relatedDomain?: string
+  susiContextId?: string // SSO context ID
+  relatedDomain?: string // Related domain for the series
+  contentRoot?: string // Content root path
+  createdBy?: string
+  modifiedBy?: string
   creationTime: number
   modificationTime: number
+}
+
+// Series template configuration types
+export interface SeriesTemplate {
+  'template-path': string
+  'template-name': string
+  'template-image': string
+  'supported-event-type': 'InPerson' | 'Webinar' | 'Hybrid'
+}
+
+export interface SeriesTemplatesConfig {
+  total: number
+  offset: number
+  limit: number
+  data: SeriesTemplate[]
+  columns?: string[]
+  ':type'?: string
 }
 
 // Event image types
@@ -93,17 +114,24 @@ export interface VenueAddressComponent {
   languageCode?: string
 }
 
+// Venue localization data
+export interface VenueLocalization {
+  additionalInformation?: string
+  [key: string]: any
+}
+
 export interface Venue {
-  placeId?: string
+  venueId: string
   venueName: string
+  placeId?: string
   formattedAddress?: string
   addressComponents?: VenueAddressComponent[]
   coordinates?: VenueCoordinates
   gmtOffset?: number
-  localizations?: Record<string, any>
+  additionalInformation?: string // Localizable
+  localizations?: Record<string, VenueLocalization>
   localizationOverrides?: Record<string, any>
-  additionalInformation?: string
-  venueId: string
+  // Convenience fields (derived from addressComponents)
   address?: string
   city?: string
   state?: string
@@ -152,10 +180,55 @@ export interface EventHistoryResponse {
   nextPageToken?: string
 }
 
+// Agenda item from API
+export interface AgendaDataItem {
+  startTime: string
+  description?: string
+  title: string
+}
+
+// Video data from API
+export interface VideoData {
+  url?: string
+}
+
+// Registration config from API
+export interface RegistrationData {
+  type?: string
+  formData?: string
+}
+
+// Marketo integration data from API
+export interface MarketoIntegrationData {
+  eventType?: string
+  salesforceCampaignId?: string
+  mczProgramName?: string
+  coMarketingPartner?: string
+  eventPoi?: string
+}
+
+// CTA (Call-to-Action) item
+export interface CtaItem {
+  label?: string
+  url?: string
+  type?: string
+}
+
+// Promotional item
+export interface PromotionalItem {
+  title?: string
+  description?: string
+  url?: string
+  imageUrl?: string
+}
+
 // Event API Response types (from backend)
 export interface EventApiResponse {
   eventId: string
-  enTitle?: string
+  title?: string // Localizable
+  enTitle?: string // English title for URL/reference
+  description?: string // Localizable - rich text for event page
+  eventDetails?: string // Localizable - additional event details
   seriesId?: string
   cloudType?: string
   eventType?: string
@@ -181,13 +254,17 @@ export interface EventApiResponse {
   externalEventId?: string
   creationTime?: number
   modificationTime?: number
+  createdBy?: string
+  modifiedBy?: string
   localizationOverrides?: Record<string, any>
-  localizations?: Record<string, any>
+  localizations?: Record<string, EventLocalization>
   venue?: Record<string, any>
-  agenda?: any[]
+  agenda?: AgendaDataItem[] // Localizable array
   rsvpFormFields?: Record<string, any>
-  video?: Record<string, any>
-  marketoIntegration?: Record<string, any>
+  rsvpDescription?: string // Localizable
+  video?: VideoData
+  registration?: RegistrationData
+  marketoIntegration?: MarketoIntegrationData
   liveUpdate?: boolean
   forceSpWrite?: boolean
   defaultLocale?: string
@@ -195,11 +272,29 @@ export interface EventApiResponse {
   showAgendaPostEvent?: boolean
   showVenuePostEvent?: boolean
   showVenueAdditionalInfoPostEvent?: boolean
+  useLegacyDetailPagePath?: boolean
+  communityTopicUrl?: string // URL for community forum topic
+  cta?: CtaItem[] // Localizable call-to-action items
+  promotionalItems?: PromotionalItem[] // Localizable promotional content
   gmtOffset?: number
   localStartTimeMillis?: number
   localEndTimeMillis?: number
   images?: EventImage[]
+  speakers?: any[]
+  sponsors?: any[]
   // Add any other fields as optional
+  [key: string]: any
+}
+
+// Event localization data
+export interface EventLocalization {
+  title?: string
+  description?: string
+  eventDetails?: string
+  rsvpDescription?: string
+  agenda?: AgendaDataItem[]
+  cta?: CtaItem[]
+  promotionalItems?: PromotionalItem[]
   [key: string]: any
 }
 
@@ -215,6 +310,7 @@ export interface EventDashboardItem {
   startDate?: string
   localStartDate?: string
   localStartTime?: string
+  localStartTimeMillis?: number
   timezone?: string
   attendeeLimit?: number
   attendeeCount?: number
@@ -228,6 +324,8 @@ export interface EventDashboardItem {
   language?: string
   thumbnail?: string
   contributor?: string
+  detailPagePath?: string
+  defaultLocale?: string
 }
 
 // Enhanced Series type for dashboard display
@@ -262,18 +360,279 @@ export interface Event {
   updatedAt: string
 }
 
-export interface EventFormData {
+// Tag/Topic types for event categorization
+export interface EventTag {
   name: string
+  caasId?: string
+}
+
+export interface EventTagGroup {
+  groupName: string
+  tags: EventTag[]
+}
+
+// CAAS Tag API Response types
+export interface CaasTag {
+  path: string
+  tagID: string
+  name: string
+  title: string
   description?: string
+  tagImage?: string
+  tags?: Record<string, CaasTag>
+  [key: string]: any // For localized titles like title.ja, title.de, etc.
+}
+
+export interface CaasNamespace {
+  name: string
+  title: string
+  description: string
+  path: string
+  tags: Record<string, CaasTag>
+}
+
+export interface CaasTagsResponse {
+  namespaces: Record<string, CaasNamespace>
+}
+
+// Speaker/Host profile types
+// Per OpenAPI SocialLink schema: serviceName and link are required
+export type SocialServiceName = 'YouTube' | 'LinkedIn' | 'Web' | 'X' | 'TikTok' | 'Instagram' | 'Facebook' | 'Pinterest'
+
+export interface SocialLink {
+  serviceName: SocialServiceName
+  link: string
+}
+
+// Internal form representation (before API transformation)
+export interface SocialLinkFormData {
+  platform?: string // Display name for UI
+  url: string // User input
+}
+
+// Speaker role types for events
+export type SpeakerType = 
+  | 'host'
+  | 'presenter'
+  | 'speaker'
+  | 'guest-speaker'
+  | 'keynote'
+  | 'judge'
+  | 'portfolio-reviewer'
+  | 'career-advisor'
+  | 'product-demonstrator'
+
+export interface ProfileData {
+  type: SpeakerType
+  speakerId?: string // Series-level speaker ID
+  firstName: string
+  lastName: string
+  title: string // Localizable
+  bio?: string // Localizable
+  imageUrl?: string
+  imageId?: string
+  socialLinks?: SocialLinkFormData[] // Form representation (url, platform)
+  localizations?: Record<string, SpeakerLocalization>
+  // State flags
+  isSaved?: boolean // Speaker has been saved to series
+  isFromSeries?: boolean // Speaker was selected from series autocomplete
+  ordinal?: number // Order in event
+  modificationTime?: number // For API updates
+  creationTime?: number
+}
+
+// Speaker localization data
+export interface SpeakerLocalization {
+  title?: string
+  bio?: string
+  [key: string]: any
+}
+
+// Series-level speaker data from API (matches v1 SPEAKER_DATA_FILTER)
+// Per OpenAPI: socialLinks uses SocialLink schema with serviceName + link
+export interface SeriesSpeaker {
+  speakerId: string
+  firstName: string
+  lastName: string
+  title?: string // Localizable
+  bio?: string // Localizable
+  socialLinks?: SocialLink[] // API format: { serviceName, link }
+  photo?: {
+    imageId: string
+    imageUrl: string
+  }
+  localizations?: Record<string, SpeakerLocalization>
+  creationTime?: number
+  modificationTime?: number
+}
+
+// Sponsor localization data
+export interface SponsorLocalization {
+  info?: string
+  [key: string]: any
+}
+
+// Series-level sponsor data from API (matches v1 SPONSOR_DATA_FILTER)
+export interface SeriesSponsor {
+  sponsorId: string
+  name: string
+  info?: string // Localizable description/info about sponsor
+  link?: string // External URL (v1 uses 'link', some places use 'externalUrl')
+  externalUrl?: string // Alias for link
+  // API returns image data under 'image' property
+  image?: {
+    imageId: string
+    imageUrl: string
+    altText?: string
+  }
+  logo?: {
+    imageId: string
+    imageUrl: string
+  }
+  localizations?: Record<string, SponsorLocalization>
+  creationTime?: number
+  modificationTime?: number
+}
+
+// Sponsor type enum per OpenAPI SponsorType schema
+export type SponsorType = 'Diamond' | 'Platinum' | 'Gold' | 'Silver' | 'Bronze' | 'Engagement' | 'Partner'
+
+// Sponsor/Partner types for form
+export interface SponsorData {
+  id: string
+  sponsorId?: string  // Series-level sponsor ID if saved
+  partnerName: string
+  partnerUrl: string
+  info?: string // Localizable description
+  type?: SponsorType // Event-level sponsor type
+  imageUrl?: string
+  imageId?: string
+  isSaved?: boolean
+  isFromSeries?: boolean  // True if selected from series autocomplete
+  localizations?: Record<string, SponsorLocalization>
+  modificationTime?: number
+}
+
+// Image types for events
+export interface EventImageData {
+  imageKind: 'event-card-image' | 'event-hero-image' | 'venue-image' | string
+  imageUrl?: string
+  imageId?: string
+  altText?: string
+}
+
+// Venue data types
+// Address component per OpenAPI AddressComponent schema
+// Note: Uses camelCase (longName, shortName) - converted from Google Places snake_case
+export interface AddressComponent {
+  longName: string
+  shortName: string
+  types: string[]
+}
+
+export interface VenueData {
+  venueName: string
+  formattedAddress?: string
+  placeId?: string
+  coordinates?: {
+    lat: number
+    lon: number
+  }
+  gmtOffset?: number
+  addressComponents?: AddressComponent[] // Required by OpenAPI for venue creation
+  additionalInformation?: string
+  venueImageUrl?: string
+  venueImageId?: string
+  showVenuePostEvent?: boolean
+  showAdditionalInfoPostEvent?: boolean
+}
+
+// Comprehensive Event Form Data
+export interface EventFormData {
+  // Step 1: Basic Info
+  cloudType: 'CreativeCloud' | 'ExperienceCloud'
+  eventType: 'in-person' | 'webinar'
   seriesId: string
   organizationId: string
+  name: string // Title (localizable)
+  enTitle?: string // English title for URL/reference
+  urlTitle?: string // English title for page URL
+  description?: string // Rich text description for event page (localizable)
+  eventDetails?: string // Additional event details (localizable)
+  shortDescription?: string // Plain text for Events Hub/SEO (160 chars max)
+  language: string
+  defaultLocale?: string
+  isPrivate: boolean
+  
+  // Step 2: Tags & Topics
+  tags?: EventTag[]
+  topics?: string[]
+  
+  // Step 3: Date & Time
   startDateTime: string
   endDateTime: string
-  location?: string
-  capacity?: number
+  localStartDate?: string
+  localEndDate?: string
+  localStartTime?: string
+  localEndTime?: string
+  timezone?: string
+  
+  // Step 4: Venue
+  venue?: VenueData
+  showVenuePostEvent?: boolean
+  showVenueAdditionalInfoPostEvent?: boolean
+  
+  // Step 5: Attendance & Registration
+  attendeeLimit?: number
   status: 'draft' | 'published' | 'ongoing' | 'completed' | 'cancelled'
   registrationOpen: boolean
+  allowWaitlist?: boolean
+  allowWaitlisting?: boolean // Alias
+  allowGuestRegistration?: boolean
+  hostEmail?: string
+  rsvpDescription?: string // Localizable
+  // Registration fields configuration
+  registrationType?: 'ESP' | 'Marketo'
+  registration?: RegistrationData
+  marketoFormUrl?: string
+  marketoIntegration?: MarketoIntegrationData
+  rsvpFormFields?: Record<string, any>
+  visibleRsvpFields?: string[]
+  requiredRsvpFields?: string[]
+  
+  // Step 6: Images
+  images?: EventImageData[]
+  
+  // Step 7: Speakers & Hosts
+  profiles?: ProfileData[]
+  
+  // Step 8: Video/Webinar
+  video?: VideoData
+  
+  // Additional metadata
+  communityTopicUrl?: string // URL for community forum topic
+  communityForumUrl?: string // Alias
+  secondaryLinkTitle?: string
+  cta?: CtaItem[] // Localizable call-to-action items
+  promotionalItems?: PromotionalItem[] // Localizable promotional content
+  agendaItems?: AgendaItem[]
+  agenda?: AgendaDataItem[] // API format
+  showAgendaPostEvent?: boolean
+  showSponsors?: boolean
+  sponsors?: SponsorData[]
+  useLegacyDetailPagePath?: boolean
+  localizations?: Record<string, EventLocalization>
+  localizationOverrides?: Record<string, any>
   metadata?: Record<string, any>
+}
+
+// Agenda Item
+export interface AgendaItem {
+  id: string
+  startDateTime: string
+  endDateTime: string
+  title: string
+  description?: string
 }
 
 // Session types
@@ -330,5 +689,23 @@ export interface ApiResponse<T> {
 
 export interface ApiListResponse<T> extends ApiResponse<T[]> {
   pagination?: PaginationParams
+}
+
+// Publishing Profile types (for Webinar metadata)
+export interface PublishingProfile {
+  profileId: string
+  name: string
+  description?: string
+  metadata?: Record<string, string>
+  status?: 'active' | 'inactive' | string
+  creationTime: number
+  modificationTime: number
+}
+
+export interface PublishingProfileFormData {
+  name: string
+  description?: string
+  metadata?: Record<string, string>
+  status?: string
 }
 
