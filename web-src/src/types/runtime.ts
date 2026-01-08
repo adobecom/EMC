@@ -2,7 +2,10 @@
 * <license header>
 */
 
-// Type definitions for Adobe Experience Cloud Runtime
+/**
+ * Type definitions for Adobe Experience Cloud Runtime
+ * These types define the interface with the Adobe Experience Cloud shell
+ */
 
 export interface IMSProfile {
   userId?: string
@@ -53,4 +56,3 @@ export interface Runtime {
 export interface Actions {
   [key: string]: string
 }
-
