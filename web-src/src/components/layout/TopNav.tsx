@@ -48,7 +48,7 @@ const TopNav: React.FC<TopNavProps> = ({ ims }) => {
           </a>
         </View>
 
-        {/* Center: Navigation Links - Order: Home, Clouds, Series, Events, Attendees, About */}
+        {/* Center: Navigation Links - Order: Home, Overview, Clouds, Series, Events, Attendees, About */}
         <Flex 
           direction="row" 
           alignItems="center" 
@@ -61,6 +61,12 @@ const TopNav: React.FC<TopNavProps> = ({ ims }) => {
             to="/"
           >
             Home
+          </NavLink>
+          <NavLink
+            className={({ isActive }) => `nav-link ${isActive ? 'is-selected' : ''}`}
+            to="/overview"
+          >
+            Overview
           </NavLink>
           <NavLink
             className={({ isActive }) => `nav-link ${isActive ? 'is-selected' : ''}`}

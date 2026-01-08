@@ -15,6 +15,7 @@ import { SeriesForm } from './SeriesForm'
 import { EventForm } from './EventForm'
 import { AttendeeDashboard } from './AttendeeDashboard'
 import { CloudManagementConsole } from './CloudManagementConsole'
+import { OverviewDashboard } from './OverviewDashboard'
 import { ToastContainer } from './shared'
 import { ToastProvider } from '../contexts'
 import { Runtime, IMS } from '../types'
@@ -75,6 +76,7 @@ const App: React.FC<AppProps> = (props) => {
               >
                 <Routes>
                   <Route path='/' element={<Home />} />
+                  <Route path='/overview' element={<OverviewDashboard ims={props.ims} />} />
                   <Route path='/profile' element={<UserProfile ims={props.ims} />} />
                   <Route path='/clouds' element={<CloudManagementConsole ims={props.ims} />} />
                   <Route path='/series' element={<SeriesDashboard ims={props.ims} />} />

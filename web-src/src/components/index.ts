@@ -16,6 +16,7 @@ export { AttendeeDashboard } from './AttendeeDashboard'
 export { CloudManagementConsole } from './CloudManagementConsole'
 export { EventForm } from './EventForm'
 export { EventsDashboard } from './EventsDashboard'
+export { OverviewDashboard } from './OverviewDashboard'
 export { SeriesDashboard } from './SeriesDashboard'
 export { SeriesForm } from './SeriesForm'
 
