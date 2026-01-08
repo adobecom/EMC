@@ -11,6 +11,7 @@ import { Home, About } from './pages'
 import { UserProfile } from './user'
 import { SeriesDashboard } from './SeriesDashboard'
 import { EventsDashboard } from './EventsDashboard'
+import { SpeakersDashboard } from './SpeakersDashboard'
 import { SeriesForm } from './SeriesForm'
 import { EventForm } from './EventForm'
 import { AttendeeDashboard } from './AttendeeDashboard'
@@ -87,6 +88,7 @@ const App: React.FC<AppProps> = (props) => {
                   <Route path='/events/edit/:id' element={<EventForm ims={props.ims} />} />
                   <Route path='/attendees' element={<AttendeeDashboard ims={props.ims} />} />
                   <Route path='/attendees/:eventId' element={<AttendeeDashboard ims={props.ims} />} />
+                  <Route path='/speakers' element={<SpeakersDashboard ims={props.ims} />} />
                   <Route path='/about' element={<About />}/>
                 </Routes>
               </View>

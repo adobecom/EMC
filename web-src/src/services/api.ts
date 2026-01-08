@@ -1137,6 +1137,29 @@ class ApiService {
     )
   }
 
+  /**
+   * Delete a speaker from a series
+   * Note: This does NOT automatically remove the speaker from events
+   */
+  async deleteSpeaker(speakerId: string, seriesId: string): Promise<SuccessResponse | ErrorResponse> {
+    validateString(seriesId, 'series ID')
+    validateString(speakerId, 'speaker ID')
+    return this.callExternalApi('esp', `/v1/series/${seriesId}/speakers/${speakerId}`, 'DELETE', undefined,
+      { operationName: `deleteSpeaker(${speakerId})` }
+    )
+  }
+
+  /**
+   * Get all events that a speaker is assigned to
+   * Uses the /speakers/{speakerId}/events endpoint
+   */
+  async getEventsBySpeakerId(speakerId: string): Promise<any | ErrorResponse> {
+    validateString(speakerId, 'speaker ID')
+    return this.callExternalApi('esp', `/v1/speakers/${speakerId}/events`, 'GET', undefined,
+      { operationName: `getEventsBySpeakerId(${speakerId})`, shouldReturnFullResponse: true }
+    )
+  }
+
   // ============================================================================
   // SPONSOR APIs
   // ============================================================================

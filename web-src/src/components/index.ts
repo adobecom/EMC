@@ -19,6 +19,7 @@ export { EventsDashboard } from './EventsDashboard'
 export { OverviewDashboard } from './OverviewDashboard'
 export { SeriesDashboard } from './SeriesDashboard'
 export { SeriesForm } from './SeriesForm'
+export { SpeakersDashboard } from './SpeakersDashboard'
 
 // User components
 export * from './user'

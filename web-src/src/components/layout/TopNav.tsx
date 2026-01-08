@@ -94,6 +94,12 @@ const TopNav: React.FC<TopNavProps> = ({ ims }) => {
           </NavLink>
           <NavLink
             className={({ isActive }) => `nav-link ${isActive ? 'is-selected' : ''}`}
+            to="/speakers"
+          >
+            Speakers
+          </NavLink>
+          <NavLink
+            className={({ isActive }) => `nav-link ${isActive ? 'is-selected' : ''}`}
             to="/about"
           >
             About
