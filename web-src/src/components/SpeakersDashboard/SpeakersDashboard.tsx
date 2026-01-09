@@ -669,7 +669,7 @@ export const SpeakersDashboard: React.FC<SpeakersDashboardProps> = () => {
   // Series selector header with searchable ComboBox
   const seriesSelectorHeader = useMemo(() => (
     <Well UNSAFE_style={{ marginBottom: '16px', padding: '20px' }}>
-      <Flex direction="column" gap="size-200">
+      <Flex justifyContent="space-between" alignItems="center" gap="size-200">
         {/* ComboBox Row */}
         <Flex alignItems="end" gap="size-200">
           {isLoadingSeries ? (
@@ -729,7 +729,7 @@ export const SpeakersDashboard: React.FC<SpeakersDashboardProps> = () => {
                   {formatCloudType(selectedSeries.cloudType)}
                 </Badge>
                 <Badge variant="neutral">
-                  {selectedSeries.seriesStatus}
+                  {selectedSeries.seriesStatus || 'N/A'}
                 </Badge>
                 <Text UNSAFE_style={{ 
                   fontSize: '13px', 
