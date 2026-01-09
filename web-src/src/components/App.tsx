@@ -7,19 +7,24 @@ import { Provider, defaultTheme, Grid, View } from '@adobe/react-spectrum'
 import ErrorBoundary from 'react-error-boundary'
 import { HashRouter as Router, Routes, Route } from 'react-router-dom'
 import { TopNav } from './layout'
-import { Home, About } from './pages'
-import { UserProfile } from './user'
-import { SeriesDashboard } from './SeriesDashboard'
-import { EventsDashboard } from './EventsDashboard'
-import { SpeakersDashboard } from './SpeakersDashboard'
-import { SeriesForm } from './SeriesForm'
-import { EventForm } from './EventForm'
-import { AttendeeDashboard } from './AttendeeDashboard'
-import { CloudManagementConsole } from './CloudManagementConsole'
-import { OverviewDashboard } from './OverviewDashboard'
 import { ToastContainer } from './shared'
 import { ToastProvider } from '../contexts'
 import { Runtime, IMS } from '../types'
+
+// Pages - route-level components
+import {
+  Home,
+  About,
+  UserProfile,
+  CloudManagementConsole,
+  SeriesDashboard,
+  EventsDashboard,
+  SeriesForm,
+  EventForm,
+  AttendeeDashboard,
+  SpeakersDashboard,
+  OverviewDashboard
+} from '../pages'
 
 interface AppProps {
   runtime: Runtime
