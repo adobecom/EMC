@@ -23,7 +23,7 @@ import {
 } from '@adobe/react-spectrum'
 import { SponsorData, SeriesSponsor, EventApiResponse, SponsorType } from '../../types/domain'
 import { ImageUploader } from '../../components/shared'
-import { TYPOGRAPHY } from '../../styles/designSystem'
+import { TYPOGRAPHY, SPACING, COLORS, FLEX_GAP } from '../../styles/designSystem'
 import Add from '@spectrum-icons/workflow/Add'
 import Edit from '@spectrum-icons/workflow/Edit'
 import RemoveCircle from '@spectrum-icons/workflow/RemoveCircle'
@@ -123,7 +123,7 @@ const PartnerDialog: React.FC<PartnerDialogProps> = ({
           <Heading>{isNew ? 'Add new partner' : 'Edit partner'}</Heading>
           <Divider />
           <Content>
-            <Flex gap="size-400" UNSAFE_style={{ alignItems: 'flex-start' }}>
+            <Flex gap={FLEX_GAP.LARGE} alignItems="start">
               {/* Image Upload Section */}
               <View UNSAFE_style={{ textAlign: 'center' }}>
                 <ImageUploader
@@ -148,7 +148,7 @@ const PartnerDialog: React.FC<PartnerDialogProps> = ({
               </View>
 
               {/* Form Fields Section */}
-              <Flex direction="column" gap="size-200" flex={1}>
+              <Flex direction="column" gap={FLEX_GAP.FIELD} flex={1}>
                 <TextField
                   label="Partner name"
                   value={name}
@@ -215,24 +215,23 @@ const PartnerCard: React.FC<PartnerCardProps> = ({
       borderColor="dark"
       borderRadius="medium"
       padding="size-200"
-      UNSAFE_style={{
-        backgroundColor: 'white',
-      }}
+      backgroundColor="gray-50"
     >
-      <Flex alignItems="center" gap="size-200">
+      <Flex alignItems="center" gap={FLEX_GAP.FIELD}>
         {/* Partner Logo */}
         <View 
           width="size-800" 
           height="size-600"
+          borderRadius="small"
+          borderWidth="thin"
+          borderColor="gray-300"
+          backgroundColor="static-white"
           UNSAFE_style={{
             flexShrink: 0,
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
             overflow: 'hidden',
-            borderRadius: '4px',
-            border: '1px solid var(--spectrum-global-color-gray-300)',
-            backgroundColor: 'white',
           }}
         >
           {partner.imageUrl ? (
@@ -250,13 +249,12 @@ const PartnerCard: React.FC<PartnerCardProps> = ({
               UNSAFE_style={{
                 width: '100%',
                 height: '100%',
-                backgroundColor: 'var(--spectrum-global-color-gray-200)',
+                backgroundColor: COLORS.GRAY_200,
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                fontSize: '14px',
-                fontWeight: 'bold',
-                color: 'var(--spectrum-global-color-gray-600)',
+                ...TYPOGRAPHY.FIELD_LABEL,
+                color: COLORS.GRAY_600,
               }}
             >
               {partner.partnerName?.substring(0, 2).toUpperCase() || 'P'}
@@ -266,21 +264,22 @@ const PartnerCard: React.FC<PartnerCardProps> = ({
 
         {/* Partner Info */}
         <Flex direction="column" flex={1} gap="size-50">
-          <Flex alignItems="center" gap="size-150">
-            <Text UNSAFE_style={{ fontWeight: 700, fontSize: '16px' }}>
+          <Flex alignItems="center" gap={FLEX_GAP.SMALL}>
+            <Text UNSAFE_style={{ ...TYPOGRAPHY.FIELD_LABEL, fontSize: '16px' }}>
               {partner.partnerName || 'Untitled Partner'}
             </Text>
             
             {/* Inline Tier Picker */}
             <View
+              borderRadius="small"
+              borderWidth="thin"
+              borderColor="gray-300"
+              backgroundColor="static-white"
               UNSAFE_style={{
                 display: 'inline-flex',
                 alignItems: 'center',
-                gap: '6px',
-                padding: '0 8px',
-                borderRadius: '4px',
-                border: '1px solid var(--spectrum-global-color-gray-300)',
-                backgroundColor: 'white',
+                gap: `${SPACING.XS}px`,
+                padding: `0 ${SPACING.XS}px`,
                 cursor: 'pointer',
               }}
             >
@@ -289,7 +288,7 @@ const PartnerCard: React.FC<PartnerCardProps> = ({
                   UNSAFE_style={{
                     width: '10px',
                     height: '10px',
-                    borderRadius: '2px',
+                    borderRadius: `${SPACING.XXS}px`,
                     backgroundColor: currentTier.color,
                     flexShrink: 0,
                   }}
@@ -303,7 +302,7 @@ const PartnerCard: React.FC<PartnerCardProps> = ({
                     onTierChange(key as SponsorType)
                   }
                 }}
-                UNSAFE_style={{ width: '100%', padding: '0px'}}
+                UNSAFE_style={{ width: '100%', padding: '0px' }}
                 isQuiet
               >
                 {TIER_OPTIONS.map(option => (
@@ -314,14 +313,14 @@ const PartnerCard: React.FC<PartnerCardProps> = ({
           </Flex>
           
           {partner.partnerUrl && (
-            <Text UNSAFE_style={{ fontSize: '14px', color: 'var(--spectrum-global-color-gray-600)' }}>
+            <Text UNSAFE_style={TYPOGRAPHY.HELPER_TEXT}>
               {partner.partnerUrl}
             </Text>
           )}
         </Flex>
 
         {/* Action Buttons */}
-        <Flex gap="size-100" alignItems="center">
+        <Flex gap={FLEX_GAP.TIGHT} alignItems="center">
           <ActionButton onPress={onEdit} isQuiet aria-label="Edit partner">
             <Edit size="S" />
           </ActionButton>
@@ -742,9 +741,9 @@ export const SponsorsComponent: React.FC = () => {
   // ============================================================================
 
   return (
-    <Flex direction="column" gap="size-200">
+    <Flex direction="column" gap={FLEX_GAP.FIELD}>
       {/* Header */}
-      <Flex alignItems="center" gap="size-150">
+      <Flex alignItems="center" gap={FLEX_GAP.SMALL}>
         <Heading level={3} UNSAFE_style={TYPOGRAPHY.COMPONENT_HEADING}>
           Partners (optional)
         </Heading>
@@ -758,7 +757,7 @@ export const SponsorsComponent: React.FC = () => {
       </Text>
 
       {/* Controls Bar */}
-      <Flex gap="size-0" alignItems="stretch" marginTop="size-100" width="100%">
+      <Flex gap={FLEX_GAP.NONE} alignItems="stretch" marginTop={FLEX_GAP.TIGHT} width="100%">
         {/* Search Partners Dropdown */}
         <View flex={1}>
           <ComboBox
@@ -775,8 +774,8 @@ export const SponsorsComponent: React.FC = () => {
           </ComboBox>
         </View>
 
-        {/* Vertical Divider */}
-        <Divider orientation="vertical" size="S" marginX="size-200" />
+        {/* Vertical Divider - 40px spacing on each side (SPACING.XXL / size-500) */}
+        <Divider orientation="vertical" size="S" marginX="size-500" />
 
         {/* Add New Partner Button */}
         <View flex={1}>
@@ -785,8 +784,8 @@ export const SponsorsComponent: React.FC = () => {
             onPress={handleAddNewClick}
             width="100%"
             UNSAFE_style={{
-              backgroundColor: 'var(--spectrum-global-color-gray-200)',
-              borderRadius: '20px',
+              backgroundColor: COLORS.GRAY_200,
+              borderRadius: `${SPACING.LG}px`,
               border: 'none',
             }}
           >
@@ -797,22 +796,22 @@ export const SponsorsComponent: React.FC = () => {
       </Flex>
 
       {/* Divider */}
-      <Divider size="S" marginTop="size-100" />
+      <Divider size="S" marginTop={FLEX_GAP.TIGHT} />
 
       {/* Partner List or Empty State */}
       {sponsors.length === 0 ? (
         <View
-          padding="size-400"
+          padding={FLEX_GAP.LARGE}
           backgroundColor="gray-100"
           borderRadius="medium"
           UNSAFE_style={{ textAlign: 'center' }}
         >
-          <Text UNSAFE_style={{ color: 'var(--spectrum-global-color-gray-700)' }}>
+          <Text UNSAFE_style={{ color: COLORS.GRAY_700 }}>
             No partners have been added yet for this event
           </Text>
         </View>
       ) : (
-        <Flex direction="column" gap="size-150">
+        <Flex direction="column" gap={FLEX_GAP.SMALL}>
           {sponsors.map((partner, index) => (
             <PartnerCard
               key={partner.id || index}
