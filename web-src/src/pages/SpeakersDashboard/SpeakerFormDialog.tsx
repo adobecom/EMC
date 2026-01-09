@@ -207,31 +207,26 @@ export const SpeakerFormDialog: React.FC<SpeakerFormDialogProps> = ({
               </Flex>
               
               {/* Profile Image */}
-              <View>
-                <Text UNSAFE_style={{ ...TYPOGRAPHY.FIELD_LABEL, marginBottom: '8px', display: 'block' }}>
-                  Profile Image
-                </Text>
-                <View width="100%" UNSAFE_style={{ maxWidth: '300px' }}>
-                  <ImageUploader
-                    label="Profile Image"
-                    imageUrl={formState.imageUrl}
-                    imageId={formState.imageId}
-                    imageKind="speaker-photo"
-                    altText={`${formState.firstName} ${formState.lastName}`}
-                    maxSizeMB={25}
-                    width={300}
-                    dropzoneTitle="Add profile image"
-                    dropzoneDimensions="Dimensions 584 x 300 px"
-                    deferUpload={true}
-                    pendingFile={pendingFile || undefined}
-                    onFileSelected={handleFileSelect}
-                    onChange={(imageUrl, imageId) => {
-                      updateField('imageUrl', imageUrl)
-                      updateField('imageId', imageId)
-                    }}
-                    onRemove={handleFileRemove}
-                  />
-                </View>
+              <View width="100%" UNSAFE_style={{ maxWidth: '300px' }}>
+                <ImageUploader
+                  label="Profile Image"
+                  imageUrl={formState.imageUrl}
+                  imageId={formState.imageId}
+                  imageKind="speaker-photo"
+                  altText={`${formState.firstName} ${formState.lastName}`}
+                  maxSizeMB={25}
+                  width={300}
+                  dropzoneTitle="Add profile image"
+                  dropzoneDimensions="Dimensions 584 x 300 px"
+                  deferUpload={true}
+                  pendingFile={pendingFile || undefined}
+                  onFileSelected={handleFileSelect}
+                  onChange={(imageUrl, imageId) => {
+                    updateField('imageUrl', imageUrl)
+                    updateField('imageId', imageId)
+                  }}
+                  onRemove={handleFileRemove}
+                />
               </View>
               
               {/* Title */}
@@ -243,17 +238,12 @@ export const SpeakerFormDialog: React.FC<SpeakerFormDialogProps> = ({
               />
               
               {/* Bio */}
-              <View>
-                <Text UNSAFE_style={{ ...TYPOGRAPHY.FIELD_LABEL, marginBottom: '8px', display: 'block' }}>
-                  Bio (Optional)
-                </Text>
-                <RichTextEditor
-                  label="Bio"
-                  value={formState.bio}
-                  onChange={(value) => updateField('bio', value)}
-                  height="150px"
-                />
-              </View>
+              <RichTextEditor
+                label="Bio (Optional)"
+                value={formState.bio}
+                onChange={(value) => updateField('bio', value)}
+                height="150px"
+              />
               
               {/* Social Links */}
               <View>
