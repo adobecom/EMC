@@ -15,6 +15,7 @@ import Collection from '@spectrum-icons/workflow/Collection'
 import Events from '@spectrum-icons/workflow/Events'
 import UserGroup from '@spectrum-icons/workflow/UserGroup'
 import Info from '@spectrum-icons/workflow/Info'
+import GraphBarVertical from '@spectrum-icons/workflow/GraphBarVertical'
 
 /**
  * Navigation destination configuration
@@ -28,6 +29,13 @@ interface NavDestination {
 }
 
 const destinations: NavDestination[] = [
+  {
+    id: 'overview',
+    path: '/overview',
+    icon: <GraphBarVertical size="XL" />,
+    title: 'Overview',
+    description: 'View comprehensive statistics, metrics, and insights across all events and series.'
+  },
   {
     id: 'clouds',
     path: '/clouds',

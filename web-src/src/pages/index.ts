@@ -21,6 +21,8 @@ export { CloudManagementConsole } from './CloudManagementConsole'
 export { EventsDashboard } from './EventsDashboard'
 export { SeriesDashboard } from './SeriesDashboard'
 export { AttendeeDashboard } from './AttendeeDashboard'
+export { SpeakersDashboard } from './SpeakersDashboard'
+export { OverviewDashboard } from './OverviewDashboard'
 
 // Form pages
 export { EventForm } from './EventForm'

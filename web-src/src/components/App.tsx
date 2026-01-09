@@ -21,7 +21,9 @@ import {
   EventsDashboard,
   SeriesForm,
   EventForm,
-  AttendeeDashboard
+  AttendeeDashboard,
+  SpeakersDashboard,
+  OverviewDashboard
 } from '../pages'
 
 interface AppProps {
@@ -80,6 +82,7 @@ const App: React.FC<AppProps> = (props) => {
               >
                 <Routes>
                   <Route path='/' element={<Home />} />
+                  <Route path='/overview' element={<OverviewDashboard ims={props.ims} />} />
                   <Route path='/profile' element={<UserProfile ims={props.ims} />} />
                   <Route path='/clouds' element={<CloudManagementConsole ims={props.ims} />} />
                   <Route path='/series' element={<SeriesDashboard ims={props.ims} />} />
@@ -90,6 +93,7 @@ const App: React.FC<AppProps> = (props) => {
                   <Route path='/events/edit/:id' element={<EventForm ims={props.ims} />} />
                   <Route path='/attendees' element={<AttendeeDashboard ims={props.ims} />} />
                   <Route path='/attendees/:eventId' element={<AttendeeDashboard ims={props.ims} />} />
+                  <Route path='/speakers' element={<SpeakersDashboard ims={props.ims} />} />
                   <Route path='/about' element={<About />}/>
                 </Routes>
               </View>
