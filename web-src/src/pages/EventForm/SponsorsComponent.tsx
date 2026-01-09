@@ -758,9 +758,9 @@ export const SponsorsComponent: React.FC = () => {
       </Text>
 
       {/* Controls Bar */}
-      <Flex gap="size-200" alignItems="end" marginTop="size-100">
+      <Flex gap="size-0" alignItems="stretch" marginTop="size-100" width="100%">
         {/* Search Partners Dropdown */}
-        <View flex={1} maxWidth="size-3600">
+        <View flex={1}>
           <ComboBox
             label=""
             aria-label="Search partners"
@@ -775,19 +775,25 @@ export const SponsorsComponent: React.FC = () => {
           </ComboBox>
         </View>
 
+        {/* Vertical Divider */}
+        <Divider orientation="vertical" size="S" marginX="size-200" />
+
         {/* Add New Partner Button */}
-        <Button
-          variant="secondary"
-          onPress={handleAddNewClick}
-          UNSAFE_style={{
-            backgroundColor: 'var(--spectrum-global-color-gray-200)',
-            borderRadius: '20px',
-            border: 'none',
-          }}
-        >
-          <Add size="S" />
-          <Text>Add new partner</Text>
-        </Button>
+        <View flex={1}>
+          <Button
+            variant="secondary"
+            onPress={handleAddNewClick}
+            width="100%"
+            UNSAFE_style={{
+              backgroundColor: 'var(--spectrum-global-color-gray-200)',
+              borderRadius: '20px',
+              border: 'none',
+            }}
+          >
+            <Add size="S" />
+            <Text>Add new partner</Text>
+          </Button>
+        </View>
       </Flex>
 
       {/* Divider */}
