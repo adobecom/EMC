@@ -29,7 +29,8 @@ import {
   RegistrationConfigComponent, 
   PageMetadataComponent,
   PromotionalContentComponent,
-  MarketoIntegrationComponent
+  MarketoIntegrationComponent,
+  SessionManagementComponent
 } from './index'
 import { fromApiSocialLink } from '../../utils/socialPlatformDetector'
 import { useEventFeatureFlags } from '../../hooks/useEventTypeFeatures'
@@ -408,6 +409,7 @@ const EventFormInner: React.FC<EventFormInnerProps> = ({ ims }) => {
     
     window.open(previewUrl, '_blank')
   }, [state.eventDataResp])
+
   
   // ============================================================================
   // STEP 1: Basic Info
@@ -423,7 +425,7 @@ const EventFormInner: React.FC<EventFormInnerProps> = ({ ims }) => {
     Boolean(formData.timezone && formData.timezone.trim() !== '') && // Timezone is required
     (hasVenue ? formData.venue?.venueName?.trim() !== '' : true)
   
-  const step1Component = (
+  const basicInfoComponent = (
     <Flex direction="column" gap="size-0">
       <FormCard>
         <EventFormatComponent />
@@ -465,7 +467,7 @@ const EventFormInner: React.FC<EventFormInnerProps> = ({ ims }) => {
   // ============================================================================
   // STEP 2: Speakers & Hosts
   // ============================================================================
-  const step2Component = (
+  const speakersHostsComponent = (
     <FormCard>
       <SpeakersComponent />
     </FormCard>
@@ -474,7 +476,7 @@ const EventFormInner: React.FC<EventFormInnerProps> = ({ ims }) => {
   // ============================================================================
   // STEP 3: Additional Content
   // ============================================================================
-  const step3Component = (
+  const additionalContentComponent = (
     <>
       <FormCard>
         <PromotionalContentComponent />
@@ -493,9 +495,19 @@ const EventFormInner: React.FC<EventFormInnerProps> = ({ ims }) => {
   // ============================================================================
   // STEP 4: RSVP
   // ============================================================================
-  const step4Component = (
+  const rsvpComponent = (
     <FormCard>
       <RegistrationConfigComponent />
+    </FormCard>
+  )
+
+
+  // ============================================================================
+  // STEP 0: Session management
+  // ============================================================================
+  const sessionManagementComponent = (
+    <FormCard>
+      <SessionManagementComponent />
     </FormCard>
   )
   
@@ -504,31 +516,38 @@ const EventFormInner: React.FC<EventFormInnerProps> = ({ ims }) => {
   // ============================================================================
   const steps: WizardStep[] = [
     {
+      id: 'session-management',
+      title: 'Session Management',
+      description: 'Breakdown your event into sessions and add details',
+      component: sessionManagementComponent,
+      isValid: true
+    },
+    {
       id: 'basic-info',
       title: 'Basic Info',
       description: 'Event format, tags, information, date/time, and venue',
-      component: step1Component,
+      component: basicInfoComponent,
       isValid: step1IsValid
     },
     {
       id: 'speakers-hosts',
       title: 'Speakers & Hosts',
       description: 'Add speaker and host profiles (optional)',
-      component: step2Component,
+      component: speakersHostsComponent,
       isValid: true
     },
     {
       id: 'additional-content',
       title: 'Additional Content',
       description: 'Add event images and visual content (optional)',
-      component: step3Component,
+      component: additionalContentComponent,
       isValid: true
     },
     {
       id: 'rsvp',
       title: 'RSVP',
       description: 'Configure attendance capacity and registration settings',
-      component: step4Component,
+      component: rsvpComponent,
       isValid: true
     }
   ]
