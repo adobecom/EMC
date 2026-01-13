@@ -2,142 +2,63 @@
 * <license header>
 */
 
-import React, { useEffect, useCallback, useMemo } from 'react'
+import React, { useState, useCallback, useMemo } from 'react'
 import {
   View,
-  Heading,
   SearchField,
   AlertDialog,
   DialogTrigger
 } from '@adobe/react-spectrum'
-import { useParams, useNavigate, useSearchParams } from 'react-router-dom'
 import type { EventApiResponse } from '../../types/domain'
-import type { Attendee, AttendeeFilters, AttendeeStats } from '../../types/attendee'
-import { calculateAttendeeStats, getAttendeeName } from '../../types/attendee'
-import { apiService, cachedApi } from '../../services/api'
-import { useRsvpConfig } from '../../hooks/useRsvpConfig'
-import { IMS } from '../../types'
-import { LoadingSpinner } from '../../components/shared'
-import { useSafeState } from '../../hooks'
+import type { Attendee, AttendeeFilters, AttendeeColumnConfig } from '../../types/attendee'
+import { getAttendeeName } from '../../types/attendee'
+import { apiService } from '../../services/api'
 import {
   EventSelectorComponent,
-  EventInfoComponent,
   AttendeeFiltersComponent,
   AttendeeTableComponent,
 } from './index'
 
-interface AttendeeDashboardProps {
-  ims: IMS
+interface RegistrationsTabProps {
+  events: EventApiResponse[]
+  selectedEventId: string
+  selectedEvent: EventApiResponse | null
+  attendees: Attendee[]
+  columnConfig: AttendeeColumnConfig[]
+  isLoadingEvents: boolean
+  isLoadingAttendees: boolean
+  isLoadingConfig: boolean
+  onEventChange: (eventId: string) => void
+  onBackClick: () => void
+  onAttendeesRefresh: () => Promise<void>
 }
 
 /**
- * Attendee Dashboard - Main container component
+ * Registrations Tab - Contains the attendee list and filters
  * 
  * Features:
- * - Event selection with searchable picker
- * - Event info panel with statistics
  * - Dynamic columns from RSVP config
  * - Side panel with filters
  * - CSV export functionality
  * - Selection for bulk actions
  */
-export const AttendeeDashboard: React.FC<AttendeeDashboardProps> = ({ ims: _ims }) => {
-  const { eventId: paramEventId } = useParams<{ eventId: string }>()
-  const [searchParams] = useSearchParams()
-  const navigate = useNavigate()
-
-  // Determine initial event ID from URL params or query string
-  const initialEventId = paramEventId || searchParams.get('eventId') || ''
-
+export const RegistrationsTab: React.FC<RegistrationsTabProps> = ({
+  events,
+  selectedEventId,
+  selectedEvent: _selectedEvent,
+  attendees,
+  columnConfig,
+  isLoadingEvents,
+  isLoadingAttendees,
+  isLoadingConfig,
+  onEventChange,
+  onBackClick
+}) => {
   // State
-  const [events, setEvents] = useSafeState<EventApiResponse[]>([])
-  const [selectedEventId, setSelectedEventId] = useSafeState<string>(initialEventId)
-  const [attendees, setAttendees] = useSafeState<Attendee[]>([])
-  const [filters, setFilters] = useSafeState<AttendeeFilters>({})
-  const [searchQuery, setSearchQuery] = useSafeState('')
-  const [selectedIds, setSelectedIds] = useSafeState<Set<string>>(new Set())
-  const [itemToDelete, setItemToDelete] = useSafeState<Attendee | null>(null)
-  
-  const [isLoadingEvents, setIsLoadingEvents] = useSafeState(true)
-  const [isLoadingAttendees, setIsLoadingAttendees] = useSafeState(false)
-  const [, setError] = useSafeState<string | null>(null)
-
-  // Get selected event
-  const selectedEvent = useMemo(() => 
-    events.find(e => e.eventId === selectedEventId) || null,
-    [events, selectedEventId]
-  )
-
-  // Get RSVP config for the selected event's cloud type
-  const { columnConfig, isLoading: isLoadingConfig } = useRsvpConfig(selectedEvent?.cloudType)
-
-  // Load events on mount
-  useEffect(() => {
-    const loadEvents = async () => {
-      setIsLoadingEvents(true)
-      try {
-        const eventsData = await cachedApi.getEventsList()
-        
-        if (Array.isArray(eventsData)) {
-          setEvents(eventsData)
-          
-          // If no event selected and we have events, select the first one
-          if (!selectedEventId && eventsData.length > 0) {
-            setSelectedEventId(eventsData[0].eventId)
-          }
-        }
-      } catch (err) {
-        console.error('Failed to load events:', err)
-        setError('Failed to load events')
-      } finally {
-        setIsLoadingEvents(false)
-      }
-    }
-
-    loadEvents()
-  }, [])
-
-  // Load attendees when event changes
-  useEffect(() => {
-    if (!selectedEventId) {
-      setAttendees([])
-      return
-    }
-
-    const loadAttendees = async () => {
-      setIsLoadingAttendees(true)
-      setError(null)
-      
-      try {
-        const result = await cachedApi.getAllEventAttendees(selectedEventId)
-        
-        if ('error' in result) {
-          console.error('Failed to load attendees:', result)
-          setAttendees([])
-          setError('Failed to load attendees')
-          return
-        }
-        
-        const attendeesWithEventId = result.map(a => ({
-          ...a,
-          eventId: selectedEventId
-        }))
-        
-        setAttendees(attendeesWithEventId)
-        setSelectedIds(new Set())
-        setFilters({})
-        
-      } catch (err) {
-        console.error('Failed to load attendees:', err)
-        setAttendees([])
-        setError('Failed to load attendees')
-      } finally {
-        setIsLoadingAttendees(false)
-      }
-    }
-
-    loadAttendees()
-  }, [selectedEventId])
+  const [filters, setFilters] = useState<AttendeeFilters>({})
+  const [searchQuery, setSearchQuery] = useState('')
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
+  const [itemToDelete, setItemToDelete] = useState<Attendee | null>(null)
 
   // Filter and search attendees
   const filteredAttendees = useMemo(() => {
@@ -176,36 +97,16 @@ export const AttendeeDashboard: React.FC<AttendeeDashboardProps> = ({ ims: _ims 
     return result
   }, [attendees, searchQuery, filters])
 
-  // Calculate statistics from ALL attendees (not filtered)
-  // Stats should reflect the total event numbers, not the filtered view
-  const stats: AttendeeStats = useMemo(() => 
-    calculateAttendeeStats(attendees),
-    [attendees]
-  )
-
-  // Handle event selection change
-  const handleEventChange = useCallback((eventId: string) => {
-    setSelectedEventId(eventId)
-    // Update URL without full navigation
-    navigate(`/attendees/${eventId}`, { replace: true })
-  }, [navigate])
-
   // Handle delete attendee
   const handleDeleteAttendee = useCallback(async (attendee: Attendee) => {
     try {
       await apiService.removeAttendeeFromEvent(attendee.eventId!, attendee.attendeeId)
       setItemToDelete(null)
       
-      // Refresh attendees
-      const result = await cachedApi.getAllEventAttendees(selectedEventId)
-      if (!('error' in result)) {
-        const attendeesWithEventId = result.map(a => ({ ...a, eventId: selectedEventId }))
-        setAttendees(attendeesWithEventId)
-      }
     } catch (err) {
       console.error('Failed to delete attendee:', err)
     }
-  }, [selectedEventId])
+  }, [])
 
   // Handle attendee action (delete)
   const handleAttendeeAction = useCallback((action: 'view' | 'edit' | 'delete', attendee: Attendee) => {
@@ -214,43 +115,15 @@ export const AttendeeDashboard: React.FC<AttendeeDashboardProps> = ({ ims: _ims 
     }
   }, [])
 
-  // Handle back navigation
-  const handleBackClick = useCallback(() => {
-    navigate('/events')
-  }, [navigate])
-
-  // Loading state
-  if (isLoadingEvents) {
-    return (
-      <View padding="size-400">
-        <LoadingSpinner message="Loading events..." />
-      </View>
-    )
-  }
+  // Reset filters when event changes
+  React.useEffect(() => {
+    setFilters({})
+    setSelectedIds(new Set())
+    setSearchQuery('')
+  }, [selectedEventId])
 
   return (
-    <View width="100%" padding="size-400" UNSAFE_style={{ boxSizing: 'border-box' }}>
-      {/* Header */}
-      <div style={{ 
-        display: 'flex',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        marginBottom: '24px'
-      }}>
-        <Heading level={1}>Event report</Heading>
-      </div>
-
-      {/* Event Info Panel */}
-      {selectedEvent && (
-        <View marginBottom="size-300">
-          <EventInfoComponent
-            event={selectedEvent}
-            stats={stats}
-            isLoading={isLoadingAttendees}
-          />
-        </View>
-      )}
-
+    <>
       {/* Main Content Area */}
       <div style={{ 
         display: 'grid', 
@@ -267,7 +140,7 @@ export const AttendeeDashboard: React.FC<AttendeeDashboardProps> = ({ ims: _ims 
             {/* Back Button */}
             <div>
               <button
-                onClick={handleBackClick}
+                onClick={onBackClick}
                 style={{
                   display: 'flex',
                   alignItems: 'center',
@@ -291,7 +164,7 @@ export const AttendeeDashboard: React.FC<AttendeeDashboardProps> = ({ ims: _ims 
               <EventSelectorComponent
                 events={events}
                 selectedEventId={selectedEventId}
-                onChange={handleEventChange}
+                onChange={onEventChange}
                 isLoading={isLoadingEvents}
                 label="Search other events"
               />
@@ -304,7 +177,7 @@ export const AttendeeDashboard: React.FC<AttendeeDashboardProps> = ({ ims: _ims 
                 attendees={attendees}
                 filters={filters}
                 onFiltersChange={setFilters}
-                onBackClick={handleBackClick}
+                onBackClick={onBackClick}
                 backLabel=""
               />
             )}
@@ -380,9 +253,8 @@ export const AttendeeDashboard: React.FC<AttendeeDashboardProps> = ({ ims: _ims 
           </AlertDialog>
         )}
       </DialogTrigger>
-    </View>
+    </>
   )
 }
 
-export default AttendeeDashboard
-
+export default RegistrationsTab

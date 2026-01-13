@@ -58,11 +58,11 @@ const destinations: NavDestination[] = [
     description: 'Create, edit, and publish events with full configuration options.'
   },
   {
-    id: 'attendees',
-    path: '/attendees',
+    id: 'registrations',
+    path: '/registrations',
     icon: <UserGroup size="XL" />,
-    title: 'Attendees',
-    description: 'View and manage event registrations, export attendee lists, and track RSVPs.'
+    title: 'Registrations',
+    description: 'View and manage event registrations, campaigns, and track RSVPs.'
   },
   {
     id: 'about',

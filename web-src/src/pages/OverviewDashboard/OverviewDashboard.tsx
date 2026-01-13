@@ -506,7 +506,7 @@ export const OverviewDashboard: React.FC<OverviewDashboardProps> = () => {
                 value={stats.totalAttendees.toLocaleString()}
                 subtitle={stats.totalCapacity > 0 ? `of ${stats.totalCapacity.toLocaleString()} capacity` : 'registered'}
                 color="#268E6C"
-                onClick={() => window.location.hash = '#/attendees'}
+                onClick={() => window.location.hash = '#/registrations'}
               />
               
               <StatCard

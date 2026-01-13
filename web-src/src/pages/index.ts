@@ -20,7 +20,7 @@ export { CloudManagementConsole } from './CloudManagementConsole'
 // Dashboard pages
 export { EventsDashboard } from './EventsDashboard'
 export { SeriesDashboard } from './SeriesDashboard'
-export { AttendeeDashboard } from './AttendeeDashboard'
+export { Registrations } from './Registrations'
 export { SpeakersDashboard } from './SpeakersDashboard'
 export { OverviewDashboard } from './OverviewDashboard'
 

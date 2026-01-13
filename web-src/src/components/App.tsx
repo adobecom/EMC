@@ -21,7 +21,7 @@ import {
   EventsDashboard,
   SeriesForm,
   EventForm,
-  AttendeeDashboard,
+  Registrations,
   SpeakersDashboard,
   OverviewDashboard
 } from '../pages'
@@ -92,8 +92,8 @@ const App: React.FC<AppProps> = (props) => {
                     <Route path='/events' element={<EventsDashboard ims={props.ims} />} />
                     <Route path='/events/new/:eventType' element={<EventForm ims={props.ims} />} />
                     <Route path='/events/edit/:id' element={<EventForm ims={props.ims} />} />
-                    <Route path='/attendees' element={<AttendeeDashboard ims={props.ims} />} />
-                    <Route path='/attendees/:eventId' element={<AttendeeDashboard ims={props.ims} />} />
+                    <Route path='/registrations' element={<Registrations ims={props.ims} />} />
+                    <Route path='/registrations/:eventId' element={<Registrations ims={props.ims} />} />
                     <Route path='/speakers' element={<SpeakersDashboard ims={props.ims} />} />
                     <Route path='/about' element={<About />}/>
                   </Routes>
