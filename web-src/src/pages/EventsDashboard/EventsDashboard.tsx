@@ -3,6 +3,7 @@
 */
 
 import React, { useEffect, useMemo, useCallback } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { Text, ActionButton, MenuTrigger, Menu, Item, Flex, Button, DialogTrigger, AlertDialog, ProgressCircle, View, Link } from '@adobe/react-spectrum'
 import MoreSmallList from '@spectrum-icons/workflow/MoreSmallList'
 import PublishRemove from '@spectrum-icons/workflow/PublishRemove'
@@ -31,6 +32,7 @@ interface EventsDashboardProps {
 
 export const EventsDashboard: React.FC<EventsDashboardProps> = () => {
   const toast = useToast()
+  const navigate = useNavigate()
   const [events, setEvents] = useSafeState<EventDashboardItem[]>([])
   const [isLoading, setIsLoading] = useSafeState(true)
   const [error, setError] = useSafeState<string | null>(null)
@@ -685,12 +687,13 @@ export const EventsDashboard: React.FC<EventsDashboardProps> = () => {
         return aCount - bCount
       },
       render: (item) => (
-        <Link href={`#/attendees/${item.eventId}`}>
-          <Text>
-            {item.attendeeCount !== undefined ? item.attendeeCount : 0} / {item.attendeeLimit !== undefined ? item.attendeeLimit : '-'}
-          </Text>
+        <Link
+          isQuiet
+          onPress={() => navigate(`/registrations/${item.eventId}`)}
+          UNSAFE_style={{ cursor: 'pointer' }}
+        >
+          <span>{item.attendeeCount !== undefined ? item.attendeeCount : 0} / {item.attendeeLimit !== undefined ? item.attendeeLimit : '-'}</span>
         </Link>
-
       )
     },
     {

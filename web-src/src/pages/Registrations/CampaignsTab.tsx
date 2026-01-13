@@ -282,12 +282,6 @@ export const CampaignsTab: React.FC<CampaignsTabProps> = ({
         alignItems="center" 
         marginBottom="size-200"
       >
-        <Text UNSAFE_style={{ 
-          fontSize: '14px', 
-          color: COLORS.GRAY_600 
-        }}>
-          {campaigns.length} campaign{campaigns.length !== 1 ? 's' : ''}
-        </Text>
         <Button
           variant="accent"
           onPress={handleCreateClick}
@@ -326,6 +320,7 @@ export const CampaignsTab: React.FC<CampaignsTabProps> = ({
             campaign={editingCampaign}
             eventCapacity={event?.attendeeLimit}
             otherCampaignsCapacity={getOtherCampaignsCapacity(editingCampaign?.campaignId)}
+            eventUrl={event?.detailPagePath}
             onSave={(data) => {
               handleSaveCampaign(data)
               close()
@@ -427,11 +422,15 @@ const EmptyCampaignsState: React.FC<{ onCreateClick: () => void }> = ({ onCreate
 
 /**
  * Campaign Form Dialog
+ * 
+ * Modal dialog for creating and editing campaigns.
+ * Matches the "Edit tracking link" design pattern.
  */
 interface CampaignFormDialogProps {
   campaign: Campaign | null
   eventCapacity?: number
   otherCampaignsCapacity: number
+  eventUrl?: string
   onSave: (data: CampaignFormData) => void
   onCancel: () => void
 }
@@ -440,13 +439,32 @@ const CampaignFormDialog: React.FC<CampaignFormDialogProps> = ({
   campaign,
   eventCapacity,
   otherCampaignsCapacity,
+  eventUrl,
   onSave,
   onCancel
 }) => {
   const [name, setName] = useState(campaign?.name || '')
   const [capacityLimit, setCapacityLimit] = useState<number | undefined>(campaign?.capacityLimit)
-  const [isActive, setIsActive] = useState(campaign?.isActive ?? false) // New campaigns start as inactive
+  const [isActive, setIsActive] = useState(campaign?.isActive ?? false)
   const [capacityError, setCapacityError] = useState<string | null>(null)
+  const [copied, setCopied] = useState(false)
+
+  // Generate the tracking link URL
+  const urlParam = name ? generateUrlParam(name) : ''
+  const baseUrl = eventUrl || 'www.events.adobe.com/event'
+  const trackingLink = urlParam ? `${baseUrl}/${urlParam}` : ''
+
+  // Handle copy to clipboard
+  const handleCopyLink = async () => {
+    if (!trackingLink) return
+    try {
+      await navigator.clipboard.writeText(trackingLink)
+      setCopied(true)
+      setTimeout(() => setCopied(false), 2000)
+    } catch (err) {
+      console.error('Failed to copy:', err)
+    }
+  }
 
   // Validate capacity on change
   const handleCapacityChange = (value: number) => {
@@ -479,67 +497,143 @@ const CampaignFormDialog: React.FC<CampaignFormDialogProps> = ({
   const isValid = name.trim().length > 0 && !capacityError
 
   return (
-    <Dialog>
-      <Heading>{campaign ? 'Edit Campaign' : 'Create Campaign'}</Heading>
+    <Dialog size="M">
+      <Heading>{campaign ? 'Edit tracking link' : 'Add tracking link'}</Heading>
       <Divider />
       <Content>
         <Flex direction="column" gap="size-300">
-          <TextField
-            label="Campaign Name"
-            value={name}
-            onChange={setName}
-            isRequired
-            autoFocus
-            description="A descriptive name for this campaign"
-          />
-          
+          {/* Name Field */}
           <View>
-            <Text UNSAFE_style={{ 
-              fontSize: '12px', 
-              color: COLORS.GRAY_600,
-              marginBottom: SPACING.XS 
-            }}>
-              URL Preview
+            <Text 
+              UNSAFE_style={{ 
+                fontSize: '14px',
+                fontWeight: 500,
+                color: COLORS.GRAY_800,
+                marginBottom: '8px',
+                display: 'block'
+              }}
+            >
+              Name
+            </Text>
+            <TextField
+              value={name}
+              onChange={setName}
+              isRequired
+              autoFocus
+              aria-label="Name"
+              width="100%"
+            />
+          </View>
+          
+          {/* Tracking Link Field */}
+          <View>
+            <Text 
+              UNSAFE_style={{ 
+                fontSize: '14px',
+                fontWeight: 500,
+                color: COLORS.GRAY_800,
+                marginBottom: '8px',
+                display: 'block'
+              }}
+            >
+              Tracking link
             </Text>
             <View
-              backgroundColor="gray-100"
-              padding="size-150"
-              borderRadius="regular"
+              UNSAFE_style={{
+                display: 'flex',
+                alignItems: 'center',
+                backgroundColor: 'var(--spectrum-global-color-gray-100)',
+                border: '1px solid var(--spectrum-global-color-gray-300)',
+                borderRadius: '4px',
+                padding: '10px 12px',
+                gap: '8px'
+              }}
             >
-              <Text UNSAFE_style={{ fontFamily: 'monospace', fontSize: '13px' }}>
-                ?campaign={name ? generateUrlParam(name) : 'your-campaign-name'}
+              <Text 
+                UNSAFE_style={{ 
+                  flex: 1,
+                  fontSize: '14px',
+                  color: trackingLink ? COLORS.GRAY_800 : COLORS.GRAY_400,
+                  fontFamily: 'inherit',
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                  whiteSpace: 'nowrap'
+                }}
+              >
+                {trackingLink || 'Enter a name to generate link'}
               </Text>
+              <ActionButton
+                isQuiet
+                isDisabled={!trackingLink}
+                onPress={handleCopyLink}
+                aria-label="Copy tracking link"
+                UNSAFE_style={{ flexShrink: 0 }}
+              >
+                <Copy size="S" />
+              </ActionButton>
             </View>
+            {copied && (
+              <Text UNSAFE_style={{ fontSize: '12px', color: COLORS.STATUS_DRAFT, marginTop: '4px' }}>
+                Copied to clipboard!
+              </Text>
+            )}
           </View>
 
-          <NumberField
-            label="Capacity Limit"
-            value={capacityLimit ?? NaN}
-            onChange={handleCapacityChange}
-            minValue={1}
-            maxValue={eventCapacity || 10000}
-            description={
-              eventCapacity
-                ? `Max available: ${eventCapacity - otherCampaignsCapacity}`
-                : 'Optional. Leave empty for unlimited'
-            }
-            validationState={capacityError ? 'invalid' : undefined}
-            errorMessage={capacityError}
-          />
-
-          <Flex alignItems="center" gap="size-200">
-            <Switch
-              isSelected={isActive}
-              onChange={setIsActive}
+          {/* Capacity Limit Field */}
+          <View>
+            <Text 
+              UNSAFE_style={{ 
+                fontSize: '14px',
+                fontWeight: 500,
+                color: COLORS.GRAY_800,
+                marginBottom: '8px',
+                display: 'block'
+              }}
             >
-              Active
-            </Switch>
-            <Text UNSAFE_style={{ fontSize: '12px', color: COLORS.GRAY_600 }}>
-              {isActive 
-                ? 'Campaign URL is accepting registrations' 
-                : 'Campaign URL is disabled'}
+              Set link capacity limit
             </Text>
-          </Flex>
+            <NumberField
+              value={capacityLimit ?? NaN}
+              onChange={handleCapacityChange}
+              minValue={1}
+              maxValue={eventCapacity || 10000}
+              aria-label="Set link capacity limit"
+              width="100%"
+              validationState={capacityError ? 'invalid' : undefined}
+            />
+            <Text 
+              UNSAFE_style={{ 
+                fontSize: '12px', 
+                color: capacityError ? COLORS.RED_600 : COLORS.GRAY_600,
+                marginTop: '6px',
+                display: 'block'
+              }}
+            >
+              {capacityError || 'Must be lower than the event capacity limit'}
+            </Text>
+          </View>
+
+          {/* Active Toggle */}
+          <View 
+            UNSAFE_style={{
+              paddingTop: '8px',
+              borderTop: `1px solid ${COLORS.GRAY_200}`
+            }}
+          >
+            <Flex alignItems="center" gap="size-200">
+              <Switch
+                isSelected={isActive}
+                onChange={setIsActive}
+              >
+                Active
+              </Switch>
+              <Text UNSAFE_style={{ fontSize: '12px', color: COLORS.GRAY_600 }}>
+                {isActive 
+                  ? 'Link is accepting registrations' 
+                  : 'Link is disabled'}
+              </Text>
+            </Flex>
+          </View>
         </Flex>
       </Content>
       <ButtonGroup>
@@ -547,11 +641,15 @@ const CampaignFormDialog: React.FC<CampaignFormDialogProps> = ({
           Cancel
         </Button>
         <Button 
-          variant="accent" 
+          variant="cta"
           onPress={handleSave}
           isDisabled={!isValid}
+          UNSAFE_style={{
+            backgroundColor: COLORS.BLACK,
+            borderColor: COLORS.BLACK
+          }}
         >
-          {campaign ? 'Save Changes' : 'Create Campaign'}
+          Save
         </Button>
       </ButtonGroup>
     </Dialog>

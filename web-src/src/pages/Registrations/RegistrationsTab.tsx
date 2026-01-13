@@ -9,27 +9,20 @@ import {
   AlertDialog,
   DialogTrigger
 } from '@adobe/react-spectrum'
-import type { EventApiResponse } from '../../types/domain'
 import type { Attendee, AttendeeFilters, AttendeeColumnConfig } from '../../types/attendee'
 import { getAttendeeName } from '../../types/attendee'
 import { apiService } from '../../services/api'
 import {
-  EventSelectorComponent,
   AttendeeFiltersComponent,
   AttendeeTableComponent,
 } from './index'
 
 interface RegistrationsTabProps {
-  events: EventApiResponse[]
   selectedEventId: string
-  selectedEvent: EventApiResponse | null
   attendees: Attendee[]
   columnConfig: AttendeeColumnConfig[]
-  isLoadingEvents: boolean
   isLoadingAttendees: boolean
   isLoadingConfig: boolean
-  onEventChange: (eventId: string) => void
-  onBackClick: () => void
   onAttendeesRefresh: () => Promise<void>
 }
 
@@ -38,21 +31,16 @@ interface RegistrationsTabProps {
  * 
  * Features:
  * - Dynamic columns from RSVP config
- * - Side panel with filters
+ * - Filters panel
  * - CSV export functionality
  * - Selection for bulk actions
  */
 export const RegistrationsTab: React.FC<RegistrationsTabProps> = ({
-  events,
   selectedEventId,
-  selectedEvent: _selectedEvent,
   attendees,
   columnConfig,
-  isLoadingEvents,
   isLoadingAttendees,
-  isLoadingConfig,
-  onEventChange,
-  onBackClick
+  isLoadingConfig
 }) => {
   // State
   const [filters, setFilters] = useState<AttendeeFilters>({})
@@ -127,86 +115,42 @@ export const RegistrationsTab: React.FC<RegistrationsTabProps> = ({
       {/* Main Content Area */}
       <div style={{ 
         display: 'grid', 
-        gridTemplateColumns: '240px 1fr', 
+        gridTemplateColumns: selectedEventId && attendees.length > 0 ? '220px 1fr' : '1fr', 
         gap: '24px',
         alignItems: 'start'
       }}>
-        {/* Side Panel - Back, Event Selector, Filters */}
-        <div style={{ width: '240px' }}>
-          <div style={{ 
-            display: 'grid',
-            gap: '24px'
-          }}>
-            {/* Back Button */}
-            <div>
-              <button
-                onClick={onBackClick}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '8px',
-                  padding: '8px 12px',
-                  background: 'transparent',
-                  border: 'none',
-                  cursor: 'pointer',
-                  fontSize: '14px',
-                  fontWeight: 600,
-                  color: 'var(--spectrum-global-color-gray-800)'
-                }}
-              >
-                <span style={{ fontSize: '18px' }}>←</span>
-                <span>Back</span>
-              </button>
-            </div>
-
-            {/* Event Selector - "Search other events" */}
-            <div>
-              <EventSelectorComponent
-                events={events}
-                selectedEventId={selectedEventId}
-                onChange={onEventChange}
-                isLoading={isLoadingEvents}
-                label="Search other events"
-              />
-            </div>
-
-            {/* Filters */}
-            {selectedEventId && attendees.length > 0 && (
-              <AttendeeFiltersComponent
-                columnConfig={columnConfig}
-                attendees={attendees}
-                filters={filters}
-                onFiltersChange={setFilters}
-                onBackClick={onBackClick}
-                backLabel=""
-              />
-            )}
-          </div>
-        </div>
+        {/* Filters Panel - Only show when there are attendees */}
+        {selectedEventId && attendees.length > 0 && (
+          <AttendeeFiltersComponent
+            columnConfig={columnConfig}
+            attendees={attendees}
+            filters={filters}
+            onFiltersChange={setFilters}
+            backLabel=""
+          />
+        )}
 
         {/* Main Table Area */}
         <div style={{ minWidth: 0 }}>
-          {/* Search and Bulk Actions */}
+          {/* Search */}
           {selectedEventId && (
-            <>
-              <div style={{ 
-                display: 'flex',
-                justifyContent: 'flex-end',
-                marginBottom: '16px'
-              }}>
-                <div style={{ width: '240px' }}>
-                  <SearchField
-                    label="Search attendees"
-                    placeholder="Search"
-                    value={searchQuery}
-                    onChange={setSearchQuery}
-                    onClear={() => setSearchQuery('')}
-                    width="100%"
-                    isQuiet
-                  />
-                </div>
+            <div style={{ 
+              display: 'flex',
+              justifyContent: 'flex-end',
+              marginBottom: '16px'
+            }}>
+              <div style={{ width: '240px' }}>
+                <SearchField
+                  label="Search attendees"
+                  placeholder="Search"
+                  value={searchQuery}
+                  onChange={setSearchQuery}
+                  onClear={() => setSearchQuery('')}
+                  width="100%"
+                  isQuiet
+                />
               </div>
-            </>
+            </div>
           )}
 
           {/* Attendee Table */}

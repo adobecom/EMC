@@ -21,6 +21,7 @@ import { useRsvpConfig } from '../../hooks/useRsvpConfig'
 import { IMS } from '../../types'
 import { LoadingSpinner } from '../../components/shared'
 import { EventInfoComponent } from './EventInfoComponent'
+import { EventSelectorComponent } from './EventSelectorComponent'
 import { RegistrationsTab } from './RegistrationsTab'
 import { CampaignsTab } from './CampaignsTab'
 
@@ -231,14 +232,47 @@ export const Registrations: React.FC<RegistrationsProps> = ({ ims: _ims }) => {
 
   return (
     <View width="100%" padding="size-400" UNSAFE_style={{ boxSizing: 'border-box' }}>
-      {/* Header */}
+      {/* Header with Back Button and Event Selector */}
       <div style={{ 
         display: 'flex',
-        justifyContent: 'space-between',
         alignItems: 'center',
+        gap: '16px',
         marginBottom: '24px'
       }}>
-        <Heading level={1}>Event report</Heading>
+        {/* Back Button */}
+        <button
+          onClick={handleBackClick}
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '6px',
+            padding: '8px 12px',
+            background: 'transparent',
+            border: '1px solid var(--spectrum-global-color-gray-300)',
+            borderRadius: '4px',
+            cursor: 'pointer',
+            fontSize: '14px',
+            fontWeight: 500,
+            color: 'var(--spectrum-global-color-gray-800)'
+          }}
+        >
+          <span style={{ fontSize: '14px' }}>←</span>
+          <span>Back</span>
+        </button>
+
+        {/* Page Title */}
+        <Heading level={1} UNSAFE_style={{ margin: 0, flex: 1 }}>Event report</Heading>
+
+        {/* Event Selector */}
+        <div style={{ width: '280px' }}>
+          <EventSelectorComponent
+            events={events}
+            selectedEventId={selectedEventId}
+            onChange={handleEventChange}
+            isLoading={isLoadingEvents}
+            label="Search other events"
+          />
+        </div>
       </div>
 
       {/* Event Info Panel */}
@@ -267,16 +301,11 @@ export const Registrations: React.FC<RegistrationsProps> = ({ ims: _ims }) => {
             <Item key="registrations">
               <View paddingTop="size-300">
                 <RegistrationsTab
-                  events={events}
                   selectedEventId={selectedEventId}
-                  selectedEvent={selectedEvent}
                   attendees={attendees}
                   columnConfig={columnConfig}
-                  isLoadingEvents={isLoadingEvents}
                   isLoadingAttendees={isLoadingAttendees}
                   isLoadingConfig={isLoadingConfig}
-                  onEventChange={handleEventChange}
-                  onBackClick={handleBackClick}
                   onAttendeesRefresh={handleAttendeesRefresh}
                 />
               </View>
