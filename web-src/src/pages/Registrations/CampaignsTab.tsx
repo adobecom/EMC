@@ -223,7 +223,7 @@ export const CampaignsTab: React.FC<CampaignsTabProps> = ({
       width: 100,
       isSticky: true,
       render: (campaign) => (
-        <Flex gap="size-100" justifyContent="flex-end">
+        <Flex gap="size-100" justifyContent="end">
           <ActionButton
             isQuiet
             onPress={() => handleEditClick(campaign)}
