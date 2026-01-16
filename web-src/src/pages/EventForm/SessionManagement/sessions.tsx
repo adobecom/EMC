@@ -7,6 +7,7 @@ import { EditIcon } from '../../../components/icons/edit'
 import { DeleteIcon } from '../../../components/icons/delete'
 import { AddIcon } from '../../../components/icons/add'
 import { formatTime, formatDate } from '../../../utils/shared'
+import { SessionDetailComponent } from './sessionDetail'
 
 // Define props interface for SessionItem
 interface SessionItemProps {
@@ -137,10 +138,7 @@ export const SessionsList: React.FC= () => {
           <Text>Breakdown your event into sessions and add details</Text>
         </Flex>
         <View>
-          <Button variant="secondary" style="fill">
-            <AddIcon />
-            <Text>Add new session</Text>
-          </Button>
+          <SessionDetailComponent />
         </View>
       </Flex>
 
