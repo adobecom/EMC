@@ -28,6 +28,7 @@ import { v4 as uuidv4 } from 'uuid'
 import { HeadingWithTooltip, RichTextEditor } from '../../components/shared'
 import { AgendaItem } from '../../types/domain'
 import { useEventFormComponent } from '../../hooks/useEventFormComponent'
+import { AGENDA_LIMITS } from '../../config/uiConstants'
 
 /**
  * Safely parse ISO 8601 datetime string for DatePicker
@@ -415,7 +416,10 @@ export const AgendaComponent: React.FC = () => {
   /**
    * Strip HTML tags and truncate text for collapsed view
    */
-  const truncateDescription = (html: string | undefined, maxLength: number = 80): string => {
+  const truncateDescription = (
+    html: string | undefined,
+    maxLength: number = AGENDA_LIMITS.collapsedDescriptionMaxLength
+  ): string => {
     if (!html) return ''
     // Strip HTML tags
     const text = html.replace(/<[^>]*>/g, '').trim()

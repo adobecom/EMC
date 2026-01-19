@@ -11,7 +11,7 @@
 
 import { tokenStorage } from './tokenStorage'
 import { constructRequestHeaders, safeFetch } from './requestHelpers'
-import { getCurrentEnvironment, getApiHost, API_CONFIG } from '../config/constants'
+import { getCurrentEnvironment, getApiHost, API_CONFIG } from '../config/environmentConfig'
 
 /**
  * External API Service

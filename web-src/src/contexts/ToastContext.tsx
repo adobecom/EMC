@@ -9,6 +9,7 @@ import React, {
   useCallback,
   useMemo,
 } from 'react'
+import { TOAST_LIMITS } from '../config/uiConstants'
 
 // ============================================================================
 // TYPES
@@ -71,24 +72,16 @@ interface ToastContextValue {
 }
 
 // ============================================================================
-// CONSTANTS
-// ============================================================================
-
-const DEFAULT_DURATION = 5000
-const ERROR_DURATION = 8000 // Errors stay longer
-const MAX_TOASTS = 5 // Maximum toasts visible at once
-
-// ============================================================================
 // REDUCER
 // ============================================================================
 
 function toastReducer(state: ToastState, action: ToastAction): ToastState {
   switch (action.type) {
     case 'ADD_TOAST': {
-      // Add new toast, limit to MAX_TOASTS (remove oldest if exceeding)
+      // Add new toast, limit to maxToasts (remove oldest if exceeding)
       const newToasts = [...state.toasts, action.payload]
-      if (newToasts.length > MAX_TOASTS) {
-        return { toasts: newToasts.slice(-MAX_TOASTS) }
+      if (newToasts.length > TOAST_LIMITS.maxToasts) {
+        return { toasts: newToasts.slice(-TOAST_LIMITS.maxToasts) }
       }
       return { toasts: newToasts }
     }
@@ -137,7 +130,9 @@ export const ToastProvider: React.FC<ToastProviderProps> = ({ children }) => {
     options: ToastOptions = {}
   ): string => {
     const id = generateToastId()
-    const defaultDuration = variant === 'negative' ? ERROR_DURATION : DEFAULT_DURATION
+    const defaultDuration = variant === 'negative'
+      ? TOAST_LIMITS.errorDurationMs
+      : TOAST_LIMITS.defaultDurationMs
     
     const toast: Toast = {
       id,

@@ -15,7 +15,7 @@ import {
 import { HeadingWithTooltip, LoadingSpinner } from '../../components/shared'
 import { FLEX_GAP } from '../../styles/designSystem'
 import { useSeriesFormComponent } from '../../hooks/useSeriesFormComponent'
-import { SUPPORTED_CLOUDS } from '../../config/constants'
+import { SUPPORTED_CLOUDS } from '../../config/environmentConfig'
 import { EXTERNAL_CONFIG_URLS } from '../../config/externalConfigs'
 import { TargetCms } from '../../types/domain'
 

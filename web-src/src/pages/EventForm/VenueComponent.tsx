@@ -23,14 +23,9 @@ import { apiService } from '../../services/api'
 import { getVenuePayload } from '../../utils/dataFilters'
 import { uploadImage } from '../../services/requestHelpers'
 import { tokenStorage } from '../../services/tokenStorage'
-import { getCurrentEnvironment, getApiHost } from '../../config/constants'
+import { getCurrentEnvironment, getApiHost } from '../../config/environmentConfig'
+import { EVENT_FORM_LIMITS } from '../../config/uiConstants'
 import '../../../src/types/google-places.d.ts'
-
-// ============================================================================
-// CONSTANTS
-// ============================================================================
-
-const VENUE_NAME_MAX_LENGTH = 80
 
 // ============================================================================
 // COMPONENT
@@ -443,7 +438,7 @@ export const VenueComponent: React.FC = () => {
             fontSize: '12px',
             color: COLORS.GRAY_600
           }}>
-            {VENUE_NAME_MAX_LENGTH} characters max
+            {EVENT_FORM_LIMITS.venueNameMaxLength} characters max
           </Text>
         </Flex>
         
@@ -454,7 +449,7 @@ export const VenueComponent: React.FC = () => {
           value={venueNameValue}
           onChange={(e) => handleVenueNameChange(e.target.value)}
           onBlur={() => setHasAttemptedSubmit(true)}
-          maxLength={VENUE_NAME_MAX_LENGTH}
+          maxLength={EVENT_FORM_LIMITS.venueNameMaxLength}
           placeholder="Where it's at"
           aria-label="Venue Name"
           aria-describedby={showVenueNameError ? 'venue-name-error' : undefined}
@@ -525,7 +520,7 @@ export const VenueComponent: React.FC = () => {
               width="100%"
               value={alternativeVenueName}
               onChange={handleAlternativeNameChange}
-              maxLength={VENUE_NAME_MAX_LENGTH}
+              maxLength={EVENT_FORM_LIMITS.venueNameMaxLength}
               description="This name will be displayed instead of the Google Places name"
             />
           </View>

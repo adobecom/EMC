@@ -3,6 +3,7 @@
 */
 
 import { EventFormData } from '../types/domain'
+import { STORAGE_KEYS } from '../config/storageConstants'
 
 /**
  * Session storage utilities for persisting form drafts
@@ -15,14 +16,12 @@ import { EventFormData } from '../types/domain'
  * Data is stored in sessionStorage (cleared when browser closes)
  */
 
-export const STORAGE_KEY_PREFIX = 'emc-event-form-draft-'
-
 /**
  * Generate the storage key for a form draft
  * @param eventIdOrKey - Event ID for edits, or a descriptive key for new events
  */
 function getStorageKey(eventIdOrKey: string): string {
-  return `${STORAGE_KEY_PREFIX}${eventIdOrKey}`
+  return `${STORAGE_KEYS.formDraftPrefix}${eventIdOrKey}`
 }
 
 /**
@@ -98,7 +97,7 @@ export function clearAllFormDrafts(): void {
     
     for (let i = 0; i < sessionStorage.length; i++) {
       const key = sessionStorage.key(i)
-      if (key && key.startsWith(STORAGE_KEY_PREFIX)) {
+      if (key && key.startsWith(STORAGE_KEYS.formDraftPrefix)) {
         keysToRemove.push(key)
       }
     }
@@ -154,8 +153,8 @@ export function getAllDraftKeys(): string[] {
   try {
     for (let i = 0; i < sessionStorage.length; i++) {
       const key = sessionStorage.key(i)
-      if (key && key.startsWith(STORAGE_KEY_PREFIX)) {
-        keys.push(key.slice(STORAGE_KEY_PREFIX.length))
+      if (key && key.startsWith(STORAGE_KEYS.formDraftPrefix)) {
+        keys.push(key.slice(STORAGE_KEYS.formDraftPrefix.length))
       }
     }
   } catch (error) {

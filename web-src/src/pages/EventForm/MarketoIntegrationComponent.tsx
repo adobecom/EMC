@@ -14,42 +14,7 @@ import { HeadingWithTooltip } from '../../components/shared'
 import { TYPOGRAPHY, FLEX_GAP } from '../../styles/designSystem'
 import { useEventFormComponent } from '../../hooks/useEventFormComponent'
 import { MarketoIntegrationData } from '../../types/domain'
-
-// ============================================================================
-// CONSTANTS
-// ============================================================================
-
-const EVENT_TYPE_OPTIONS = [
-  { key: 'no-integration', label: 'No Marketo integration' },
-  { key: 'DX NA/ROW', label: 'DX NA/ROW' },
-  { key: 'DX APAC', label: 'DX APAC' },
-  { key: 'DX EMEA', label: 'DX EMEA' },
-  { key: 'DX Japan', label: 'DX Japan' },
-  { key: 'DX LATAM', label: 'DX LATAM' },
-]
-
-const EVENT_POI_OPTIONS = [
-  { key: 'no-poi', label: 'No Event POI' },
-  { key: 'Adobe Analytics', label: 'Adobe Analytics' },
-  { key: 'Adobe Audience Manager', label: 'Adobe Audience Manager' },
-  { key: 'Adobe Campaign', label: 'Adobe Campaign' },
-  { key: 'Adobe Commerce', label: 'Adobe Commerce' },
-  { key: 'Adobe Creative Cloud®', label: 'Adobe Creative Cloud®' },
-  { key: 'Adobe Experience Manager', label: 'Adobe Experience Manager' },
-  { key: 'Adobe Experience Manager Assets', label: 'Adobe Experience Manager Assets' },
-  { key: 'Adobe Experience Manager Forms', label: 'Adobe Experience Manager Forms' },
-  { key: 'Adobe Experience Manager Sites', label: 'Adobe Experience Manager Sites' },
-  { key: 'Adobe Experience Platform', label: 'Adobe Experience Platform' },
-  { key: 'Adobe Journey Optimizer', label: 'Adobe Journey Optimizer' },
-  { key: 'Adobe Sign', label: 'Adobe Sign' },
-  { key: 'Adobe Target', label: 'Adobe Target' },
-  { key: 'Customer Journey Analytics', label: 'Customer Journey Analytics' },
-  { key: 'Experience Platform Launch', label: 'Experience Platform Launch' },
-  { key: 'Intelligent Services', label: 'Intelligent Services' },
-  { key: 'Marketo® Engage', label: 'Marketo® Engage' },
-  { key: 'Real-Time CDP', label: 'Real-Time CDP' },
-  { key: 'Workfront', label: 'Workfront' },
-]
+import { MARKETO_OPTIONS } from '../../config/uiConstants'
 
 // ============================================================================
 // COMPONENT
@@ -170,7 +135,7 @@ export const MarketoIntegrationComponent: React.FC = () => {
         isDisabled={isLocked}
         width="size-3600"
       >
-        {EVENT_TYPE_OPTIONS.map((option) => (
+        {MARKETO_OPTIONS.eventTypes.map((option) => (
           <Item key={option.key}>{option.label}</Item>
         ))}
       </Picker>
@@ -216,7 +181,7 @@ export const MarketoIntegrationComponent: React.FC = () => {
           isDisabled={isNoIntegration || isLocked}
           width="size-3600"
         >
-          {EVENT_POI_OPTIONS.map((option) => (
+          {MARKETO_OPTIONS.eventPois.map((option) => (
             <Item key={option.key}>{option.label}</Item>
           ))}
         </Picker>

@@ -5,7 +5,7 @@
 */
 
 import { env } from '../config/env'
-import { ALLOWED_HOSTS } from '../config/constants'
+import { ALLOWED_HOSTS } from '../config/environmentConfig'
 
 /**
  * Generate a UUID v4

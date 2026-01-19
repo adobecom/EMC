@@ -14,6 +14,7 @@ import { TYPOGRAPHY, FLEX_GAP } from '../../styles/designSystem'
 import { useEventFormComponent } from '../../hooks/useEventFormComponent'
 import { apiService } from '../../services/api'
 import { PublishingProfile } from '../../types/domain'
+import { EXTERNAL_CONFIG_URLS } from '../../config/externalConfigs'
 
 interface MetadataField {
   key: string
@@ -30,8 +31,6 @@ interface MetadataCatalogue {
   }
   [key: string]: any
 }
-
-const METADATA_CATALOGUE_URL = 'https://www.adobe.com/event-libs/assets/configs/metadata-catalogue.json'
 
 /**
  * PageMetadataComponent - Manages page metadata for webinar events
@@ -192,7 +191,7 @@ export const PageMetadataComponent: React.FC = () => {
 
     const fetchCatalogue = async () => {
       try {
-        const response = await fetch(METADATA_CATALOGUE_URL)
+        const response = await fetch(EXTERNAL_CONFIG_URLS.metadataCatalogue)
         if (!response.ok) {
           throw new Error('Failed to fetch metadata catalogue')
         }

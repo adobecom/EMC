@@ -8,7 +8,7 @@
  */
 
 import { env } from '../config/env'
-import { getCurrentEnvironment, ENVIRONMENTS } from '../config/constants'
+import { getCurrentEnvironment, ENVIRONMENTS } from '../config/environmentConfig'
 
 let isLoading = false
 let isLoaded = false

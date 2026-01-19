@@ -5,6 +5,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { configService } from '../services/configService'
 import type { RsvpConfigField, AttendeeColumnConfig } from '../types/attendee'
+import { ATTENDEE_TABLE, ATTENDEE_DEFAULT_COLUMNS } from '../config/uiConstants'
 
 /**
  * Convert camelCase to Sentence Case
@@ -18,18 +19,6 @@ function camelToSentenceCase(str: string): string {
 /**
  * Sticky columns that should be fixed on the right side of the table
  */
-const STICKY_COLUMNS = ['registrationStatus', 'checkedIn']
-
-/**
- * Fields to exclude from individual columns (combined into 'name')
- */
-const NAME_FIELDS = ['firstName', 'lastName']
-
-/**
- * Fields to exclude from column generation
- */
-const EXCLUDED_FIELD_TYPES = ['submit', 'button', 'hidden']
-
 /**
  * Transform RSVP config fields to column definitions
  */
@@ -38,8 +27,8 @@ function transformConfigToColumns(config: RsvpConfigField[]): AttendeeColumnConf
   const validFields = config.filter(f => 
     f.Field && 
     f.Field.trim() !== '' && 
-    !EXCLUDED_FIELD_TYPES.includes(f.Type?.toLowerCase()) &&
-    !NAME_FIELDS.includes(f.Field)
+    !ATTENDEE_TABLE.excludedFieldTypes.includes(f.Type?.toLowerCase() || '') &&
+    !ATTENDEE_TABLE.nameFields.includes(f.Field)
   )
 
   // Start with combined name column
@@ -56,7 +45,7 @@ function transformConfigToColumns(config: RsvpConfigField[]): AttendeeColumnConf
 
   // Add configured fields (excluding sticky columns for now)
   validFields
-    .filter(f => !STICKY_COLUMNS.includes(f.Field))
+    .filter(f => !ATTENDEE_TABLE.stickyColumns.includes(f.Field))
     .forEach(field => {
       columns.push({
         key: field.Field,
@@ -70,7 +59,7 @@ function transformConfigToColumns(config: RsvpConfigField[]): AttendeeColumnConf
     })
 
   // Add sticky columns at the end
-  STICKY_COLUMNS.forEach((key) => {
+  ATTENDEE_TABLE.stickyColumns.forEach((key) => {
     const existingField = config.find(f => f.Field === key)
     
     columns.push({
@@ -78,7 +67,7 @@ function transformConfigToColumns(config: RsvpConfigField[]): AttendeeColumnConf
       label: existingField?.Label || getDefaultLabel(key),
       type: existingField?.Type || 'text',
       fallback: key === 'registrationStatus' ? 'registered' : '-',
-      width: 130,
+      width: ATTENDEE_TABLE.columnWidths.sticky,
       sortable: true,
       isSticky: true
     })
@@ -91,17 +80,7 @@ function transformConfigToColumns(config: RsvpConfigField[]): AttendeeColumnConf
  * Get default label for known fields
  */
 function getDefaultLabel(key: string): string {
-  const labels: Record<string, string> = {
-    registrationStatus: 'RSVP Status',
-    checkedIn: 'Checked In',
-    email: 'Email',
-    mobilePhone: 'Phone',
-    companyName: 'Company',
-    jobTitle: 'Job Title',
-    industry: 'Industry',
-    countryRegion: 'Country/Region'
-  }
-  return labels[key] || camelToSentenceCase(key)
+  return ATTENDEE_TABLE.labelOverrides[key] || camelToSentenceCase(key)
 }
 
 /**
@@ -109,16 +88,18 @@ function getDefaultLabel(key: string): string {
  */
 function getColumnWidth(fieldKey: string): number {
   // Email fields need more space
-  if (fieldKey === 'email') return 250
+  if (fieldKey === 'email') return ATTENDEE_TABLE.columnWidths.email
   
   // Phone numbers
-  if (fieldKey.toLowerCase().includes('phone')) return 150
+  if (fieldKey.toLowerCase().includes('phone')) return ATTENDEE_TABLE.columnWidths.phone
   
   // Company/org names
-  if (fieldKey.toLowerCase().includes('company') || fieldKey.toLowerCase().includes('organization')) return 200
+  if (fieldKey.toLowerCase().includes('company') || fieldKey.toLowerCase().includes('organization')) {
+    return ATTENDEE_TABLE.columnWidths.company
+  }
   
   // Default width
-  return 150
+  return ATTENDEE_TABLE.columnWidths.default
 }
 
 /**
@@ -205,14 +186,7 @@ export function useRsvpConfig(cloudType: string | undefined): UseRsvpConfigResul
  * Get default columns when no RSVP config is available
  */
 function getDefaultColumns(): AttendeeColumnConfig[] {
-  return [
-    { key: 'name', label: 'Name', type: 'text', fallback: '-', width: 200, sortable: true },
-    { key: 'email', label: 'Email', type: 'text', fallback: '-', width: 250, sortable: true },
-    { key: 'mobilePhone', label: 'Phone', type: 'text', fallback: '-', width: 150, sortable: true },
-    { key: 'companyName', label: 'Company', type: 'text', fallback: '-', width: 200, sortable: true },
-    { key: 'registrationStatus', label: 'RSVP Status', type: 'text', fallback: 'registered', width: 130, sortable: true, isSticky: true },
-    { key: 'checkedIn', label: 'Checked In', type: 'text', fallback: '-', width: 130, sortable: true, isSticky: true }
-  ]
+  return ATTENDEE_DEFAULT_COLUMNS
 }
 
 export default useRsvpConfig

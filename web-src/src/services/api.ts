@@ -22,7 +22,7 @@ import {
 import { getSeriesListMock, getEventsListMock } from '../mocks'
 import { tokenStorage } from './tokenStorage'
 import { constructRequestHeaders, safeFetch } from './requestHelpers'
-import { getCurrentEnvironment, getApiHost, SUPPORTED_CLOUDS } from '../config/constants'
+import { getCurrentEnvironment, getApiHost, SUPPORTED_CLOUDS } from '../config/environmentConfig'
 
 // ============================================================================
 // TYPES

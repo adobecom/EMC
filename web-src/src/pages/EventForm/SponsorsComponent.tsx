@@ -22,7 +22,6 @@ import Add from '@spectrum-icons/workflow/Add'
 import Delete from '@spectrum-icons/workflow/Delete'
 import Edit from '@spectrum-icons/workflow/Edit'
 import SaveFloppy from '@spectrum-icons/workflow/SaveFloppy'
-import Remove from '@spectrum-icons/workflow/Remove'
 import DragHandle from '@spectrum-icons/workflow/DragHandle'
 import ChevronDown from '@spectrum-icons/workflow/ChevronDown'
 import ChevronRight from '@spectrum-icons/workflow/ChevronRight'
@@ -32,18 +31,8 @@ import { apiService } from '../../services/api'
 import { useEventFormComponent } from '../../hooks/useEventFormComponent'
 import { uploadImage, UploadTracker } from '../../services/requestHelpers'
 import { tokenStorage } from '../../services/tokenStorage'
-import { getCurrentEnvironment, getApiHost } from '../../config/constants'
-
-// Sponsor type options per OpenAPI SponsorType enum
-const SPONSOR_TYPE_OPTIONS: { key: SponsorType; label: string }[] = [
-  { key: 'Diamond', label: 'Diamond' },
-  { key: 'Platinum', label: 'Platinum' },
-  { key: 'Gold', label: 'Gold' },
-  { key: 'Silver', label: 'Silver' },
-  { key: 'Bronze', label: 'Bronze' },
-  { key: 'Engagement', label: 'Engagement' },
-  { key: 'Partner', label: 'Partner' },
-]
+import { getCurrentEnvironment, getApiHost } from '../../config/environmentConfig'
+import { SPONSOR_OPTIONS } from '../../config/uiConstants'
 
 /**
  * SponsorsComponent - Manages sponsor and partner information
@@ -68,7 +57,6 @@ export const SponsorsComponent: React.FC = () => {
   const {
     formData,
     updateFormData,
-    eventId,
     seriesId,
   } = useEventFormComponent({
     componentId: 'sponsors',
@@ -568,10 +556,6 @@ export const SponsorsComponent: React.FC = () => {
     return !!(sponsor.isSaved || sponsor.isFromSeries)
   }
 
-  const isSponsorComplete = (sponsor: SponsorData): boolean => {
-    return !!(sponsor.partnerName && sponsor.partnerUrl)
-  }
-
   /**
    * Format modification time for display
    */
@@ -630,7 +614,7 @@ export const SponsorsComponent: React.FC = () => {
         const isSaving = savingIndex === index
         const isDragging = draggedIndex === index
         const isDragOver = dragOverIndex === index
-        const typeLabel = SPONSOR_TYPE_OPTIONS.find(opt => opt.key === sponsor.type)?.label || 'Partner'
+        const typeLabel = SPONSOR_OPTIONS.find(opt => opt.key === sponsor.type)?.label || 'Partner'
         const isExpanded = expandedCards.has(index)
 
         // ==================== COLLAPSED VIEW (Read-only only) ====================
@@ -781,7 +765,7 @@ export const SponsorsComponent: React.FC = () => {
                 isDisabled
                 UNSAFE_style={{ marginBottom: '24px' }}
               >
-                {SPONSOR_TYPE_OPTIONS.map(option => (
+                {SPONSOR_OPTIONS.map(option => (
                   <Item key={option.key}>{option.label}</Item>
                 ))}
               </Picker>
@@ -881,7 +865,7 @@ export const SponsorsComponent: React.FC = () => {
                 width="size-3000"
                 isRequired
               >
-                {SPONSOR_TYPE_OPTIONS.map(option => (
+                {SPONSOR_OPTIONS.map(option => (
                   <Item key={option.key}>{option.label}</Item>
                 ))}
               </Picker>

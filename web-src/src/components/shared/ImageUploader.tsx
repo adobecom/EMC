@@ -16,20 +16,15 @@ import Delete from '@spectrum-icons/workflow/Delete'
 import ImageAdd from '@spectrum-icons/workflow/ImageAdd'
 import { uploadImage, UploadTracker } from '../../services/requestHelpers'
 import { tokenStorage } from '../../services/tokenStorage'
-import { getCurrentEnvironment, getApiHost } from '../../config/constants'
+import { getCurrentEnvironment, getApiHost } from '../../config/environmentConfig'
 import { apiService } from '../../services/api'
+import { IMAGE_UPLOAD, type ValidImageType } from '../../config/uiConstants'
 
 // ============================================================================
 // IMAGE VALIDATION UTILITIES
 // ============================================================================
 
 /** Allowed image types for upload */
-const VALID_IMAGE_TYPES = ['jpeg', 'jpg', 'png', 'svg'] as const
-type ValidImageType = typeof VALID_IMAGE_TYPES[number]
-
-/** File input accept attribute for allowed types */
-const ACCEPTED_FILE_TYPES = '.jpg,.jpeg,.png,.svg,image/jpeg,image/png,image/svg+xml'
-
 /**
  * Validate image type by checking file signature (magic bytes)
  * This prevents spoofed file extensions from bypassing validation
@@ -78,7 +73,7 @@ async function isImageTypeValid(file: File): Promise<{ valid: boolean; detectedT
     }
   }
 
-  const valid = detectedType !== null && VALID_IMAGE_TYPES.includes(detectedType as ValidImageType)
+  const valid = detectedType !== null && IMAGE_UPLOAD.validTypes.includes(detectedType as ValidImageType)
   return { valid, detectedType }
 }
 
@@ -204,7 +199,7 @@ export const ImageUploader: React.FC<ImageUploaderProps> = ({
     const { valid, detectedType } = await isImageTypeValid(file)
     
     if (!valid) {
-      const allowedTypesStr = VALID_IMAGE_TYPES.join(', ').toUpperCase()
+      const allowedTypesStr = IMAGE_UPLOAD.validTypes.join(', ').toUpperCase()
       if (detectedType) {
         setError(`Invalid image type: ${detectedType.toUpperCase()}. Allowed types: ${allowedTypesStr}`)
       } else {
@@ -477,7 +472,7 @@ export const ImageUploader: React.FC<ImageUploaderProps> = ({
           <input
             ref={fileInputRef}
             type="file"
-            accept={ACCEPTED_FILE_TYPES}
+            accept={IMAGE_UPLOAD.acceptedFileTypes}
             onChange={handleFileInputChange}
             style={{ display: 'none' }}
           />

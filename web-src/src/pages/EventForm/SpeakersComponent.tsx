@@ -32,19 +32,8 @@ import { apiService } from '../../services/api'
 import { useEventFormComponent } from '../../hooks/useEventFormComponent'
 import { uploadImage, UploadTracker } from '../../services/requestHelpers'
 import { tokenStorage } from '../../services/tokenStorage'
-import { getCurrentEnvironment, getApiHost } from '../../config/constants'
-
-const SPEAKER_TYPE_OPTIONS: { key: SpeakerType; label: string }[] = [
-  { key: 'host', label: 'Host' },
-  { key: 'presenter', label: 'Presenter' },
-  { key: 'speaker', label: 'Speaker' },
-  { key: 'guest-speaker', label: 'Guest Speaker' },
-  { key: 'keynote', label: 'Keynote' },
-  { key: 'judge', label: 'Judge' },
-  { key: 'portfolio-reviewer', label: 'Portfolio Reviewer' },
-  { key: 'career-advisor', label: 'Career Advisor' },
-  { key: 'product-demonstrator', label: 'Product Demonstrator' },
-]
+import { getCurrentEnvironment, getApiHost } from '../../config/environmentConfig'
+import { SPEAKER_OPTIONS, SPEAKER_TYPE_API_MAP } from '../../config/uiConstants'
 
 /**
  * Format modification time for display
@@ -69,28 +58,7 @@ function formatLastUpdate(modificationTime?: number | string): string {
  * API expects: Host, Presenter, Speaker, GuestSpeaker, Keynote, Judge, PortfolioReviewer, CareerAdvisor, ProductDemonstrator
  */
 function toApiSpeakerType(type: SpeakerType | string): string {
-  const typeMap: Record<string, string> = {
-    'host': 'Host',
-    'presenter': 'Presenter',
-    'speaker': 'Speaker',
-    'guest-speaker': 'GuestSpeaker',
-    'keynote': 'Keynote',
-    'judge': 'Judge',
-    'portfolio-reviewer': 'PortfolioReviewer',
-    'career-advisor': 'CareerAdvisor',
-    'product-demonstrator': 'ProductDemonstrator',
-    // Also handle if already in PascalCase
-    'Host': 'Host',
-    'Presenter': 'Presenter',
-    'Speaker': 'Speaker',
-    'GuestSpeaker': 'GuestSpeaker',
-    'Keynote': 'Keynote',
-    'Judge': 'Judge',
-    'PortfolioReviewer': 'PortfolioReviewer',
-    'CareerAdvisor': 'CareerAdvisor',
-    'ProductDemonstrator': 'ProductDemonstrator',
-  }
-  return typeMap[type] || 'Speaker'
+  return SPEAKER_TYPE_API_MAP[type] || 'Speaker'
 }
 
 /**
@@ -740,7 +708,7 @@ export const SpeakersComponent: React.FC = () => {
         const displayName = profile.firstName && profile.lastName 
           ? `${profile.firstName} ${profile.lastName}`
           : `Profile ${index + 1}`
-        const typeLabel = SPEAKER_TYPE_OPTIONS.find(opt => opt.key === profile.type)?.label || 'Speaker'
+        const typeLabel = SPEAKER_OPTIONS.find(opt => opt.key === profile.type)?.label || 'Speaker'
 
         // ==================== COLLAPSED VIEW (Read-only only) ====================
         if (isCollapsed) {
@@ -881,7 +849,7 @@ export const SpeakersComponent: React.FC = () => {
                 isDisabled
                 UNSAFE_style={{ marginBottom: '24px' }}
               >
-                {SPEAKER_TYPE_OPTIONS.map(option => (
+                {SPEAKER_OPTIONS.map(option => (
                   <Item key={option.key}>{option.label}</Item>
                 ))}
               </Picker>
@@ -1026,7 +994,7 @@ export const SpeakersComponent: React.FC = () => {
                 width="size-3000"
                 isRequired
               >
-                {SPEAKER_TYPE_OPTIONS.map(option => (
+                {SPEAKER_OPTIONS.map(option => (
                   <Item key={option.key}>{option.label}</Item>
                 ))}
               </Picker>

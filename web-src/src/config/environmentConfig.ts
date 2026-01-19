@@ -1,5 +1,5 @@
 /**
- * Environment and domain constants used across the application
+ * Environment, domain, and API configuration.
  * Based on the previous version's constants.js
  */
 
@@ -170,4 +170,3 @@ export function getApiHost(service: 'esp' | 'esl', env?: Environment): string {
   const currentEnv = env || getCurrentEnvironment()
   return API_CONFIG[service][currentEnv].host
 }
-

@@ -15,6 +15,7 @@ import {
 import { HeadingWithTooltip } from '../../components/shared'
 import LinkOut from '@spectrum-icons/workflow/LinkOut'
 import DragHandle from '@spectrum-icons/workflow/DragHandle'
+import { SUPPORTED_CLOUDS } from '../../config/environmentConfig'
 
 /**
  * Configuration field structure from the JSON configs
@@ -64,11 +65,6 @@ const convertString = (input: string): string => {
  * Fetches RSVP form configurations for all supported clouds
  */
 const fetchRsvpFormConfigs = async (): Promise<RsvpConfig[]> => {
-  const SUPPORTED_CLOUDS = [
-    { id: 'CreativeCloud', name: 'Creative Cloud' },
-    { id: 'ExperienceCloud', name: 'Experience Cloud' }
-  ]
-
   return Promise.all(
     SUPPORTED_CLOUDS.map(async ({ id }) => {
       try {

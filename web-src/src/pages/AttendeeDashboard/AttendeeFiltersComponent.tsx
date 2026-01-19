@@ -15,6 +15,7 @@ import {
 import ChevronLeft from '@spectrum-icons/workflow/ChevronLeft'
 import type { AttendeeColumnConfig, AttendeeFilters, Attendee, FilterMenuConfig } from '../../types/attendee'
 import { COLORS } from '../../styles/designSystem'
+import { ATTENDEE_FILTERS } from '../../config/uiConstants'
 
 interface AttendeeFiltersComponentProps {
   columnConfig: AttendeeColumnConfig[]
@@ -36,8 +37,6 @@ function camelToSentenceCase(str: string): string {
 /**
  * Fields to exclude from filter generation
  */
-const EXCLUDED_FILTER_FIELDS = ['firstName', 'lastName', 'name', 'email', 'attendeeId']
-
 /**
  * Side panel with filter menus for attendee list
  */
@@ -55,7 +54,7 @@ export const AttendeeFiltersComponent: React.FC<AttendeeFiltersComponentProps> =
 
     columnConfig.forEach(({ key, label }) => {
       // Skip excluded fields
-      if (EXCLUDED_FILTER_FIELDS.includes(key)) return
+      if (ATTENDEE_FILTERS.excludedFields.includes(key)) return
 
       // Get unique values for this field
       const uniqueValues = new Map<string, number>()

@@ -19,11 +19,12 @@ import {
   ComboBox
 } from '@adobe/react-spectrum'
 import { parseDateTime, CalendarDateTime } from '@internationalized/date'
-import { getTimeZones } from '@vvo/tzdb'
 import Info from '@spectrum-icons/workflow/Info'
 import { HeadingWithTooltip, RichTextEditor } from '../../components/shared'
 import { FLEX_GAP } from '../../styles/designSystem'
 import { useEventFormComponent } from '../../hooks/useEventFormComponent'
+import { EVENT_FORM_LIMITS, EVENT_FORM_OPTIONS } from '../../config/uiConstants'
+import { TIMEZONE_OPTIONS } from '../../config/timezoneOptions'
 
 /**
  * Safely parse ISO 8601 datetime string for DatePicker
@@ -101,22 +102,6 @@ function getMinEndDateTime(startDateTimeStr: string): CalendarDateTime | undefin
   if (!startDt) return undefined
   return addMinutes(startDt, 1)
 }
-
-const LANGUAGE_OPTIONS = [
-  { key: 'en', label: 'English' },
-  { key: 'es', label: 'Spanish' },
-  { key: 'fr', label: 'French' },
-  { key: 'de', label: 'German' },
-  { key: 'ja', label: 'Japanese' },
-  { key: 'ko', label: 'Korean' },
-  { key: 'pt', label: 'Portuguese' },
-  { key: 'zh', label: 'Chinese' }
-]
-
-const TIMEZONE_OPTIONS = getTimeZones().map((tz) => ({
-  id: tz.name,
-  name: `${tz.name} (${tz.currentTimeFormat})`
-}))
 
 /**
  * EventInfoComponent - Manages core event information
@@ -240,7 +225,7 @@ export const EventInfoComponent: React.FC = () => {
         selectedKey={language}
         onSelectionChange={(key) => updateFormData({ language: String(key) })}
       >
-        {LANGUAGE_OPTIONS.map((lang) => (
+        {EVENT_FORM_OPTIONS.languages.map((lang) => (
           <Item key={lang.key}>{lang.label}</Item>
         ))}
       </Picker>
@@ -248,10 +233,10 @@ export const EventInfoComponent: React.FC = () => {
       <TextField
         label="Event Title"
         isRequired
-        maxLength={80}
+        maxLength={EVENT_FORM_LIMITS.eventTitleMaxLength}
         value={name}
         onChange={handleNameChange}
-        description="80 characters max"
+        description={`${EVENT_FORM_LIMITS.eventTitleMaxLength} characters max`}
         width="100%"
       />
 
@@ -300,10 +285,10 @@ export const EventInfoComponent: React.FC = () => {
       <TextArea
         label="Event Description for Events Hub and SEO"
         isRequired
-        maxLength={160}
+        maxLength={EVENT_FORM_LIMITS.shortDescriptionMaxLength}
         value={shortDescription || ''}
         onChange={(value) => updateFormData({ shortDescription: value })}
-        description="160 characters max"
+        description={`${EVENT_FORM_LIMITS.shortDescriptionMaxLength} characters max`}
         width="100%"
       />
 

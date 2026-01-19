@@ -12,7 +12,8 @@ import React, {
   useMemo,
 } from 'react'
 import { EventFormData, EventApiResponse } from '../types/domain'
-import { saveFormDraft, loadFormDraft, clearFormDraft, STORAGE_KEY_PREFIX } from '../utils/formPersistence'
+import { saveFormDraft, loadFormDraft, clearFormDraft } from '../utils/formPersistence'
+import { EVENT_DEFAULTS } from '../config/eventDefaults'
 
 // ============================================================================
 // TYPES
@@ -157,8 +158,6 @@ export interface EventFormContextValue {
 // DEFAULT VALUES
 // ============================================================================
 
-const DEFAULT_LOCALE = 'en-US'
-
 export const createDefaultFormData = (): EventFormData => ({
   cloudType: 'CreativeCloud',
   eventType: 'in-person',
@@ -169,7 +168,7 @@ export const createDefaultFormData = (): EventFormData => ({
   description: '',
   shortDescription: '',
   language: 'en',
-  defaultLocale: DEFAULT_LOCALE,
+  defaultLocale: EVENT_DEFAULTS.defaultLocale,
   isPrivate: false,
   tags: [],
   startDateTime: '',
@@ -206,7 +205,7 @@ const createInitialState = (initialData?: Partial<EventFormData>): EventFormStat
   eventId: null,
   seriesId: '',
   isEditMode: false,
-  locale: DEFAULT_LOCALE,
+  locale: EVENT_DEFAULTS.defaultLocale,
   eventDataResp: null,
   formData: { ...createDefaultFormData(), ...initialData },
   isDirty: false,
@@ -317,7 +316,7 @@ export const EventFormProvider: React.FC<EventFormProviderProps> = ({
   initialEventId = null,
   initialSeriesId = '',
   initialEventType = 'in-person',
-  initialLocale = DEFAULT_LOCALE,
+  initialLocale = EVENT_DEFAULTS.defaultLocale,
   autoPersist = true,
 }) => {
   // Initialize state

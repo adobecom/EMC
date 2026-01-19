@@ -11,6 +11,7 @@ import {
   setEventAttribute,
   isValidAttribute,
 } from '../utils/dataFilters'
+import { EVENT_DEFAULTS, EVENT_TYPE_API_MAP } from '../config/eventDefaults'
 
 /**
  * Options for the save operation
@@ -129,16 +130,7 @@ export function useEventFormSave() {
     // EventType mapping - API requires PascalCase: "InPerson" | "Webinar" | "Hybrid"
     // Form uses lowercase: "in-person" | "webinar"
     if (mergedData.eventType) {
-      const eventTypeMap: Record<string, string> = {
-        'in-person': 'InPerson',
-        'webinar': 'Webinar',
-        'hybrid': 'Hybrid',
-        // Also handle if already in correct format
-        'InPerson': 'InPerson',
-        'Webinar': 'Webinar',
-        'Hybrid': 'Hybrid',
-      }
-      payload.eventType = eventTypeMap[mergedData.eventType] || 'InPerson'
+      payload.eventType = EVENT_TYPE_API_MAP[mergedData.eventType] || 'InPerson'
     }
     
     // Date/Time mapping - API requires separate localStartDate/localEndDate and localStartTime/localEndTime
@@ -149,14 +141,14 @@ export function useEventFormSave() {
       const [startDate, startTime] = mergedData.startDateTime.split('T')
       payload.localStartDate = startDate
       // Ensure HH:MM:SS format - append :00 if only HH:MM provided
-      const formattedStartTime = startTime?.slice(0, 5) || '09:00'
+      const formattedStartTime = startTime?.slice(0, 5) || EVENT_DEFAULTS.defaultStartTime
       payload.localStartTime = formattedStartTime.length === 5 ? `${formattedStartTime}:00` : formattedStartTime
     }
     if (mergedData.endDateTime) {
       const [endDate, endTime] = mergedData.endDateTime.split('T')
       payload.localEndDate = endDate
       // Ensure HH:MM:SS format - append :00 if only HH:MM provided
-      const formattedEndTime = endTime?.slice(0, 5) || '17:00'
+      const formattedEndTime = endTime?.slice(0, 5) || EVENT_DEFAULTS.defaultEndTime
       payload.localEndTime = formattedEndTime.length === 5 ? `${formattedEndTime}:00` : formattedEndTime
     }
     
@@ -421,7 +413,7 @@ export function useEventFormSave() {
       }
       if (!payload.timezone) {
         // Default to America/Los_Angeles if not set (required field)
-        payload.timezone = formData.timezone || 'America/Los_Angeles'
+        payload.timezone = formData.timezone || EVENT_DEFAULTS.defaultTimezone
       }
       
       // 5. Call create/update API (using external ESP/ESL API)

@@ -8,6 +8,7 @@ import {
   hasRsvpConfig,
   type RsvpCloudType 
 } from '../config/externalConfigs'
+import { CONFIG_SERVICE } from '../config/serviceConstants'
 import type { RsvpConfigField } from '../types/attendee'
 import type { SeriesTemplatesConfig } from '../types/domain'
 
@@ -28,13 +29,13 @@ class ConfigService {
   private pendingRequests: Map<string, Promise<any>> = new Map()
   
   /** Cache time-to-live in milliseconds (5 minutes) */
-  private readonly CACHE_TTL = 5 * 60 * 1000
+  private readonly CACHE_TTL = CONFIG_SERVICE.cacheTtlMs
   
   /** Maximum retry attempts for failed requests */
-  private readonly MAX_RETRIES = 2
+  private readonly MAX_RETRIES = CONFIG_SERVICE.maxRetries
   
   /** Retry delay in milliseconds */
-  private readonly RETRY_DELAY = 1000
+  private readonly RETRY_DELAY = CONFIG_SERVICE.retryDelayMs
 
   /**
    * Get cached data if still valid

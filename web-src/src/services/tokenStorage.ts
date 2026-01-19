@@ -1,3 +1,5 @@
+import { STORAGE_KEYS } from '../config/storageConstants'
+
 /* 
 * Token Storage Service
 * Manages Adobe IMS token storage and retrieval for local development
@@ -9,8 +11,6 @@ export interface StoredToken {
   sid?: string
 }
 
-const TOKEN_STORAGE_KEY = 'emc_dev_token'
-
 /**
  * Token Storage Service
  * Provides methods to store, retrieve, and validate Adobe IMS tokens
@@ -21,7 +21,7 @@ export class TokenStorageService {
    */
   saveToken(tokenData: StoredToken): void {
     try {
-      localStorage.setItem(TOKEN_STORAGE_KEY, JSON.stringify(tokenData))
+      localStorage.setItem(STORAGE_KEYS.devToken, JSON.stringify(tokenData))
       console.log('✅ Token saved successfully. Expires:', tokenData.expire)
     } catch (error) {
       console.error('❌ Failed to save token:', error)
@@ -33,7 +33,7 @@ export class TokenStorageService {
    */
   getToken(): StoredToken | null {
     try {
-      const stored = localStorage.getItem(TOKEN_STORAGE_KEY)
+      const stored = localStorage.getItem(STORAGE_KEYS.devToken)
       if (!stored) return null
       
       const tokenData: StoredToken = JSON.parse(stored)
@@ -85,7 +85,7 @@ export class TokenStorageService {
    */
   clearToken(): void {
     try {
-      localStorage.removeItem(TOKEN_STORAGE_KEY)
+      localStorage.removeItem(STORAGE_KEYS.devToken)
       console.log('🗑️ Token cleared')
     } catch (error) {
       console.error('❌ Failed to clear token:', error)
