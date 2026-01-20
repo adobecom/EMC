@@ -426,6 +426,9 @@ export const VenueComponent: React.FC = () => {
       <Switch
         isSelected={venue.showVenuePostEvent || false}
         onChange={handleShowVenuePostEventChange}
+        UNSAFE_style={{
+          width: 'max-content'
+        }}
       >
         Display venue info post-event.
       </Switch>
