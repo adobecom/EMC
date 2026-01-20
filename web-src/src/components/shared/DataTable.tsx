@@ -76,8 +76,8 @@ export function DataTable<T extends Record<string, any>>({
         })
         return prevColumn
       } else {
-        // Different column - set to ascending
-        setSortDirection('asc')
+        // Different column - default to descending on first click
+        setSortDirection('desc')
         return columnKey
       }
     })
