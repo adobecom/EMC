@@ -91,8 +91,17 @@ export const VenueComponent: React.FC = () => {
             
             if (result.imageUrl && result.imageId) {
               console.log('Venue image uploaded successfully:', result)
+              // Clear the pending file to prevent repeat uploads
+              pendingImageFileRef.current = null
               // Update venue data with the uploaded image info
-              // Note: This updates local state; the image is now associated with the event
+              updateFormData({
+                venue: {
+                  ...venueData,
+                  venueName: venueData?.venueName || '',
+                  venueImageUrl: result.imageUrl,
+                  venueImageId: result.imageId
+                }
+              })
             }
           }
         } catch (error) {
@@ -308,8 +317,9 @@ export const VenueComponent: React.FC = () => {
 
     return () => {
       isMounted = false
-      if (autocompleteInstance) {
-        window.google?.maps?.event?.clearInstanceListeners(autocompleteInstance)
+      if (autocompleteInstance && window.google?.maps) {
+        // Use type assertion for Google Maps event API
+        (window.google.maps as any).event?.clearInstanceListeners(autocompleteInstance)
       }
     }
   }, [autocomplete, updateVenue])
