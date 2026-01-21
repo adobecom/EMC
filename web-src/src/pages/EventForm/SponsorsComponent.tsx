@@ -80,6 +80,21 @@ const PartnerDialog: React.FC<PartnerDialogProps> = ({
   const [imageUrl, setImageUrl] = useState(partner?.imageUrl || '')
   const [imageId, setImageId] = useState(partner?.imageId || '')
   const [pendingFile, setPendingFile] = useState<File | undefined>()
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null)
+
+  // Manage object URL lifecycle to prevent memory leaks
+  useEffect(() => {
+    if (pendingFile) {
+      const url = URL.createObjectURL(pendingFile)
+      setPreviewUrl(url)
+      // Cleanup: revoke the object URL when file changes or component unmounts
+      return () => {
+        URL.revokeObjectURL(url)
+      }
+    } else {
+      setPreviewUrl(null)
+    }
+  }, [pendingFile])
 
   // Reset form when dialog opens with new data
   useEffect(() => {
@@ -128,7 +143,7 @@ const PartnerDialog: React.FC<PartnerDialogProps> = ({
               <View UNSAFE_style={{ textAlign: 'center' }}>
                 <ImageUploader
                   label=""
-                  imageUrl={pendingFile ? URL.createObjectURL(pendingFile) : imageUrl}
+                  imageUrl={previewUrl || imageUrl}
                   imageId={imageId}
                   imageKind="sponsor-logo"
                   altText={name || 'Partner logo'}
