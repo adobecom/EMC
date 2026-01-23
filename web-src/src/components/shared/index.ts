@@ -18,4 +18,6 @@ export { AutocompleteTextField } from './AutocompleteTextField'
 export { ToastContainer } from './ToastContainer'
 export { SingleStepFormLayout } from './SingleStepFormLayout'
 export type { FormStatus } from './SingleStepFormLayout'
+export { HistoryTimeline } from './HistoryTimeline'
+export type { HistoryResourceType } from './HistoryTimeline'
 
