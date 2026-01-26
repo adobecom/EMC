@@ -40,26 +40,47 @@ export const DOMAINS = Object.freeze({
   STAGE02_ADOBE_COM: 'stage02.adobe.com',
   CORP_ADOBE_COM: 'corp.adobe.com',
   GRAYBOX_ADOBE_COM: 'graybox.adobe.com',
+  // Adobe I/O Static hosting domains
+  ADOBEIO_STATIC: 'adobeio-static.net',
+  EMC_PROD_STATIC: '14257-emc-production.adobeio-static.net',
+  EMC_STAGE_STATIC: '14257-emc-stage.adobeio-static.net',
+  EMC_DEV_STATIC: '14257-emc-dev.adobeio-static.net',
 } as const)
 
 /**
  * Environment detection patterns
+ * Note: Order matters - more specific patterns should be checked before general ones
+ * 
+ * Adobe I/O Static hosting patterns:
+ * - PROD: 14257-emc-production.adobeio-static.net
+ * - STAGE: 14257-emc-stage.adobeio-static.net
+ * - DEV: 14257-emc-dev.adobeio-static.net and user workspaces (e.g., 14257-emc-{username}.adobeio-static.net)
  */
 export const HOST_PATTERNS: Record<Environment, (host: string) => boolean> = Object.freeze({
   [ENVIRONMENTS.LOCAL]: (host) => host.includes(DOMAINS.LOCALHOST),
   [ENVIRONMENTS.DEV02]: (host) => host.startsWith('dev02--') || host.includes(DOMAINS.DEV02_ADOBE_COM),
   [ENVIRONMENTS.DEV]: (host) => host.startsWith('dev--')
     || host.includes(DOMAINS.DEV_ADOBE_COM)
-    || host.includes(DOMAINS.DEV_INTERNAL_ADOBE_COM),
+    || host.includes(DOMAINS.DEV_INTERNAL_ADOBE_COM)
+    // Adobe I/O Static: dev workspace and user workspaces (any 14257-emc-* except prod/stage)
+    || host === DOMAINS.EMC_DEV_STATIC
+    || (host.endsWith(DOMAINS.ADOBEIO_STATIC)
+        && host.startsWith('14257-emc-')
+        && host !== DOMAINS.EMC_PROD_STATIC
+        && host !== DOMAINS.EMC_STAGE_STATIC),
   [ENVIRONMENTS.STAGE]: (host) => host.startsWith('stage--')
     || host.includes(DOMAINS.STAGE_ADOBE_COM)
     || host.includes(DOMAINS.STAGE_INTERNAL_ADOBE_COM)
     || host.includes(DOMAINS.CORP_ADOBE_COM)
-    || host.includes(DOMAINS.GRAYBOX_ADOBE_COM),
+    || host.includes(DOMAINS.GRAYBOX_ADOBE_COM)
+    // Adobe I/O Static: stage workspace
+    || host === DOMAINS.EMC_STAGE_STATIC,
   [ENVIRONMENTS.STAGE02]: (host) => host.startsWith('stage02--') || host.includes(DOMAINS.STAGE02_ADOBE_COM),
   [ENVIRONMENTS.PROD]: (host) => host.startsWith('main--')
     || host.endsWith('adobe.com')
-    || host.includes(DOMAINS.INTERNAL_ADOBE_COM),
+    || host.includes(DOMAINS.INTERNAL_ADOBE_COM)
+    // Adobe I/O Static: production workspace
+    || host === DOMAINS.EMC_PROD_STATIC,
 })
 
 /**
