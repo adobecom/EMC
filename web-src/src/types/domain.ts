@@ -542,11 +542,15 @@ export interface VenueData {
   }
   gmtOffset?: number
   addressComponents?: AddressComponent[] // Required by OpenAPI for venue creation
-  additionalInformation?: string
+  additionalInformation?: string // "Instructions for attendees" in UI
   venueImageUrl?: string
   venueImageId?: string
   showVenuePostEvent?: boolean
+  showVenueImagePostEvent?: boolean // Display image and instructions post-event
   showAdditionalInfoPostEvent?: boolean
+  // Alternative venue name feature
+  googlePlaceName?: string // Original name from Google Places
+  useAlternativeVenueName?: boolean // Whether to show/use alternative name field
 }
 
 // Comprehensive Event Form Data

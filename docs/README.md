@@ -121,22 +121,79 @@ A system that lets you use real Adobe IMS tokens from production sites in your l
 - [Dev Token Security Model](./DEV_TOKEN_SECURITY.md)
 - [Development Workflow](./DEVELOPMENT_WORKFLOW.md)
 
+## 🚀 Deployment
+
+### Environment Overview
+
+| Environment | URL | How to Deploy |
+|-------------|-----|---------------|
+| **Dev/User Workspaces** | `14257-emc-{name}.adobeio-static.net` | `aio app deploy` (manual) |
+| **Stage** | `14257-emc-stage.adobeio-static.net` | Push to `main` branch (automatic) |
+| **Production** | `14257-emc-production.adobeio-static.net` | Publish GitHub release (automatic) |
+
+### CI/CD Workflows
+
+**Stage Deployment** (`deploy_stage.yml`):
+- **Trigger**: Push/merge to `main` branch
+- **Action**: Builds with `ENVIRONMENT=stage` and deploys to stage workspace
+
+**Production Deployment** (`deploy_prod.yml`):
+- **Trigger**: Publish a GitHub release
+- **Action**: Builds with `ENVIRONMENT=prod` and deploys to production workspace
+
+### Deploying to Stage
+
+```bash
+# Merge your PR or push directly to main
+git checkout main
+git merge your-feature-branch
+git push origin main
+# → Stage deployment triggers automatically
+```
+
+### Deploying to Production
+
+```bash
+# Option 1: GitHub CLI
+gh release create v1.0.0 --title "v1.0.0" --notes "Release notes"
+
+# Option 2: GitHub UI
+# Go to Releases → Draft a new release → Publish
+```
+
+### Environment Configuration
+
+The `ENVIRONMENT` variable determines which API tier to use:
+
+| ENVIRONMENT | ESP API | ESL API |
+|-------------|---------|---------|
+| `dev` (default) | Dev cluster | Dev cluster |
+| `stage` | `events-service-platform-stage.adobe.io` | `events-service-layer-stage.adobe.io` |
+| `prod` | `events-service-platform.adobe.io` | `events-service-layer.adobe.io` |
+
+Set in `.env` for local development:
+```bash
+ENVIRONMENT=dev  # or 'stage' to test against stage APIs
+```
+
 ## 🔍 Quick Reference
 
 ### Common Commands
 
 ```bash
 # Development
-npm run dev              # Start local dev server
-aio app run              # Run with remote actions
-aio app run --local      # Run with local actions
+npm run dev              # Start local dev server (port 3000)
+npm run dev:local        # Run with local actions
+aio app run              # Alternative (port 9080)
 
 # Testing
-aio app test             # Run unit tests
-aio app test --e2e       # Run E2E tests
+npm test                 # Run unit tests
+npm run e2e              # Run E2E tests
+npm run lint             # Check code style
+npm run type-check       # TypeScript validation
 
 # Deployment
-aio app deploy           # Deploy to Adobe I/O Runtime
+aio app deploy           # Deploy to your workspace (dev)
 aio app undeploy         # Remove deployment
 ```
 
@@ -144,6 +201,7 @@ aio app undeploy         # Remove deployment
 
 | Task | Documentation |
 |------|---------------|
+| Deploy to stage/production | [Deployment section](#-deployment) |
 | Set up local dev with API access | [Dev Token Quick Start](./DEV_TOKEN_QUICKSTART.md) |
 | Set up Google Places API | [Google Places Setup](./GOOGLE_PLACES_SETUP.md) |
 | Create a new component | [Frontend Guide](./FRONTEND.md) |
@@ -156,6 +214,11 @@ aio app undeploy         # Remove deployment
 
 ```
 EMC/
+├── .github/workflows/              # 🚀 CI/CD pipelines
+│   ├── deploy_stage.yml           # Auto-deploy on push to main
+│   ├── deploy_prod.yml            # Auto-deploy on release
+│   └── pr_test.yml                # PR validation
+│
 ├── docs/                           # 📚 This documentation
 │   ├── README.md                   # This index file
 │   ├── PROJECT_OVERVIEW.md         # Start here!
@@ -165,24 +228,25 @@ EMC/
 │   ├── MODULAR_COMPONENT_PATTERN.md # Component patterns
 │   ├── API_CENTRALIZATION.md       # API architecture
 │   ├── TESTING.md                  # Testing guide
-│   ├── TOP_NAV_LAYOUT.md          # Nav structure
-│   ├── USER_PANEL_IMPLEMENTATION.md # User panel
 │   ├── DEV_TOKEN_QUICKSTART.md    # ⚡ Quick setup
 │   └── DEV_TOKEN_GUIDE.md         # 📖 Complete guide
 │
 ├── web-src/                        # Frontend application
 │   └── src/
 │       ├── components/             # React components
+│       ├── pages/                  # Page components
 │       ├── services/               # API services
 │       │   ├── api.ts             # Main API service
 │       │   ├── tokenStorage.ts    # Token management
-│       │   ├── eventEnrichment.ts # Data enrichment
-│       │   └── dataEnrichment.ts  # Enrichment utilities
+│       │   └── *Enrichment.ts     # Data enrichment utilities
 │       ├── hooks/                  # React hooks
+│       ├── contexts/               # React context providers
 │       ├── config/                 # Configuration
-│       └── ...
+│       │   ├── constants.ts       # Environment & API config
+│       │   └── env.ts             # Environment variables
+│       └── types/                  # TypeScript definitions
 │
-├── actions/                        # Backend actions
+├── actions/                        # Backend actions (I/O Runtime)
 ├── test/                          # Unit tests
 ├── e2e/                          # E2E tests
 └── app.config.yaml               # App configuration
@@ -220,7 +284,14 @@ EMC/
 
 ## 🆕 Recent Updates
 
-### Design System (November 25, 2025)
+### Build-Time Environment Configuration (January 2026)
+- ✨ **Simplified Environment Config** - Build-time injection replaces runtime detection
+  - `ENVIRONMENT` variable set via CI/CD pipelines
+  - 3 environment tiers: `dev`, `stage`, `prod`
+  - Automatic API endpoint selection
+  - See [Deployment section](#-deployment) above
+
+### Design System (November 2025)
 - ✨ **Centralized Design System** - Single source of truth for styles
   - Layout dimensions and calculated heights
   - Color palette (Adobe brand + Spectrum variables)
@@ -283,8 +354,8 @@ When updating documentation:
 
 ---
 
-**Last Updated:** December 8, 2025
-**Version:** 1.5.0
+**Last Updated:** January 26, 2026
+**Version:** 1.6.0
 
 Happy coding! 🚀
 

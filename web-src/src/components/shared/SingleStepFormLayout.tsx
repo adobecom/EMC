@@ -62,6 +62,8 @@ interface SingleStepFormLayoutProps {
   isValid?: boolean
   /** Publish button label */
   publishLabel?: string
+  /** Optional actions to render in the header (e.g., history button) */
+  headerActions?: React.ReactNode
 }
 
 export const SingleStepFormLayout: React.FC<SingleStepFormLayoutProps> = ({
@@ -78,7 +80,8 @@ export const SingleStepFormLayout: React.FC<SingleStepFormLayoutProps> = ({
   isSaving = false,
   isPublished = false,
   isValid = true,
-  publishLabel = 'Publish'
+  publishLabel = 'Publish',
+  headerActions
 }) => {
   const navigate = useNavigate()
 
@@ -309,7 +312,7 @@ export const SingleStepFormLayout: React.FC<SingleStepFormLayoutProps> = ({
                 </Text>
               )}
               
-              {/* Heading row with status badge */}
+              {/* Heading row with status badge and optional header actions */}
               <Flex direction="row" alignItems="center" gap="size-400">
                 <Heading level={2} UNSAFE_style={TYPOGRAPHY.STEP_HEADING}>{title}</Heading>
                 
@@ -344,6 +347,12 @@ export const SingleStepFormLayout: React.FC<SingleStepFormLayoutProps> = ({
                     {statusLabel}
                   </Text>
                 </View>
+                
+                {/* Spacer to push header actions to the right */}
+                {headerActions && <View flex={1} />}
+                
+                {/* Optional header actions (e.g., history button) */}
+                {headerActions}
               </Flex>
             </View>
 
