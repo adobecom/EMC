@@ -78,7 +78,7 @@ interface SeriesFormInnerProps {
   ims: IMS
 }
 
-const SeriesFormInner: React.FC<SeriesFormInnerProps> = ({ ims }) => {
+const SeriesFormInner: React.FC<SeriesFormInnerProps> = ({ ims: _ims }) => {
   const navigate = useNavigate()
   const { id: seriesIdParam } = useParams<{ id: string }>()
   const toast = useToast()

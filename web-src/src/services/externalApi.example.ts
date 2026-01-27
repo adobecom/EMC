@@ -11,7 +11,7 @@
 
 import { tokenStorage } from './tokenStorage'
 import { constructRequestHeaders, safeFetch } from './requestHelpers'
-import { getCurrentEnvironment, getApiHost, API_CONFIG } from '../config/constants'
+import { getCurrentEnvironment, getApiHost } from '../config/constants'
 
 /**
  * External API Service
@@ -95,10 +95,10 @@ class ExternalApiService {
     
     // Fetch event with related data
     const [event, speakers, sponsors, venues] = await Promise.all([
-      this.request('esp', url, 'GET'),
-      this.request('esp', `${url}/speakers`, 'GET'),
-      this.request('esp', `${url}/sponsors`, 'GET'),
-      this.request('esp', `${url}/venues`, 'GET')
+      this.request<Record<string, any>>('esp', url, 'GET'),
+      this.request<{ speakers?: any[] }>('esp', `${url}/speakers`, 'GET'),
+      this.request<{ sponsors?: any[] }>('esp', `${url}/sponsors`, 'GET'),
+      this.request<{ venues?: any[] }>('esp', `${url}/venues`, 'GET')
     ])
 
     return {
@@ -203,7 +203,7 @@ class ExternalApiService {
    * Get clouds
    */
   async getClouds(): Promise<any> {
-    const result = await this.request('esp', '/v1/clouds', 'GET')
+    const result = await this.request<{ clouds?: any[] }>('esp', '/v1/clouds', 'GET')
     return result.clouds
   }
 

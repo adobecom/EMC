@@ -76,7 +76,6 @@ export const SingleStepFormLayout: React.FC<SingleStepFormLayoutProps> = ({
   onSave,
   onPublish,
   isSaving = false,
-  hasSavedId = false,
   isPublished = false,
   isValid = true,
   publishLabel = 'Publish'
@@ -253,7 +252,7 @@ export const SingleStepFormLayout: React.FC<SingleStepFormLayoutProps> = ({
       >
         <Flex
           direction="row"
-          justifyContent="flex-end"
+          justifyContent="end"
           alignItems="center"
           height="100%"
           marginStart="size-400"

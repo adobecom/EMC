@@ -22,7 +22,6 @@ import Add from '@spectrum-icons/workflow/Add'
 import Delete from '@spectrum-icons/workflow/Delete'
 import Edit from '@spectrum-icons/workflow/Edit'
 import SaveFloppy from '@spectrum-icons/workflow/SaveFloppy'
-import Remove from '@spectrum-icons/workflow/Remove'
 import DragHandle from '@spectrum-icons/workflow/DragHandle'
 import ChevronDown from '@spectrum-icons/workflow/ChevronDown'
 import ChevronRight from '@spectrum-icons/workflow/ChevronRight'
@@ -68,7 +67,6 @@ export const SponsorsComponent: React.FC = () => {
   const {
     formData,
     updateFormData,
-    eventId,
     seriesId,
   } = useEventFormComponent({
     componentId: 'sponsors',
@@ -568,9 +566,6 @@ export const SponsorsComponent: React.FC = () => {
     return !!(sponsor.isSaved || sponsor.isFromSeries)
   }
 
-  const isSponsorComplete = (sponsor: SponsorData): boolean => {
-    return !!(sponsor.partnerName && sponsor.partnerUrl)
-  }
 
   /**
    * Format modification time for display

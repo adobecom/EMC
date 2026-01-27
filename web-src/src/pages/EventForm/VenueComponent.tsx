@@ -39,7 +39,6 @@ export const VenueComponent: React.FC = () => {
     updateFormData,
     eventId,
     locale,
-    isEditMode,
   } = useEventFormComponent({
     componentId: 'venue',
     
