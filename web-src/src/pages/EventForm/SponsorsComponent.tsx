@@ -84,15 +84,16 @@ const PartnerDialog: React.FC<PartnerDialogProps> = ({
 
   // Manage object URL lifecycle to prevent memory leaks
   useEffect(() => {
-    if (pendingFile) {
-      const url = URL.createObjectURL(pendingFile)
-      setPreviewUrl(url)
-      // Cleanup: revoke the object URL when file changes or component unmounts
-      return () => {
-        URL.revokeObjectURL(url)
-      }
-    } else {
+    if (!pendingFile) {
       setPreviewUrl(null)
+      return
+    }
+    
+    const url = URL.createObjectURL(pendingFile)
+    setPreviewUrl(url)
+    // Cleanup: revoke the object URL when file changes or component unmounts
+    return () => {
+      URL.revokeObjectURL(url)
     }
   }, [pendingFile])
 

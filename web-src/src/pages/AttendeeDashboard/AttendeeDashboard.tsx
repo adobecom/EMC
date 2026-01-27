@@ -223,10 +223,6 @@ export const AttendeeDashboard: React.FC<AttendeeDashboardProps> = ({ ims: _ims 
     navigate('/events')
   }, [navigate])
 
-  // Clear selection
-  const handleClearSelection = useCallback(() => {
-    setSelectedIds(new Set())
-  }, [])
 
   // Loading state
   if (isLoadingEvents) {

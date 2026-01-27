@@ -12,7 +12,7 @@ import React, {
   useMemo,
 } from 'react'
 import { EventFormData, EventApiResponse } from '../types/domain'
-import { saveFormDraft, loadFormDraft, clearFormDraft, STORAGE_KEY_PREFIX } from '../utils/formPersistence'
+import { saveFormDraft, loadFormDraft, clearFormDraft } from '../utils/formPersistence'
 
 // ============================================================================
 // TYPES

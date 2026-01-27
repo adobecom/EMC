@@ -184,7 +184,7 @@ export interface EventHistoryResponse {
 export interface AgendaDataItem {
   startTime: string
   description?: string
-  title: string
+  title?: string
 }
 
 // Video data from API
@@ -214,13 +214,15 @@ export interface CtaItem {
   type?: string
 }
 
-// Promotional item
-export interface PromotionalItem {
+// Promotional item (can be string or object depending on API response)
+export interface PromotionalItemObject {
   title?: string
   description?: string
   url?: string
   imageUrl?: string
 }
+
+export type PromotionalItem = string | PromotionalItemObject
 
 // Event API Response types (from backend)
 export interface EventApiResponse {
@@ -273,7 +275,7 @@ export interface EventApiResponse {
   showVenuePostEvent?: boolean
   showVenueAdditionalInfoPostEvent?: boolean
   useLegacyDetailPagePath?: boolean
-  communityTopicUrl?: string // URL for community forum topic
+  communityTopicUrl?: string | null // URL for community forum topic
   cta?: CtaItem[] // Localizable call-to-action items
   promotionalItems?: PromotionalItem[] // Localizable promotional content
   gmtOffset?: number
@@ -614,7 +616,7 @@ export interface EventFormData {
   video?: VideoData
   
   // Additional metadata
-  communityTopicUrl?: string // URL for community forum topic
+  communityTopicUrl?: string | null // URL for community forum topic
   communityForumUrl?: string // Alias
   secondaryLinkTitle?: string
   cta?: CtaItem[] // Localizable call-to-action items

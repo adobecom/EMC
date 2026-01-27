@@ -114,7 +114,7 @@ const DistributionBar: React.FC<DistributionBarProps> = ({ items, total }) => {
   return (
     <View marginTop="size-200">
       {/* Bar */}
-      <Flex direction="row" height="size-100" borderRadius="small" overflow="hidden">
+      <Flex direction="row" height="size-100" UNSAFE_style={{ borderRadius: '4px', overflow: 'hidden' }}>
         {items.map((item, idx) => (
           <div
             key={idx}
@@ -250,7 +250,6 @@ const TemplateBreakdown: React.FC<TemplateBreakdownProps> = ({ templateCounts, i
                           textOverflow: 'ellipsis',
                           whiteSpace: 'nowrap'
                         }}
-                        title={template}
                       >
                         {displayName}
                       </Text>
