@@ -82,6 +82,7 @@ function mapSponsorsToFormData(sponsors: any[], locale: string = 'en-US'): Spons
     partnerUrl: getLocalizedValue(sponsor, 'link', locale) || sponsor.link || sponsor.partnerUrl || '',
     imageUrl: sponsor.image?.imageUrl || sponsor.imageUrl || '',
     imageId: sponsor.image?.imageId || sponsor.imageId || '',
+    type: sponsor.sponsorType, // Map sponsorType from API to type in form
     isSaved: true,
     isFromSeries: true
   }))

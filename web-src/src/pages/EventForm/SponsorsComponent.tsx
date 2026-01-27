@@ -13,47 +13,354 @@ import {
   ActionButton,
   ProgressCircle,
   Picker,
-  Item
+  Item,
+  Dialog,
+  DialogContainer,
+  Divider,
+  Content,
+  ButtonGroup,
+  ComboBox
 } from '@adobe/react-spectrum'
 import { SponsorData, SeriesSponsor, EventApiResponse, SponsorType } from '../../types/domain'
-import { ImageUploader, AutocompleteTextField } from '../../components/shared'
-import { TYPOGRAPHY } from '../../styles/designSystem'
+import { ImageUploader } from '../../components/shared'
+import { TYPOGRAPHY, SPACING, COLORS, FLEX_GAP } from '../../styles/designSystem'
 import Add from '@spectrum-icons/workflow/Add'
-import Delete from '@spectrum-icons/workflow/Delete'
 import Edit from '@spectrum-icons/workflow/Edit'
-import SaveFloppy from '@spectrum-icons/workflow/SaveFloppy'
-import Remove from '@spectrum-icons/workflow/Remove'
-import DragHandle from '@spectrum-icons/workflow/DragHandle'
-import ChevronDown from '@spectrum-icons/workflow/ChevronDown'
-import ChevronRight from '@spectrum-icons/workflow/ChevronRight'
-import Info from '@spectrum-icons/workflow/Info'
-import LinkOut from '@spectrum-icons/workflow/LinkOut'
+import RemoveCircle from '@spectrum-icons/workflow/RemoveCircle'
 import { apiService } from '../../services/api'
 import { useEventFormComponent } from '../../hooks/useEventFormComponent'
 import { uploadImage, UploadTracker } from '../../services/requestHelpers'
 import { tokenStorage } from '../../services/tokenStorage'
 import { getCurrentEnvironment, getApiHost } from '../../config/constants'
 
-// Sponsor type options per OpenAPI SponsorType enum
-const SPONSOR_TYPE_OPTIONS: { key: SponsorType; label: string }[] = [
-  { key: 'Diamond', label: 'Diamond' },
-  { key: 'Platinum', label: 'Platinum' },
-  { key: 'Gold', label: 'Gold' },
-  { key: 'Silver', label: 'Silver' },
-  { key: 'Bronze', label: 'Bronze' },
-  { key: 'Engagement', label: 'Engagement' },
-  { key: 'Partner', label: 'Partner' },
+// ============================================================================
+// TIER OPTIONS WITH COLORS
+// ============================================================================
+
+interface TierOption {
+  key: SponsorType | 'select'
+  label: string
+  color: string
+}
+
+const TIER_OPTIONS: TierOption[] = [
+  { key: 'select', label: 'Select tier', color: 'transparent' },
+  { key: 'Diamond', label: 'Diamond', color: '#B9F2FF' },
+  { key: 'Platinum', label: 'Platinum', color: '#E5E4E2' },
+  { key: 'Gold', label: 'Gold', color: '#FFD700' },
+  { key: 'Silver', label: 'Silver', color: '#C0C0C0' },
+  { key: 'Bronze', label: 'Bronze', color: '#CD7F32' },
+  { key: 'Engagement', label: 'Engagement', color: '#9B59B6' },
+  { key: 'Partner', label: 'Partner', color: '#3498DB' },
 ]
 
+// ============================================================================
+// PARTNER DIALOG COMPONENT
+// ============================================================================
+
+interface PartnerDialogProps {
+  isOpen: boolean
+  onClose: () => void
+  onSave: (partner: SponsorData, pendingFile?: File) => Promise<void>
+  partner?: SponsorData
+  isNew: boolean
+  isSaving: boolean
+}
+
+const PartnerDialog: React.FC<PartnerDialogProps> = ({
+  isOpen,
+  onClose,
+  onSave,
+  partner,
+  isNew,
+  isSaving
+}) => {
+  const [name, setName] = useState(partner?.partnerName || '')
+  const [website, setWebsite] = useState(partner?.partnerUrl || '')
+  const [imageUrl, setImageUrl] = useState(partner?.imageUrl || '')
+  const [imageId, setImageId] = useState(partner?.imageId || '')
+  const [pendingFile, setPendingFile] = useState<File | undefined>()
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null)
+
+  // Manage object URL lifecycle to prevent memory leaks
+  useEffect(() => {
+    if (pendingFile) {
+      const url = URL.createObjectURL(pendingFile)
+      setPreviewUrl(url)
+      // Cleanup: revoke the object URL when file changes or component unmounts
+      return () => {
+        URL.revokeObjectURL(url)
+      }
+    } else {
+      setPreviewUrl(null)
+    }
+  }, [pendingFile])
+
+  // Reset form when dialog opens with new data
+  useEffect(() => {
+    if (isOpen) {
+      setName(partner?.partnerName || '')
+      setWebsite(partner?.partnerUrl || '')
+      setImageUrl(partner?.imageUrl || '')
+      setImageId(partner?.imageId || '')
+      setPendingFile(undefined)
+    }
+  }, [isOpen, partner])
+
+  const handleSave = async () => {
+    const updatedPartner: SponsorData = {
+      ...partner,
+      id: partner?.id || `partner-${Date.now()}`,
+      partnerName: name,
+      partnerUrl: website,
+      imageUrl: pendingFile ? undefined : imageUrl,
+      imageId: pendingFile ? undefined : imageId,
+    }
+    await onSave(updatedPartner, pendingFile)
+  }
+
+  const handleFileSelected = (file: File) => {
+    setPendingFile(file)
+  }
+
+  const handleImageRemove = () => {
+    setPendingFile(undefined)
+    setImageUrl('')
+    setImageId('')
+  }
+
+  const isValid = name.trim() !== '' && website.trim() !== ''
+
+  return (
+    <DialogContainer onDismiss={onClose}>
+      {isOpen && (
+        <Dialog size="L" isDismissable>
+          <Heading>{isNew ? 'Add new partner' : 'Edit partner'}</Heading>
+          <Divider />
+          <Content>
+            <Flex gap={FLEX_GAP.LARGE} alignItems="start">
+              {/* Image Upload Section */}
+              <View UNSAFE_style={{ textAlign: 'center' }}>
+                <ImageUploader
+                  label=""
+                  imageUrl={previewUrl || imageUrl}
+                  imageId={imageId}
+                  imageKind="sponsor-logo"
+                  altText={name || 'Partner logo'}
+                  maxSizeMB={25}
+                  width={280}
+                  dropzoneTitle="Add partner image"
+                  dropzoneDimensions="Dimensions 584px x 306px. Does not exceed 25mb"
+                  deferUpload={true}
+                  pendingFile={pendingFile}
+                  onFileSelected={handleFileSelected}
+                  onChange={(url, id) => {
+                    setImageUrl(url)
+                    setImageId(id)
+                  }}
+                  onRemove={handleImageRemove}
+                />
+              </View>
+
+              {/* Form Fields Section */}
+              <Flex direction="column" gap={FLEX_GAP.FIELD} flex={1}>
+                <TextField
+                  label="Partner name"
+                  value={name}
+                  onChange={setName}
+                  placeholder="Partner name"
+                  width="100%"
+                  isRequired
+                />
+                <TextField
+                  label="Partner website"
+                  value={website}
+                  onChange={setWebsite}
+                  placeholder="www.example.com"
+                  width="100%"
+                  isRequired
+                />
+              </Flex>
+            </Flex>
+          </Content>
+          <ButtonGroup>
+            <Button variant="secondary" onPress={onClose} isDisabled={isSaving}>
+              Cancel
+            </Button>
+            <Button 
+              variant="accent" 
+              onPress={handleSave} 
+              isDisabled={!isValid || isSaving}
+            >
+              {isSaving ? (
+                <ProgressCircle size="S" isIndeterminate aria-label="Saving" />
+              ) : (
+                isNew ? 'Create' : 'Save'
+              )}
+            </Button>
+          </ButtonGroup>
+        </Dialog>
+      )}
+    </DialogContainer>
+  )
+}
+
+// ============================================================================
+// PARTNER CARD COMPONENT
+// ============================================================================
+
+interface PartnerCardProps {
+  partner: SponsorData
+  onEdit: () => void
+  onRemove: () => void
+  onTierChange: (tier: SponsorType) => void
+}
+
+const PartnerCard: React.FC<PartnerCardProps> = ({
+  partner,
+  onEdit,
+  onRemove,
+  onTierChange
+}) => {
+  const currentTier = TIER_OPTIONS.find(t => t.key === partner.type) || TIER_OPTIONS[0]
+
+  return (
+    <View
+      borderWidth="thin"
+      borderColor="dark"
+      borderRadius="medium"
+      padding="size-200"
+      backgroundColor="gray-50"
+    >
+      <Flex alignItems="center" gap={FLEX_GAP.FIELD}>
+        {/* Partner Logo */}
+        <View 
+          width="size-800" 
+          height="size-600"
+          borderRadius="small"
+          borderWidth="thin"
+          borderColor="gray-300"
+          backgroundColor="static-white"
+          UNSAFE_style={{
+            flexShrink: 0,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            overflow: 'hidden',
+          }}
+        >
+          {partner.imageUrl ? (
+            <img
+              src={partner.imageUrl}
+              alt={partner.partnerName || 'Partner logo'}
+              style={{
+                maxWidth: '100%',
+                maxHeight: '100%',
+                objectFit: 'contain',
+              }}
+            />
+          ) : (
+            <View
+              UNSAFE_style={{
+                width: '100%',
+                height: '100%',
+                backgroundColor: COLORS.GRAY_200,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                ...TYPOGRAPHY.FIELD_LABEL,
+                color: COLORS.GRAY_600,
+              }}
+            >
+              {partner.partnerName?.substring(0, 2).toUpperCase() || 'P'}
+            </View>
+          )}
+        </View>
+
+        {/* Partner Info */}
+        <Flex direction="column" flex={1} gap="size-50">
+          <Flex alignItems="center" gap={FLEX_GAP.SMALL}>
+            <Text UNSAFE_style={{ ...TYPOGRAPHY.FIELD_LABEL, fontSize: '16px' }}>
+              {partner.partnerName || 'Untitled Partner'}
+            </Text>
+            
+            {/* Inline Tier Picker */}
+            <View
+              borderRadius="small"
+              borderWidth="thin"
+              borderColor="gray-300"
+              backgroundColor="static-white"
+              UNSAFE_style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: `${SPACING.XS}px`,
+                padding: `0 ${SPACING.XS}px`,
+                cursor: 'pointer',
+              }}
+            >
+              {currentTier.color !== 'transparent' && (
+                <View
+                  UNSAFE_style={{
+                    width: '10px',
+                    height: '10px',
+                    borderRadius: `${SPACING.XXS}px`,
+                    backgroundColor: currentTier.color,
+                    flexShrink: 0,
+                  }}
+                />
+              )}
+              <Picker
+                aria-label="Partner tier"
+                selectedKey={partner.type || 'select'}
+                onSelectionChange={(key) => {
+                  if (key !== 'select') {
+                    onTierChange(key as SponsorType)
+                  }
+                }}
+                UNSAFE_style={{ width: '100%', padding: '0px' }}
+                isQuiet
+              >
+                {TIER_OPTIONS.map(option => (
+                  <Item key={option.key}>{option.label}</Item>
+                ))}
+              </Picker>
+            </View>
+          </Flex>
+          
+          {partner.partnerUrl && (
+            <Text UNSAFE_style={TYPOGRAPHY.HELPER_TEXT}>
+              {partner.partnerUrl}
+            </Text>
+          )}
+        </Flex>
+
+        {/* Action Buttons */}
+        <Flex gap={FLEX_GAP.TIGHT} alignItems="center">
+          <ActionButton onPress={onEdit} isQuiet aria-label="Edit partner">
+            <Edit size="S" />
+          </ActionButton>
+          <ActionButton onPress={onRemove} isQuiet aria-label="Remove partner">
+            <RemoveCircle size="S" />
+          </ActionButton>
+        </Flex>
+      </Flex>
+    </View>
+  )
+}
+
+// ============================================================================
+// MAIN COMPONENT
+// ============================================================================
+
 /**
- * SponsorsComponent - Manages sponsor and partner information
+ * SponsorsComponent - Manages partner information
  * 
  * Uses EventFormContext for state management.
  * Handles:
- * - Adding/removing sponsors
- * - Autocomplete from series sponsors
- * - Saving sponsors to series
- * - Event-level sponsor association (add, update, remove)
+ * - Adding/removing partners
+ * - Search from series partners
+ * - Saving partners to series
+ * - Event-level partner association (add, update, remove)
  */
 export const SponsorsComponent: React.FC = () => {
   // ============================================================================
@@ -68,7 +375,6 @@ export const SponsorsComponent: React.FC = () => {
   const {
     formData,
     updateFormData,
-    eventId,
     seriesId,
   } = useEventFormComponent({
     componentId: 'sponsors',
@@ -199,16 +505,15 @@ export const SponsorsComponent: React.FC = () => {
   
   const [availableSponsors, setAvailableSponsors] = useState<SeriesSponsor[]>([])
   const [isLoadingSponsors, setIsLoadingSponsors] = useState(false)
-  const [savingIndex, setSavingIndex] = useState<number | null>(null)
-  // Store pending image files per sponsor index (for deferred upload)
-  const [pendingFiles, setPendingFiles] = useState<Map<number, File>>(new Map())
-  // Editing state per sponsor
-  const [editingIndices, setEditingIndices] = useState<Set<number>>(new Set())
-  // Expanded cards in read-only view (for toggle between collapsed/expanded)
-  const [expandedCards, setExpandedCards] = useState<Set<number>>(new Set())
-  // Drag and drop state
-  const [draggedIndex, setDraggedIndex] = useState<number | null>(null)
-  const [dragOverIndex, setDragOverIndex] = useState<number | null>(null)
+  const [isSaving, setIsSaving] = useState(false)
+  
+  // Dialog state
+  const [isDialogOpen, setIsDialogOpen] = useState(false)
+  const [editingPartner, setEditingPartner] = useState<SponsorData | undefined>()
+  const [editingIndex, setEditingIndex] = useState<number | null>(null)
+  
+  // Search state
+  const [searchQuery, setSearchQuery] = useState('')
 
   // ============================================================================
   // DATA LOADING
@@ -247,32 +552,42 @@ export const SponsorsComponent: React.FC = () => {
   // EVENT HANDLERS
   // ============================================================================
 
-  const addSponsor = useCallback(() => {
-    const newSponsor: SponsorData = {
-      id: `sponsor-${Date.now()}`,
-      partnerName: '',
-      partnerUrl: '',
-      isSaved: false
-    }
-    updateFormData({ sponsors: [...sponsors, newSponsor] })
-  }, [sponsors, updateFormData])
-
-  const removeSponsor = useCallback((index: number) => {
-    updateFormData({ sponsors: sponsors.filter((_, i) => i !== index) })
-  }, [sponsors, updateFormData])
-
   const updateSponsor = useCallback((index: number, updates: Partial<SponsorData>) => {
     const updated = [...sponsors]
     updated[index] = { ...updated[index], ...updates }
     updateFormData({ sponsors: updated })
   }, [sponsors, updateFormData])
 
-  const handleSelectSponsor = (index: number, sponsorId: string) => {
+  const removeSponsor = useCallback((index: number) => {
+    updateFormData({ sponsors: sponsors.filter((_, i) => i !== index) })
+  }, [sponsors, updateFormData])
+
+  const handleAddNewClick = () => {
+    setEditingPartner(undefined)
+    setEditingIndex(null)
+    setIsDialogOpen(true)
+  }
+
+  const handleEditClick = (index: number) => {
+    setEditingPartner(sponsors[index])
+    setEditingIndex(index)
+    setIsDialogOpen(true)
+  }
+
+  const handleDialogClose = () => {
+    setIsDialogOpen(false)
+    setEditingPartner(undefined)
+    setEditingIndex(null)
+  }
+
+  const handleSelectFromSearch = (sponsorId: string | null) => {
+    if (!sponsorId) return
+    
     const selectedSponsor = availableSponsors.find(s => s.sponsorId === sponsorId)
     if (selectedSponsor) {
-      // API returns image data under 'image' property (not 'logo')
       const imageData = selectedSponsor.image || selectedSponsor.logo
-      updateSponsor(index, {
+      const newPartner: SponsorData = {
+        id: `partner-${Date.now()}`,
         sponsorId: selectedSponsor.sponsorId,
         partnerName: selectedSponsor.name,
         partnerUrl: selectedSponsor.externalUrl || selectedSponsor.link || '',
@@ -281,34 +596,15 @@ export const SponsorsComponent: React.FC = () => {
         isSaved: true,
         isFromSeries: true,
         modificationTime: selectedSponsor.modificationTime
-      })
-      
-      // Exit editing mode
-      setEditingIndices(prev => {
-        const next = new Set(prev)
-        next.delete(index)
-        return next
-      })
+      }
+      updateFormData({ sponsors: [...sponsors, newPartner] })
+      setSearchQuery('')
     }
   }
 
-  const handlePendingFileSelect = useCallback((index: number, file: File) => {
-    setPendingFiles(prev => {
-      const next = new Map(prev)
-      next.set(index, file)
-      return next
-    })
-  }, [])
-
-  const handlePendingFileRemove = useCallback((index: number) => {
-    setPendingFiles(prev => {
-      const next = new Map(prev)
-      next.delete(index)
-      return next
-    })
-    // Also clear any existing image
-    updateSponsor(index, { imageUrl: undefined, imageId: undefined })
-  }, [updateSponsor])
+  const handleTierChange = (index: number, tier: SponsorType) => {
+    updateSponsor(index, { type: tier })
+  }
 
   /**
    * Upload sponsor image to the series sponsor endpoint
@@ -354,31 +650,35 @@ export const SponsorsComponent: React.FC = () => {
     }
   }
 
-  const handleSaveSponsor = async (index: number) => {
-    const sponsor = sponsors[index]
-    if (!seriesId || !sponsor.partnerName) return
-
-    setSavingIndex(index)
+  const handleDialogSave = async (partner: SponsorData, pendingFile?: File) => {
+    if (!seriesId) return
+    
+    setIsSaving(true)
     try {
-      // Per OpenAPI BaseSponsorProperties: requires name and link
-      // link must be a valid URL pattern: ^https:\/\/...
-      // Validate link is provided (required field)
-      if (!sponsor.partnerUrl || !sponsor.partnerUrl.startsWith('https://')) {
-        console.error('Sponsor link must be a valid https:// URL')
-        setSavingIndex(null)
-        return
+      // Validate URL format
+      let partnerUrl = partner.partnerUrl || ''
+      if (partnerUrl && !partnerUrl.startsWith('https://')) {
+        if (partnerUrl.startsWith('http://')) {
+          partnerUrl = partnerUrl.replace('http://', 'https://')
+        } else if (partnerUrl.startsWith('www.')) {
+          partnerUrl = `https://${partnerUrl}`
+        } else {
+          partnerUrl = `https://${partnerUrl}`
+        }
       }
-      
+
       const sponsorData = {
-        name: sponsor.partnerName,
-        link: sponsor.partnerUrl // Required field per OpenAPI
+        name: partner.partnerName || '',
+        link: partnerUrl
       }
 
       let response
-      if (sponsor.sponsorId && (sponsor.isSaved || sponsor.isFromSeries)) {
+      const isExisting = partner.sponsorId && (partner.isSaved || partner.isFromSeries)
+      
+      if (isExisting) {
         response = await apiService.updateSponsor(
-          { ...sponsorData, modificationTime: sponsor.modificationTime },
-          sponsor.sponsorId,
+          { ...sponsorData, modificationTime: partner.modificationTime },
+          partner.sponsorId!,
           seriesId,
           'en-US'
         )
@@ -388,612 +688,166 @@ export const SponsorsComponent: React.FC = () => {
 
       if (response && !('error' in response)) {
         const savedSponsor = response.sponsor || response
-        const sponsorId = savedSponsor.sponsorId || sponsor.sponsorId
+        const sponsorId = savedSponsor.sponsorId || partner.sponsorId
         
         // Upload pending image if there is one
-        const pendingFile = pendingFiles.get(index)
         let uploadedImage: { imageUrl: string; imageId: string } | null = null
         
-        if (pendingFile) {
-          const altText = sponsor.partnerName || 'Sponsor logo'
+        if (pendingFile && sponsorId) {
+          const altText = partner.partnerName || 'Partner logo'
           uploadedImage = await uploadSponsorImage(
             pendingFile, 
             sponsorId, 
             altText,
-            sponsor.imageId // Pass existing imageId for updates
+            partner.imageId
           )
-          
-          // Clear the pending file
-          setPendingFiles(prev => {
-            const next = new Map(prev)
-            next.delete(index)
-            return next
-          })
         }
         
-        updateSponsor(index, {
+        const updatedPartner: SponsorData = {
+          ...partner,
           sponsorId: sponsorId,
+          partnerUrl: partnerUrl,
           isSaved: true,
           isFromSeries: true,
           modificationTime: savedSponsor.modificationTime,
-          // Update image if we just uploaded one
           ...(uploadedImage ? {
             imageUrl: uploadedImage.imageUrl,
             imageId: uploadedImage.imageId
           } : {})
-        })
+        }
 
-        // Exit editing mode
-        setEditingIndices(prev => {
-          const next = new Set(prev)
-          next.delete(index)
-          return next
-        })
+        if (editingIndex !== null) {
+          // Update existing
+          const updated = [...sponsors]
+          updated[editingIndex] = updatedPartner
+          updateFormData({ sponsors: updated })
+        } else {
+          // Add new
+          updateFormData({ sponsors: [...sponsors, updatedPartner] })
+        }
 
         // Refresh the available sponsors list
         const updatedResponse = await apiService.getSponsors(seriesId)
         if (updatedResponse && !('error' in updatedResponse)) {
           setAvailableSponsors(updatedResponse.sponsors || updatedResponse || [])
         }
+        
+        handleDialogClose()
       } else {
-        console.error('Failed to save sponsor:', response)
+        console.error('Failed to save partner:', response)
       }
     } catch (error) {
-      console.error('Failed to save sponsor:', error)
+      console.error('Failed to save partner:', error)
     } finally {
-      setSavingIndex(null)
+      setIsSaving(false)
     }
   }
 
-  const handleEditSponsor = (index: number) => {
-    setEditingIndices(prev => {
-      const next = new Set(prev)
-      next.add(index)
-      return next
-    })
-    // Expand the card when entering edit mode
-    setExpandedCards(prev => {
-      const next = new Set(prev)
-      next.add(index)
-      return next
-    })
-  }
-
-  const handleToggleExpand = (index: number) => {
-    setExpandedCards(prev => {
-      const next = new Set(prev)
-      if (next.has(index)) {
-        next.delete(index)
-      } else {
-        next.add(index)
-      }
-      return next
-    })
-  }
-
-  const handleCancelEdit = (index: number) => {
-    const sponsor = sponsors[index]
-    if (sponsor.isSaved || sponsor.isFromSeries) {
-      // For saved sponsors, just exit edit mode
-      setEditingIndices(prev => {
-        const next = new Set(prev)
-        next.delete(index)
-        return next
-      })
-    } else {
-      // For new unsaved sponsors, remove them
-      removeSponsor(index)
-    }
-  }
-
-  // ============================================================================
-  // DRAG AND DROP HANDLERS
-  // ============================================================================
-
-  const handleDragStart = (e: React.DragEvent, index: number) => {
-    setDraggedIndex(index)
-    e.dataTransfer.effectAllowed = 'move'
-    e.dataTransfer.setData('text/plain', String(index))
-  }
-
-  const handleDragOver = (e: React.DragEvent, index: number) => {
-    e.preventDefault()
-    e.dataTransfer.dropEffect = 'move'
-    if (draggedIndex !== null && draggedIndex !== index) {
-      setDragOverIndex(index)
-    }
-  }
-
-  const handleDragLeave = () => {
-    setDragOverIndex(null)
-  }
-
-  const handleDrop = (e: React.DragEvent, dropIndex: number) => {
-    e.preventDefault()
-    
-    if (draggedIndex === null || draggedIndex === dropIndex) {
-      setDraggedIndex(null)
-      setDragOverIndex(null)
-      return
-    }
-
-    // Reorder the sponsors array
-    const newSponsors = [...sponsors]
-    const [draggedItem] = newSponsors.splice(draggedIndex, 1)
-    newSponsors.splice(dropIndex, 0, draggedItem)
-    
-    updateFormData({ sponsors: newSponsors })
-    
-    // Update indices to follow the items
-    const updateIndices = (prev: Set<number>) => {
-      const newSet = new Set<number>()
-      prev.forEach(oldIndex => {
-        if (oldIndex === draggedIndex) {
-          newSet.add(dropIndex)
-        } else if (draggedIndex < dropIndex) {
-          if (oldIndex > draggedIndex && oldIndex <= dropIndex) {
-            newSet.add(oldIndex - 1)
-          } else {
-            newSet.add(oldIndex)
-          }
-        } else {
-          if (oldIndex >= dropIndex && oldIndex < draggedIndex) {
-            newSet.add(oldIndex + 1)
-          } else {
-            newSet.add(oldIndex)
-          }
-        }
-      })
-      return newSet
-    }
-    
-    setExpandedCards(updateIndices)
-    setEditingIndices(updateIndices)
-
-    setDraggedIndex(null)
-    setDragOverIndex(null)
-  }
-
-  const handleDragEnd = () => {
-    setDraggedIndex(null)
-    setDragOverIndex(null)
-  }
-
-  // ============================================================================
-  // HELPERS
-  // ============================================================================
-
-  const isReadOnly = (sponsor: SponsorData, index: number): boolean => {
-    if (editingIndices.has(index)) return false
-    return !!(sponsor.isSaved || sponsor.isFromSeries)
-  }
-
-  const isSponsorComplete = (sponsor: SponsorData): boolean => {
-    return !!(sponsor.partnerName && sponsor.partnerUrl)
-  }
-
-  /**
-   * Format modification time for display
-   */
-  const formatLastUpdate = (modificationTime?: number | string): string => {
-    if (!modificationTime) return ''
-    try {
-      const date = new Date(modificationTime)
-      return date.toLocaleDateString('en-US', { 
-        month: '2-digit', 
-        day: '2-digit', 
-        year: 'numeric' 
-      })
-    } catch {
-      return ''
-    }
-  }
+  // Filter available sponsors for search (exclude already added)
+  const filteredAvailableSponsors = availableSponsors.filter(s => {
+    const alreadyAdded = sponsors.some(existing => existing.sponsorId === s.sponsorId)
+    if (alreadyAdded) return false
+    if (!searchQuery) return true
+    return s.name?.toLowerCase().includes(searchQuery.toLowerCase())
+  })
 
   // ============================================================================
   // RENDER
   // ============================================================================
 
   return (
-    <Flex direction="column" gap="size-200">
-      <Flex alignItems="center" gap="size-150">
-        <Heading level={3} UNSAFE_style={TYPOGRAPHY.COMPONENT_HEADING}>Sponsors & Partners</Heading>
+    <Flex direction="column" gap={FLEX_GAP.FIELD}>
+      {/* Header */}
+      <Flex alignItems="center" gap={FLEX_GAP.SMALL}>
+        <Heading level={3} UNSAFE_style={TYPOGRAPHY.COMPONENT_HEADING}>
+          Partners (optional)
+        </Heading>
         {isLoadingSponsors && (
-          <ProgressCircle size="S" isIndeterminate aria-label="Loading sponsors" />
+          <ProgressCircle size="S" isIndeterminate aria-label="Loading partners" />
         )}
       </Flex>
 
-      <Text>Add sponsor and partner information. Drag to reorder.</Text>
+      <Text UNSAFE_style={TYPOGRAPHY.SECTION_DESCRIPTION}>
+        Add partners to your event landing page.
+      </Text>
 
-      {/* Empty State */}
-      {sponsors.length === 0 && (
-        <View 
-          padding="size-400" 
-          backgroundColor="gray-100" 
+      {/* Controls Bar */}
+      <Flex gap={FLEX_GAP.NONE} alignItems="stretch" marginTop={FLEX_GAP.TIGHT} width="100%">
+        {/* Search Partners Dropdown */}
+        <View flex={1}>
+          <ComboBox
+            label=""
+            aria-label="Search partners"
+            placeholder="Search partners"
+            inputValue={searchQuery}
+            onInputChange={setSearchQuery}
+            onSelectionChange={(key) => handleSelectFromSearch(key as string)}
+            items={filteredAvailableSponsors.map(s => ({ id: s.sponsorId, name: s.name }))}
+            width="100%"
+          >
+            {(item) => <Item key={item.id}>{item.name}</Item>}
+          </ComboBox>
+        </View>
+
+        {/* Vertical Divider - 40px spacing on each side (SPACING.XXL / size-500) */}
+        <Divider orientation="vertical" size="S" marginX="size-500" />
+
+        {/* Add New Partner Button */}
+        <View flex={1}>
+          <Button
+            variant="secondary"
+            onPress={handleAddNewClick}
+            width="100%"
+            UNSAFE_style={{
+              backgroundColor: COLORS.GRAY_200,
+              borderRadius: `${SPACING.LG}px`,
+              border: 'none',
+            }}
+          >
+            <Add size="S" />
+            <Text>Add new partner</Text>
+          </Button>
+        </View>
+      </Flex>
+
+      {/* Divider */}
+      <Divider size="S" marginTop={FLEX_GAP.TIGHT} />
+
+      {/* Partner List or Empty State */}
+      {sponsors.length === 0 ? (
+        <View
+          padding={FLEX_GAP.LARGE}
+          backgroundColor="gray-100"
           borderRadius="medium"
           UNSAFE_style={{ textAlign: 'center' }}
         >
-          <Flex direction="column" alignItems="center" gap="size-200">
-            <Text>Create a new sponsor or partner to add to your event</Text>
-            <Button 
-              variant="secondary" 
-              onPress={addSponsor}
-            >
-              <Add />
-              <Text>Add sponsor</Text>
-            </Button>
-          </Flex>
+          <Text UNSAFE_style={{ color: COLORS.GRAY_700 }}>
+            No partners have been added yet for this event
+          </Text>
         </View>
+      ) : (
+        <Flex direction="column" gap={FLEX_GAP.SMALL}>
+          {sponsors.map((partner, index) => (
+            <PartnerCard
+              key={partner.id || index}
+              partner={partner}
+              onEdit={() => handleEditClick(index)}
+              onRemove={() => removeSponsor(index)}
+              onTierChange={(tier) => handleTierChange(index, tier)}
+            />
+          ))}
+        </Flex>
       )}
 
-      {sponsors.map((sponsor, index) => {
-        const readOnly = isReadOnly(sponsor, index)
-        const isSaving = savingIndex === index
-        const isDragging = draggedIndex === index
-        const isDragOver = dragOverIndex === index
-        const typeLabel = SPONSOR_TYPE_OPTIONS.find(opt => opt.key === sponsor.type)?.label || 'Partner'
-        const isExpanded = expandedCards.has(index)
-
-        // ==================== COLLAPSED VIEW (Read-only only) ====================
-        if (readOnly && !isExpanded) {
-          return (
-            <div 
-              key={sponsor.id}
-              draggable
-              onDragStart={(e: React.DragEvent) => handleDragStart(e, index)}
-              onDragOver={(e: React.DragEvent) => handleDragOver(e, index)}
-              onDragLeave={handleDragLeave}
-              onDrop={(e: React.DragEvent) => handleDrop(e, index)}
-              onDragEnd={handleDragEnd}
-              style={{
-                padding: '12px 16px',
-                border: isDragOver 
-                  ? '2px solid var(--spectrum-global-color-blue-500)' 
-                  : '1px solid var(--spectrum-global-color-gray-300)',
-                borderRadius: '8px',
-                backgroundColor: isDragging 
-                  ? 'var(--spectrum-global-color-gray-100)' 
-                  : 'var(--spectrum-global-color-gray-50)',
-                opacity: isDragging ? 0.5 : 1,
-                cursor: 'default',
-                transition: 'border-color 0.2s, background-color 0.2s'
-              }}
-            >
-              <Flex alignItems="center" gap="size-150">
-                {/* Expand/Collapse Toggle */}
-                <ActionButton 
-                  onPress={() => handleToggleExpand(index)} 
-                  isQuiet 
-                  aria-label="Expand"
-                  UNSAFE_style={{ padding: 0 }}
-                >
-                  <ChevronRight size="S" />
-                </ActionButton>
-
-                {/* Logo thumbnail */}
-                {sponsor.imageUrl ? (
-                  <img 
-                    src={sponsor.imageUrl} 
-                    alt={sponsor.partnerName || 'Sponsor'}
-                    style={{ 
-                      width: '60px', 
-                      height: '30px', 
-                      objectFit: 'contain',
-                      border: '1px solid var(--spectrum-global-color-gray-300)',
-                      borderRadius: '4px',
-                      backgroundColor: 'white'
-                    }}
-                  />
-                ) : (
-                  <View
-                    UNSAFE_style={{
-                      width: '60px',
-                      height: '30px',
-                      backgroundColor: 'var(--spectrum-global-color-gray-200)',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      borderRadius: '4px',
-                      fontSize: '10px',
-                      color: 'var(--spectrum-global-color-gray-600)'
-                    }}
-                  >
-                    {sponsor.partnerName?.substring(0, 2).toUpperCase() || 'SP'}
-                  </View>
-                )}
-
-                {/* Name and type */}
-                <Flex direction="column" flex={1}>
-                  <Text UNSAFE_style={{ fontWeight: 'bold', fontSize: '14px' }}>
-                    {sponsor.partnerName || 'Untitled Sponsor'}
-                  </Text>
-                  <Text UNSAFE_style={{ fontSize: '12px', color: 'var(--spectrum-global-color-gray-600)' }}>
-                    {typeLabel}
-                    {sponsor.isSaved && ' • ✓ Saved'}
-                  </Text>
-                </Flex>
-
-                {/* Action buttons */}
-                <Flex gap="size-100" alignItems="center">
-                  <ActionButton onPress={() => handleEditSponsor(index)} isQuiet aria-label="Edit">
-                    <Edit size="S" />
-                  </ActionButton>
-                  <ActionButton onPress={() => removeSponsor(index)} isQuiet aria-label="Delete">
-                    <Delete size="S" />
-                  </ActionButton>
-                  {/* Drag Handle */}
-                  <View
-                    UNSAFE_style={{
-                      cursor: 'grab',
-                      padding: '4px',
-                      color: 'var(--spectrum-global-color-gray-500)'
-                    }}
-                  >
-                    <DragHandle size="S" />
-                  </View>
-                </Flex>
-              </Flex>
-            </div>
-          )
-        }
-
-        // ==================== EXPANDED READ-ONLY VIEW ====================
-        if (readOnly) {
-          return (
-            <div 
-              key={sponsor.id} 
-              onDragOver={(e: React.DragEvent) => handleDragOver(e, index)}
-              onDragLeave={handleDragLeave}
-              onDrop={(e: React.DragEvent) => handleDrop(e, index)}
-              style={{
-                padding: '20px',
-                border: isDragOver 
-                  ? '2px solid var(--spectrum-global-color-blue-500)' 
-                  : '1px solid var(--spectrum-global-color-gray-300)',
-                borderRadius: '8px',
-                transition: 'border-color 0.2s'
-              }}
-            >
-              {/* Header: Collapse toggle, Sponsor title, delete button */}
-              <Flex justifyContent="space-between" alignItems="center" marginBottom="size-300">
-                <Flex alignItems="center" gap="size-100">
-                  <ActionButton 
-                    onPress={() => handleToggleExpand(index)} 
-                    isQuiet 
-                    aria-label="Collapse"
-                    UNSAFE_style={{ padding: 0 }}
-                  >
-                    <ChevronDown size="S" />
-                  </ActionButton>
-                  <Heading level={4} UNSAFE_style={{ margin: 0 }}>Sponsor</Heading>
-                  <Info size="S" UNSAFE_style={{ color: 'var(--spectrum-global-color-gray-500)' }} />
-                </Flex>
-                <ActionButton onPress={() => removeSponsor(index)} isQuiet aria-label="Delete sponsor">
-                  <Delete />
-                </ActionButton>
-              </Flex>
-
-              {/* Type Picker (disabled in read-only) */}
-              <Picker
-                label="Sponsor Level"
-                selectedKey={sponsor.type || 'Partner'}
-                onSelectionChange={() => {}}
-                width="size-3000"
-                isDisabled
-                UNSAFE_style={{ marginBottom: '24px' }}
-              >
-                {SPONSOR_TYPE_OPTIONS.map(option => (
-                  <Item key={option.key}>{option.label}</Item>
-                ))}
-              </Picker>
-
-              {/* Name as heading */}
-              <Heading level={4} UNSAFE_style={{ marginBottom: '16px', marginTop: '8px' }}>
-                {sponsor.partnerName || 'Untitled Sponsor'}
-              </Heading>
-
-              {/* Sponsor Logo - larger in read-only view */}
-              {sponsor.imageUrl && (
-                <View marginBottom="size-300" UNSAFE_style={{ maxWidth: '200px' }}>
-                  <img 
-                    src={sponsor.imageUrl} 
-                    alt={sponsor.partnerName || 'Sponsor logo'}
-                    style={{ 
-                      width: '100%', 
-                      height: 'auto', 
-                      borderRadius: '8px',
-                      border: '1px solid var(--spectrum-global-color-gray-300)'
-                    }}
-                  />
-                </View>
-              )}
-
-              {/* External URL as link */}
-              {sponsor.partnerUrl && (
-                <View marginBottom="size-300">
-                  <Flex gap="size-100" alignItems="center">
-                    <LinkOut size="S" UNSAFE_style={{ color: 'var(--spectrum-global-color-blue-600)' }} />
-                    <a 
-                      href={sponsor.partnerUrl} 
-                      target="_blank" 
-                      rel="noopener noreferrer"
-                      style={{ 
-                        color: 'var(--spectrum-global-color-blue-600)',
-                        fontSize: '14px',
-                        wordBreak: 'break-all'
-                      }}
-                    >
-                      {sponsor.partnerUrl}
-                    </a>
-                  </Flex>
-                </View>
-              )}
-
-              {/* Footer: Last update and Edit button */}
-              <View 
-                UNSAFE_style={{ 
-                  borderTop: '1px solid var(--spectrum-global-color-gray-200)',
-                  marginTop: '24px',
-                  paddingTop: '16px'
-                }}
-              >
-                <Flex justifyContent="space-between" alignItems="center">
-                  <Text UNSAFE_style={{ fontSize: '14px', color: 'var(--spectrum-global-color-gray-600)' }}>
-                    {sponsor.modificationTime 
-                      ? `Last update: ${formatLastUpdate(sponsor.modificationTime)}`
-                      : ''}
-                  </Text>
-                  <Button 
-                    variant="primary" 
-                    onPress={() => handleEditSponsor(index)}
-                  >
-                    <Edit size="S" />
-                    <Text>Edit</Text>
-                  </Button>
-                </Flex>
-              </View>
-            </div>
-          )
-        }
-
-        // ==================== EDIT VIEW ====================
-        return (
-          <View key={sponsor.id} padding="size-200" borderWidth="thin" borderColor="dark" borderRadius="medium">
-            <Flex justifyContent="space-between" alignItems="center" marginBottom="size-200">
-              <Heading level={4}>
-                {sponsor.partnerName || `Sponsor ${index + 1}`}
-                {sponsor.isSaved && (
-                  <Text UNSAFE_style={{ fontSize: '12px', color: 'var(--spectrum-global-color-green-600)', marginLeft: '8px' }}>
-                    ✓ Saved
-                  </Text>
-                )}
-              </Heading>
-              <ActionButton onPress={() => removeSponsor(index)} isQuiet aria-label="Remove">
-                <Delete />
-              </ActionButton>
-            </Flex>
-
-            <Flex direction="column" gap="size-150">
-              {/* Sponsor Type */}
-              <Picker
-                label="Sponsor Level"
-                selectedKey={sponsor.type || 'Partner'}
-                onSelectionChange={(key) => updateSponsor(index, { type: key as SponsorType })}
-                width="size-3000"
-                isRequired
-              >
-                {SPONSOR_TYPE_OPTIONS.map(option => (
-                  <Item key={option.key}>{option.label}</Item>
-                ))}
-              </Picker>
-
-              {/* Name Field */}
-              {seriesId ? (
-                <AutocompleteTextField
-                  label="Partner Name"
-                  value={sponsor.partnerName}
-                  onChange={(value) => updateSponsor(index, { partnerName: value })}
-                  onSelect={(option) => handleSelectSponsor(index, option.id)}
-                  options={availableSponsors.map(s => {
-                    // API returns image data under 'image' property (not 'logo')
-                    const imageData = s.image || s.logo
-                    return {
-                      id: s.sponsorId,
-                      label: s.name,
-                      imageUrl: imageData?.imageUrl,
-                      initials: s.name?.substring(0, 2).toUpperCase()
-                    }
-                  })}
-                  placeholder="Type to search existing sponsors..."
-                  isRequired
-                />
-              ) : (
-                <TextField
-                  label="Partner Name"
-                  isRequired
-                  value={sponsor.partnerName}
-                  onChange={(value) => updateSponsor(index, { partnerName: value })}
-                  width="100%"
-                />
-              )}
-
-              {/* Partner Image */}
-              <View width="100%" UNSAFE_style={{ maxWidth: '200px' }}>
-                <ImageUploader
-                  label="Partner Logo"
-                  imageUrl={sponsor.imageUrl}
-                  imageId={sponsor.imageId}
-                  imageKind="sponsor-logo"
-                  altText={sponsor.partnerName || 'Sponsor logo'}
-                  maxSizeMB={25}
-                  width={200}
-                  dropzoneTitle="Partner image"
-                  dropzoneDimensions="File dimensions 120px wide."
-                  deferUpload={true}
-                  pendingFile={pendingFiles.get(index)}
-                  onFileSelected={(file) => handlePendingFileSelect(index, file)}
-                  onChange={(imageUrl, imageId) => {
-                    updateSponsor(index, { imageUrl, imageId })
-                  }}
-                  onRemove={() => handlePendingFileRemove(index)}
-                />
-              </View>
-
-              {/* Partner URL */}
-              <TextField
-                label="Partner External URL"
-                isRequired
-                value={sponsor.partnerUrl}
-                onChange={(value) => updateSponsor(index, { partnerUrl: value })}
-                width="100%"
-                placeholder="https://..."
-              />
-
-              {/* Save/Cancel Buttons */}
-              {seriesId && (
-                <Flex justifyContent="end" gap="size-100" marginTop="size-200">
-                  {/* Cancel button */}
-                  <Button
-                    variant="secondary"
-                    onPress={() => handleCancelEdit(index)}
-                    isDisabled={isSaving}
-                  >
-                    <Text>Cancel</Text>
-                  </Button>
-                  <Button
-                    variant="primary"
-                    onPress={() => handleSaveSponsor(index)}
-                    isDisabled={isSaving || !sponsor.partnerName?.trim() || !sponsor.partnerUrl?.trim()}
-                  >
-                    {isSaving ? (
-                      <ProgressCircle aria-label="Saving" size="S" isIndeterminate />
-                    ) : (
-                      <SaveFloppy />
-                    )}
-                    <Text>{sponsor.isSaved ? 'Update Sponsor' : 'Save Sponsor'}</Text>
-                  </Button>
-                </Flex>
-              )}
-            </Flex>
-          </View>
-        )
-      })}
-
-      {/* Add Sponsor Button - only show when items exist */}
-      {sponsors.length > 0 && (
-        <Button 
-          variant="secondary" 
-          onPress={addSponsor}
-          width="100%"
-          UNSAFE_style={{
-            backgroundColor: 'var(--spectrum-global-color-gray-200)',
-            border: 'none',
-            color: 'var(--spectrum-global-color-gray-800)'
-          }}
-        >
-          <Add />
-          <Text>Add sponsor</Text>
-        </Button>
-      )}
+      {/* Partner Dialog */}
+      <PartnerDialog
+        isOpen={isDialogOpen}
+        onClose={handleDialogClose}
+        onSave={handleDialogSave}
+        partner={editingPartner}
+        isNew={editingIndex === null}
+        isSaving={isSaving}
+      />
     </Flex>
   )
 }
