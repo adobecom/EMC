@@ -1,6 +1,6 @@
-# EMC - Event Management Cloud
+# EMC - Event Management Console
 
-Adobe Experience Cloud application for managing events, series, registrations, and teams.
+Adobe Experience Console application for managing events, series, registrations, and teams.
 
 ## 📖 Documentation
 
