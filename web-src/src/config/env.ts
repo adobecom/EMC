@@ -5,8 +5,13 @@
 * Environment variables are injected at build time by Parcel from:
 * 1. .env file in project root
 * 2. app.config.yaml env section
-* 3. System environment variables
+* 3. System environment variables (including CI/CD pipeline variables)
 */
+
+/**
+ * Valid environment values for API tier selection
+ */
+export type EnvironmentTier = 'dev' | 'stage' | 'prod'
 
 /**
  * Environment configuration
@@ -19,6 +24,14 @@ export const env = {
   
   // API Key for external requests
   API_KEY: process.env.API_KEY || 'acom_event_service',
+  
+  /**
+   * Environment tier for API endpoint selection
+   * Set at build time via CI/CD or .env file
+   * Values: 'dev', 'stage', 'prod'
+   * Defaults to 'dev' for local development
+   */
+  ENVIRONMENT: (process.env.ENVIRONMENT || 'dev') as EnvironmentTier,
   
   // Google Places API Keys (environment-specific)
   // Loaded from .env file: DEV_GOOGLE_PLACES_API, STAGE_GOOGLE_PLACES_API, PROD_GOOGLE_PLACES_API
@@ -44,6 +57,7 @@ export const env = {
 // Debug logging in development
 if (typeof window !== 'undefined' && env.isDevelopment()) {
   console.log('🔧 Environment Configuration:')
+  console.log('   ENVIRONMENT:', env.ENVIRONMENT)
   console.log('   CLIENT_IDENTITY:', env.CLIENT_IDENTITY)
   console.log('   API_KEY:', env.API_KEY)
   console.log('   NODE_ENV:', env.NODE_ENV)
