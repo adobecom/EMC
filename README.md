@@ -92,7 +92,7 @@ ENVIRONMENT=dev
 # Client identity for API requests
 CLIENT_IDENTITY=emc-console-dev
 
-# Google Places API keys (optional, for venue autocomplete)
+# Google Places API keys (for venue autocomplete)
 DEV_GOOGLE_PLACES_API=your-dev-key
 STAGE_GOOGLE_PLACES_API=your-stage-key
 PROD_GOOGLE_PLACES_API=your-prod-key
