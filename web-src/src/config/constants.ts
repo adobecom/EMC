@@ -1,21 +1,23 @@
 /**
  * Environment and domain constants used across the application
- * Based on the previous version's constants.js
+ * 
+ * Environment is determined at BUILD TIME via the ENVIRONMENT variable,
+ * set by CI/CD pipelines or .env file. This replaces runtime hostname detection.
  */
 
+import { env, EnvironmentTier } from './env'
+
 /**
- * Available application environments
+ * Application environment tiers
+ * Simplified to 3 tiers that map to API backends
  */
 export const ENVIRONMENTS = Object.freeze({
-  LOCAL: 'local',
   DEV: 'dev',
-  DEV02: 'dev02',
   STAGE: 'stage',
-  STAGE02: 'stage02',
   PROD: 'prod',
 } as const)
 
-export type Environment = typeof ENVIRONMENTS[keyof typeof ENVIRONMENTS]
+export type Environment = EnvironmentTier
 
 /**
  * Available IMS environments
@@ -26,81 +28,36 @@ export const IMS_ENVIRONMENTS = Object.freeze({
 } as const)
 
 /**
+ * Map environment tier to IMS environment
+ */
+export function getImsEnvironment(): typeof IMS_ENVIRONMENTS[keyof typeof IMS_ENVIRONMENTS] {
+  return env.ENVIRONMENT === 'prod' ? IMS_ENVIRONMENTS.PROD : IMS_ENVIRONMENTS.STAGE
+}
+
+/**
  * Domain constants used across the application
+ * Kept for reference and ALLOWED_HOSTS generation
  */
 export const DOMAINS = Object.freeze({
   ADOBE_COM: 'www.adobe.com',
   INTERNAL_ADOBE_COM: 'events-internal.adobe.com',
   STAGE_ADOBE_COM: 'www.stage.adobe.com',
-  STAGE_INTERNAL_ADOBE_COM: 'events-internal.stage.adobe.com',
   LOCALHOST: 'localhost',
-  DEV_ADOBE_COM: 'dev.adobe.com',
-  DEV_INTERNAL_ADOBE_COM: 'events-internal.dev.adobe.com',
-  DEV02_ADOBE_COM: 'dev02.adobe.com',
-  STAGE02_ADOBE_COM: 'stage02.adobe.com',
-  CORP_ADOBE_COM: 'corp.adobe.com',
-  GRAYBOX_ADOBE_COM: 'graybox.adobe.com',
-  // Adobe I/O Static hosting domains
-  ADOBEIO_STATIC: 'adobeio-static.net',
-  EMC_PROD_STATIC: '14257-emc-production.adobeio-static.net',
-  EMC_STAGE_STATIC: '14257-emc-stage.adobeio-static.net',
-  EMC_DEV_STATIC: '14257-emc-dev.adobeio-static.net',
 } as const)
 
 /**
- * Environment detection patterns
- * Note: Order matters - more specific patterns should be checked before general ones
- * 
- * Adobe I/O Static hosting patterns:
- * - PROD: 14257-emc-production.adobeio-static.net
- * - STAGE: 14257-emc-stage.adobeio-static.net
- * - DEV: 14257-emc-dev.adobeio-static.net and user workspaces (e.g., 14257-emc-{username}.adobeio-static.net)
- */
-export const HOST_PATTERNS: Record<Environment, (host: string) => boolean> = Object.freeze({
-  [ENVIRONMENTS.LOCAL]: (host) => host.includes(DOMAINS.LOCALHOST),
-  [ENVIRONMENTS.DEV02]: (host) => host.startsWith('dev02--') || host.includes(DOMAINS.DEV02_ADOBE_COM),
-  [ENVIRONMENTS.DEV]: (host) => host.startsWith('dev--')
-    || host.includes(DOMAINS.DEV_ADOBE_COM)
-    || host.includes(DOMAINS.DEV_INTERNAL_ADOBE_COM)
-    // Adobe I/O Static: dev workspace and user workspaces (any 14257-emc-* except prod/stage)
-    || host === DOMAINS.EMC_DEV_STATIC
-    || (host.endsWith(DOMAINS.ADOBEIO_STATIC)
-        && host.startsWith('14257-emc-')
-        && host !== DOMAINS.EMC_PROD_STATIC
-        && host !== DOMAINS.EMC_STAGE_STATIC),
-  [ENVIRONMENTS.STAGE]: (host) => host.startsWith('stage--')
-    || host.includes(DOMAINS.STAGE_ADOBE_COM)
-    || host.includes(DOMAINS.STAGE_INTERNAL_ADOBE_COM)
-    || host.includes(DOMAINS.CORP_ADOBE_COM)
-    || host.includes(DOMAINS.GRAYBOX_ADOBE_COM)
-    // Adobe I/O Static: stage workspace
-    || host === DOMAINS.EMC_STAGE_STATIC,
-  [ENVIRONMENTS.STAGE02]: (host) => host.startsWith('stage02--') || host.includes(DOMAINS.STAGE02_ADOBE_COM),
-  [ENVIRONMENTS.PROD]: (host) => host.startsWith('main--')
-    || host.endsWith('adobe.com')
-    || host.includes(DOMAINS.INTERNAL_ADOBE_COM)
-    // Adobe I/O Static: production workspace
-    || host === DOMAINS.EMC_PROD_STATIC,
-})
-
-/**
  * API Configuration for ESL (Events Service Layer) and ESP (Events Service Platform)
+ * Simplified to 3 environment tiers
  */
 export const API_CONFIG = {
   esl: {
-    [ENVIRONMENTS.LOCAL]: { host: 'https://wcms-events-service-layer-deploy-ethos102-stage-va-9c3ecd.stage.cloud.adobe.io' },
     [ENVIRONMENTS.DEV]: { host: 'https://wcms-events-service-layer-deploy-ethos102-stage-va-9c3ecd.stage.cloud.adobe.io' },
-    [ENVIRONMENTS.DEV02]: { host: 'https://wcms-events-service-layer-deploy-ethos102-stage-va-d5dc93.stage.cloud.adobe.io' },
     [ENVIRONMENTS.STAGE]: { host: 'https://events-service-layer-stage.adobe.io' },
-    [ENVIRONMENTS.STAGE02]: { host: 'https://wcms-events-service-layer-deploy-ethos105-stage-or-8f7ce1.stage.cloud.adobe.io' },
     [ENVIRONMENTS.PROD]: { host: 'https://events-service-layer.adobe.io' },
   },
   esp: {
-    [ENVIRONMENTS.LOCAL]: { host: 'https://wcms-events-service-platform-deploy-ethos102-stage-caff5f.stage.cloud.adobe.io' },
     [ENVIRONMENTS.DEV]: { host: 'https://wcms-events-service-platform-deploy-ethos102-stage-caff5f.stage.cloud.adobe.io' },
-    [ENVIRONMENTS.DEV02]: { host: 'https://wcms-events-service-platform-deploy-ethos102-stage-c81eb6.stage.cloud.adobe.io' },
     [ENVIRONMENTS.STAGE]: { host: 'https://events-service-platform-stage.adobe.io' },
-    [ENVIRONMENTS.STAGE02]: { host: 'https://wcms-events-service-platform-deploy-ethos105-stage-9a5fdc.stage.cloud.adobe.io' },
     [ENVIRONMENTS.PROD]: { host: 'https://events-service-platform.adobe.io' },
   },
 } as const
@@ -112,21 +69,21 @@ export const ALLOWED_HOSTS: Record<string, boolean> = {
   [DOMAINS.ADOBE_COM]: true,
   [DOMAINS.STAGE_ADOBE_COM]: true,
   [DOMAINS.LOCALHOST]: true,
-  ...Object.values(API_CONFIG.esl).reduce((acc, env) => {
+  ...Object.values(API_CONFIG.esl).reduce((acc, envConfig) => {
     try {
-      const url = new URL(env.host)
+      const url = new URL(envConfig.host)
       acc[url.hostname] = true
     } catch (e) {
-      console.warn('Invalid URL in API_CONFIG.esl:', env.host)
+      console.warn('Invalid URL in API_CONFIG.esl:', envConfig.host)
     }
     return acc
   }, {} as Record<string, boolean>),
-  ...Object.values(API_CONFIG.esp).reduce((acc, env) => {
+  ...Object.values(API_CONFIG.esp).reduce((acc, envConfig) => {
     try {
-      const url = new URL(env.host)
+      const url = new URL(envConfig.host)
       acc[url.hostname] = true
     } catch (e) {
-      console.warn('Invalid URL in API_CONFIG.esp:', env.host)
+      console.warn('Invalid URL in API_CONFIG.esp:', envConfig.host)
     }
     return acc
   }, {} as Record<string, boolean>),
@@ -168,27 +125,30 @@ export const DEFAULT_SAVE_POLICIES = {
 } as const
 
 /**
- * Get current environment based on hostname
+ * Get current environment tier
+ * 
+ * Returns the build-time ENVIRONMENT value ('dev', 'stage', or 'prod')
+ * Set via CI/CD pipeline or .env file. Defaults to 'dev'.
  */
 export function getCurrentEnvironment(): Environment {
-  const hostname = window.location.hostname
-
-  // Check each environment pattern
-  for (const [env, pattern] of Object.entries(HOST_PATTERNS)) {
-    if (pattern(hostname)) {
-      return env as Environment
-    }
-  }
-
-  // Default to LOCAL if no match
-  return ENVIRONMENTS.LOCAL
+  return env.ENVIRONMENT
 }
 
 /**
- * Get API host for a service and environment
+ * Get API host for a service
+ * 
+ * @param service - 'esp' or 'esl'
+ * @param overrideEnv - Optional environment override (mainly for testing)
  */
-export function getApiHost(service: 'esp' | 'esl', env?: Environment): string {
-  const currentEnv = env || getCurrentEnvironment()
+export function getApiHost(service: 'esp' | 'esl', overrideEnv?: Environment): string {
+  const currentEnv = overrideEnv || env.ENVIRONMENT
   return API_CONFIG[service][currentEnv].host
 }
 
+/**
+ * Check if running in local development (localhost)
+ */
+export function isLocalDevelopment(): boolean {
+  return typeof window !== 'undefined' && 
+    (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
+}

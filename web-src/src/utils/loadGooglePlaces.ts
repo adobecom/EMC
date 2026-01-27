@@ -8,7 +8,7 @@
  */
 
 import { env } from '../config/env'
-import { getCurrentEnvironment, ENVIRONMENTS } from '../config/constants'
+import { getCurrentEnvironment } from '../config/constants'
 
 let isLoading = false
 let isLoaded = false
@@ -20,14 +20,11 @@ function getGooglePlacesApiKey(): string {
   const currentEnv = getCurrentEnvironment()
   
   switch (currentEnv) {
-    case ENVIRONMENTS.DEV:
-    case ENVIRONMENTS.DEV02:
-    case ENVIRONMENTS.LOCAL:
+    case 'dev':
       return env.DEV_GOOGLE_PLACES_API
-    case ENVIRONMENTS.STAGE:
-    case ENVIRONMENTS.STAGE02:
+    case 'stage':
       return env.STAGE_GOOGLE_PLACES_API
-    case ENVIRONMENTS.PROD:
+    case 'prod':
       return env.PROD_GOOGLE_PLACES_API
     default:
       return env.DEV_GOOGLE_PLACES_API
