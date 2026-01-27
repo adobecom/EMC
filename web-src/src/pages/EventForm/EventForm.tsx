@@ -16,7 +16,7 @@ import {
 } from '../../types/domain'
 import { apiService } from '../../services/api'
 import { IMS } from '../../types'
-import { FormWizard, WizardStep, LoadingSpinner, FormCard } from '../../components/shared'
+import { FormWizard, WizardStep, LoadingSpinner, FormCard, HistoryTimeline } from '../../components/shared'
 import { 
   EventFormatComponent, 
   EventTagsComponent, 
@@ -554,6 +554,14 @@ const EventFormInner: React.FC<EventFormInnerProps> = ({ ims }) => {
     }
   }
 
+  // Render history timeline only in edit mode with a valid eventId
+  const renderHeaderActions = () => {
+    if (!isEditMode || !eventId) {
+      return null
+    }
+    return <HistoryTimeline resourceId={eventId} resourceType="event" />
+  }
+
   return (
     <View 
       UNSAFE_style={{
@@ -574,6 +582,7 @@ const EventFormInner: React.FC<EventFormInnerProps> = ({ ims }) => {
         maxStepReached={maxStepReached}
         onMaxStepChange={handleMaxStepChange}
         eventTypeLabel={getEventTypeLabel()}
+        headerActions={renderHeaderActions()}
       />
     </View>
   )
