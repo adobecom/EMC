@@ -324,6 +324,26 @@ class ApiService {
   // ============================================================================
 
   /**
+   * Get the current auth token - checks both stored dev token and IMS token from context
+   * Priority: 1) tokenStorage (dev mode) 2) configured headers (ExC Shell IMS)
+   */
+  private getAuthToken(): string | null {
+    // First check tokenStorage (dev mode)
+    const storedToken = tokenStorage.getValidToken()
+    if (storedToken) {
+      return storedToken
+    }
+    
+    // Fall back to IMS token set via setAuthHeaders (ExC Shell mode)
+    const authHeader = this.config.headers?.authorization
+    if (authHeader && authHeader.startsWith('Bearer ')) {
+      return authHeader.substring(7) // Remove "Bearer " prefix
+    }
+    
+    return null
+  }
+
+  /**
    * Generic external API call wrapper
    * Handles token validation, environment detection, and error handling
    * 
@@ -341,7 +361,7 @@ class ApiService {
     }
   ): Promise<T | ErrorResponse> {
     const operationName = options?.operationName || `${method} ${endpoint}`
-    const token = tokenStorage.getValidToken()
+    const token = this.getAuthToken()
     
     if (!token) {
       console.warn(`⚠️ No valid authentication token for ${operationName}`)
@@ -430,7 +450,7 @@ class ApiService {
    * Get series list from ESP API with token authentication and mock fallback
    */
   async getSeriesList(): Promise<SeriesApiResponse[]> {
-    const token = tokenStorage.getValidToken()
+    const token = this.getAuthToken()
     
     if (!token) {
       console.warn('⚠️ No valid authentication token. Using mock data.')
@@ -552,7 +572,7 @@ class ApiService {
    * Fetch series history in batch for enrichment
    */
   async getSeriesHistoryBatch(seriesIds: string[]): Promise<Map<string, EventHistoryResponse>> {
-    const token = tokenStorage.getValidToken()
+    const token = this.getAuthToken()
     const results = new Map<string, EventHistoryResponse>()
     
     if (!token) {
@@ -601,7 +621,7 @@ class ApiService {
    * Fetch series details for enrichment
    */
   async getSeriesBatch(seriesIds: string[]): Promise<Map<string, SeriesApiResponse>> {
-    const token = tokenStorage.getValidToken()
+    const token = this.getAuthToken()
     const results = new Map<string, SeriesApiResponse>()
     
     if (!token) {
@@ -654,7 +674,7 @@ class ApiService {
    * Get events list from ESP API with token authentication and mock fallback
    */
   async getEventsList(): Promise<EventApiResponse[]> {
-    const token = tokenStorage.getValidToken()
+    const token = this.getAuthToken()
     
     if (!token) {
       console.warn('⚠️ No valid authentication token. Using mock data.')
@@ -776,7 +796,7 @@ class ApiService {
   async getEventFull(eventId: string): Promise<any | ErrorResponse> {
     validateString(eventId, 'eventId')
 
-    const token = tokenStorage.getValidToken()
+    const token = this.getAuthToken()
     if (!token) {
       console.warn('⚠️ No valid authentication token for getEventFull')
       return { status: 'No Token', error: 'No valid authentication token' }
@@ -913,7 +933,7 @@ class ApiService {
    * Batch fetch event images for enrichment
    */
   async getEventImagesBatch(eventIds: string[]): Promise<Map<string, EventApiResponse>> {
-    const token = tokenStorage.getValidToken()
+    const token = this.getAuthToken()
     const results = new Map<string, EventApiResponse>()
     
     if (!token) return results
@@ -961,7 +981,7 @@ class ApiService {
    * Batch fetch event venues for enrichment
    */
   async getEventVenuesBatch(eventIds: string[]): Promise<Map<string, Venue[]>> {
-    const token = tokenStorage.getValidToken()
+    const token = this.getAuthToken()
     const results = new Map<string, Venue[]>()
     
     if (!token) return results
@@ -1008,7 +1028,7 @@ class ApiService {
    * Batch fetch event history for enrichment
    */
   async getEventHistoryBatch(eventIds: string[]): Promise<Map<string, EventHistoryResponse>> {
-    const token = tokenStorage.getValidToken()
+    const token = this.getAuthToken()
     const results = new Map<string, EventHistoryResponse>()
     
     if (!token) return results
@@ -1408,7 +1428,7 @@ class ApiService {
     tracker?: UploadProgressTracker,
     imageId?: string
   ): Promise<any | ErrorResponse> {
-    const token = tokenStorage.getValidToken()
+    const token = this.getAuthToken()
     
     if (!token) {
       console.warn('⚠️ No valid authentication token for uploadImage')

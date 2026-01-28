@@ -8,7 +8,7 @@ import { useNavigate, useParams } from 'react-router-dom'
 import { SeriesApiResponse } from '../../types/domain'
 import { apiService, cachedApi } from '../../services/api'
 import { IMS } from '../../types'
-import { FormCard, LoadingSpinner, SingleStepFormLayout } from '../../components/shared'
+import { FormCard, LoadingSpinner, SingleStepFormLayout, HistoryTimeline } from '../../components/shared'
 import { SeriesDetailsComponent } from './SeriesDetailsComponent'
 import { SeriesAdditionalInfoComponent } from './SeriesAdditionalInfoComponent'
 import { SeriesTemplateComponent } from './SeriesTemplateComponent'
@@ -299,6 +299,14 @@ const SeriesFormInner: React.FC<SeriesFormInnerProps> = ({ ims }) => {
   // Determine status
   const status = isPublished ? 'published' : 'draft'
 
+  // Render history timeline only in edit mode with a valid seriesId
+  const renderHeaderActions = () => {
+    if (!isEditMode || !seriesId) {
+      return null
+    }
+    return <HistoryTimeline resourceId={seriesId} resourceType="series" />
+  }
+
   return (
     <View 
       UNSAFE_style={{
@@ -319,6 +327,7 @@ const SeriesFormInner: React.FC<SeriesFormInnerProps> = ({ ims }) => {
         isPublished={isPublished}
         isValid={isFormValid}
         publishLabel="Publish series"
+        headerActions={renderHeaderActions()}
       >
         <Flex direction="column" gap="size-0">
           <FormCard>

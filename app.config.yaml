@@ -1,5 +1,4 @@
 application:
-  actions: actions
   web: web-src
   # Environment variables for the web app (frontend)
   # These will be injected at build time by Parcel
@@ -11,27 +10,3 @@ application:
         view:
           - type: web
             impl: index.html
-  runtimeManifest:
-    packages:
-      EMC:
-        license: Apache-2.0
-        actions:
-          sample:
-            function: actions/sample/index.js
-            web: 'yes'
-            runtime: nodejs:22
-            inputs:
-              LOG_LEVEL: debug
-            annotations:
-              require-adobe-auth: true
-              final: true
-          sampleMessage:
-            function: actions/sampleMessage/index.js
-            web: 'yes'
-            runtime: nodejs:22
-            inputs:
-              LOG_LEVEL: debug
-              apiKey: $SERVICE_API_KEY
-            annotations:
-              require-adobe-auth: true
-              final: true
