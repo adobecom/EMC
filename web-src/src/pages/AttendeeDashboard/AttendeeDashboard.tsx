@@ -14,7 +14,7 @@ import { useParams, useNavigate, useSearchParams } from 'react-router-dom'
 import type { EventApiResponse } from '../../types/domain'
 import type { Attendee, AttendeeFilters, AttendeeStats } from '../../types/attendee'
 import { calculateAttendeeStats, getAttendeeName } from '../../types/attendee'
-import { apiService } from '../../services/api'
+import { apiService, cachedApi } from '../../services/api'
 import { useRsvpConfig } from '../../hooks/useRsvpConfig'
 import { IMS } from '../../types'
 import { LoadingSpinner } from '../../components/shared'
@@ -72,10 +72,14 @@ export const AttendeeDashboard: React.FC<AttendeeDashboardProps> = ({ ims: _ims 
 
   // Load events on mount
   useEffect(() => {
+    let cancelled = false
+
     const loadEvents = async () => {
       setIsLoadingEvents(true)
       try {
-        const eventsData = await apiService.getEventsList()
+        const eventsData = await cachedApi.getEventsList()
+        
+        if (cancelled) return
         
         if (Array.isArray(eventsData)) {
           setEvents(eventsData)
@@ -87,29 +91,44 @@ export const AttendeeDashboard: React.FC<AttendeeDashboardProps> = ({ ims: _ims 
         }
       } catch (err) {
         console.error('Failed to load events:', err)
-        setError('Failed to load events')
+        if (!cancelled) {
+          setError('Failed to load events')
+        }
       } finally {
-        setIsLoadingEvents(false)
+        if (!cancelled) {
+          setIsLoadingEvents(false)
+        }
       }
     }
 
     loadEvents()
+    
+    return () => {
+      cancelled = true
+    }
   }, [])
 
   // Load attendees when event changes
   useEffect(() => {
+    let cancelled = false
+
     if (!selectedEventId) {
-      setAttendees([])
+      if (!cancelled) {
+        setAttendees([])
+      }
       return
     }
 
     const loadAttendees = async () => {
-      setIsLoadingAttendees(true)
-      setError(null)
+      if (!cancelled) {
+        setIsLoadingAttendees(true)
+        setError(null)
+      }
       
       try {
-        // Use getAllEventAttendees for paginated fetching
-        const result = await apiService.getAllEventAttendees(selectedEventId)
+        const result = await cachedApi.getAllEventAttendees(selectedEventId)
+        
+        if (cancelled) return
         
         if ('error' in result) {
           console.error('Failed to load attendees:', result)
@@ -118,30 +137,33 @@ export const AttendeeDashboard: React.FC<AttendeeDashboardProps> = ({ ims: _ims 
           return
         }
         
-        // Add eventId to each attendee for reference
         const attendeesWithEventId = result.map(a => ({
           ...a,
           eventId: selectedEventId
         }))
         
         setAttendees(attendeesWithEventId)
-        
-        // Clear selection when event changes
         setSelectedIds(new Set())
-        
-        // Clear filters when event changes
         setFilters({})
         
       } catch (err) {
         console.error('Failed to load attendees:', err)
-        setAttendees([])
-        setError('Failed to load attendees')
+        if (!cancelled) {
+          setAttendees([])
+          setError('Failed to load attendees')
+        }
       } finally {
-        setIsLoadingAttendees(false)
+        if (!cancelled) {
+          setIsLoadingAttendees(false)
+        }
       }
     }
 
     loadAttendees()
+    
+    return () => {
+      cancelled = true
+    }
   }, [selectedEventId])
 
   // Filter and search attendees
@@ -202,9 +224,10 @@ export const AttendeeDashboard: React.FC<AttendeeDashboardProps> = ({ ims: _ims 
       setItemToDelete(null)
       
       // Refresh attendees
-      const result = await apiService.getAllEventAttendees(selectedEventId)
+      const result = await cachedApi.getAllEventAttendees(selectedEventId)
       if (!('error' in result)) {
-        setAttendees(result.map(a => ({ ...a, eventId: selectedEventId })))
+        const attendeesWithEventId = result.map(a => ({ ...a, eventId: selectedEventId }))
+        setAttendees(attendeesWithEventId)
       }
     } catch (err) {
       console.error('Failed to delete attendee:', err)
@@ -222,11 +245,6 @@ export const AttendeeDashboard: React.FC<AttendeeDashboardProps> = ({ ims: _ims 
   const handleBackClick = useCallback(() => {
     navigate('/events')
   }, [navigate])
-
-  // Clear selection
-  const handleClearSelection = useCallback(() => {
-    setSelectedIds(new Set())
-  }, [])
 
   // Loading state
   if (isLoadingEvents) {

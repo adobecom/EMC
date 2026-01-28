@@ -3,7 +3,7 @@
 */
 
 import { createEnrichmentManager } from './dataEnrichment'
-import { apiService } from './api'
+import { cachedApi } from './api'
 import { EventApiResponse, Venue, EventHistoryResponse, HistoryUser } from '../types/domain'
 import { clearSeriesEnrichmentCaches } from './seriesEnrichment'
 
@@ -71,7 +71,7 @@ export const thumbnailEnrichmentManager = createEnrichmentManager<string, EventT
     
     try {
       // Fetch event images in batch
-      const eventImages = await apiService.getEventImagesBatch(eventIds)
+      const eventImages = await cachedApi.getEventImagesBatch(eventIds)
       
       // Extract thumbnails from each event
       eventImages.forEach((event, eventId) => {
@@ -124,7 +124,7 @@ export const venueEnrichmentManager = createEnrichmentManager<string, EventVenue
     
     try {
       // Fetch event venues in batch
-      const eventVenues = await apiService.getEventVenuesBatch(eventIds)
+      const eventVenues = await cachedApi.getEventVenuesBatch(eventIds)
       
       // Extract venue info from each event
       eventVenues.forEach((venues, eventId) => {
@@ -195,7 +195,7 @@ export const historyEnrichmentManager = createEnrichmentManager<string, EventHis
     
     try {
       // Fetch event histories in batch
-      const historyData = await apiService.getEventHistoryBatch(eventIds)
+      const historyData = await cachedApi.getEventHistoryBatch(eventIds)
       
       // Extract history info from each event
       historyData.forEach((history, eventId) => {

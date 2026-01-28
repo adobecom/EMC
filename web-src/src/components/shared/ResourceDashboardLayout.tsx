@@ -2,7 +2,7 @@
 * <license header>
 */
 
-import React, { useState, useMemo, useEffect, useCallback } from 'react'
+import React, { useState, useMemo, useEffect, useCallback, useRef } from 'react'
 import {
   Flex,
   Heading,
@@ -15,6 +15,7 @@ import {
 import Refresh from '@spectrum-icons/workflow/Refresh'
 import { DataTable, TableColumn, TableAction } from './DataTable'
 import { LoadingSpinner } from './LoadingSpinner'
+import { debounce } from '../../services/cacheUtils'
 
 interface ResourceDashboardLayoutProps<T> {
   // Header props
@@ -78,14 +79,19 @@ export function ResourceDashboardLayout<T extends Record<string, any>>({
   const [inputValue, setInputValue] = useState('')
   const [debouncedQuery, setDebouncedQuery] = useState('')
 
-  // Debounce search query (300ms delay)
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setDebouncedQuery(inputValue)
-    }, 300)
+  // Use debounce utility from cacheUtils (following throttling.md pattern)
+  // Create stable debounced function using useMemo
+  const debouncedSetQuery = useMemo(
+    () => debounce((value: string) => {
+      setDebouncedQuery(value)
+    }, 300), // 300ms delay as per throttling.md best practices for search
+    [] // Empty deps - function is stable
+  )
 
-    return () => clearTimeout(timer)
-  }, [inputValue])
+  // Update debounced query when input changes
+  useEffect(() => {
+    debouncedSetQuery(inputValue)
+  }, [inputValue, debouncedSetQuery])
 
   // Clear handler
   const handleClear = useCallback(() => {

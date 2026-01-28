@@ -28,7 +28,7 @@ import ChevronDown from '@spectrum-icons/workflow/ChevronDown'
 import ChevronRight from '@spectrum-icons/workflow/ChevronRight'
 import Info from '@spectrum-icons/workflow/Info'
 import LinkOut from '@spectrum-icons/workflow/LinkOut'
-import { apiService } from '../../services/api'
+import { apiService, cachedApi } from '../../services/api'
 import { useEventFormComponent } from '../../hooks/useEventFormComponent'
 import { uploadImage, UploadTracker } from '../../services/requestHelpers'
 import { tokenStorage } from '../../services/tokenStorage'
@@ -87,7 +87,7 @@ export const SponsorsComponent: React.FC = () => {
       // We must fetch the current event sponsors from the API
       let savedSponsors: any[] = []
       try {
-        const sponsorsResponse = await apiService.getEventSponsors(savedEventId)
+        const sponsorsResponse = await cachedApi.getEventSponsors(savedEventId)
         if (sponsorsResponse && !('error' in sponsorsResponse)) {
           savedSponsors = sponsorsResponse.sponsors || sponsorsResponse || []
           if (!Array.isArray(savedSponsors)) {
@@ -222,7 +222,7 @@ export const SponsorsComponent: React.FC = () => {
       
       setIsLoadingSponsors(true)
       try {
-        const response = await apiService.getSponsors(seriesId)
+        const response = await cachedApi.getSponsors(seriesId)
         if (isMounted && response && !('error' in response)) {
           const sponsorsList = response.sponsors || response || []
           setAvailableSponsors(sponsorsList)
@@ -431,7 +431,7 @@ export const SponsorsComponent: React.FC = () => {
         })
 
         // Refresh the available sponsors list
-        const updatedResponse = await apiService.getSponsors(seriesId)
+        const updatedResponse = await cachedApi.getSponsors(seriesId)
         if (updatedResponse && !('error' in updatedResponse)) {
           setAvailableSponsors(updatedResponse.sponsors || updatedResponse || [])
         }

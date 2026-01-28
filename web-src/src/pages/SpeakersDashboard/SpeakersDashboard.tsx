@@ -41,7 +41,7 @@ import User from '@spectrum-icons/workflow/User'
 import { TableColumn } from '../../components/shared/DataTable'
 import { ResourceDashboardLayout } from '../../components/shared'
 import { SeriesSpeaker, SeriesApiResponse, EventApiResponse } from '../../types/domain'
-import { apiService } from '../../services/api'
+import { apiService, cachedApi } from '../../services/api'
 import { IMS } from '../../types'
 import { useToast } from '../../contexts'
 import { createShimmerStyle, COLORS } from '../../styles/designSystem'
@@ -101,10 +101,15 @@ export const SpeakersDashboard: React.FC<SpeakersDashboardProps> = () => {
   
   // Load series list on mount
   useEffect(() => {
+    let cancelled = false
+
     const loadSeriesList = async () => {
       setIsLoadingSeries(true)
       try {
-        const data = await apiService.getSeriesList()
+        const data = await cachedApi.getSeriesList()
+        
+        if (cancelled) return
+        
         setSeriesList(data)
         
         // Auto-select first series if available
@@ -113,13 +118,21 @@ export const SpeakersDashboard: React.FC<SpeakersDashboardProps> = () => {
         }
       } catch (err) {
         console.error('Error loading series:', err)
-        toast.error('Failed to load series list')
+        if (!cancelled) {
+          toast.error('Failed to load series list')
+        }
       } finally {
-        setIsLoadingSeries(false)
+        if (!cancelled) {
+          setIsLoadingSeries(false)
+        }
       }
     }
     
     loadSeriesList()
+    
+    return () => {
+      cancelled = true
+    }
   }, [])
   
   // Load speakers when series changes
@@ -133,7 +146,7 @@ export const SpeakersDashboard: React.FC<SpeakersDashboardProps> = () => {
     setError(null)
     
     try {
-      const response = await apiService.getSpeakers(selectedSeriesId)
+      const response = await cachedApi.getSpeakers(selectedSeriesId)
       
       if ('error' in response) {
         throw new Error(response.error)
@@ -181,7 +194,7 @@ export const SpeakersDashboard: React.FC<SpeakersDashboardProps> = () => {
       const results = await Promise.all(
         speakersToLoad.map(async (speakerId) => {
           try {
-            const response = await apiService.getEventsBySpeakerId(speakerId)
+            const response = await cachedApi.getEventsBySpeakerId(speakerId)
             if (response && !('error' in response)) {
               const events = response.events || response || []
               return { speakerId, events: Array.isArray(events) ? events : [] }

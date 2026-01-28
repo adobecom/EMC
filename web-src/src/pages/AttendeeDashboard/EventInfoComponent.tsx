@@ -11,7 +11,7 @@ import {
 import type { EventApiResponse } from '../../types/domain'
 import type { AttendeeStats } from '../../types/attendee'
 import { COLORS } from '../../styles/designSystem'
-import { apiService } from '../../services/api'
+import { cachedApi } from '../../services/api'
 
 interface EventInfoComponentProps {
   event: EventApiResponse | null
@@ -90,6 +90,7 @@ export const EventInfoComponent: React.FC<EventInfoComponentProps> = ({
 
   // Fetch event images when event changes
   useEffect(() => {
+    let cancelled = false
     const eventId = event?.eventId
     const fallbackImages = event?.images
     
@@ -100,7 +101,9 @@ export const EventInfoComponent: React.FC<EventInfoComponentProps> = ({
 
     const fetchImages = async () => {
       try {
-        const response = await apiService.getEventImages(eventId)
+        const response = await cachedApi.getEventImages(eventId)
+        
+        if (cancelled) return
         
         if (response && !('error' in response) && response.images) {
           setEventImages(response.images)
@@ -110,12 +113,18 @@ export const EventInfoComponent: React.FC<EventInfoComponentProps> = ({
         }
       } catch (error) {
         console.error('Failed to fetch event images:', error)
-        // Fallback to event.images
-        setEventImages(fallbackImages || null)
+        if (!cancelled) {
+          // Fallback to event.images
+          setEventImages(fallbackImages || null)
+        }
       }
     }
 
     fetchImages()
+    
+    return () => {
+      cancelled = true
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [event?.eventId])
 

@@ -3,7 +3,7 @@
 */
 
 import { createEnrichmentManager } from './dataEnrichment'
-import { apiService } from './api'
+import { cachedApi } from './api'
 import { EventHistoryResponse, HistoryUser, SeriesApiResponse } from '../types/domain'
 
 /**
@@ -42,7 +42,7 @@ export const seriesEnrichmentManager = createEnrichmentManager<string, SeriesInf
     
     try {
       // Fetch series in batch
-      const seriesData = await apiService.getSeriesBatch(seriesIds)
+      const seriesData = await cachedApi.getSeriesBatch(seriesIds)
       
       // Extract series info from each series
       seriesData.forEach((series, seriesId) => {
@@ -111,7 +111,7 @@ export const seriesHistoryEnrichmentManager = createEnrichmentManager<string, Se
     
     try {
       // Fetch series histories in batch
-      const historyData = await apiService.getSeriesHistoryBatch(seriesIds)
+      const historyData = await cachedApi.getSeriesHistoryBatch(seriesIds)
       
       // Extract history info from each series
       historyData.forEach((history, seriesId) => {

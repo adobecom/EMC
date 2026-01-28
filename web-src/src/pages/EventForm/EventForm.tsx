@@ -14,7 +14,7 @@ import {
   SponsorData,
   EventApiResponse
 } from '../../types/domain'
-import { apiService } from '../../services/api'
+import { apiService, cachedApi } from '../../services/api'
 import { IMS } from '../../types'
 import { FormWizard, WizardStep, LoadingSpinner, FormCard } from '../../components/shared'
 import { 
@@ -260,7 +260,7 @@ const EventFormInner: React.FC<EventFormInnerProps> = ({ ims }) => {
   const loadEvent = async (eventIdToLoad: string) => {
     setLoading(true)
     try {
-      const response = await apiService.getEventFull(eventIdToLoad)
+      const response = await cachedApi.getEventFull(eventIdToLoad)
       
       if ('error' in response) {
         console.error('Failed to load event:', response)

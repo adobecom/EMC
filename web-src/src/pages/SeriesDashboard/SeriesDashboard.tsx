@@ -12,7 +12,7 @@ import Archive from '@spectrum-icons/workflow/Archive'
 import { TableColumn } from '../../components/shared/DataTable'
 import { StatusBadge, ResourceDashboardLayout } from '../../components/shared'
 import { SeriesDashboardItem, EventApiResponse } from '../../types/domain'
-import { apiService } from '../../services/api'
+import { apiService, cachedApi } from '../../services/api'
 import { IMS } from '../../types'
 import { 
   seriesHistoryEnrichmentManager, 
@@ -39,7 +39,7 @@ export const SeriesDashboard: React.FC<SeriesDashboardProps> = () => {
   const [historyErrors, setHistoryErrors] = useState<Set<string>>(new Set())
   const [historyAttempted, setHistoryAttempted] = useState<Set<string>>(new Set())
 
-  const loadSeriesData = async () => {
+  const loadSeriesData = async (signal?: { cancelled: boolean }) => {
     setIsLoading(true)
     setError(null)
     
@@ -48,9 +48,11 @@ export const SeriesDashboard: React.FC<SeriesDashboardProps> = () => {
       
       // Fetch both series and events in parallel
       const [seriesData, eventsData] = await Promise.all([
-        apiService.getSeriesList(),
-        apiService.getEventsList()
+        cachedApi.getSeriesList(),
+        cachedApi.getEventsList()
       ])
+      
+      if (signal?.cancelled) return
       
       console.log(`✅ Fetched ${seriesData.length} series and ${eventsData.length} events`)
       
@@ -73,17 +75,28 @@ export const SeriesDashboard: React.FC<SeriesDashboardProps> = () => {
         eventCount: undefined
       }))
       
+      if (signal?.cancelled) return
+      
       setSeries(dashboardItems)
     } catch (err) {
       console.error('❌ Error loading series:', err)
-      setError('Failed to load series data')
+      if (!signal?.cancelled) {
+        setError('Failed to load series data')
+      }
     } finally {
-      setIsLoading(false)
+      if (!signal?.cancelled) {
+        setIsLoading(false)
+      }
     }
   }
 
   useEffect(() => {
-    loadSeriesData()
+    const signal = { cancelled: false }
+    loadSeriesData(signal)
+    
+    return () => {
+      signal.cancelled = true
+    }
   }, [])
 
   // Fetch history info (creator/modifier) for visible series IDs
@@ -379,11 +392,13 @@ export const SeriesDashboard: React.FC<SeriesDashboardProps> = () => {
         console.log('Publish series:', item)
         try {
           // Fetch full series data first to get modificationTime
-          const fullSeries = await apiService.getSeriesFull(item.seriesId)
+          const fullSeries = await cachedApi.getSeriesFull(item.seriesId)
+
           if ('error' in fullSeries) {
             throw new Error('Failed to fetch series data')
           }
           await apiService.publishSeries(item.seriesId, { modificationTime: fullSeries.modificationTime })
+          
           // Reload data to reflect changes
           await loadSeriesData()
         } catch (error) {
@@ -395,11 +410,13 @@ export const SeriesDashboard: React.FC<SeriesDashboardProps> = () => {
         console.log('Unpublish series:', item)
         try {
           // Fetch full series data first to get modificationTime
-          const fullSeries = await apiService.getSeriesFull(item.seriesId)
+          const fullSeries = await cachedApi.getSeriesFull(item.seriesId)
+
           if ('error' in fullSeries) {
             throw new Error('Failed to fetch series data')
           }
           await apiService.unpublishSeries(item.seriesId, { modificationTime: fullSeries.modificationTime })
+          
           // Reload data to reflect changes
           await loadSeriesData()
         } catch (error) {
@@ -420,11 +437,13 @@ export const SeriesDashboard: React.FC<SeriesDashboardProps> = () => {
         console.log('Archive series:', item)
         try {
           // Fetch full series data first to get modificationTime
-          const fullSeries = await apiService.getSeriesFull(item.seriesId)
+          const fullSeries = await cachedApi.getSeriesFull(item.seriesId)
+
           if ('error' in fullSeries) {
             throw new Error('Failed to fetch series data')
           }
           await apiService.archiveSeries(item.seriesId, { modificationTime: fullSeries.modificationTime })
+          
           // Reload data to reflect changes
           await loadSeriesData()
         } catch (error) {

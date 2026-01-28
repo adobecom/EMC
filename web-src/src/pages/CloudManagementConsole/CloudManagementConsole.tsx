@@ -18,7 +18,7 @@ import {
 import Add from '@spectrum-icons/workflow/Add'
 import Checkmark from '@spectrum-icons/workflow/Checkmark'
 import { IMS } from '../../types'
-import { apiService } from '../../services/api'
+import { apiService, cachedApi } from '../../services/api'
 import { LoadingSpinner } from '../../components/shared'
 import {
   COLORS,
@@ -161,10 +161,6 @@ export const CloudManagementConsole: React.FC<CloudManagementConsoleProps> = () 
   // DATA LOADING
   // ============================================================================
 
-  useEffect(() => {
-    loadInitialData()
-  }, [])
-
   const loadInitialData = async () => {
     setIsLoading(true)
     setError(null)
@@ -172,8 +168,8 @@ export const CloudManagementConsole: React.FC<CloudManagementConsoleProps> = () 
     try {
       // Load clouds and locales in parallel
       const [cloudsResult, localesResult] = await Promise.all([
-        apiService.getClouds(),
-        apiService.getLocales()
+        cachedApi.getClouds(),
+        cachedApi.getLocales()
       ])
 
       // Handle clouds
@@ -223,6 +219,25 @@ export const CloudManagementConsole: React.FC<CloudManagementConsoleProps> = () 
     }
   }
 
+  useEffect(() => {
+    let cancelled = false
+    
+    const load = async () => {
+      await loadInitialData()
+      // If component unmounted during load, don't do anything
+      if (cancelled) {
+        // Reset loading states since component is unmounted
+        return
+      }
+    }
+    
+    load()
+    
+    return () => {
+      cancelled = true
+    }
+  }, [])
+
   // ============================================================================
   // EVENT HANDLERS
   // ============================================================================
@@ -261,7 +276,8 @@ export const CloudManagementConsole: React.FC<CloudManagementConsoleProps> = () 
 
     try {
       // Get current cloud data for modificationTime
-      const cloudData = await apiService.getCloud(currentCloud)
+      const cloudData = await cachedApi.getCloud(currentCloud)
+      
       if ('error' in cloudData) {
         throw new Error(`Failed to get cloud data: ${cloudData.error}`)
       }
@@ -284,7 +300,9 @@ export const CloudManagementConsole: React.FC<CloudManagementConsoleProps> = () 
 
       // Show success toast
       setToastMessage('Changes saved successfully!')
-      setTimeout(() => setToastMessage(null), 3000)
+      setTimeout(() => {
+        setToastMessage(null)
+      }, 3000)
     } catch (err) {
       console.error('Error saving cloud:', err)
       setError(err instanceof Error ? err.message : 'Failed to save changes')

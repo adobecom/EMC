@@ -18,7 +18,7 @@ import UserGroup from '@spectrum-icons/workflow/UserGroup'
 import Globe from '@spectrum-icons/workflow/Globe'
 import Location from '@spectrum-icons/workflow/Location'
 import Data from '@spectrum-icons/workflow/Data'
-import { apiService } from '../../services/api'
+import { cachedApi } from '../../services/api'
 import { EventApiResponse, SeriesApiResponse } from '../../types/domain'
 import { COLORS, SPACING, TYPOGRAPHY } from '../../styles/designSystem'
 import { IMS } from '../../types'
@@ -308,8 +308,8 @@ export const OverviewDashboard: React.FC<OverviewDashboardProps> = () => {
     
     try {
       const [eventsData, seriesData] = await Promise.all([
-        apiService.getEventsList(),
-        apiService.getSeriesList()
+        cachedApi.getEventsList(),
+        cachedApi.getSeriesList()
       ])
       
       setEvents(eventsData)
@@ -324,7 +324,17 @@ export const OverviewDashboard: React.FC<OverviewDashboardProps> = () => {
   }
 
   useEffect(() => {
-    loadData()
+    let cancelled = false
+    
+    const load = async () => {
+      await loadData()
+    }
+    
+    load()
+    
+    return () => {
+      cancelled = true
+    }
   }, [])
 
   // Calculate statistics

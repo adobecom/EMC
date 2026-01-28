@@ -17,7 +17,7 @@ import { getEventTypeOptions, EventType } from '../../config/eventTypeConfig'
 import { TableColumn } from '../../components/shared/DataTable'
 import { StatusBadge, ResourceDashboardLayout } from '../../components/shared'
 import { EventDashboardItem } from '../../types/domain'
-import { apiService } from '../../services/api'
+import { apiService, cachedApi } from '../../services/api'
 import { thumbnailEnrichmentManager, venueEnrichmentManager, historyEnrichmentManager, EventThumbnail, EventVenueInfo, EventHistoryInfo } from '../../services/eventEnrichment'
 import { seriesEnrichmentManager, SeriesInfo } from '../../services/seriesEnrichment'
 import { IMS } from '../../types'
@@ -45,12 +45,14 @@ export const EventsDashboard: React.FC<EventsDashboardProps> = () => {
   const [itemToDelete, setItemToDelete] = useState<EventDashboardItem | null>(null)
   const [actionInProgress, setActionInProgress] = useState<string | null>(null)
 
-  const loadEventsData = async () => {
+  const loadEventsData = async (signal?: { cancelled: boolean }) => {
     setIsLoading(true)
     setError(null)
     
     try {
-      const data = await apiService.getEventsList()
+      const data = await cachedApi.getEventsList()
+      
+      if (signal?.cancelled) return
       
       // Transform API response to dashboard items
       const dashboardItems: EventDashboardItem[] = data.map(item => ({
@@ -83,17 +85,28 @@ export const EventsDashboard: React.FC<EventsDashboardProps> = () => {
         modifiedBy: undefined
       }))
       
+      if (signal?.cancelled) return
+      
       setEvents(dashboardItems)
     } catch (err) {
       console.error('Error loading events:', err)
-      setError('Failed to load events data')
+      if (!signal?.cancelled) {
+        setError('Failed to load events data')
+      }
     } finally {
-      setIsLoading(false)
+      if (!signal?.cancelled) {
+        setIsLoading(false)
+      }
     }
   }
 
   useEffect(() => {
-    loadEventsData()
+    const signal = { cancelled: false }
+    loadEventsData(signal)
+    
+    return () => {
+      signal.cancelled = true
+    }
   }, [])
 
   // Fetch thumbnails only for visible event IDs (triggered by pagination)
@@ -122,7 +135,6 @@ export const EventsDashboard: React.FC<EventsDashboardProps> = () => {
       } catch (error) {
         console.error('Error fetching thumbnails:', error)
       } finally {
-        // Remove loading state for all requested events
         setLoadingThumbnails(prev => {
           const updated = new Set(prev)
           visibleEventIds.forEach(id => updated.delete(id))
@@ -160,7 +172,6 @@ export const EventsDashboard: React.FC<EventsDashboardProps> = () => {
       } catch (error) {
         console.error('Error fetching venues:', error)
       } finally {
-        // Remove loading state for all requested events
         setLoadingVenues(prev => {
           const updated = new Set(prev)
           visibleEventIds.forEach(id => updated.delete(id))
@@ -207,7 +218,6 @@ export const EventsDashboard: React.FC<EventsDashboardProps> = () => {
       } catch (error) {
         console.error('Error fetching series:', error)
       } finally {
-        // Remove loading state for all requested series
         setLoadingSeries(prev => {
           const updated = new Set(prev)
           seriesIds.forEach(id => updated.delete(id))
@@ -245,7 +255,6 @@ export const EventsDashboard: React.FC<EventsDashboardProps> = () => {
       } catch (error) {
         console.error('Error fetching history:', error)
       } finally {
-        // Remove loading state for all requested events
         setLoadingHistory(prev => {
           const updated = new Set(prev)
           visibleEventIds.forEach(id => updated.delete(id))
@@ -311,7 +320,7 @@ export const EventsDashboard: React.FC<EventsDashboardProps> = () => {
         
         try {
           // Fetch full event data (needed for complete payload with all localizations)
-          const eventResponse = await apiService.getEventFull(item.eventId)
+          const eventResponse = await cachedApi.getEventFull(item.eventId)
           
           if ('error' in eventResponse) {
             toast.error(`Failed to load event data: ${eventResponse.error}`)
@@ -403,7 +412,7 @@ export const EventsDashboard: React.FC<EventsDashboardProps> = () => {
         
         try {
           // Fetch full event data to get all fields for cloning
-          const eventResponse = await apiService.getEventFull(item.eventId)
+          const eventResponse = await cachedApi.getEventFull(item.eventId)
           
           if ('error' in eventResponse) {
             toast.error('Failed to load event data for cloning')
