@@ -2,11 +2,12 @@
   "version": "mjdyprbm",
   "releaseTag": "rules-2025.12.20.1766214843475",
   "generated": "2025-12-20T07:14:03.538Z",
-  "lastUpdated": "2026-01-28T19:53:54.817Z",
+  "lastUpdated": "2026-01-28T20:03:04.029Z",
   "lastUpdateReleaseTag": "rules-2025.12.20.1766214843475",
   "installedDomains": [
     "security-global",
-    "security-lang"
+    "security-lang",
+    "react-spectrum"
   ],
   "files": {
     "security-global/security-global-api.mdc": {
@@ -80,11 +81,27 @@
     "security-lang/security-lang-node.mdc": {
       "sha256": "9019cc2470bbfc6d01c5c34aff42498a91b59ca9766a34a79de1ebe93cc6c587",
       "domain": "security-lang"
+    },
+    "react-spectrum/react-spectrum-s2.mdc": {
+      "sha256": "b47990ce4281dd0e0df7f7bbbb12eb8a4e23da114a746fde932cb593b2a60efb",
+      "domain": "react-spectrum"
+    },
+    "react-spectrum/react-spectrum-style-macro-s2.mdc": {
+      "sha256": "15b927e58575501fe475e4a3bffb260ba0078b692c31e0f3b954cf81b190b9da",
+      "domain": "react-spectrum"
+    },
+    "react-spectrum/react-spectrum-v3.mdc": {
+      "sha256": "51297bc74499a9ea33b88338346804ceb140f80099c6ce6182cb2db15426fcaa",
+      "domain": "react-spectrum"
+    },
+    "react-spectrum/react-spectrum-v3-to-s2-migration.mdc": {
+      "sha256": "a352f7eab116d5ec52d454261646238f845903859beaa955f0b8ad3d37362a69",
+      "domain": "react-spectrum"
     }
   },
   "stats": {
-    "totalFiles": 18,
+    "totalFiles": 22,
     "missingFiles": 0,
-    "domains": 2
+    "domains": 3
   }
 }
