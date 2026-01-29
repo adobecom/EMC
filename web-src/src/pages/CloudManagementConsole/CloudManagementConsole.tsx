@@ -2,7 +2,7 @@
 * <license header>
 */
 
-import React, { useState, useEffect, useMemo, useCallback } from 'react'
+import React, { useEffect, useMemo, useCallback } from 'react'
 import {
   Flex,
   View,
@@ -32,6 +32,7 @@ import {
   createActionBarPadding,
   ACTION_BAR_BUTTON_STYLES,
 } from '../../styles/designSystem'
+import { useSafeState } from '../../hooks'
 
 // ============================================================================
 // TYPES
@@ -131,21 +132,21 @@ const styles = {
 export const CloudManagementConsole: React.FC<CloudManagementConsoleProps> = () => {
 
   // Data states
-  const [clouds, setClouds] = useState<CloudData[]>([])
-  const [currentCloud, setCurrentCloud] = useState<string>('')
-  const [allLocales, setAllLocales] = useState<Record<string, string>>({})
+  const [clouds, setClouds] = useSafeState<CloudData[]>([])
+  const [currentCloud, setCurrentCloud] = useSafeState<string>('')
+  const [allLocales, setAllLocales] = useSafeState<Record<string, string>>({})
   
   // Pre-computed saved locales for all clouds
-  const [savedLocales, setSavedLocales] = useState<Record<string, string[]>>({})
+  const [savedLocales, setSavedLocales] = useSafeState<Record<string, string[]>>({})
   
   // Current selection state
-  const [selectedLocales, setSelectedLocales] = useState<Set<string>>(new Set())
+  const [selectedLocales, setSelectedLocales] = useSafeState<Set<string>>(new Set())
   
   // UI states
-  const [isLoading, setIsLoading] = useState(true)
-  const [isSaving, setIsSaving] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-  const [toastMessage, setToastMessage] = useState<string | null>(null)
+  const [isLoading, setIsLoading] = useSafeState(true)
+  const [isSaving, setIsSaving] = useSafeState(false)
+  const [error, setError] = useSafeState<string | null>(null)
+  const [toastMessage, setToastMessage] = useSafeState<string | null>(null)
 
   // Check if there are pending changes
   const pendingChanges = useMemo(() => {
@@ -220,22 +221,7 @@ export const CloudManagementConsole: React.FC<CloudManagementConsoleProps> = () 
   }
 
   useEffect(() => {
-    let cancelled = false
-    
-    const load = async () => {
-      await loadInitialData()
-      // If component unmounted during load, don't do anything
-      if (cancelled) {
-        // Reset loading states since component is unmounted
-        return
-      }
-    }
-    
-    load()
-    
-    return () => {
-      cancelled = true
-    }
+    loadInitialData()
   }, [])
 
   // ============================================================================

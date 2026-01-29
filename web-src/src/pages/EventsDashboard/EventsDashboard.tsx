@@ -2,7 +2,7 @@
 * <license header>
 */
 
-import React, { useEffect, useState, useMemo, useCallback } from 'react'
+import React, { useEffect, useMemo, useCallback } from 'react'
 import { Text, ActionButton, MenuTrigger, Menu, Item, Flex, Button, DialogTrigger, AlertDialog, ProgressCircle, View } from '@adobe/react-spectrum'
 import MoreSmallList from '@spectrum-icons/workflow/MoreSmallList'
 import PublishRemove from '@spectrum-icons/workflow/PublishRemove'
@@ -23,6 +23,7 @@ import { seriesEnrichmentManager, SeriesInfo } from '../../services/seriesEnrich
 import { IMS } from '../../types'
 import { useToast } from '../../contexts'
 import { filterEventData } from '../../utils/dataFilters'
+import { useSafeState } from '../../hooks'
 
 interface EventsDashboardProps {
   ims: IMS
@@ -30,29 +31,27 @@ interface EventsDashboardProps {
 
 export const EventsDashboard: React.FC<EventsDashboardProps> = () => {
   const toast = useToast()
-  const [events, setEvents] = useState<EventDashboardItem[]>([])
-  const [isLoading, setIsLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
-  const [thumbnails, setThumbnails] = useState<Map<string, EventThumbnail>>(new Map())
-  const [venues, setVenues] = useState<Map<string, EventVenueInfo>>(new Map())
-  const [series, setSeries] = useState<Map<string, SeriesInfo>>(new Map())
-  const [history, setHistory] = useState<Map<string, EventHistoryInfo>>(new Map())
-  const [visibleEventIds, setVisibleEventIds] = useState<string[]>([])
-  const [loadingThumbnails, setLoadingThumbnails] = useState<Set<string>>(new Set())
-  const [loadingVenues, setLoadingVenues] = useState<Set<string>>(new Set())
-  const [loadingSeries, setLoadingSeries] = useState<Set<string>>(new Set())
-  const [loadingHistory, setLoadingHistory] = useState<Set<string>>(new Set())
-  const [itemToDelete, setItemToDelete] = useState<EventDashboardItem | null>(null)
-  const [actionInProgress, setActionInProgress] = useState<string | null>(null)
+  const [events, setEvents] = useSafeState<EventDashboardItem[]>([])
+  const [isLoading, setIsLoading] = useSafeState(true)
+  const [error, setError] = useSafeState<string | null>(null)
+  const [thumbnails, setThumbnails] = useSafeState<Map<string, EventThumbnail>>(new Map())
+  const [venues, setVenues] = useSafeState<Map<string, EventVenueInfo>>(new Map())
+  const [series, setSeries] = useSafeState<Map<string, SeriesInfo>>(new Map())
+  const [history, setHistory] = useSafeState<Map<string, EventHistoryInfo>>(new Map())
+  const [visibleEventIds, setVisibleEventIds] = useSafeState<string[]>([])
+  const [loadingThumbnails, setLoadingThumbnails] = useSafeState<Set<string>>(new Set())
+  const [loadingVenues, setLoadingVenues] = useSafeState<Set<string>>(new Set())
+  const [loadingSeries, setLoadingSeries] = useSafeState<Set<string>>(new Set())
+  const [loadingHistory, setLoadingHistory] = useSafeState<Set<string>>(new Set())
+  const [itemToDelete, setItemToDelete] = useSafeState<EventDashboardItem | null>(null)
+  const [actionInProgress, setActionInProgress] = useSafeState<string | null>(null)
 
-  const loadEventsData = async (signal?: { cancelled: boolean }) => {
+  const loadEventsData = async () => {
     setIsLoading(true)
     setError(null)
     
     try {
       const data = await cachedApi.getEventsList()
-      
-      if (signal?.cancelled) return
       
       // Transform API response to dashboard items
       const dashboardItems: EventDashboardItem[] = data.map(item => ({
@@ -85,28 +84,17 @@ export const EventsDashboard: React.FC<EventsDashboardProps> = () => {
         modifiedBy: undefined
       }))
       
-      if (signal?.cancelled) return
-      
       setEvents(dashboardItems)
     } catch (err) {
       console.error('Error loading events:', err)
-      if (!signal?.cancelled) {
-        setError('Failed to load events data')
-      }
+      setError('Failed to load events data')
     } finally {
-      if (!signal?.cancelled) {
-        setIsLoading(false)
-      }
+      setIsLoading(false)
     }
   }
 
   useEffect(() => {
-    const signal = { cancelled: false }
-    loadEventsData(signal)
-    
-    return () => {
-      signal.cancelled = true
-    }
+    loadEventsData()
   }, [])
 
   // Fetch thumbnails only for visible event IDs (triggered by pagination)

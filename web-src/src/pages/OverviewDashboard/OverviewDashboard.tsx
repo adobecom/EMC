@@ -2,7 +2,7 @@
 * <license header>
 */
 
-import React, { useEffect, useState, useMemo } from 'react'
+import React, { useEffect, useMemo } from 'react'
 import {
   View,
   Flex,
@@ -22,6 +22,7 @@ import { cachedApi } from '../../services/api'
 import { EventApiResponse, SeriesApiResponse } from '../../types/domain'
 import { COLORS, SPACING, TYPOGRAPHY } from '../../styles/designSystem'
 import { IMS } from '../../types'
+import { useSafeState } from '../../hooks'
 
 interface OverviewDashboardProps {
   ims: IMS
@@ -296,11 +297,11 @@ const TemplateBreakdown: React.FC<TemplateBreakdownProps> = ({ templateCounts, i
  * Displays comprehensive statistics and metrics for events and series
  */
 export const OverviewDashboard: React.FC<OverviewDashboardProps> = () => {
-  const [events, setEvents] = useState<EventApiResponse[]>([])
-  const [series, setSeries] = useState<SeriesApiResponse[]>([])
-  const [isLoading, setIsLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
-  const [lastUpdated, setLastUpdated] = useState<Date | null>(null)
+  const [events, setEvents] = useSafeState<EventApiResponse[]>([])
+  const [series, setSeries] = useSafeState<SeriesApiResponse[]>([])
+  const [isLoading, setIsLoading] = useSafeState(true)
+  const [error, setError] = useSafeState<string | null>(null)
+  const [lastUpdated, setLastUpdated] = useSafeState<Date | null>(null)
 
   const loadData = async () => {
     setIsLoading(true)
@@ -324,17 +325,7 @@ export const OverviewDashboard: React.FC<OverviewDashboardProps> = () => {
   }
 
   useEffect(() => {
-    let cancelled = false
-    
-    const load = async () => {
-      await loadData()
-    }
-    
-    load()
-    
-    return () => {
-      cancelled = true
-    }
+    loadData()
   }, [])
 
   // Calculate statistics

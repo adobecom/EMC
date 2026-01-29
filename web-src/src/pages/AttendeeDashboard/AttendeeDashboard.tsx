@@ -2,7 +2,7 @@
 * <license header>
 */
 
-import React, { useState, useEffect, useCallback, useMemo } from 'react'
+import React, { useEffect, useCallback, useMemo } from 'react'
 import {
   View,
   Heading,
@@ -18,6 +18,7 @@ import { apiService, cachedApi } from '../../services/api'
 import { useRsvpConfig } from '../../hooks/useRsvpConfig'
 import { IMS } from '../../types'
 import { LoadingSpinner } from '../../components/shared'
+import { useSafeState } from '../../hooks'
 import {
   EventSelectorComponent,
   EventInfoComponent,
@@ -49,17 +50,17 @@ export const AttendeeDashboard: React.FC<AttendeeDashboardProps> = ({ ims: _ims 
   const initialEventId = paramEventId || searchParams.get('eventId') || ''
 
   // State
-  const [events, setEvents] = useState<EventApiResponse[]>([])
-  const [selectedEventId, setSelectedEventId] = useState<string>(initialEventId)
-  const [attendees, setAttendees] = useState<Attendee[]>([])
-  const [filters, setFilters] = useState<AttendeeFilters>({})
-  const [searchQuery, setSearchQuery] = useState('')
-  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
-  const [itemToDelete, setItemToDelete] = useState<Attendee | null>(null)
+  const [events, setEvents] = useSafeState<EventApiResponse[]>([])
+  const [selectedEventId, setSelectedEventId] = useSafeState<string>(initialEventId)
+  const [attendees, setAttendees] = useSafeState<Attendee[]>([])
+  const [filters, setFilters] = useSafeState<AttendeeFilters>({})
+  const [searchQuery, setSearchQuery] = useSafeState('')
+  const [selectedIds, setSelectedIds] = useSafeState<Set<string>>(new Set())
+  const [itemToDelete, setItemToDelete] = useSafeState<Attendee | null>(null)
   
-  const [isLoadingEvents, setIsLoadingEvents] = useState(true)
-  const [isLoadingAttendees, setIsLoadingAttendees] = useState(false)
-  const [, setError] = useState<string | null>(null)
+  const [isLoadingEvents, setIsLoadingEvents] = useSafeState(true)
+  const [isLoadingAttendees, setIsLoadingAttendees] = useSafeState(false)
+  const [, setError] = useSafeState<string | null>(null)
 
   // Get selected event
   const selectedEvent = useMemo(() => 
@@ -72,14 +73,10 @@ export const AttendeeDashboard: React.FC<AttendeeDashboardProps> = ({ ims: _ims 
 
   // Load events on mount
   useEffect(() => {
-    let cancelled = false
-
     const loadEvents = async () => {
       setIsLoadingEvents(true)
       try {
         const eventsData = await cachedApi.getEventsList()
-        
-        if (cancelled) return
         
         if (Array.isArray(eventsData)) {
           setEvents(eventsData)
@@ -91,44 +88,28 @@ export const AttendeeDashboard: React.FC<AttendeeDashboardProps> = ({ ims: _ims 
         }
       } catch (err) {
         console.error('Failed to load events:', err)
-        if (!cancelled) {
-          setError('Failed to load events')
-        }
+        setError('Failed to load events')
       } finally {
-        if (!cancelled) {
-          setIsLoadingEvents(false)
-        }
+        setIsLoadingEvents(false)
       }
     }
 
     loadEvents()
-    
-    return () => {
-      cancelled = true
-    }
   }, [])
 
   // Load attendees when event changes
   useEffect(() => {
-    let cancelled = false
-
     if (!selectedEventId) {
-      if (!cancelled) {
-        setAttendees([])
-      }
+      setAttendees([])
       return
     }
 
     const loadAttendees = async () => {
-      if (!cancelled) {
-        setIsLoadingAttendees(true)
-        setError(null)
-      }
+      setIsLoadingAttendees(true)
+      setError(null)
       
       try {
         const result = await cachedApi.getAllEventAttendees(selectedEventId)
-        
-        if (cancelled) return
         
         if ('error' in result) {
           console.error('Failed to load attendees:', result)
@@ -148,22 +129,14 @@ export const AttendeeDashboard: React.FC<AttendeeDashboardProps> = ({ ims: _ims 
         
       } catch (err) {
         console.error('Failed to load attendees:', err)
-        if (!cancelled) {
-          setAttendees([])
-          setError('Failed to load attendees')
-        }
+        setAttendees([])
+        setError('Failed to load attendees')
       } finally {
-        if (!cancelled) {
-          setIsLoadingAttendees(false)
-        }
+        setIsLoadingAttendees(false)
       }
     }
 
     loadAttendees()
-    
-    return () => {
-      cancelled = true
-    }
   }, [selectedEventId])
 
   // Filter and search attendees

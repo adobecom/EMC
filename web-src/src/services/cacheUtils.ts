@@ -21,6 +21,20 @@ interface CacheEntry<T> {
 }
 
 /**
+ * WeakMap to assign unique IDs to functions
+ * This prevents key collisions and works reliably with minification
+ */
+const funcIdMap = new WeakMap<Function, number>()
+let nextFuncId = 0
+
+const getFunctionId = (fn: Function): number => {
+  if (!funcIdMap.has(fn)) {
+    funcIdMap.set(fn, nextFuncId++)
+  }
+  return funcIdMap.get(fn)!
+}
+
+/**
  * Stable stringify - sorts object keys for consistent serialization
  * Prevents cache misses due to property ordering differences
  */
@@ -95,14 +109,13 @@ export const apiCache = (() => {
   }
 
   /**
-   * Generate cache key from function signature and arguments
-   * Uses stable stringify for consistent key generation
+   * Generate cache key from function ID and arguments
+   * Uses WeakMap-based function IDs to prevent collisions
    */
   const generateKey = (apiFunction: Function, ...args: any[]): string => {
-    // Use function code signature instead of name (survives minification)
-    const funcSignature = apiFunction.toString().slice(0, 100).replace(/\s+/g, '')
+    const funcId = getFunctionId(apiFunction)
     const argsKey = stableStringify(args)
-    return `${funcSignature}_${argsKey}`
+    return `${funcId}_${argsKey}`
   }
 
   /**
