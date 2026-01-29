@@ -10,7 +10,7 @@ import {
   Flex,
   Text
 } from '@adobe/react-spectrum'
-import { apiService } from '../../services/api'
+import { cachedApi } from '../../services/api'
 import { configService } from '../../services/configService'
 import { LoadingSpinner, HeadingWithTooltip } from '../../components/shared'
 import { SeriesApiResponse, SeriesTemplate } from '../../types/domain'
@@ -86,7 +86,7 @@ export const EventFormatComponent: React.FC = () => {
       try {
         const [cloudsResponse, seriesResponse, templatesConfig] = await Promise.all([
           fetchClouds(),
-          apiService.getSeriesList(),
+          cachedApi.getSeriesList(),
           configService.getSeriesTemplates()
         ])
 

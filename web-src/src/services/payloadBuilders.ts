@@ -7,7 +7,7 @@
  * For pure data filters and sync utilities, see utils/dataFilters.ts
  */
 
-import { apiService } from './api'
+import { cachedApi } from './api'
 import {
   SPEAKER_DATA_FILTER,
   SPONSOR_DATA_FILTER,
@@ -48,7 +48,7 @@ export async function getSpeakerPayload(
   // Fetch existing speaker data to preserve other locale's localizations
   let existingSpeakerPayload: Record<string, any> = {}
   if (speakerData.speakerId) {
-    const result = await apiService.getSpeaker(seriesId, speakerData.speakerId)
+    const result = await cachedApi.getSpeaker(seriesId, speakerData.speakerId)
     if (!('error' in result)) {
       existingSpeakerPayload = result
     }
@@ -112,7 +112,7 @@ export async function getSponsorPayload(
   // Fetch existing sponsor data to preserve other locale's localizations
   let existingSponsorPayload: Record<string, any> = {}
   if (sponsorData.sponsorId) {
-    const result = await apiService.getSponsor(seriesId, sponsorData.sponsorId)
+    const result = await cachedApi.getSponsor(seriesId, sponsorData.sponsorId)
     if (!('error' in result)) {
       existingSponsorPayload = result
     }

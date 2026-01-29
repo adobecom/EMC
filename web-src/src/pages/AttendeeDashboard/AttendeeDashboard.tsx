@@ -2,7 +2,7 @@
 * <license header>
 */
 
-import React, { useState, useEffect, useCallback, useMemo } from 'react'
+import React, { useEffect, useCallback, useMemo } from 'react'
 import {
   View,
   Heading,
@@ -14,10 +14,11 @@ import { useParams, useNavigate, useSearchParams } from 'react-router-dom'
 import type { EventApiResponse } from '../../types/domain'
 import type { Attendee, AttendeeFilters, AttendeeStats } from '../../types/attendee'
 import { calculateAttendeeStats, getAttendeeName } from '../../types/attendee'
-import { apiService } from '../../services/api'
+import { apiService, cachedApi } from '../../services/api'
 import { useRsvpConfig } from '../../hooks/useRsvpConfig'
 import { IMS } from '../../types'
 import { LoadingSpinner } from '../../components/shared'
+import { useSafeState } from '../../hooks'
 import {
   EventSelectorComponent,
   EventInfoComponent,
@@ -49,17 +50,17 @@ export const AttendeeDashboard: React.FC<AttendeeDashboardProps> = ({ ims: _ims 
   const initialEventId = paramEventId || searchParams.get('eventId') || ''
 
   // State
-  const [events, setEvents] = useState<EventApiResponse[]>([])
-  const [selectedEventId, setSelectedEventId] = useState<string>(initialEventId)
-  const [attendees, setAttendees] = useState<Attendee[]>([])
-  const [filters, setFilters] = useState<AttendeeFilters>({})
-  const [searchQuery, setSearchQuery] = useState('')
-  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
-  const [itemToDelete, setItemToDelete] = useState<Attendee | null>(null)
+  const [events, setEvents] = useSafeState<EventApiResponse[]>([])
+  const [selectedEventId, setSelectedEventId] = useSafeState<string>(initialEventId)
+  const [attendees, setAttendees] = useSafeState<Attendee[]>([])
+  const [filters, setFilters] = useSafeState<AttendeeFilters>({})
+  const [searchQuery, setSearchQuery] = useSafeState('')
+  const [selectedIds, setSelectedIds] = useSafeState<Set<string>>(new Set())
+  const [itemToDelete, setItemToDelete] = useSafeState<Attendee | null>(null)
   
-  const [isLoadingEvents, setIsLoadingEvents] = useState(true)
-  const [isLoadingAttendees, setIsLoadingAttendees] = useState(false)
-  const [, setError] = useState<string | null>(null)
+  const [isLoadingEvents, setIsLoadingEvents] = useSafeState(true)
+  const [isLoadingAttendees, setIsLoadingAttendees] = useSafeState(false)
+  const [, setError] = useSafeState<string | null>(null)
 
   // Get selected event
   const selectedEvent = useMemo(() => 
@@ -75,7 +76,7 @@ export const AttendeeDashboard: React.FC<AttendeeDashboardProps> = ({ ims: _ims 
     const loadEvents = async () => {
       setIsLoadingEvents(true)
       try {
-        const eventsData = await apiService.getEventsList()
+        const eventsData = await cachedApi.getEventsList()
         
         if (Array.isArray(eventsData)) {
           setEvents(eventsData)
@@ -108,8 +109,7 @@ export const AttendeeDashboard: React.FC<AttendeeDashboardProps> = ({ ims: _ims 
       setError(null)
       
       try {
-        // Use getAllEventAttendees for paginated fetching
-        const result = await apiService.getAllEventAttendees(selectedEventId)
+        const result = await cachedApi.getAllEventAttendees(selectedEventId)
         
         if ('error' in result) {
           console.error('Failed to load attendees:', result)
@@ -118,18 +118,13 @@ export const AttendeeDashboard: React.FC<AttendeeDashboardProps> = ({ ims: _ims 
           return
         }
         
-        // Add eventId to each attendee for reference
         const attendeesWithEventId = result.map(a => ({
           ...a,
           eventId: selectedEventId
         }))
         
         setAttendees(attendeesWithEventId)
-        
-        // Clear selection when event changes
         setSelectedIds(new Set())
-        
-        // Clear filters when event changes
         setFilters({})
         
       } catch (err) {
@@ -202,9 +197,10 @@ export const AttendeeDashboard: React.FC<AttendeeDashboardProps> = ({ ims: _ims 
       setItemToDelete(null)
       
       // Refresh attendees
-      const result = await apiService.getAllEventAttendees(selectedEventId)
+      const result = await cachedApi.getAllEventAttendees(selectedEventId)
       if (!('error' in result)) {
-        setAttendees(result.map(a => ({ ...a, eventId: selectedEventId })))
+        const attendeesWithEventId = result.map(a => ({ ...a, eventId: selectedEventId }))
+        setAttendees(attendeesWithEventId)
       }
     } catch (err) {
       console.error('Failed to delete attendee:', err)
@@ -222,11 +218,6 @@ export const AttendeeDashboard: React.FC<AttendeeDashboardProps> = ({ ims: _ims 
   const handleBackClick = useCallback(() => {
     navigate('/events')
   }, [navigate])
-
-  // Clear selection
-  const handleClearSelection = useCallback(() => {
-    setSelectedIds(new Set())
-  }, [])
 
   // Loading state
   if (isLoadingEvents) {
