@@ -2,7 +2,14 @@
 
 ## Overview
 
-The EMC application uses a **two-path bootstrap architecture** that ensures the dev token system only activates on localhost and never interferes with real IMS sessions in the Adobe Experience Cloud Shell.
+The EMC application uses a **two-path bootstrap architecture** that ensures the dev token system only activates on localhost and approved dev instances, and never interferes with real IMS sessions in the Adobe Experience Cloud Shell.
+
+**Approved development environments:**
+- `localhost` / `127.0.0.1`
+- `14257-emc-dev.adobeio-static.net`
+- `14257-emc-qiyundai.adobeio-static.net`
+- `14257-emc-shameeb.adobeio-static.net`
+- `14257-emc-rkhan.adobeio-static.net`
 
 ## Bootstrap Architecture
 
@@ -97,21 +104,29 @@ function bootstrapRaw(): void {
 
 ## Security Guarantees
 
-### 1. Localhost-Only UI
+### 1. Development Environment UI
 
-The dev token button visibility is controlled by strict hostname checking:
+The dev token button visibility is controlled by hostname checking against an allowlist:
 
 ```typescript
-// web-src/src/hooks/useDevToken.ts
-// web-src/src/components/DevTokenButton.tsx
 // web-src/src/config/env.ts
 
-const isDevMode = 
-  window.location.hostname === 'localhost' || 
-  window.location.hostname === '127.0.0.1'
+const DEV_TOKEN_ALLOWED_HOSTNAMES = [
+  'localhost',
+  '127.0.0.1',
+  // Main dev instance
+  '14257-emc-dev.adobeio-static.net',
+  // Developer namespace workspaces
+  '14257-emc-qiyundai.adobeio-static.net',
+  '14257-emc-shameeb.adobeio-static.net',
+  '14257-emc-rkhan.adobeio-static.net',
+]
+
+// Used by DevTokenButton and useDevToken hook
+env.isDevelopment() // true if hostname is in the allowlist
 ```
 
-**Result**: Dev token UI **never shows** on deployed environments, even with URL parameters.
+**Result**: Dev token UI only shows on localhost and approved dev instances, **never on staging or production**.
 
 ### 2. Separate Bootstrap Paths
 
@@ -304,7 +319,7 @@ aio app deploy
 ## Summary
 
 ✅ **Dev token system is secure and isolated:**
-- Only activates on localhost
+- Only activates on localhost and approved dev instances
 - Never interferes with real IMS sessions
 - Completely separate bootstrap paths
 - No URL parameter bypasses
