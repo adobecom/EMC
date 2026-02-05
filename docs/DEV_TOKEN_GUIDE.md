@@ -263,7 +263,7 @@ function MyComponent() {
 
 ⚠️ **Important Security Notes:**
 
-1. **Localhost Only**: Dev token UI **only appears on localhost** (hostname is `localhost` or `127.0.0.1`)
+1. **Development Environments Only**: Dev token UI **only appears on localhost and approved dev instances** (see `DEV_TOKEN_ALLOWED_HOSTNAMES` in `env.ts`)
 2. **Never Interferes with Real IMS**: When running in Adobe Experience Cloud Shell, the dev token system is completely bypassed - the real IMS token from the shell is always used
 3. **Two Separate Bootstrap Paths**:
    - **Experience Cloud Shell**: Uses `bootstrapInExcShell()` with real IMS token - dev token never checked
@@ -298,9 +298,14 @@ function MyComponent() {
 
 ### Dialog Not Showing
 
-The dialog only appears when running on localhost. Check:
-- You're running on `localhost` or `127.0.0.1`
+The dialog only appears when running on allowed development environments. Check:
+- You're running on `localhost`, `127.0.0.1`, or an approved dev instance
 - The `DevTokenButton` is rendered in `TopNav`
+- Approved dev instances include:
+  - `14257-emc-dev.adobeio-static.net`
+  - `14257-emc-qiyundai.adobeio-static.net`
+  - `14257-emc-shameeb.adobeio-static.net`
+  - `14257-emc-rkhan.adobeio-static.net`
 
 **Note**: The dev token button will NEVER show when running in Adobe Experience Cloud Shell, even with URL parameters. This is by design to prevent confusion with the real IMS session.
 

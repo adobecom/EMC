@@ -5,6 +5,7 @@
 
 import { useState, useEffect } from 'react'
 import { tokenStorage } from '../services/tokenStorage'
+import { env } from '../config/env'
 
 interface UseDevTokenReturn {
   token: string | null
@@ -23,10 +24,9 @@ export function useDevToken(): UseDevTokenReturn {
   const [token, setToken] = useState<string | null>(null)
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [isDevMode] = useState(() => {
-    // Check if running in development mode (localhost only)
+    // Check if running in development mode (localhost or dev instances)
     // Note: This ensures dev token UI never shows in Experience Cloud Shell
-    return window.location.hostname === 'localhost' || 
-           window.location.hostname === '127.0.0.1'
+    return env.isDevelopment()
   })
 
   useEffect(() => {

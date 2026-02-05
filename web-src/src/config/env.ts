@@ -9,6 +9,21 @@
 */
 
 /**
+ * Hostnames where dev token functionality is allowed
+ * Includes localhost and all dev/developer namespace workspaces
+ */
+const DEV_TOKEN_ALLOWED_HOSTNAMES = [
+  'localhost',
+  '127.0.0.1',
+  // Main dev instance
+  '14257-emc-dev.adobeio-static.net',
+  // Developer namespace workspaces
+  '14257-emc-qiyundai.adobeio-static.net',
+  '14257-emc-shameeb.adobeio-static.net',
+  '14257-emc-rkhan.adobeio-static.net',
+]
+
+/**
  * Environment configuration
  * Parcel automatically injects process.env variables at build time
  */
@@ -29,8 +44,15 @@ export const env = {
   // Environment mode
   NODE_ENV: process.env.NODE_ENV || 'development',
   
-  // Check if in development mode (localhost only)
+  // Check if in development mode (localhost or dev instances)
+  // This controls whether dev token UI is shown
   isDevelopment: () => {
+    const hostname = window.location.hostname
+    return DEV_TOKEN_ALLOWED_HOSTNAMES.includes(hostname)
+  },
+  
+  // Check if running on localhost specifically
+  isLocalhost: () => {
     return window.location.hostname === 'localhost' || 
            window.location.hostname === '127.0.0.1'
   },
