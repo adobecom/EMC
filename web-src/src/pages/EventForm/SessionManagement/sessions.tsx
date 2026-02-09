@@ -5,17 +5,17 @@ import Chip from '../../../components/shared/Chip'
 import { COLORS } from '../../../styles/designSystem'
 import { EditIcon } from '../../../components/icons/edit'
 import { DeleteIcon } from '../../../components/icons/delete'
-import { AddIcon } from '../../../components/icons/add'
 import { formatTime, formatDate } from '../../../utils/shared'
 import { SessionDetailComponent } from './sessionDetail'
 
 // Define props interface for SessionItem
 interface SessionItemProps {
   session: Session
+  onDelete: (sessionId: string) => void
 }
 
 // Component receives props object
-const SessionItem: React.FC<SessionItemProps> = ({ session }) => {
+const SessionItem: React.FC<SessionItemProps> = ({ session, onDelete }) => {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const startTime = formatTime(session.startDateTime)
   const endTime = formatTime(session.endDateTime)
@@ -30,6 +30,7 @@ const SessionItem: React.FC<SessionItemProps> = ({ session }) => {
   }
 
   const handleConfirmDelete = () => {
+    onDelete(session.id)
     setShowDeleteConfirm(false)
   }
 
