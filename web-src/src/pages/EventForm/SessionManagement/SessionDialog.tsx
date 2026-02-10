@@ -18,8 +18,6 @@ import {
   Item,
   Text,
   Checkbox,
-  ComboBox,
-  ProgressCircle,
 } from "@adobe/react-spectrum";
 import {
   parseDateTime,
@@ -31,9 +29,7 @@ import { Session } from "../../../types/sessions";
 import { EventTag } from "../../../types/domain";
 import { apiService } from "../../../services/api";
 import { useEventFormContext } from "../../../contexts";
-import { TagSelector } from "../../../components/shared";
-import { AddIcon } from "../../../components/icons/add";
-import { AddSpeakerDialog } from "./AddSpeakerDialog";
+import { TagSelector, SpeakerSelector } from "../../../components/shared";
 
 export interface SessionFormData {
   name: string;
@@ -128,11 +124,14 @@ export const SessionDialog: React.FC<SessionDialogProps> = ({
   onSave,
 }) => {
   const isEditMode = session !== null;
+  const { seriesId: contextSeriesId, formData } = useEventFormContext();
+  // Use context seriesId as source of truth, fall back to formData.seriesId
+  // (RESET_FORM_DATA from storage only updates formData, not state.seriesId)
+  const seriesId = contextSeriesId || formData.seriesId || "";
   const [loadingDetails, setLoadingDetails] = useState(
     isEditMode && !!session?.id,
   );
   const [detailError, setDetailError] = useState<string | null>(null);
-
   const [name, setName] = useState(session?.name ?? "");
   const [description, setDescription] = useState(session?.description ?? "");
   const [date, setDate] = useState<CalendarDate | null>(() => {
@@ -159,14 +158,6 @@ export const SessionDialog: React.FC<SessionDialogProps> = ({
     creationTime?: number;
     modificationTime?: number;
   }>({});
-  const [sessionSpeakers, setSessionSpeakers] = useState<
-    Array<{ speakerId: string; speakerType?: string; ordinal?: number }>
-  >([]);
-  const [loadingSpeakers, setLoadingSpeakers] = useState(false);
-  const [selectedSpeakerKey, setSelectedSpeakerKey] = useState<string | null>(
-    null,
-  );
-  const [addSpeakerDialogOpen, setAddSpeakerDialogOpen] = useState(false);
 
   useEffect(() => {
     if (!session?.id) {
@@ -210,29 +201,6 @@ export const SessionDialog: React.FC<SessionDialogProps> = ({
   }, [session?.id]);
 
   useEffect(() => {
-    if (!session?.id || !isEditMode) {
-      setSessionSpeakers([]);
-      setSelectedSpeakerKey(null);
-      setAddSpeakerDialogOpen(false);
-      return;
-    }
-    let cancelled = false;
-    setLoadingSpeakers(true);
-    apiService.getSessionSpeakers(session.id).then((res) => {
-      if (cancelled) return;
-      setLoadingSpeakers(false);
-      if (res.success && res.data?.speakers) {
-        setSessionSpeakers(res.data.speakers);
-      } else {
-        setSessionSpeakers([]);
-      }
-    });
-    return () => {
-      cancelled = true;
-    };
-  }, [session?.id, isEditMode]);
-
-  useEffect(() => {
     if (!session) {
       setName("");
       setDescription("");
@@ -241,9 +209,6 @@ export const SessionDialog: React.FC<SessionDialogProps> = ({
       setStartTime(null);
       setEndTime(null);
       setSessionTimestamps({});
-      setSessionSpeakers([]);
-      setSelectedSpeakerKey(null);
-      setAddSpeakerDialogOpen(false);
     }
   }, [session]);
 
@@ -379,66 +344,10 @@ export const SessionDialog: React.FC<SessionDialogProps> = ({
               </Flex>
             </Flex>
 
-            <Flex direction="column" gap="size-100">
-              <Flex alignItems="center" gap="size-150">
-                <Text>Speakers</Text>
-                {loadingSpeakers && (
-                  <ProgressCircle
-                    size="S"
-                    isIndeterminate
-                    aria-label="Loading speakers"
-                  />
-                )}
-              </Flex>
-              <ComboBox
-                width="100%"
-                aria-label="Session speakers"
-                selectedKey={selectedSpeakerKey ?? undefined}
-                onSelectionChange={(key) => {
-                  const k = key as string | null;
-                  setSelectedSpeakerKey(k ?? null);
-                  if (k === "__add__") setAddSpeakerDialogOpen(true);
-                }}
-                items={[
-                  ...sessionSpeakers.map((s, i) => ({
-                    key: s.speakerId,
-                    label: `Speaker ${i + 1}${s.speakerType ? ` (${s.speakerType})` : ""}`,
-                  })),
-                  { key: "__add__", label: "Add new speaker" },
-                ]}
-              >
-                {(item) => (
-                  <Item key={item.key}>
-                    {item.key === "__add__" ? (
-                      <>
-                        <AddIcon />
-                        <Text>Add new speaker</Text>
-                      </>
-                    ) : (
-                      item.label
-                    )}
-                  </Item>
-                )}
-              </ComboBox>
-              <AddSpeakerDialog
-                isOpen={addSpeakerDialogOpen}
-                onOpenChange={(open) => {
-                  setAddSpeakerDialogOpen(open);
-                  if (!open) setSelectedSpeakerKey(null);
-                }}
-                sessionId={session?.id ?? ""}
-                nextOrdinal={sessionSpeakers.length}
-                onAdded={() => {
-                  if (session?.id) {
-                    apiService.getSessionSpeakers(session.id).then((res) => {
-                      if (res.success && res.data?.speakers) {
-                        setSessionSpeakers(res.data.speakers);
-                      }
-                    });
-                  }
-                }}
-              />
-            </Flex>
+            <SpeakerSelector
+              seriesId={seriesId}
+              sessionId={session?.id}
+            />
 
             <Flex direction="column" gap="size-100">
               <Text>Tags</Text>
