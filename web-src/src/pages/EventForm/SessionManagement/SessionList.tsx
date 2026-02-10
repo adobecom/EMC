@@ -1,8 +1,4 @@
-/* 
-* <license header>
-*/
-
-import React, { useState } from 'react'
+import React, { useState } from "react";
 import {
   Flex,
   Heading,
@@ -11,34 +7,38 @@ import {
   ActionButton,
   Button,
   DialogTrigger,
-} from '@adobe/react-spectrum'
-import { Session } from '../../../types/sessions'
-import Chip from '../../../components/shared/Chip'
-import { COLORS } from '../../../styles/designSystem'
-import { EditIcon } from '../../../components/icons/edit'
-import { DeleteIcon } from '../../../components/icons/delete'
-import { formatTime, formatDate } from '../../../utils/shared'
-import { SessionDialog } from './SessionDialog'
-import type { SessionFormData } from './SessionDialog'
+} from "@adobe/react-spectrum";
+import { Session } from "../../../types/sessions";
+import Chip from "../../../components/shared/Chip";
+import { COLORS } from "../../../styles/designSystem";
+import { EditIcon } from "../../../components/icons/edit";
+import { DeleteIcon } from "../../../components/icons/delete";
+import { formatTime, formatDate } from "../../../utils/shared";
+import { SessionDialog } from "./SessionDialog";
+import type { SessionFormData } from "./SessionDialog";
 
 export interface SessionItemProps {
-  session: Session
-  onDelete: (sessionId: string) => void
-  onSave: (sessionId: string, data: SessionFormData) => void
+  session: Session;
+  onDelete: (sessionId: string) => void;
+  onSave: (sessionId: string, data: SessionFormData) => void;
 }
 
-export const SessionItem: React.FC<SessionItemProps> = ({ session, onDelete, onSave }) => {
-  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
-  const startTime = formatTime(session.startDateTime)
-  const endTime = formatTime(session.endDateTime)
-  const sessionDate = formatDate(session.startDateTime)
+export const SessionItem: React.FC<SessionItemProps> = ({
+  session,
+  onDelete,
+  onSave,
+}) => {
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const startTime = formatTime(session.startDateTime);
+  const endTime = formatTime(session.endDateTime);
+  const sessionDate = formatDate(session.startDateTime);
 
-  const handleDeleteClick = () => setShowDeleteConfirm(true)
-  const handleCancelDelete = () => setShowDeleteConfirm(false)
+  const handleDeleteClick = () => setShowDeleteConfirm(true);
+  const handleCancelDelete = () => setShowDeleteConfirm(false);
   const handleConfirmDelete = () => {
-    onDelete(session.id)
-    setShowDeleteConfirm(false)
-  }
+    onDelete(session.id);
+    setShowDeleteConfirm(false);
+  };
 
   return (
     <View
@@ -49,7 +49,7 @@ export const SessionItem: React.FC<SessionItemProps> = ({ session, onDelete, onS
       borderWidth="thin"
       borderColor="gray-300"
       borderRadius="medium"
-      UNSAFE_style={{ position: 'relative' }}
+      UNSAFE_style={{ position: "relative" }}
     >
       <Flex justifyContent="space-between" alignItems="center">
         <View>
@@ -65,7 +65,9 @@ export const SessionItem: React.FC<SessionItemProps> = ({ session, onDelete, onS
               {sessionDate} | {startTime} - {endTime}
             </Text>
             <Flex gap="size-150" marginTop="size-100">
-              {session.tags?.map((tag) => <Chip key={tag} text={tag} />)}
+              {session.tags?.map((tag) => (
+                <Chip key={tag} text={tag} />
+              ))}
             </Flex>
           </Flex>
         </View>
@@ -97,18 +99,18 @@ export const SessionItem: React.FC<SessionItemProps> = ({ session, onDelete, onS
       {showDeleteConfirm && (
         <View
           UNSAFE_style={{
-            position: 'absolute',
+            position: "absolute",
             top: 0,
             left: 0,
             right: 0,
             bottom: 0,
-            backgroundColor: 'rgba(255, 255, 255, 0.5)',
-            borderRadius: '4px',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'flex-end',
-            gap: '16px',
-            padding: '12px 16px',
+            backgroundColor: "rgba(255, 255, 255, 0.5)",
+            borderRadius: "4px",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "flex-end",
+            gap: "16px",
+            padding: "12px 16px",
             zIndex: 10,
           }}
         >
@@ -128,13 +130,13 @@ export const SessionItem: React.FC<SessionItemProps> = ({ session, onDelete, onS
         </View>
       )}
     </View>
-  )
-}
+  );
+};
 
 export interface SessionsListProps {
-  sessions: Session[]
-  onDelete: (sessionId: string) => void
-  onSave: (sessionId: string, data: SessionFormData) => void
+  sessions: Session[];
+  onDelete: (sessionId: string) => void;
+  onSave: (sessionId: string, data: SessionFormData) => void;
 }
 
 export const SessionsList: React.FC<SessionsListProps> = ({
@@ -153,5 +155,5 @@ export const SessionsList: React.FC<SessionsListProps> = ({
         />
       ))}
     </Flex>
-  )
-}
+  );
+};

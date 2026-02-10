@@ -277,23 +277,208 @@ class ApiService {
 
   // Session APIs
   async getSessions(eventId?: string): Promise<ApiListResponse<Session>> {
-    return this.callAction<ApiListResponse<Session>>('getSessions', { eventId })
+    const token = tokenStorage.getValidToken()
+    if (!token) {
+      return { data: [], success: true }
+    }
+    try {
+      const env = getCurrentEnvironment()
+      const headers = constructRequestHeaders(token, 'GET')
+      const host = getApiHost('esp', env)
+      const url = eventId
+        ? `${host}/v1/sessions?eventId=${encodeURIComponent(eventId)}`
+        : `${host}/v1/sessions`
+      const response = await safeFetch(url, { method: 'GET', headers: headers as any })
+      const json = await response.json()
+      if (!response.ok) {
+        console.error('getSessions API error:', response.status, json)
+        return { data: [], success: false, error: json?.message || `API returned ${response.status}` }
+      }
+      const sessions = json.sessions ?? json.data ?? []
+      return { data: Array.isArray(sessions) ? sessions : [], success: true }
+    } catch (err) {
+      console.error('getSessions failed:', err)
+      return { data: [], success: false, error: err instanceof Error ? err.message : 'Failed to load sessions' }
+    }
   }
 
   async getSession(id: string): Promise<ApiResponse<Session>> {
-    return this.callAction<ApiResponse<Session>>('getSession', { id })
+    const token = tokenStorage.getValidToken()
+    if (!token) {
+      return { data: null as any, success: false, error: 'No valid authentication token' }
+    }
+    try {
+      const env = getCurrentEnvironment()
+      const headers = constructRequestHeaders(token, 'GET')
+      const host = getApiHost('esp', env)
+      const response = await safeFetch(`${host}/v1/sessions/${encodeURIComponent(id)}`, {
+        method: 'GET',
+        headers: headers as any
+      })
+      const json = await response.json()
+      if (!response.ok) {
+        return { data: null as any, success: false, error: json?.message || `API returned ${response.status}` }
+      }
+      return { data: json, success: true }
+    } catch (err) {
+      console.error('getSession failed:', err)
+      return { data: null as any, success: false, error: err instanceof Error ? err.message : 'Failed to load session' }
+    }
   }
 
-  async createSession(data: Omit<Session, 'id' | 'createdAt' | 'updatedAt'>): Promise<ApiResponse<Session>> {
-    return this.callAction<ApiResponse<Session>>('createSession', data)
+  async createSession(eventId: string, data: Record<string, unknown>): Promise<ApiResponse<Session>> {
+    const token = tokenStorage.getValidToken()
+    if (!token) {
+      return { data: null as any, success: false, error: 'No valid authentication token' }
+    }
+    try {
+      const env = getCurrentEnvironment()
+      const headers = constructRequestHeaders(token, 'POST')
+      const host = getApiHost('esp', env)
+      const sessionCode = (String(data.name ?? data.enTitle ?? '').replace(/\s+/g, '-').toLowerCase()).substring(0, 50) || 'session'
+      const body = {
+        eventId,
+        enTitle: data.name ?? data.enTitle ?? '',
+        title: data.name ?? data.enTitle ?? '',
+        description: data.description ?? '',
+        sessionCode,
+        sessionType: data.sessionType ?? 'Session',
+        published: data.published ?? false,
+        ...data
+      }
+      const response = await safeFetch(`${host}/v1/sessions`, {
+        method: 'POST',
+        headers: headers as any,
+        body: JSON.stringify(body)
+      })
+      const json = await response.json()
+      if (!response.ok) {
+        return { data: null as any, success: false, error: json?.message || `API returned ${response.status}` }
+      }
+      return { data: json, success: true }
+    } catch (err) {
+      console.error('createSession failed:', err)
+      return { data: null as any, success: false, error: err instanceof Error ? err.message : 'Failed to create session' }
+    }
   }
 
-  async updateSession(id: string, data: Partial<Session>): Promise<ApiResponse<Session>> {
-    return this.callAction<ApiResponse<Session>>('updateSession', { id, ...data })
+  async updateSession(id: string, eventId: string, data: Record<string, unknown>): Promise<ApiResponse<Session>> {
+    const token = tokenStorage.getValidToken()
+    if (!token) {
+      return { data: null as any, success: false, error: 'No valid authentication token' }
+    }
+    try {
+      const env = getCurrentEnvironment()
+      const headers = constructRequestHeaders(token, 'PUT')
+      const host = getApiHost('esp', env)
+      const sessionCode = (String(data.name ?? data.enTitle ?? '').replace(/\s+/g, '-').toLowerCase()).substring(0, 50) || 'session'
+      const now = Date.now()
+      const body = {
+        ...data,
+        sessionId: id,
+        eventId,
+        sessionCode,
+        enTitle: data.enTitle ?? data.name ?? '',
+        sessionType: data.sessionType ?? 'Session',
+        published: data.published ?? false,
+        creationTime: (data.creationTime as number) ?? now,
+        modificationTime: (data.modificationTime as number) ?? now,
+      }
+      const response = await safeFetch(`${host}/v1/sessions/${encodeURIComponent(id)}`, {
+        method: 'PUT',
+        headers: headers as any,
+        body: JSON.stringify(body)
+      })
+      const json = await response.json()
+      if (!response.ok) {
+        return { data: null as any, success: false, error: json?.message || `API returned ${response.status}` }
+      }
+      return { data: json, success: true }
+    } catch (err) {
+      console.error('updateSession failed:', err)
+      return { data: null as any, success: false, error: err instanceof Error ? err.message : 'Failed to update session' }
+    }
   }
 
   async deleteSession(id: string): Promise<ApiResponse<void>> {
-    return this.callAction<ApiResponse<void>>('deleteSession', { id })
+    const token = tokenStorage.getValidToken()
+    if (!token) {
+      return { data: undefined, success: false, error: 'No valid authentication token' }
+    }
+    try {
+      const env = getCurrentEnvironment()
+      const headers = constructRequestHeaders(token, 'DELETE')
+      const host = getApiHost('esp', env)
+      const response = await safeFetch(`${host}/v1/sessions/${encodeURIComponent(id)}`, {
+        method: 'DELETE',
+        headers: headers as any
+      })
+      if (!response.ok) {
+        const json = await response.json().catch(() => ({}))
+        return { data: undefined, success: false, error: json?.message || `API returned ${response.status}` }
+      }
+      return { data: undefined, success: true }
+    } catch (err) {
+      console.error('deleteSession failed:', err)
+      return { data: undefined, success: false, error: err instanceof Error ? err.message : 'Failed to delete session' }
+    }
+  }
+
+  /** GET /v1/sessions/{sessionId}/speakers - list session speakers */
+  async getSessionSpeakers(sessionId: string): Promise<ApiResponse<{ speakers: Array<{ speakerId: string; speakerType?: string; ordinal?: number }> }>> {
+    const token = tokenStorage.getValidToken()
+    if (!token) {
+      return { data: null as any, success: false, error: 'No valid authentication token' }
+    }
+    try {
+      const env = getCurrentEnvironment()
+      const headers = constructRequestHeaders(token, 'GET')
+      const host = getApiHost('esp', env)
+      const response = await safeFetch(`${host}/v1/sessions/${encodeURIComponent(sessionId)}/speakers`, {
+        method: 'GET',
+        headers: headers as any
+      })
+      const json = await response.json()
+      if (!response.ok) {
+        if (response.status === 404) {
+          return { data: { speakers: [] }, success: true }
+        }
+        return { data: null as any, success: false, error: json?.message || `API returned ${response.status}` }
+      }
+      const speakers = json.speakers ?? []
+      return { data: { speakers: Array.isArray(speakers) ? speakers : [] }, success: true }
+    } catch (err) {
+      console.error('getSessionSpeakers failed:', err)
+      return { data: null as any, success: false, error: err instanceof Error ? err.message : 'Failed to load session speakers' }
+    }
+  }
+
+  /** POST /v1/sessions/{sessionId}/speakers - add a speaker to a session. Body: { speakerId, speakerType (PascalCase), ordinal } */
+  async addSessionSpeaker(
+    sessionId: string,
+    body: { speakerId: string; speakerType: string; ordinal: number }
+  ): Promise<ApiResponse<{ speakerId: string; speakerType: string; ordinal: number; creationTime?: number; modificationTime?: number }>> {
+    const token = tokenStorage.getValidToken()
+    if (!token) {
+      return { data: null as any, success: false, error: 'No valid authentication token' }
+    }
+    try {
+      const env = getCurrentEnvironment()
+      const headers = constructRequestHeaders(token, 'POST')
+      const host = getApiHost('esp', env)
+      const response = await safeFetch(
+        `${host}/v1/sessions/${encodeURIComponent(sessionId)}/speakers`,
+        { method: 'POST', headers: headers as any, body: JSON.stringify(body) }
+      )
+      const json = await response.json()
+      if (!response.ok) {
+        return { data: null as any, success: false, error: json?.message || `API returned ${response.status}` }
+      }
+      return { data: json, success: true }
+    } catch (err) {
+      console.error('addSessionSpeaker failed:', err)
+      return { data: null as any, success: false, error: err instanceof Error ? err.message : 'Failed to add session speaker' }
+    }
   }
 
   // Registration APIs

@@ -14,6 +14,12 @@ import {
   TextArea,
   DatePicker,
   TimeField,
+  ActionGroup,
+  Item,
+  Text,
+  Checkbox,
+  ComboBox,
+  ProgressCircle,
 } from "@adobe/react-spectrum";
 import {
   parseDateTime,
@@ -22,6 +28,12 @@ import {
   Time,
 } from "@internationalized/date";
 import { Session } from "../../../types/sessions";
+import { EventTag } from "../../../types/domain";
+import { apiService } from "../../../services/api";
+import { useEventFormContext } from "../../../contexts";
+import { TagSelector } from "../../../components/shared";
+import { AddIcon } from "../../../components/icons/add";
+import { AddSpeakerDialog } from "./AddSpeakerDialog";
 
 export interface SessionFormData {
   name: string;
@@ -29,6 +41,9 @@ export interface SessionFormData {
   startDateTime: string;
   endDateTime: string;
   tags?: string[];
+  /** From GET session; required by API for update body */
+  creationTime?: number;
+  modificationTime?: number;
 }
 
 interface SessionDialogProps {
@@ -36,8 +51,8 @@ interface SessionDialogProps {
   close: () => void;
   /** When null, form is blank (add mode). When provided, form is pre-filled (edit mode). */
   session: Session | null;
-  /** Called with form data on Save. Caller can add or update session. */
-  onSave: (data: SessionFormData) => void;
+  /** Called with form data on Save. Caller can add or update session. May return a Promise. */
+  onSave: (data: SessionFormData) => void | Promise<void>;
 }
 
 function safeParseDateTimeString(
@@ -74,12 +89,49 @@ function dateAndTimeToISO(date: CalendarDate, time: Time): string {
   return `${dt.toString()}.000Z`;
 }
 
+/** Map API session response to UI Session shape */
+function mapApiToSession(item: Record<string, unknown>): Session {
+  const loc = (
+    item.localizations as Record<
+      string,
+      { title?: string; description?: string }
+    >
+  )?.["en-US"];
+  return {
+    id: String(item.sessionId ?? item.id ?? ""),
+    name: String(item.enTitle ?? item.title ?? loc?.title ?? ""),
+    description:
+      item.description != null
+        ? String(item.description)
+        : loc?.description != null
+          ? String(loc.description)
+          : undefined,
+    startDateTime: String(item.startDateTime ?? ""),
+    endDateTime: String(item.endDateTime ?? ""),
+    capacity: item.capacity != null ? Number(item.capacity) : undefined,
+    tags: Array.isArray(item.tags) ? (item.tags as string[]) : [],
+  };
+}
+
+function stringsToEventTags(tags: string[] | undefined): EventTag[] {
+  if (!tags?.length) return [];
+  return tags.map((t) => ({ name: t, caasId: t }));
+}
+
+function eventTagsToStrings(tags: EventTag[]): string[] {
+  return tags.map((t) => t.caasId ?? t.name);
+}
+
 export const SessionDialog: React.FC<SessionDialogProps> = ({
   close,
   session,
   onSave,
 }) => {
   const isEditMode = session !== null;
+  const [loadingDetails, setLoadingDetails] = useState(
+    isEditMode && !!session?.id,
+  );
+  const [detailError, setDetailError] = useState<string | null>(null);
 
   const [name, setName] = useState(session?.name ?? "");
   const [description, setDescription] = useState(session?.description ?? "");
@@ -96,40 +148,133 @@ export const SessionDialog: React.FC<SessionDialogProps> = ({
   const [endTime, setEndTime] = useState<Time | null>(() =>
     parseTimeFromDateTime(session?.endDateTime ?? undefined),
   );
+  const [selectedTags, setSelectedTags] = useState<EventTag[]>(() =>
+    stringsToEventTags(session?.tags),
+  );
+  const [registrationRequired, setRegistrationRequired] = useState(false);
+  const [capacityLimitEnabled, setCapacityLimitEnabled] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
+  const [sessionTimestamps, setSessionTimestamps] = useState<{
+    creationTime?: number;
+    modificationTime?: number;
+  }>({});
+  const [sessionSpeakers, setSessionSpeakers] = useState<
+    Array<{ speakerId: string; speakerType?: string; ordinal?: number }>
+  >([]);
+  const [loadingSpeakers, setLoadingSpeakers] = useState(false);
+  const [selectedSpeakerKey, setSelectedSpeakerKey] = useState<string | null>(
+    null,
+  );
+  const [addSpeakerDialogOpen, setAddSpeakerDialogOpen] = useState(false);
 
   useEffect(() => {
-    if (session) {
-      setName(session.name);
-      setDescription(session.description ?? "");
-      const startDt = safeParseDateTimeString(session.startDateTime);
-      setDate(
-        startDt
-          ? new CalendarDate(startDt.year, startDt.month, startDt.day)
-          : null,
-      );
-      setStartTime(parseTimeFromDateTime(session.startDateTime));
-      setEndTime(parseTimeFromDateTime(session.endDateTime));
-    } else {
+    if (!session?.id) {
+      setLoadingDetails(false);
+      return;
+    }
+    let cancelled = false;
+    setLoadingDetails(true);
+    setDetailError(null);
+    apiService.getSession(session.id).then((res) => {
+      if (cancelled) return;
+      setLoadingDetails(false);
+      if (res.success && res.data) {
+        const raw = res.data as unknown as Record<string, unknown>;
+        const mapped = mapApiToSession(raw);
+        setName(mapped.name);
+        setDescription(mapped.description ?? "");
+        setSelectedTags(stringsToEventTags(mapped.tags));
+        const startDt = safeParseDateTimeString(mapped.startDateTime);
+        setDate(
+          startDt
+            ? new CalendarDate(startDt.year, startDt.month, startDt.day)
+            : null,
+        );
+        setStartTime(parseTimeFromDateTime(mapped.startDateTime));
+        setEndTime(parseTimeFromDateTime(mapped.endDateTime));
+        const ct = raw.creationTime as number | undefined;
+        const mt = raw.modificationTime as number | undefined;
+        setSessionTimestamps(
+          typeof ct === "number" || typeof mt === "number"
+            ? { creationTime: ct, modificationTime: mt }
+            : {},
+        );
+      } else {
+        setDetailError(res.error ?? "Failed to load session");
+      }
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [session?.id]);
+
+  useEffect(() => {
+    if (!session?.id || !isEditMode) {
+      setSessionSpeakers([]);
+      setSelectedSpeakerKey(null);
+      setAddSpeakerDialogOpen(false);
+      return;
+    }
+    let cancelled = false;
+    setLoadingSpeakers(true);
+    apiService.getSessionSpeakers(session.id).then((res) => {
+      if (cancelled) return;
+      setLoadingSpeakers(false);
+      if (res.success && res.data?.speakers) {
+        setSessionSpeakers(res.data.speakers);
+      } else {
+        setSessionSpeakers([]);
+      }
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [session?.id, isEditMode]);
+
+  useEffect(() => {
+    if (!session) {
       setName("");
       setDescription("");
+      setSelectedTags([]);
       setDate(null);
       setStartTime(null);
       setEndTime(null);
+      setSessionTimestamps({});
+      setSessionSpeakers([]);
+      setSelectedSpeakerKey(null);
+      setAddSpeakerDialogOpen(false);
     }
   }, [session]);
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!date || !startTime || !endTime || !name.trim()) return;
+    setSaveError(null);
+    setSaving(true);
     const startDateTime = dateAndTimeToISO(date, startTime);
     const endDateTime = dateAndTimeToISO(date, endTime);
-    onSave({
-      name: name.trim(),
-      description: description.trim(),
-      startDateTime,
-      endDateTime,
-      tags: session?.tags,
-    });
-    close();
+    try {
+      await onSave({
+        name: name.trim(),
+        description: description.trim(),
+        startDateTime,
+        endDateTime,
+        tags: eventTagsToStrings(selectedTags),
+        ...(isEditMode &&
+        (sessionTimestamps.creationTime != null ||
+          sessionTimestamps.modificationTime != null)
+          ? {
+              creationTime: sessionTimestamps.creationTime,
+              modificationTime: sessionTimestamps.modificationTime,
+            }
+          : {}),
+      });
+      close();
+    } catch (err) {
+      setSaveError(err instanceof Error ? err.message : "Failed to save");
+    } finally {
+      setSaving(false);
+    }
   };
 
   const canSave = Boolean(name.trim() && date && startTime && endTime);
@@ -138,53 +283,193 @@ export const SessionDialog: React.FC<SessionDialogProps> = ({
     <Dialog>
       <Heading>{isEditMode ? "Edit Session" : "Session Details"}</Heading>
       <Content marginTop="size-100">
-        <Flex direction="column" gap="size-100" width="100%">
-          <TextField
-            label="Title"
-            isRequired
-            width="100%"
-            value={name}
-            onChange={setName}
-          />
-          <TextArea
-            label="Description"
-            width="100%"
-            value={description}
-            onChange={setDescription}
-          />
-          <Flex direction="row" gap="size-100">
-            <DatePicker
-              label="Date"
-              isRequired
-              width="100%"
-              value={date ?? undefined}
-              onChange={(v) => setDate(v ?? null)}
-            />
-            <TimeField
-              label="Start Time"
-              isRequired
-              hourCycle={12}
-              width="100%"
-              value={startTime ?? undefined}
-              onChange={(v) => setStartTime(v ?? null)}
-            />
-            <TimeField
-              label="End Time"
-              isRequired
-              hourCycle={12}
-              width="100%"
-              value={endTime ?? undefined}
-              onChange={(v) => setEndTime(v ?? null)}
-            />
+        {loadingDetails ? (
+          <Text>Loading session details...</Text>
+        ) : detailError ? (
+          <Flex direction="column" gap="size-100">
+            <Text
+              UNSAFE_style={{ color: "var(--spectrum-global-color-red-600)" }}
+            >
+              {detailError}
+            </Text>
+            <Text>Showing cached data. You can still edit and save.</Text>
           </Flex>
-        </Flex>
+        ) : null}
+        {!loadingDetails && (
+          <Flex direction="column" gap="size-200" width="100%">
+            <Flex direction="column" gap="size-100">
+              <Text>Title *</Text>
+              <TextField
+                isRequired
+                width="100%"
+                value={name}
+                onChange={setName}
+              />
+            </Flex>
+
+            <Flex direction="column" gap="size-100">
+              <Text>Description *</Text>
+              <TextArea
+                width="100%"
+                value={description}
+                onChange={setDescription}
+              />
+            </Flex>
+
+            <Flex direction="row" gap="size-100">
+              <Flex direction="column" gap="size-100">
+                <Text>Date</Text>
+                <DatePicker
+                  isRequired
+                  width="100%"
+                  value={date ?? undefined}
+                  onChange={(v) => setDate(v ?? null)}
+                />
+              </Flex>
+              <Flex direction="column" gap="size-100">
+                <Text>Start Time</Text>
+                <TimeField
+                  isRequired
+                  hourCycle={12}
+                  width="100%"
+                  value={startTime ?? undefined}
+                  onChange={(v) => setStartTime(v ?? null)}
+                />
+              </Flex>
+              <Flex direction="column" gap="size-100">
+                <Text>End Time</Text>
+                <TimeField
+                  isRequired
+                  hourCycle={12}
+                  width="100%"
+                  value={endTime ?? undefined}
+                  onChange={(v) => setEndTime(v ?? null)}
+                />
+              </Flex>
+            </Flex>
+
+            <Flex direction="column" gap="size-100">
+              <Text>Session registration</Text>
+              <ActionGroup
+                selectionMode="single"
+                selectedKeys={
+                  registrationRequired ? ["registration"] : ["automatic"]
+                }
+                onAction={(key) => {
+                  setRegistrationRequired(key === "registration");
+                }}
+              >
+                <Item key="automatic">Automatic</Item>
+                <Item key="registration">Registration required</Item>
+              </ActionGroup>
+
+              <Flex direction="row" gap="size-100">
+                <Checkbox
+                  isSelected={capacityLimitEnabled}
+                  onChange={setCapacityLimitEnabled}
+                  isDisabled={!registrationRequired}
+                >
+                  Set capacity limit
+                </Checkbox>
+                <TextField
+                  isRequired={capacityLimitEnabled}
+                  isDisabled={!registrationRequired}
+                  type="number"
+                />
+              </Flex>
+            </Flex>
+
+            <Flex direction="column" gap="size-100">
+              <Flex alignItems="center" gap="size-150">
+                <Text>Speakers</Text>
+                {loadingSpeakers && (
+                  <ProgressCircle
+                    size="S"
+                    isIndeterminate
+                    aria-label="Loading speakers"
+                  />
+                )}
+              </Flex>
+              <ComboBox
+                width="100%"
+                aria-label="Session speakers"
+                selectedKey={selectedSpeakerKey ?? undefined}
+                onSelectionChange={(key) => {
+                  const k = key as string | null;
+                  setSelectedSpeakerKey(k ?? null);
+                  if (k === "__add__") setAddSpeakerDialogOpen(true);
+                }}
+                items={[
+                  ...sessionSpeakers.map((s, i) => ({
+                    key: s.speakerId,
+                    label: `Speaker ${i + 1}${s.speakerType ? ` (${s.speakerType})` : ""}`,
+                  })),
+                  { key: "__add__", label: "Add new speaker" },
+                ]}
+              >
+                {(item) => (
+                  <Item key={item.key}>
+                    {item.key === "__add__" ? (
+                      <>
+                        <AddIcon />
+                        <Text>Add new speaker</Text>
+                      </>
+                    ) : (
+                      item.label
+                    )}
+                  </Item>
+                )}
+              </ComboBox>
+              <AddSpeakerDialog
+                isOpen={addSpeakerDialogOpen}
+                onOpenChange={(open) => {
+                  setAddSpeakerDialogOpen(open);
+                  if (!open) setSelectedSpeakerKey(null);
+                }}
+                sessionId={session?.id ?? ""}
+                nextOrdinal={sessionSpeakers.length}
+                onAdded={() => {
+                  if (session?.id) {
+                    apiService.getSessionSpeakers(session.id).then((res) => {
+                      if (res.success && res.data?.speakers) {
+                        setSessionSpeakers(res.data.speakers);
+                      }
+                    });
+                  }
+                }}
+              />
+            </Flex>
+
+            <Flex direction="column" gap="size-100">
+              <Text>Tags</Text>
+              <TagSelector
+                selectedTags={selectedTags}
+                onChange={setSelectedTags}
+              />
+            </Flex>
+          </Flex>
+        )}
       </Content>
+      {saveError && (
+        <Text
+          UNSAFE_style={{
+            color: "var(--spectrum-global-color-red-600)",
+            marginTop: "8px",
+          }}
+        >
+          {saveError}
+        </Text>
+      )}
       <ButtonGroup>
-        <Button variant="secondary" onPress={close}>
+        <Button variant="secondary" onPress={close} isDisabled={saving}>
           Cancel
         </Button>
-        <Button variant="accent" onPress={handleSave} isDisabled={!canSave}>
-          Save
+        <Button
+          variant="accent"
+          onPress={handleSave}
+          isDisabled={!canSave || saving}
+        >
+          {saving ? "Saving..." : "Save"}
         </Button>
       </ButtonGroup>
     </Dialog>
