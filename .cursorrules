@@ -1,0 +1,251 @@
+# EMC – Event Management Cloud
+
+## Project Identity
+
+EMC is an **Adobe Experience Cloud (ExC) Shell** application built on **Adobe App Builder**.
+It is a single-page application (SPA) for managing events, series, speakers, sponsors,
+venues, and attendees within the Adobe ecosystem. There is **no backend in this repo**;
+the frontend calls external Adobe APIs (ESP and ESL) directly.
+
+---
+
+## Tech Stack (code-validated)
+
+| Layer              | Technology                                         |
+| ------------------ | -------------------------------------------------- |
+| Framework          | React 16 (class-free, hooks + FC pattern)          |
+| Language           | TypeScript (strict, target ES2020, bundler module)  |
+| UI Library         | Adobe React Spectrum **v3** (`@adobe/react-spectrum`) — NOT S2 |
+| Icons              | `@spectrum-icons/workflow`                         |
+| Routing            | React Router 6 (`react-router-dom`, HashRouter)    |
+| State Management   | React Context + `useReducer` (no Redux/Zustand)    |
+| Rich Text          | Quill 2                                            |
+| Date/Time          | `@internationalized/date`                          |
+| Build              | Adobe I/O CLI (`aio`) with Parcel                  |
+| Testing            | Jest 29 (configured, no test files yet)            |
+| Linting            | ESLint 8 (`eslint:recommended`, `plugin:jest`)     |
+| Node               | >= 18                                              |
+| Package Manager    | npm (lockfile v3)                                  |
+
+### Important: React Spectrum Version
+
+This project uses **React Spectrum v3** from `@adobe/react-spectrum`.
+Do NOT use S2 imports (`@react-spectrum/s2`), S2 style macros, or S2 patterns.
+The `.cursor/rules/react-spectrum/` rules for S2 are reference-only for future migration.
+
+---
+
+## Project Structure (code-validated)
+
+```
+EMC/
+├── app.config.yaml              # Adobe App Builder config (web + ExC extension)
+├── package.json                 # Scripts: dev, dev:local, lint, lint:fix, type-check
+├── tsconfig.json                # TypeScript config (strict, ES2020, bundler)
+├── .eslintrc.json               # ESLint config
+├── .babelrc                     # Babel (JSX transform)
+├── jest.setup.js                # Jest timeout setup
+│
+├── web-src/                     # ★ Frontend root
+│   ├── index.html               # SPA entry point (#root)
+│   └── src/
+│       ├── index.tsx             # React bootstrap (ExC Shell + standalone)
+│       ├── index.css             # Global styles (nav, tables, panels)
+│       │
+│       ├── components/
+│       │   ├── App.tsx           # Root component: Provider, Router, Grid layout
+│       │   ├── layout/           # TopNav
+│       │   ├── shared/           # Reusable: DataTable, FormWizard, FormCard,
+│       │   │                     #   StatusBadge, LoadingSpinner, ImageUploader,
+│       │   │                     #   RichTextEditor, TagSelector, AutocompleteTextField,
+│       │   │                     #   ToastContainer, ResourceDashboardLayout,
+│       │   │                     #   HistoryTimeline, HeadingWithTooltip, etc.
+│       │   ├── dev/              # DevTokenButton, DevTokenDialog
+│       │   └── user/             # UserPanel
+│       │
+│       ├── pages/                # ★ Route-level page components
+│       │   ├── AttendeeDashboard/
+│       │   ├── CloudManagementConsole/
+│       │   ├── EventForm/        # Multi-step wizard (14 sub-components)
+│       │   ├── EventsDashboard/
+│       │   ├── OverviewDashboard/
+│       │   ├── SeriesDashboard/
+│       │   ├── SeriesForm/
+│       │   └── SpeakersDashboard/
+│       │
+│       ├── contexts/             # ApiContext, EventFormContext, SeriesFormContext, ToastContext
+│       ├── hooks/                # useLoadData, useDevToken, useEventFormComponent,
+│       │                         #   useEventFormSave, useSeriesFormComponent,
+│       │                         #   useRsvpConfig, useEventTypeFeatures, useSafeState
+│       ├── services/             # api.ts, cacheUtils, requestHelpers, payloadBuilders,
+│       │                         #   tokenStorage, configService, dataEnrichment,
+│       │                         #   seriesEnrichment, eventEnrichment
+│       ├── config/               # constants.ts, env.ts, eventTypeConfig, externalConfigs
+│       ├── types/                # domain.ts, runtime.ts, attendee.ts, google-places.d.ts
+│       ├── utils/                # dataFilters, deduplication, formPersistence,
+│       │                         #   loadGooglePlaces, socialPlatformDetector
+│       ├── styles/               # designSystem.ts (tokens, layout patterns)
+│       └── mocks/                # list-events, list-series mock data
+│
+├── docs/                        # Architecture and usage docs (⚠ some outdated)
+│   ├── backend-reference/       # openapi.json (Adobe Event Service API spec)
+│   └── v1-reference/            # Legacy data-utils.js reference
+│
+└── .github/workflows/           # CI/CD
+    ├── deploy_prod.yml           # Deploy on release
+    ├── deploy_stage.yml          # Deploy on push to main
+    └── pr_test.yml               # Test on PR (matrix: macOS, ubuntu, windows)
+```
+
+---
+
+## Routes (code-validated from App.tsx)
+
+| Path                       | Component                | Purpose                    |
+| -------------------------- | ------------------------ | -------------------------- |
+| `/`                        | Home                     | Landing page               |
+| `/overview`                | OverviewDashboard        | Cross-entity overview      |
+| `/profile`                 | UserProfile              | User profile               |
+| `/clouds`                  | CloudManagementConsole   | Cloud/series settings      |
+| `/series`                  | SeriesDashboard          | Series list                |
+| `/series/new`              | SeriesForm               | Create series              |
+| `/series/edit/:id`         | SeriesForm               | Edit series                |
+| `/events`                  | EventsDashboard          | Events list                |
+| `/events/new/:eventType`   | EventForm                | Create event (InPerson/Webinar) |
+| `/events/edit/:id`         | EventForm                | Edit event                 |
+| `/attendees`               | AttendeeDashboard        | Attendee list              |
+| `/attendees/:eventId`      | AttendeeDashboard        | Attendees for event        |
+| `/speakers`                | SpeakersDashboard        | Speakers list              |
+| `/about`                   | About                    | About page                 |
+
+---
+
+## Architecture Patterns
+
+### State Management
+- **React Context + useReducer** for complex state (EventFormContext, SeriesFormContext, ToastContext)
+- **ApiProvider** wraps app with auth headers and API service instance
+- No Redux, Zustand, or other state libraries
+
+### API Layer
+- **ApiService** class (`services/api.ts`) — centralized HTTP client
+- **cachedApi** — wrapper with 10s GET caching, request dedup, pattern-based invalidation
+- Two API backends: Adobe ESP (events platform) and ESL (events service layer)
+- Auth: Bearer token (IMS or dev token) + `x-gw-ims-org-id`
+- **Dry-run mode** for safe testing: `apiService.enableDryRun()`
+- Input validation: `validateString()`, `validateObject()` before API calls
+- ALLOWED_HOSTS allowlist for fetch URL validation
+
+### Form System
+- **FormWizard** — multi-step form with progress, step locking, back/next
+- **useEventFormComponent** hook — component registration with lifecycle callbacks:
+  - `onGatherPayload()` — contribute partial data during save
+  - `onAfterSave(eventId, response)` — post-save side effects (venue, images, etc.)
+  - `onLoadResponse(response)` — populate from API response
+  - `validate()` — pre-save validation
+- **Form persistence** via sessionStorage (debounced auto-save of drafts)
+
+### Component Organization
+- **Pages** in `pages/` — feature folders with barrel exports
+- **Shared** in `components/shared/` — reusable UI building blocks
+- **Layout** in `components/layout/` — TopNav only
+- Each EventForm step is a modular component in `pages/EventForm/`
+
+---
+
+## NPM Scripts (code-validated)
+
+| Script        | Command                            | Purpose                   |
+| ------------- | ---------------------------------- | ------------------------- |
+| `dev`         | `PORT=3000 aio app run`            | Dev server (port **3000**) |
+| `dev:local`   | `PORT=3000 aio app run --local`    | Fully local dev           |
+| `lint`        | `eslint --ignore-pattern web-src`  | Lint backend (src/)       |
+| `lint:fix`    | `npm run lint -- --fix`            | Auto-fix lint             |
+| `type-check`  | `tsc --noEmit`                     | TypeScript check          |
+
+**Note:** `npm test` is NOT configured in package.json. Use `aio app test` for Adobe CLI tests.
+
+---
+
+## External Integrations
+
+| Service          | Purpose                                    | Config Location            |
+| ---------------- | ------------------------------------------ | -------------------------- |
+| Adobe ESP        | Events, series, speakers, sponsors, venues | `config/constants.ts`      |
+| Adobe ESL        | Event lifecycle, venue ops, attendees      | `config/constants.ts`      |
+| Adobe IMS        | Authentication (tokens, org, profile)      | ExC Shell / tokenStorage   |
+| Google Places    | Venue autocomplete                         | `utils/loadGooglePlaces`   |
+| Adobe Chimera    | CaaS tags for content                      | `config/externalConfigs`   |
+| RSVP configs     | Registration form configuration            | `services/configService`   |
+
+---
+
+## Environments (code-validated from constants.ts)
+
+| Environment | Detection Pattern                   | API Hosts              |
+| ----------- | ----------------------------------- | ---------------------- |
+| local       | `localhost`                         | Dev ESL/ESP endpoints  |
+| dev         | `dev--*` prefix or dev.adobe.com    | Dev ESL/ESP endpoints  |
+| stage       | `stage--*` or stage.adobe.com       | Stage ESL/ESP          |
+| prod        | `main--*` or *.adobe.com            | Prod ESL/ESP           |
+
+---
+
+## Key Conventions
+
+### Code Style
+- **Functional components** with hooks — no class components
+- **TypeScript** for all new code — types in `types/` directory
+- **React Spectrum v3** components — use `onPress` (not `onClick`), layout via `Flex`/`Grid`
+- **UNSAFE_style** / **UNSAFE_className** for non-Spectrum styling (use sparingly)
+- **Design tokens** from `styles/designSystem.ts` — prefer over magic numbers
+- **Barrel exports** (`index.ts`) in every module directory
+- **No semicolons** in TypeScript files (project convention)
+
+### Naming Conventions
+- Components: PascalCase (e.g., `EventInfoComponent.tsx`)
+- Hooks: `use` prefix (e.g., `useEventFormComponent.ts`)
+- Services: camelCase (e.g., `apiService`, `cachedApi`)
+- Types: PascalCase interfaces (e.g., `EventFormData`, `SeriesApiResponse`)
+- Constants: UPPER_SNAKE_CASE (e.g., `ALLOWED_HOSTS`, `API_CONFIG`)
+- CSS classes: kebab-case (e.g., `.custom-data-table`, `.nav-link`)
+
+### File Organization
+- Page components go in `pages/{PageName}/`
+- Shared UI goes in `components/shared/`
+- Business logic goes in `services/` or `hooks/`
+- Type definitions go in `types/`
+- Configuration goes in `config/`
+
+---
+
+## Documentation Accuracy Warning
+
+The `docs/` directory contains useful architecture docs but several are **outdated**.
+Key discrepancies (validated against code):
+
+| Claim in Docs                    | Actual Code                           |
+| -------------------------------- | ------------------------------------- |
+| Port 9080                        | Port **3000** (package.json)          |
+| EventForm in `components/`       | EventForm in `pages/EventForm/`       |
+| SideBar.tsx                      | **TopNav.tsx** in `components/layout/` |
+| RegistrationDashboard            | **AttendeeDashboard**                 |
+| OrgTeamManagement                | **CloudManagementConsole**            |
+| `npm test` / `npm run e2e`       | **Not configured** in package.json    |
+| `test/` and `e2e/` directories   | **Do not exist**                      |
+| Route `/events/new`              | `/events/new/:eventType`              |
+| 12 modular form components       | **14** components in EventForm        |
+
+**Always validate against actual code, not docs.**
+
+---
+
+## Security Considerations
+
+- All API calls go through `safeFetch()` with ALLOWED_HOSTS validation
+- Auth tokens handled via IMS (production) or tokenStorage (dev only)
+- Dev token features only visible on localhost
+- No hardcoded credentials — env vars via `.env` and `app.config.yaml`
+- `constructRequestHeaders()` adds auth headers consistently
+- Input validation before API mutations (`validateString`, `validateObject`)
+- See `.cursor/rules/security-global/` for detailed security rules
