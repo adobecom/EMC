@@ -75,9 +75,13 @@ export const VenueComponent: React.FC = () => {
     componentId: 'venue',
     
     /**
-     * After the main event save, create or update the venue and upload pending image
+     * After the main event save, create or update the venue and upload pending image.
+     *
+     * Important: `eventResponse` comes from the event update/create API and may
+     * NOT include nested venue data. We therefore fetch the existing venue via a
+     * dedicated GET so the create-vs-update decision is always correct.
      */
-    onAfterSave: async (savedEventId: string, eventResponse: EventApiResponse) => {
+    onAfterSave: async (savedEventId: string, _eventResponse: EventApiResponse) => {
       const venueData = formData.venue
       
       // ========================================================================
@@ -102,9 +106,7 @@ export const VenueComponent: React.FC = () => {
             
             if (result.imageUrl && result.imageId) {
               console.log('Venue image uploaded successfully:', result)
-              // Clear the pending file to prevent repeat uploads
               pendingImageFileRef.current = null
-              // Update venue data with the uploaded image info
               updateFormData({
                 venue: {
                   ...venueData,
@@ -117,7 +119,6 @@ export const VenueComponent: React.FC = () => {
           }
         } catch (error) {
           console.error('Failed to upload venue image:', error)
-          // Don't block venue creation if image upload fails
         }
       }
       
@@ -125,13 +126,42 @@ export const VenueComponent: React.FC = () => {
       // 2. Create or update venue
       // ========================================================================
       
-      // Skip if no venue name entered
+      // Skip entirely if no venue name is entered
       if (!venueData?.venueName?.trim()) {
         return
       }
       
-      // Build the localized venue payload
-      const venuePayload = getVenuePayload({
+      // --- Fetch existing venue (authoritative; don't rely on eventResponse) ---
+      let existingVenue: any = null
+      try {
+        const venueResult = await apiService.getEventVenue(savedEventId)
+        if (venueResult && !('error' in venueResult)) {
+          existingVenue = venueResult
+        }
+      } catch {
+        // No existing venue or fetch failed — treat as new
+      }
+      
+      // --- Detect changes -------------------------------------------------------
+      if (existingVenue) {
+        const existingLocalized = existingVenue.localizations?.[locale] || {}
+        
+        const placeIdSame = venueData.placeId === existingVenue.placeId
+        const venueNameSame = venueData.venueName === existingVenue.venueName
+        const additionalInfoSame =
+          (venueData.additionalInformation || '') ===
+          (existingLocalized.additionalInformation ?? existingVenue.additionalInformation ?? '')
+        
+        if (placeIdSame && venueNameSame && additionalInfoSame) {
+          // Nothing relevant changed — skip the API call entirely
+          console.log('Venue unchanged — skipping venue API call')
+          return
+        }
+      }
+      
+      // --- Build payload --------------------------------------------------------
+      // Start from form data for the fields the user may have changed
+      const basePayload = getVenuePayload({
         venueName: venueData.venueName,
         placeId: venueData.placeId,
         coordinates: venueData.coordinates,
@@ -141,38 +171,56 @@ export const VenueComponent: React.FC = () => {
         additionalInformation: venueData.additionalInformation,
       }, locale)
       
-      const existingVenue = eventResponse.venue
+      // For updates, fill in any required fields that our form data might be
+      // missing (e.g. addressComponents is not always round-tripped from the GET)
+      if (existingVenue) {
+        if (!basePayload.formattedAddress) {
+          basePayload.formattedAddress =
+            existingVenue.formattedAddress || existingVenue.address || ''
+        }
+        if (!basePayload.addressComponents && existingVenue.addressComponents) {
+          basePayload.addressComponents = existingVenue.addressComponents
+        }
+        if (basePayload.coordinates === undefined && existingVenue.coordinates) {
+          basePayload.coordinates = existingVenue.coordinates
+        }
+        if (basePayload.gmtOffset === undefined && existingVenue.gmtOffset !== undefined) {
+          basePayload.gmtOffset = existingVenue.gmtOffset
+        }
+        if (!basePayload.placeId && existingVenue.placeId) {
+          basePayload.placeId = existingVenue.placeId
+        }
+      }
       
       try {
         if (!existingVenue) {
-          const result = await apiService.createVenue(savedEventId, venuePayload)
+          // ---- CREATE (POST) ----
+          const result = await apiService.createVenue(savedEventId, basePayload)
           if ('error' in result) {
             console.error('Failed to create venue:', result)
             return
           }
           console.log('Venue created successfully:', result)
         } else {
-          const hasPlaceIdChanged = venuePayload.placeId !== existingVenue.placeId
-          const hasAdditionalInfoChanged = venueData.additionalInformation !== existingVenue.additionalInformation
-          
-          if (hasPlaceIdChanged || hasAdditionalInfoChanged) {
-            const result = await apiService.replaceVenue(
-              savedEventId,
-              existingVenue.venueId,
-              {
-                ...venuePayload,
-                venueId: existingVenue.venueId,
-                creationTime: existingVenue.creationTime,
-                modificationTime: existingVenue.modificationTime,
-              }
-            )
-            
-            if ('error' in result) {
-              console.error('Failed to replace venue:', result)
-              return
-            }
-            console.log('Venue replaced successfully:', result)
+          // ---- UPDATE (PUT) — include venueId + timestamps as required by API ----
+          const putPayload = {
+            ...basePayload,
+            venueId: existingVenue.venueId,
+            creationTime: existingVenue.creationTime,
+            modificationTime: existingVenue.modificationTime,
           }
+          
+          const result = await apiService.replaceVenue(
+            savedEventId,
+            existingVenue.venueId,
+            putPayload
+          )
+          
+          if ('error' in result) {
+            console.error('Failed to update venue:', result)
+            return
+          }
+          console.log('Venue updated successfully:', result)
         }
       } catch (error) {
         console.error('Error saving venue:', error)

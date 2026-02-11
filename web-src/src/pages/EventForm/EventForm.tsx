@@ -128,17 +128,28 @@ function mapApiResponseToFormData(event: EventApiResponse, locale: string): Part
   
   const cta = localized.cta?.[0]
   
+  // Map venue data — include ALL fields the PUT/POST API requires so they're
+  // available in onAfterSave without a second network round-trip.
+  // The GET response has both `formattedAddress` and the derived `address`
+  // convenience field; prefer `formattedAddress` since that's what the write
+  // API expects.
+  const venueLocalized = event.venue?.localizations?.[locale] || {}
   const venueData = event.venue ? {
     venueName: event.venue.venueName || '',
-    formattedAddress: event.venue.address || '',
+    formattedAddress: event.venue.formattedAddress || event.venue.address || '',
     placeId: event.venue.placeId,
     coordinates: event.venue.coordinates,
-    gmtOffset: event.gmtOffset,
-    additionalInformation: event.venue.additionalInfo || '',
+    gmtOffset: event.venue.gmtOffset ?? event.gmtOffset,
+    addressComponents: event.venue.addressComponents,
+    additionalInformation: venueLocalized.additionalInformation
+      ?? event.venue.additionalInformation
+      ?? event.venue.additionalInfo
+      ?? '',
     venueImageUrl: event.venue.imageUrl,
     venueImageId: event.venue.imageId,
     showVenuePostEvent: event.showVenuePostEvent ?? true,
-    showAdditionalInfoPostEvent: event.showVenueAdditionalInfoPostEvent ?? true
+    showAdditionalInfoPostEvent: event.showVenueAdditionalInfoPostEvent ?? true,
+    googlePlaceName: event.venue.venueName || '', // Populate for alternative-name feature
   } : undefined
   
   const mappedEventType = event.eventType?.toLowerCase() === 'webinar' ? 'webinar' : 'in-person'
