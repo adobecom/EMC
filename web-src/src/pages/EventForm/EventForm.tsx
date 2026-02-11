@@ -599,8 +599,8 @@ const EventFormInner: React.FC<EventFormInnerProps> = ({ ims }) => {
     }
   }, [saveError, toast])
   
-  // Get feature flags based on event type
-  const { hasVenue, hasPageMetadata, hasMarketoIntegration } = useEventFeatureFlags(formData.eventType)
+  // Get feature flags based on event type + cloud type
+  const { hasVenue, hasPageMetadata, hasMarketoIntegration } = useEventFeatureFlags(formData.eventType, formData.cloudType)
   
   // ============================================================================
   // LOAD EVENT DATA
@@ -843,8 +843,7 @@ const EventFormInner: React.FC<EventFormInnerProps> = ({ ims }) => {
         </FormCard>
       )}
 
-      {/* Marketo integration is only for ExperienceCloud events */}
-      {hasMarketoIntegration && formData.cloudType === 'ExperienceCloud' && (
+      {hasMarketoIntegration && (
         <FormCard>
           <MarketoIntegrationComponent />
         </FormCard>
