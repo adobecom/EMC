@@ -2,19 +2,31 @@
 * <license header>
 */
 
-import React, { useEffect, useCallback, useRef } from 'react'
+import React, { useEffect, useCallback, useRef, useState } from 'react'
 import {
   View,
-  Flex
+  Flex,
+  Picker,
+  Item,
+  Button,
+  Text,
+  Heading,
+  Divider,
+  ProgressCircle
 } from '@adobe/react-spectrum'
 import { useNavigate, useParams } from 'react-router-dom'
+import ChevronRight from '@spectrum-icons/workflow/ChevronRight'
+import ChevronLeft from '@spectrum-icons/workflow/ChevronLeft'
 import {
   EventFormData,
   ProfileData,
   SponsorData,
-  EventApiResponse
+  EventApiResponse,
+  SeriesApiResponse,
+  SeriesTemplate
 } from '../../types/domain'
 import { apiService, cachedApi } from '../../services/api'
+import { configService } from '../../services/configService'
 import { IMS } from '../../types'
 import { FormWizard, WizardStep, LoadingSpinner, FormCard, HistoryTimeline } from '../../components/shared'
 import { 
@@ -35,6 +47,7 @@ import { fromApiSocialLink } from '../../utils/socialPlatformDetector'
 import { useEventFeatureFlags } from '../../hooks/useEventTypeFeatures'
 import { EventFormProvider, useEventFormContext, useToast } from '../../contexts'
 import { useEventFormSave } from '../../hooks/useEventFormSave'
+import { COLORS, Z_INDEX, TYPOGRAPHY } from '../../styles/designSystem'
 
 // ============================================================================
 // HELPERS
@@ -190,6 +203,337 @@ function mapApiResponseToFormData(event: EventApiResponse, locale: string): Part
 }
 
 // ============================================================================
+// FORMAT SELECTION OVERLAY
+// ============================================================================
+
+interface CloudOption {
+  key: string
+  label: string
+}
+
+interface SeriesOption {
+  id: string
+  name: string
+  description?: string
+}
+
+/**
+ * FormatSelectionOverlay - Full-screen frosted glass overlay with cloud/series selection
+ * 
+ * Shown when the user has not yet confirmed cloud + series for a new event.
+ * The form renders behind the overlay but is non-interactive.
+ */
+const FormatSelectionOverlay: React.FC<{
+  eventType: 'in-person' | 'webinar'
+  onConfirm: (cloudType: 'CreativeCloud' | 'ExperienceCloud', seriesId: string) => void
+  onCancel: () => void
+}> = ({ eventType, onConfirm, onCancel }) => {
+  // Local state for selections — only committed to context on confirm
+  const [selectedCloud, setSelectedCloud] = useState<string | null>(null)
+  const [selectedSeries, setSelectedSeries] = useState<string | null>(null)
+
+  // Data
+  const [clouds] = useState<CloudOption[]>([
+    { key: 'CreativeCloud', label: 'Creative Cloud' },
+    { key: 'ExperienceCloud', label: 'Experience Cloud' }
+  ])
+  const [allSeries, setAllSeries] = useState<SeriesApiResponse[]>([])
+  const [seriesTemplates, setSeriesTemplates] = useState<SeriesTemplate[]>([])
+  const [filteredSeries, setFilteredSeries] = useState<SeriesOption[]>([])
+  const [isLoading, setIsLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+
+  // ============================================================================
+  // DATA LOADING
+  // ============================================================================
+
+  useEffect(() => {
+    let isMounted = true
+
+    const loadData = async () => {
+      setIsLoading(true)
+      setError(null)
+      try {
+        const [seriesResponse, templatesConfig] = await Promise.all([
+          cachedApi.getSeriesList(),
+          configService.getSeriesTemplates()
+        ])
+
+        if (!isMounted) return
+
+        if (templatesConfig?.data) {
+          setSeriesTemplates(templatesConfig.data)
+        }
+
+        if (seriesResponse && Array.isArray(seriesResponse)) {
+          const published = seriesResponse.filter(
+            (s: SeriesApiResponse) => s.seriesStatus === 'published'
+          )
+          setAllSeries(published)
+        } else {
+          setError('Failed to load series list')
+        }
+      } catch (err) {
+        if (!isMounted) return
+        console.error('Failed to load format selection data:', err)
+        setError(err instanceof Error ? err.message : 'Failed to load data')
+      } finally {
+        if (isMounted) setIsLoading(false)
+      }
+    }
+
+    loadData()
+    return () => { isMounted = false }
+  }, [])
+
+  // ============================================================================
+  // SERIES FILTERING
+  // ============================================================================
+
+  /**
+   * Map form event type to API event type format
+   */
+  const mapEventTypeToApiFormat = (type: string): string => {
+    const mapping: Record<string, string> = {
+      'in-person': 'InPerson',
+      'webinar': 'Webinar',
+      'hybrid': 'Hybrid'
+    }
+    return mapping[type] || type
+  }
+
+  /**
+   * Check if a series template supports the given event type
+   */
+  const templateSupportsEventType = (templateId: string, currentEventType: string, templates: SeriesTemplate[]): boolean => {
+    const apiEventType = mapEventTypeToApiFormat(currentEventType)
+    const template = templates.find(t => t['template-path'] === templateId)
+    
+    if (!template) {
+      // Backward compatibility: allow if template not in config
+      return true
+    }
+    
+    const supportedType = template['supported-event-type']
+    if (supportedType === 'Hybrid') return true
+    return supportedType === apiEventType
+  }
+
+  useEffect(() => {
+    if (!selectedCloud || allSeries.length === 0) {
+      setFilteredSeries([])
+      return
+    }
+
+    // Filter by cloud type
+    let filtered = allSeries.filter(
+      (s: SeriesApiResponse) => s.cloudType === selectedCloud
+    )
+
+    // Filter by event type using template matching
+    if (seriesTemplates.length > 0) {
+      filtered = filtered.filter((s: SeriesApiResponse) =>
+        templateSupportsEventType(s.templateId, eventType, seriesTemplates)
+      )
+    }
+
+    const options = filtered.map((s: SeriesApiResponse) => ({
+      id: s.seriesId,
+      name: s.seriesName,
+      description: s.seriesDescription
+    }))
+
+    setFilteredSeries(options)
+
+    // Clear series selection if the previously selected series is no longer available
+    if (selectedSeries && !options.some(s => s.id === selectedSeries)) {
+      setSelectedSeries(null)
+    }
+  }, [selectedCloud, allSeries, seriesTemplates, eventType])
+
+  // ============================================================================
+  // HANDLERS
+  // ============================================================================
+
+  const handleCloudChange = (key: React.Key | null) => {
+    setSelectedCloud(key ? String(key) : null)
+    setSelectedSeries(null) // Reset series when cloud changes
+  }
+
+  const handleSeriesChange = (key: React.Key | null) => {
+    setSelectedSeries(key ? String(key) : null)
+  }
+
+  const handleConfirm = () => {
+    if (selectedCloud && selectedSeries) {
+      onConfirm(
+        selectedCloud as 'CreativeCloud' | 'ExperienceCloud',
+        selectedSeries
+      )
+    }
+  }
+
+  const isConfirmDisabled = !selectedCloud || !selectedSeries
+
+  // ============================================================================
+  // RENDER
+  // ============================================================================
+
+  const eventTypeLabel = eventType === 'webinar' ? 'Webinar' : 'In-person Event'
+
+  return (
+    <div
+      style={{
+        position: 'fixed',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        backgroundColor: 'rgba(0, 0, 0, 0.4)',
+        backdropFilter: 'blur(2px)',
+        zIndex: Z_INDEX.MODAL_BACKDROP,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+      }}
+    >
+      <View
+        backgroundColor="gray-50"
+        borderRadius="medium"
+        padding="size-500"
+        width="520px"
+        UNSAFE_style={{
+          zIndex: Z_INDEX.MODAL,
+          boxShadow: '0 8px 32px rgba(0, 0, 0, 0.18)',
+          maxWidth: '90vw',
+        }}
+      >
+        {/* Header */}
+        <Flex direction="column" gap="size-100" marginBottom="size-300">
+          <Text UNSAFE_style={{ 
+            fontSize: '13px', 
+            fontWeight: 500, 
+            color: COLORS.GRAY_700,
+            letterSpacing: '0.3px',
+          }}>
+            {eventTypeLabel.toUpperCase()}
+          </Text>
+          <Heading level={2} UNSAFE_style={{ 
+            ...TYPOGRAPHY.STEP_HEADING,
+            fontSize: '22px',
+          }}>
+            Select Event Format
+          </Heading>
+          <Text UNSAFE_style={TYPOGRAPHY.SECTION_DESCRIPTION}>
+            Choose the cloud and series for this event. This determines
+            where your event will be published and what metadata it inherits.
+          </Text>
+        </Flex>
+
+        <Divider size="S" marginBottom="size-300" />
+
+        {/* Content */}
+        {isLoading ? (
+          <Flex 
+            alignItems="center" 
+            justifyContent="center" 
+            minHeight="size-2000"
+            direction="column"
+            gap="size-200"
+          >
+            <ProgressCircle aria-label="Loading format options..." isIndeterminate size="M" />
+            <Text UNSAFE_style={{ color: COLORS.GRAY_600, fontSize: '14px' }}>
+              Loading format options...
+            </Text>
+          </Flex>
+        ) : error ? (
+          <View
+            padding="size-200"
+            backgroundColor="negative"
+            borderRadius="medium"
+            marginBottom="size-300"
+          >
+            <Text UNSAFE_style={{ color: 'white' }}>Error: {error}</Text>
+          </View>
+        ) : (
+          <Flex direction="column" gap="size-300" marginBottom="size-400">
+            <Picker
+              label="Cloud"
+              isRequired
+              selectedKey={selectedCloud}
+              onSelectionChange={handleCloudChange}
+              placeholder="Choose a cloud..."
+              width="100%"
+            >
+              {clouds.map((cloud) => (
+                <Item key={cloud.key}>{cloud.label}</Item>
+              ))}
+            </Picker>
+
+            <Picker
+              label="Series"
+              isRequired
+              selectedKey={selectedSeries}
+              onSelectionChange={handleSeriesChange}
+              isDisabled={!selectedCloud}
+              placeholder={!selectedCloud ? 'Select a cloud first' : 'Choose a series...'}
+              width="100%"
+              description={
+                selectedSeries
+                  ? filteredSeries.find(s => s.id === selectedSeries)?.description || undefined
+                  : undefined
+              }
+            >
+              {filteredSeries.length === 0 ? (
+                <Item key="no-series">No series available for this cloud</Item>
+              ) : (
+                filteredSeries.map((s) => (
+                  <Item key={s.id}>{s.name}</Item>
+                ))
+              )}
+            </Picker>
+
+            {selectedCloud && filteredSeries.length === 0 && (
+              <View
+                padding="size-150"
+                backgroundColor="notice"
+                borderRadius="medium"
+              >
+                <Text UNSAFE_style={{ fontSize: '13px' }}>
+                  No event series available for this cloud and event type combination. 
+                  Please create a series first or contact your administrator.
+                </Text>
+              </View>
+            )}
+          </Flex>
+        )}
+
+        <Divider size="S" marginBottom="size-300" />
+
+        {/* Actions */}
+        <Flex direction="row" justifyContent="end" gap="size-200">
+          <Button
+            variant="secondary"
+            onPress={onCancel}
+          >
+            <ChevronLeft size="S" />
+            <Text>Back to Dashboard</Text>
+          </Button>
+          <Button
+            variant="accent"
+            onPress={handleConfirm}
+            isDisabled={isConfirmDisabled || isLoading}
+          >
+            <Text>Confirm & Continue</Text>
+            <ChevronRight size="S" />
+          </Button>
+        </Flex>
+      </View>
+    </div>
+  )
+}
+
+// ============================================================================
 // INNER FORM COMPONENT (uses context)
 // ============================================================================
 
@@ -213,6 +557,7 @@ const EventFormInner: React.FC<EventFormInnerProps> = ({ ims }) => {
     isLoading,
     isPublished,
     maxStepReached,
+    isFormatConfirmed,
     updateFormData,
     setEventId,
     setEditMode,
@@ -221,6 +566,8 @@ const EventFormInner: React.FC<EventFormInnerProps> = ({ ims }) => {
     setLoadError,
     setPublished,
     setMaxStepReached,
+    setFormatConfirmed,
+    setSeriesId,
     loadFromStorage,
     persistToStorage,
     state,
@@ -252,11 +599,19 @@ const EventFormInner: React.FC<EventFormInnerProps> = ({ ims }) => {
     if (eventIdParam) {
       setEventId(eventIdParam)
       setEditMode(true)
+      setFormatConfirmed(true) // Edit mode: format is already set
       loadEvent(eventIdParam)
     } else {
       loadFromStorage()
     }
   }, [eventIdParam])
+  
+  // Auto-confirm format when loading a draft that already has cloud + series selected
+  useEffect(() => {
+    if (!isEditMode && !isFormatConfirmed && formData.cloudType && formData.seriesId) {
+      setFormatConfirmed(true)
+    }
+  }, [isEditMode, isFormatConfirmed, formData.cloudType, formData.seriesId, setFormatConfirmed])
   
   const loadEvent = async (eventIdToLoad: string) => {
     setLoading(true)
@@ -288,6 +643,29 @@ const EventFormInner: React.FC<EventFormInnerProps> = ({ ims }) => {
       setLoading(false)
     }
   }
+  
+  // ============================================================================
+  // FORMAT SELECTION HANDLERS
+  // ============================================================================
+  
+  /**
+   * Handle format selection confirmation from the overlay dialog
+   */
+  const handleFormatConfirm = useCallback((
+    cloudType: 'CreativeCloud' | 'ExperienceCloud',
+    seriesId: string
+  ) => {
+    updateFormData({ cloudType })
+    setSeriesId(seriesId)
+    setFormatConfirmed(true)
+  }, [updateFormData, setSeriesId, setFormatConfirmed])
+  
+  /**
+   * Handle cancel from the format selection overlay — go back to dashboard
+   */
+  const handleFormatCancel = useCallback(() => {
+    navigate('/events')
+  }, [navigate])
   
   // ============================================================================
   // FORM HANDLERS
@@ -562,6 +940,9 @@ const EventFormInner: React.FC<EventFormInnerProps> = ({ ims }) => {
     return <HistoryTimeline resourceId={eventId} resourceType="event" />
   }
 
+  // Whether to show the format selection overlay
+  const showFormatOverlay = !isFormatConfirmed && !isEditMode
+
   return (
     <View 
       UNSAFE_style={{
@@ -584,6 +965,15 @@ const EventFormInner: React.FC<EventFormInnerProps> = ({ ims }) => {
         eventTypeLabel={getEventTypeLabel()}
         headerActions={renderHeaderActions()}
       />
+
+      {/* Format Selection Overlay — frosted glass + dialog */}
+      {showFormatOverlay && (
+        <FormatSelectionOverlay
+          eventType={formData.eventType}
+          onConfirm={handleFormatConfirm}
+          onCancel={handleFormatCancel}
+        />
+      )}
     </View>
   )
 }
@@ -611,4 +1001,3 @@ export const EventForm: React.FC<EventFormProps> = ({ ims }) => {
     </EventFormProvider>
   )
 }
-
