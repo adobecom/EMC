@@ -67,6 +67,8 @@ interface FormWizardProps {
   eventStatus?: EventStatus
   /** Optional actions to render in the header (e.g., history button) */
   headerActions?: React.ReactNode
+  /** Content rendered when "Session Management" is selected in the side nav (outside the wizard steps) */
+  sessionContent?: React.ReactNode
 }
 
 export const FormWizard: React.FC<FormWizardProps> = ({
@@ -84,10 +86,12 @@ export const FormWizard: React.FC<FormWizardProps> = ({
   onMaxStepChange,
   eventTypeLabel,
   eventStatus,
-  headerActions
+  headerActions,
+  sessionContent
 }) => {
   const [currentStepIndex, setCurrentStepIndex] = useState(0)
   const [isNavigating, setIsNavigating] = useState(false)
+  const [showSessionView, setShowSessionView] = useState(false)
   const navigate = useNavigate()
 
   const currentStep = steps[currentStepIndex]
@@ -163,7 +167,13 @@ export const FormWizard: React.FC<FormWizardProps> = ({
     // Check if step is accessible
     if (!isStepAccessible(stepIndex)) return
     
+    setShowSessionView(false)
     setCurrentStepIndex(stepIndex)
+  }
+
+  const handleSessionClick = () => {
+    if (isSubmitting || isNavigating) return
+    setShowSessionView(true)
   }
 
   const handleDashboardClick = () => {
@@ -187,7 +197,7 @@ export const FormWizard: React.FC<FormWizardProps> = ({
   // Determine step status for side nav
   const getStepStatus = (index: number): 'completed' | 'active' | 'locked' | 'available' => {
     if (index < currentStepIndex && hasEventId) return 'completed'
-    if (index === currentStepIndex) return 'active'
+    if (index === currentStepIndex && !showSessionView) return 'active'
     if (!isStepAccessible(index)) return 'locked'
     return 'available'
   }
@@ -288,9 +298,6 @@ export const FormWizard: React.FC<FormWizardProps> = ({
             
             <Flex direction="column" gap="size-50">
               {steps.map((step, index) => {
-                // Session management is shown under the SESSIONS section instead
-                if (step.id === 'session-management') return null
-
                 const status = getStepStatus(index)
                 const isActive = status === 'active'
                 const isLocked = status === 'locked'
@@ -372,70 +379,61 @@ export const FormWizard: React.FC<FormWizardProps> = ({
           </View>
         </Flex>
       </View>
-      <View padding="size-300" flex={1}>
-        <Text UNSAFE_style={{ 
-          fontSize: '12px',
-          fontWeight: 500,
-          color: COLORS.GRAY_700,
-          letterSpacing: '0.5px',
-          marginBottom: '16px',
-          display: 'block'
-        }}>
-          SESSIONS
-        </Text>
-        {(() => {
-          const sessionStepIndex = steps.findIndex(s => s.id === 'session-management')
-          if (sessionStepIndex === -1) return null
-          const status = getStepStatus(sessionStepIndex)
-          const isActive = status === 'active'
-          const isLocked = status === 'locked'
-          const isDisabled = isLocked || isSubmitting || isNavigating
-          return (
-            <button
-              onClick={() => handleStepClick(sessionStepIndex)}
-              disabled={isDisabled}
-              style={{
-                border: 'none',
-                background: isActive ? COLORS.ADOBE_RED : COLORS.TRANSPARENT,
-                color: isActive ? COLORS.WHITE : isLocked ? COLORS.GRAY_600 : COLORS.GRAY_800,
-                padding: '8px 12px',
-                textAlign: 'left',
-                cursor: isDisabled ? 'not-allowed' : 'pointer',
-                borderRadius: '4px',
-                fontSize: '14px',
-                fontWeight: isActive ? 500 : 400,
-                opacity: isLocked ? 0.6 : 1,
-                transition: 'all 0.2s ease',
-                width: '100%',
-              }}
-              onMouseEnter={(e) => {
-                if (!isActive && !isDisabled) {
-                  e.currentTarget.style.backgroundColor = 'rgba(235, 16, 0, 0.1)'
-                  e.currentTarget.style.color = COLORS.ADOBE_RED
-                }
-              }}
-              onMouseLeave={(e) => {
-                if (!isActive) {
-                  e.currentTarget.style.backgroundColor = COLORS.TRANSPARENT
-                  e.currentTarget.style.color = isLocked ? COLORS.GRAY_600 : COLORS.GRAY_800
-                }
-              }}
-              onMouseDown={(e) => {
-                if (!isActive && !isDisabled) {
-                  e.currentTarget.style.backgroundColor = 'rgba(235, 16, 0, 0.2)'
-                }
-              }}
-              onMouseUp={(e) => {
-                if (!isActive && !isDisabled) {
-                  e.currentTarget.style.backgroundColor = 'rgba(235, 16, 0, 0.1)'
-                }
-              }}
-            >
-              Session Management
-            </button>
-          )
-        })()}
-      </View>
+      {sessionContent && (
+        <View padding="size-300" flex={1}>
+          <Text UNSAFE_style={{ 
+            fontSize: '12px',
+            fontWeight: 500,
+            color: COLORS.GRAY_700,
+            letterSpacing: '0.5px',
+            marginBottom: '16px',
+            display: 'block'
+          }}>
+            SESSIONS
+          </Text>
+          <button
+            onClick={handleSessionClick}
+            disabled={isSubmitting || isNavigating}
+            style={{
+              border: 'none',
+              background: showSessionView ? COLORS.ADOBE_RED : COLORS.TRANSPARENT,
+              color: showSessionView ? COLORS.WHITE : COLORS.GRAY_800,
+              padding: '8px 12px',
+              textAlign: 'left',
+              cursor: (isSubmitting || isNavigating) ? 'not-allowed' : 'pointer',
+              borderRadius: '4px',
+              fontSize: '14px',
+              fontWeight: showSessionView ? 500 : 400,
+              transition: 'all 0.2s ease',
+              width: '100%',
+            }}
+            onMouseEnter={(e) => {
+              if (!showSessionView && !isSubmitting && !isNavigating) {
+                e.currentTarget.style.backgroundColor = 'rgba(235, 16, 0, 0.1)'
+                e.currentTarget.style.color = COLORS.ADOBE_RED
+              }
+            }}
+            onMouseLeave={(e) => {
+              if (!showSessionView) {
+                e.currentTarget.style.backgroundColor = COLORS.TRANSPARENT
+                e.currentTarget.style.color = COLORS.GRAY_800
+              }
+            }}
+            onMouseDown={(e) => {
+              if (!showSessionView && !isSubmitting && !isNavigating) {
+                e.currentTarget.style.backgroundColor = 'rgba(235, 16, 0, 0.2)'
+              }
+            }}
+            onMouseUp={(e) => {
+              if (!showSessionView && !isSubmitting && !isNavigating) {
+                e.currentTarget.style.backgroundColor = 'rgba(235, 16, 0, 0.1)'
+              }
+            }}
+          >
+            Session Management
+          </button>
+        </View>
+      )}
 
       {/* Progress indicator at bottom */}
       <View padding="size-300">
@@ -618,7 +616,14 @@ export const FormWizard: React.FC<FormWizardProps> = ({
   const statusStyles = getStatusBadgeStyles(displayStatus)
   const statusLabel = displayStatus.charAt(0).toUpperCase() + displayStatus.slice(1).toLowerCase()
 
-  const mainContent = (
+  const mainContent = showSessionView ? (
+    <View>
+      <View marginBottom="size-300">
+        <Heading level={2} UNSAFE_style={TYPOGRAPHY.STEP_HEADING}>Session Management</Heading>
+      </View>
+      <View marginTop="size-300" marginBottom="size-400">{sessionContent}</View>
+    </View>
+  ) : (
     <View>
       {/* Step title */}
       <View marginBottom="size-300">

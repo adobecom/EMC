@@ -517,13 +517,6 @@ const EventFormInner: React.FC<EventFormInnerProps> = ({ ims }) => {
   // ============================================================================
   const steps: WizardStep[] = [
     {
-      id: 'session-management',
-      title: 'Session Management',
-      description: 'Breakdown your event into sessions and add details',
-      component: sessionManagementComponent,
-      isValid: true
-    },
-    {
       id: 'basic-info',
       title: 'Basic Info',
       description: 'Event format, tags, information, date/time, and venue',
@@ -602,6 +595,7 @@ const EventFormInner: React.FC<EventFormInnerProps> = ({ ims }) => {
         onMaxStepChange={handleMaxStepChange}
         eventTypeLabel={getEventTypeLabel()}
         headerActions={renderHeaderActions()}
+        sessionContent={sessionManagementComponent}
       />
     </View>
   )
