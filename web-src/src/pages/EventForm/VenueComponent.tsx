@@ -5,29 +5,50 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react'
 import {
   View,
-  Checkbox,
   Flex,
   Heading,
   Text,
-  TextField
+  TextField,
+  ActionButton,
+  Switch
 } from '@adobe/react-spectrum'
-import { RichTextEditor, ImageUploader } from '../../components/shared'
-import { TYPOGRAPHY } from '../../styles/designSystem'
+import Add from '@spectrum-icons/workflow/Add'
+import Remove from '@spectrum-icons/workflow/Remove'
+import { ImageUploader, RichTextEditor } from '../../components/shared'
+import { TYPOGRAPHY, COLORS } from '../../styles/designSystem'
 import { VenueData, EventApiResponse } from '../../types/domain'
 import { loadGooglePlacesAPI } from '../../utils/loadGooglePlaces'
 import { useEventFormComponent } from '../../hooks/useEventFormComponent'
 import { apiService } from '../../services/api'
 import { getVenuePayload } from '../../utils/dataFilters'
+import { uploadImage } from '../../services/requestHelpers'
+import { tokenStorage } from '../../services/tokenStorage'
+import { getCurrentEnvironment, getApiHost } from '../../config/constants'
 import '../../../src/types/google-places.d.ts'
+
+// ============================================================================
+// CONSTANTS
+// ============================================================================
+
+const VENUE_NAME_MAX_LENGTH = 80
+
+// ============================================================================
+// COMPONENT
+// ============================================================================
 
 /**
  * VenueComponent - Manages venue information for in-person events
  * 
+ * Features:
+ * - Google Places autocomplete for venue search
+ * - Alternative venue name override
+ * - Venue image upload
+ * - Instructions for attendees
+ * - Post-event visibility toggles
+ * 
  * Lifecycle Integration:
  * - Uses useEventFormComponent hook for context integration
  * - onAfterSave: Creates or replaces venue via API after event is saved
- * - Handles Google Places autocomplete for venue search
- * - Venue image handled by ImageUploader (uploads independently)
  */
 export const VenueComponent: React.FC = () => {
   // ============================================================================
@@ -39,16 +60,59 @@ export const VenueComponent: React.FC = () => {
     updateFormData,
     eventId,
     locale,
-    isEditMode,
   } = useEventFormComponent({
     componentId: 'venue',
     
     /**
-     * After the main event save, create or update the venue
-     * This runs in parallel with other component onAfterSave callbacks
+     * After the main event save, create or update the venue and upload pending image
      */
     onAfterSave: async (savedEventId: string, eventResponse: EventApiResponse) => {
       const venueData = formData.venue
+      
+      // ========================================================================
+      // 1. Upload pending venue image (if any)
+      // ========================================================================
+      const pendingFile = pendingImageFileRef.current
+      if (pendingFile) {
+        try {
+          const token = tokenStorage.getValidToken()
+          if (token) {
+            const currentEnv = getCurrentEnvironment()
+            const host = getApiHost('esp', currentEnv)
+            const uploadUrl = `${host}/v1/events/${savedEventId}/images`
+            
+            const config = {
+              targetUrl: uploadUrl,
+              altText: `Venue image for ${venueData?.venueName || 'event'}`,
+              type: 'venue-image'
+            }
+            
+            const result = await uploadImage(pendingFile, config, token)
+            
+            if (result.imageUrl && result.imageId) {
+              console.log('Venue image uploaded successfully:', result)
+              // Clear the pending file to prevent repeat uploads
+              pendingImageFileRef.current = null
+              // Update venue data with the uploaded image info
+              updateFormData({
+                venue: {
+                  ...venueData,
+                  venueName: venueData?.venueName || '',
+                  venueImageUrl: result.imageUrl,
+                  venueImageId: result.imageId
+                }
+              })
+            }
+          }
+        } catch (error) {
+          console.error('Failed to upload venue image:', error)
+          // Don't block venue creation if image upload fails
+        }
+      }
+      
+      // ========================================================================
+      // 2. Create or update venue
+      // ========================================================================
       
       // Skip if no venue name entered
       if (!venueData?.venueName?.trim()) {
@@ -56,39 +120,31 @@ export const VenueComponent: React.FC = () => {
       }
       
       // Build the localized venue payload
-      // Required fields per OpenAPI: placeId, venueName, formattedAddress, addressComponents, coordinates, gmtOffset
       const venuePayload = getVenuePayload({
         venueName: venueData.venueName,
         placeId: venueData.placeId,
         coordinates: venueData.coordinates,
         gmtOffset: venueData.gmtOffset,
         formattedAddress: venueData.formattedAddress,
-        addressComponents: venueData.addressComponents, // Required by OpenAPI
+        addressComponents: venueData.addressComponents,
         additionalInformation: venueData.additionalInformation,
       }, locale)
       
-      // Check if venue already exists on the event
       const existingVenue = eventResponse.venue
       
       try {
         if (!existingVenue) {
-          // Create new venue
           const result = await apiService.createVenue(savedEventId, venuePayload)
-          
           if ('error' in result) {
             console.error('Failed to create venue:', result)
-            // Don't throw - let other components continue
             return
           }
-          
           console.log('Venue created successfully:', result)
         } else {
-          // Check if venue data has changed
           const hasPlaceIdChanged = venuePayload.placeId !== existingVenue.placeId
           const hasAdditionalInfoChanged = venueData.additionalInformation !== existingVenue.additionalInformation
           
           if (hasPlaceIdChanged || hasAdditionalInfoChanged) {
-            // Replace existing venue
             const result = await apiService.replaceVenue(
               savedEventId,
               existingVenue.venueId,
@@ -104,13 +160,11 @@ export const VenueComponent: React.FC = () => {
               console.error('Failed to replace venue:', result)
               return
             }
-            
             console.log('Venue replaced successfully:', result)
           }
         }
       } catch (error) {
         console.error('Error saving venue:', error)
-        // Don't throw - let save complete for other components
       }
     },
     
@@ -120,7 +174,6 @@ export const VenueComponent: React.FC = () => {
     validate: () => {
       const venueData = formData.venue
       
-      // If venue name is provided, placeId should also be present (from autocomplete)
       if (venueData?.venueName?.trim() && !venueData?.placeId) {
         return 'Please select a valid venue from the autocomplete suggestions'
       }
@@ -129,13 +182,16 @@ export const VenueComponent: React.FC = () => {
     }
   })
   
-  // Get venue data from form context
+  // Get venue data from form context with defaults
   const venue = formData.venue || {
     venueName: '',
     formattedAddress: '',
     additionalInformation: '',
     showVenuePostEvent: false,
-    showAdditionalInfoPostEvent: false
+    showVenueImagePostEvent: false,
+    showAdditionalInfoPostEvent: false,
+    useAlternativeVenueName: false,
+    googlePlaceName: ''
   }
   
   // ============================================================================
@@ -146,15 +202,23 @@ export const VenueComponent: React.FC = () => {
   const [autocomplete, setAutocomplete] = useState<google.maps.places.Autocomplete | null>(null)
   const [venueNameValue, setVenueNameValue] = useState(venue.venueName || '')
   const [placesApiError, setPlacesApiError] = useState<string | null>(null)
-  const [placesApiLoaded, setPlacesApiLoaded] = useState(false)
+  const [showAlternativeNameField, setShowAlternativeNameField] = useState(venue.useAlternativeVenueName || false)
+  const [alternativeVenueName, setAlternativeVenueName] = useState('')
+  const [hasAttemptedSubmit, setHasAttemptedSubmit] = useState(false)
+  
+  // Deferred image upload state - used when creating new events (no eventId yet)
+  const [pendingImageFile, setPendingImageFile] = useState<File | null>(null)
+  const pendingImageFileRef = useRef<File | null>(null)
+  
+  // Keep ref in sync with state for use in onAfterSave callback
+  useEffect(() => {
+    pendingImageFileRef.current = pendingImageFile
+  }, [pendingImageFile])
   
   // ============================================================================
   // HELPERS
   // ============================================================================
   
-  /**
-   * Update venue data in context
-   */
   const updateVenue = useCallback((updates: Partial<VenueData>) => {
     updateFormData({
       venue: { ...venue, ...updates }
@@ -173,8 +237,6 @@ export const VenueComponent: React.FC = () => {
       try {
         await loadGooglePlacesAPI()
         if (!isMounted) return
-        
-        setPlacesApiLoaded(true)
 
         if (venueNameInputRef.current && !autocomplete) {
           autocompleteInstance = new window.google.maps.places.Autocomplete(
@@ -203,6 +265,7 @@ export const VenueComponent: React.FC = () => {
               
               const updates: Partial<VenueData> = {
                 venueName: place.name || '',
+                googlePlaceName: place.name || '', // Store original Google name
                 formattedAddress: place.formatted_address || '',
                 placeId: place.place_id
               }
@@ -215,12 +278,9 @@ export const VenueComponent: React.FC = () => {
               }
 
               if (place.utc_offset_minutes !== undefined) {
-                // Per OpenAPI: gmtOffset is in hours, Google Places returns minutes
                 updates.gmtOffset = place.utc_offset_minutes / 60
               }
               
-              // Required by OpenAPI: addressComponents from Google Places API
-              // Per OpenAPI AddressComponent schema: uses camelCase (longName, shortName, types)
               if (place.address_components) {
                 updates.addressComponents = place.address_components.map((component: any) => ({
                   longName: component.long_name,
@@ -230,7 +290,13 @@ export const VenueComponent: React.FC = () => {
               }
 
               setVenueNameValue(place.name || '')
-              updateVenue(updates)
+              // Reset alternative name when selecting new venue
+              setAlternativeVenueName('')
+              setShowAlternativeNameField(false)
+              updateVenue({
+                ...updates,
+                useAlternativeVenueName: false
+              })
             }
           })
 
@@ -244,7 +310,6 @@ export const VenueComponent: React.FC = () => {
         console.error('Error initializing Google Places Autocomplete:', error)
         const errorMessage = error instanceof Error ? error.message : 'Failed to load Google Places API'
         setPlacesApiError(errorMessage)
-        setPlacesApiLoaded(false)
       }
     }
 
@@ -252,8 +317,9 @@ export const VenueComponent: React.FC = () => {
 
     return () => {
       isMounted = false
-      if (autocompleteInstance) {
-        window.google?.maps?.event?.clearInstanceListeners(autocompleteInstance)
+      if (autocompleteInstance && window.google?.maps) {
+        // Use type assertion for Google Maps event API
+        (window.google.maps as any).event?.clearInstanceListeners(autocompleteInstance)
       }
     }
   }, [autocomplete, updateVenue])
@@ -263,7 +329,10 @@ export const VenueComponent: React.FC = () => {
     if (venue.venueName !== venueNameValue) {
       setVenueNameValue(venue.venueName || '')
     }
-  }, [venue.venueName])
+    if (venue.useAlternativeVenueName !== showAlternativeNameField) {
+      setShowAlternativeNameField(venue.useAlternativeVenueName || false)
+    }
+  }, [venue.venueName, venue.useAlternativeVenueName])
 
   // ============================================================================
   // EVENT HANDLERS
@@ -274,37 +343,54 @@ export const VenueComponent: React.FC = () => {
     updateVenue({ venueName: value })
   }
   
-  const handleAddressChange = (value: string) => {
-    updateVenue({ formattedAddress: value })
+  const handleAlternativeNameToggle = () => {
+    const newValue = !showAlternativeNameField
+    setShowAlternativeNameField(newValue)
+    
+    if (newValue) {
+      // Opening alternative name field - pre-populate with Google name
+      setAlternativeVenueName(venue.googlePlaceName || venue.venueName || '')
+      updateVenue({
+        useAlternativeVenueName: true
+      })
+    } else {
+      // Closing alternative name field - revert to Google name
+      setAlternativeVenueName('')
+      if (venue.googlePlaceName) {
+        updateVenue({
+          venueName: venue.googlePlaceName,
+          useAlternativeVenueName: false
+        })
+        setVenueNameValue(venue.googlePlaceName)
+      } else {
+        updateVenue({
+          useAlternativeVenueName: false
+        })
+      }
+    }
+  }
+  
+  const handleAlternativeNameChange = (value: string) => {
+    setAlternativeVenueName(value)
+    // Update the venueName with the alternative name
+    updateVenue({ venueName: value })
+  }
+  
+  const handleShowVenuePostEventChange = (checked: boolean) => {
+    updateVenue({ showVenuePostEvent: checked })
+  }
+  
+  const handleShowVenueImagePostEventChange = (checked: boolean) => {
+    updateVenue({ showVenueImagePostEvent: checked })
   }
   
   const handleAdditionalInfoChange = (value: string) => {
     updateVenue({ additionalInformation: value })
   }
   
-  const handleShowVenuePostEventChange = (checked: boolean) => {
-    updateVenue({ showVenuePostEvent: checked })
-    // If unchecking venue visibility, also uncheck additional info
-    if (!checked && venue.showAdditionalInfoPostEvent) {
-      updateVenue({ 
-        showVenuePostEvent: false,
-        showAdditionalInfoPostEvent: false 
-      })
-    }
-  }
-  
-  const handleShowAdditionalInfoPostEventChange = (checked: boolean) => {
-    updateVenue({ showAdditionalInfoPostEvent: checked })
-    // If checking additional info, also check venue visibility
-    if (checked && !venue.showVenuePostEvent) {
-      updateVenue({
-        showVenuePostEvent: true,
-        showAdditionalInfoPostEvent: true
-      })
-    }
-  }
-  
   const handleImageChange = (imageUrl: string | undefined, imageId: string | undefined) => {
+    // Clear pending file since we now have an uploaded image
+    setPendingImageFile(null)
     updateVenue({ 
       venueImageUrl: imageUrl, 
       venueImageId: imageId 
@@ -312,123 +398,197 @@ export const VenueComponent: React.FC = () => {
   }
   
   const handleImageRemove = () => {
+    // Clear both pending file and uploaded image
+    setPendingImageFile(null)
     updateVenue({ 
       venueImageUrl: undefined, 
       venueImageId: undefined 
     })
   }
+  
+  /**
+   * Handle file selection in deferred upload mode (when no eventId exists yet)
+   * The file will be uploaded in onAfterSave after the event is created
+   */
+  const handleImageFileSelected = (file: File) => {
+    setPendingImageFile(file)
+  }
+
+  // ============================================================================
+  // VALIDATION
+  // ============================================================================
+  
+  const isVenueNameEmpty = !venueNameValue.trim()
+  const showVenueNameError = hasAttemptedSubmit && isVenueNameEmpty
 
   // ============================================================================
   // RENDER
   // ============================================================================
 
   return (
-    <Flex direction="column" gap="size-200">
-      <Heading level={3} UNSAFE_style={TYPOGRAPHY.COMPONENT_HEADING}>Venue Information</Heading>
+    <Flex direction="column" gap="size-300">
+      {/* Section Heading */}
+      <Heading level={3} UNSAFE_style={TYPOGRAPHY.COMPONENT_HEADING}>
+        Venue information<span style={{ color: COLORS.ADOBE_RED }}>*</span>
+      </Heading>
 
-      {/* Venue Name with Google Places Autocomplete */}
+      {/* Post-event visibility toggle */}
+      <Switch
+        isSelected={venue.showVenuePostEvent || false}
+        onChange={handleShowVenuePostEventChange}
+        UNSAFE_style={{
+          width: 'max-content'
+        }}
+      >
+        Display venue info post-event.
+      </Switch>
+
+      {/* Venue Name Field */}
       <View width="100%">
-        <View marginBottom="size-100">
-          <label htmlFor="venue-name-input" style={{ 
-            display: 'block',
+        <Flex justifyContent="space-between" alignItems="center" marginBottom="size-50">
+          <Text UNSAFE_style={{ 
             fontSize: '14px',
-            fontWeight: 'bold',
-            marginBottom: '8px',
-            color: 'var(--spectrum-global-color-gray-800)'
+            color: COLORS.GRAY_700
           }}>
-            Venue Name <span style={{ color: 'var(--spectrum-global-color-red-600)' }}>*</span>
-          </label>
-          <input
-            id="venue-name-input"
-            ref={venueNameInputRef}
-            type="text"
-            value={venueNameValue}
-            onChange={(e) => handleVenueNameChange(e.target.value)}
-            maxLength={80}
-            required
-            aria-label="Venue Name"
-            style={{
-              width: '100%',
-              padding: '8px 12px',
-              fontSize: '14px',
-              border: placesApiError 
-                ? '1px solid var(--spectrum-global-color-red-600)' 
-                : '1px solid var(--spectrum-global-color-gray-400)',
-              borderRadius: '4px',
-              backgroundColor: 'var(--spectrum-global-color-gray-50)',
-              color: 'var(--spectrum-global-color-gray-800)',
-              fontFamily: 'adobe-clean, sans-serif',
-              boxSizing: 'border-box'
+            Venue name
+          </Text>
+          <Text UNSAFE_style={{ 
+            fontSize: '12px',
+            color: COLORS.GRAY_600
+          }}>
+            {VENUE_NAME_MAX_LENGTH} characters max
+          </Text>
+        </Flex>
+        
+        <input
+          id="venue-name-input"
+          ref={venueNameInputRef}
+          type="text"
+          value={venueNameValue}
+          onChange={(e) => handleVenueNameChange(e.target.value)}
+          onBlur={() => setHasAttemptedSubmit(true)}
+          maxLength={VENUE_NAME_MAX_LENGTH}
+          placeholder="Where it's at"
+          aria-label="Venue Name"
+          aria-describedby={showVenueNameError ? 'venue-name-error' : undefined}
+          style={{
+            width: '100%',
+            padding: '10px 12px',
+            fontSize: '14px',
+            border: showVenueNameError
+              ? `2px solid ${COLORS.ADOBE_RED}` 
+              : '1px solid var(--spectrum-global-color-gray-400)',
+            borderRadius: '4px',
+            backgroundColor: 'var(--spectrum-global-color-gray-50)',
+            color: COLORS.GRAY_800,
+            fontFamily: 'adobe-clean, sans-serif',
+            boxSizing: 'border-box'
+          }}
+        />
+        
+        {showVenueNameError && (
+          <Text 
+            id="venue-name-error"
+            UNSAFE_style={{ 
+              fontSize: '12px', 
+              color: COLORS.ADOBE_RED,
+              marginTop: '4px',
+              display: 'block'
             }}
-          />
+          >
+            Add the venue name.
+          </Text>
+        )}
+        
+        {placesApiError && (
           <Text UNSAFE_style={{ 
             fontSize: '12px', 
-            color: placesApiError 
-              ? 'var(--spectrum-global-color-red-600)' 
-              : 'var(--spectrum-global-color-gray-700)',
+            color: COLORS.ADOBE_RED,
             marginTop: '4px',
             display: 'block'
           }}>
-            {placesApiError 
-              ? `⚠️ ${placesApiError}` 
-              : placesApiLoaded 
-                ? "Start typing to search for venues" 
-                : "Loading venue autocomplete..."}
+            {placesApiError}
           </Text>
-        </View>
+        )}
       </View>
 
-      {/* Venue Address - Auto-populated but editable */}
-      <View width="100%">
-        <TextField
-          label="Venue Address"
-          width="100%"
-          value={venue.formattedAddress || ''}
-          onChange={handleAddressChange}
-          description="Auto-populated from venue selection, but editable"
+      {/* Alternative Venue Name Toggle */}
+      <View>
+        <ActionButton
+          isQuiet
+          onPress={handleAlternativeNameToggle}
+          UNSAFE_style={{
+            color: COLORS.GRAY_800,
+            padding: 0,
+            marginLeft: '-8px'
+          }}
+        >
+          {showAlternativeNameField ? <Remove size="S" /> : <Add size="S" />}
+          <Text UNSAFE_style={{ marginLeft: '4px', color: COLORS.GRAY_800 }}>
+            {showAlternativeNameField 
+              ? 'Remove alternative venue name' 
+              : 'Add alternative venue name (optional)'}
+          </Text>
+        </ActionButton>
+        
+        {showAlternativeNameField && (
+          <View marginTop="size-200">
+            <TextField
+              label="Alternative venue name"
+              width="100%"
+              value={alternativeVenueName}
+              onChange={handleAlternativeNameChange}
+              maxLength={VENUE_NAME_MAX_LENGTH}
+              description="This name will be displayed instead of the Google Places name"
+            />
+          </View>
+        )}
+      </View>
+
+      {/* Venue Image Section */}
+      <View marginTop="size-200">
+        <Heading level={4} UNSAFE_style={TYPOGRAPHY.SUBSECTION_HEADING}>
+          Venue image or map
+        </Heading>
+        
+        <Switch
+          isSelected={venue.showVenueImagePostEvent || false}
+          onChange={handleShowVenueImagePostEventChange}
+          marginTop="size-100"
+          marginBottom="size-200"
+        >
+          Display image and instructions post-event.
+        </Switch>
+        
+        <ImageUploader
+          label=""
+          imageUrl={venue.venueImageUrl}
+          imageId={venue.venueImageId}
+          imageKind="venue-image"
+          altText={`Venue image for ${venue.venueName}`}
+          eventId={eventId ?? undefined}
+          maxSizeMB={25}
+          onChange={handleImageChange}
+          onRemove={handleImageRemove}
+          dropzoneTitle="Add image"
+          dropzoneDimensions="File dimensions 1920px wide."
+          // Use deferred upload when creating new event (no eventId yet)
+          // The image will be uploaded in onAfterSave after event creation
+          deferUpload={!eventId}
+          onFileSelected={handleImageFileSelected}
+          pendingFile={pendingImageFile ?? undefined}
         />
       </View>
 
-      {/* Venue Image Uploader */}
-      <ImageUploader
-        label="Venue Image"
-        imageUrl={venue.venueImageUrl}
-        imageId={venue.venueImageId}
-        imageKind="venue-image"
-        altText={`Venue image for ${venue.venueName}`}
-        eventId={eventId ?? undefined}
-        description="Upload an image of the venue"
-        recommendedDimensions="1920px wide"
-        maxSizeMB={25}
-        onChange={handleImageChange}
-        onRemove={handleImageRemove}
-      />
-
-      {/* Venue Additional Information */}
-      <View width="100%">
+      {/* Instructions for Attendees */}
+      <View marginTop="size-200">
         <RichTextEditor
-          label="Venue Additional Information (Optional)"
+          label="Instructions for attendees"
           value={venue.additionalInformation || ''}
           onChange={handleAdditionalInfoChange}
-          height="250px"
-          description="Additional details about the venue"
+          height="200px"
         />
       </View>
-
-      {/* Post-event visibility toggles */}
-      <Checkbox
-        isSelected={venue.showVenuePostEvent || false}
-        onChange={handleShowVenuePostEventChange}
-      >
-        Venue info will appear post-event
-      </Checkbox>
-
-      <Checkbox
-        isSelected={venue.showAdditionalInfoPostEvent || false}
-        onChange={handleShowAdditionalInfoPostEventChange}
-      >
-        Venue additional info will appear post-event
-      </Checkbox>
     </Flex>
   )
 }

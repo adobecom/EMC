@@ -4,7 +4,7 @@
 
 import { useCallback } from 'react'
 import { useEventFormContext } from '../contexts/EventFormContext'
-import { apiService } from '../services/api'
+import { apiService, cachedApi } from '../services/api'
 import { EventFormData, EventApiResponse } from '../types/domain'
 import {
   EVENT_DATA_FILTER,
@@ -473,7 +473,7 @@ export function useEventFormSave() {
       }
       
       // 7. Refresh event data to get the complete state
-      const refreshedResponse = await apiService.getEventFull(savedEventId)
+      const refreshedResponse = await cachedApi.getEventFull(savedEventId)
       if (!('error' in refreshedResponse)) {
         setEventResponse(refreshedResponse as EventApiResponse)
       }

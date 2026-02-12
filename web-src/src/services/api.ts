@@ -23,6 +23,8 @@ import { getSeriesListMock, getEventsListMock } from '../mocks'
 import { tokenStorage } from './tokenStorage'
 import { constructRequestHeaders, safeFetch } from './requestHelpers'
 import { getCurrentEnvironment, getApiHost, SUPPORTED_CLOUDS } from '../config/constants'
+import { apiCache } from './cacheUtils'
+import { deduplicateBy } from '../utils/deduplication'
 
 // ============================================================================
 // TYPES
@@ -507,6 +509,26 @@ class ApiService {
   // ============================================================================
 
   /**
+   * Get the current auth token - checks both stored dev token and IMS token from context
+   * Priority: 1) tokenStorage (dev mode) 2) configured headers (ExC Shell IMS)
+   */
+  private getAuthToken(): string | null {
+    // First check tokenStorage (dev mode)
+    const storedToken = tokenStorage.getValidToken()
+    if (storedToken) {
+      return storedToken
+    }
+    
+    // Fall back to IMS token set via setAuthHeaders (ExC Shell mode)
+    const authHeader = this.config.headers?.authorization
+    if (authHeader && authHeader.startsWith('Bearer ')) {
+      return authHeader.substring(7) // Remove "Bearer " prefix
+    }
+    
+    return null
+  }
+
+  /**
    * Generic external API call wrapper
    * Handles token validation, environment detection, and error handling
    * 
@@ -524,7 +546,7 @@ class ApiService {
     }
   ): Promise<T | ErrorResponse> {
     const operationName = options?.operationName || `${method} ${endpoint}`
-    const token = tokenStorage.getValidToken()
+    const token = this.getAuthToken()
     
     if (!token) {
       console.warn(`⚠️ No valid authentication token for ${operationName}`)
@@ -613,7 +635,7 @@ class ApiService {
    * Get series list from ESP API with token authentication and mock fallback
    */
   async getSeriesList(): Promise<SeriesApiResponse[]> {
-    const token = tokenStorage.getValidToken()
+    const token = this.getAuthToken()
     
     if (!token) {
       console.warn('⚠️ No valid authentication token. Using mock data.')
@@ -735,7 +757,7 @@ class ApiService {
    * Fetch series history in batch for enrichment
    */
   async getSeriesHistoryBatch(seriesIds: string[]): Promise<Map<string, EventHistoryResponse>> {
-    const token = tokenStorage.getValidToken()
+    const token = this.getAuthToken()
     const results = new Map<string, EventHistoryResponse>()
     
     if (!token) {
@@ -784,7 +806,7 @@ class ApiService {
    * Fetch series details for enrichment
    */
   async getSeriesBatch(seriesIds: string[]): Promise<Map<string, SeriesApiResponse>> {
-    const token = tokenStorage.getValidToken()
+    const token = this.getAuthToken()
     const results = new Map<string, SeriesApiResponse>()
     
     if (!token) {
@@ -837,7 +859,7 @@ class ApiService {
    * Get events list from ESP API with token authentication and mock fallback
    */
   async getEventsList(): Promise<EventApiResponse[]> {
-    const token = tokenStorage.getValidToken()
+    const token = this.getAuthToken()
     
     if (!token) {
       console.warn('⚠️ No valid authentication token. Using mock data.')
@@ -959,7 +981,7 @@ class ApiService {
   async getEventFull(eventId: string): Promise<any | ErrorResponse> {
     validateString(eventId, 'eventId')
 
-    const token = tokenStorage.getValidToken()
+    const token = this.getAuthToken()
     if (!token) {
       console.warn('⚠️ No valid authentication token for getEventFull')
       return { status: 'No Token', error: 'No valid authentication token' }
@@ -1096,7 +1118,7 @@ class ApiService {
    * Batch fetch event images for enrichment
    */
   async getEventImagesBatch(eventIds: string[]): Promise<Map<string, EventApiResponse>> {
-    const token = tokenStorage.getValidToken()
+    const token = this.getAuthToken()
     const results = new Map<string, EventApiResponse>()
     
     if (!token) return results
@@ -1144,7 +1166,7 @@ class ApiService {
    * Batch fetch event venues for enrichment
    */
   async getEventVenuesBatch(eventIds: string[]): Promise<Map<string, Venue[]>> {
-    const token = tokenStorage.getValidToken()
+    const token = this.getAuthToken()
     const results = new Map<string, Venue[]>()
     
     if (!token) return results
@@ -1191,7 +1213,7 @@ class ApiService {
    * Batch fetch event history for enrichment
    */
   async getEventHistoryBatch(eventIds: string[]): Promise<Map<string, EventHistoryResponse>> {
-    const token = tokenStorage.getValidToken()
+    const token = this.getAuthToken()
     const results = new Map<string, EventHistoryResponse>()
     
     if (!token) return results
@@ -1591,7 +1613,7 @@ class ApiService {
     tracker?: UploadProgressTracker,
     imageId?: string
   ): Promise<any | ErrorResponse> {
-    const token = tokenStorage.getValidToken()
+    const token = this.getAuthToken()
     
     if (!token) {
       console.warn('⚠️ No valid authentication token for uploadImage')
@@ -1863,6 +1885,285 @@ export const apiService = new ApiService()
 export default apiService
 
 // ============================================================================
+// CACHED API SERVICE
+// ============================================================================
+
+/**
+ * Cached API Service - Wraps apiService with automatic caching and request deduplication
+ * 
+ * Uses the apiCache pattern from throttling.md:
+ * - 10-second cache for GET requests (configurable via apiCache.setCacheTimeout)
+ * - Request deduplication (multiple simultaneous calls = 1 API request)
+ * - Pattern-based cache invalidation on mutations
+ * 
+ * Benefits:
+ * - Multiple simultaneous calls = 1 API request (request deduplication)
+ * - 10-second cache for GET requests
+ * - Smart cache invalidation on mutations
+ * 
+ * @example
+ * // Use for dashboard data loading
+ * const events = await cachedApi.getEventsList()
+ * const series = await cachedApi.getSeriesList()
+ * 
+ * // After mutations, cache is automatically invalidated
+ * await cachedApi.deleteEvent(eventId) // Invalidates events cache
+ */
+export const cachedApi = {
+  // === SERIES (GET Operations - Cached with Deduplication) ===
+  getSeriesList: async () => {
+    const result = await apiCache.get(() => apiService.getSeriesList())
+    return deduplicateBy(result, (s) => s.seriesId, { 
+      warnOnDuplicates: true, 
+      logPrefix: 'cachedApi.getSeriesList' 
+    })
+  },
+  getSeriesById: (id: string) => apiCache.get((seriesId: string) => apiService.getSeriesByIdExternal(seriesId), id),
+  getSeriesFull: (id: string) => apiCache.get((seriesId: string) => apiService.getSeriesByIdExternal(seriesId), id),
+  getSeriesHistory: (id: string) => apiCache.get((seriesId: string) => apiService.getSeriesHistory(seriesId), id),
+  getSeriesHistoryBatch: async (ids: string[]) => {
+    const result = await apiCache.get((seriesIds: string[]) => apiService.getSeriesHistoryBatch(seriesIds), ids)
+    // Result is a Map<seriesId, EventHistoryResponse>, return as-is
+    return result
+  },
+  getSeriesBatch: async (ids: string[]) => {
+    const result = await apiCache.get((seriesIds: string[]) => apiService.getSeriesBatch(seriesIds), ids)
+    // Result is a Map, convert to array for deduplication
+    if (result instanceof Map) {
+      const array = Array.from(result.values())
+      return new Map(deduplicateBy(array, (s: any) => s.seriesId, { warnOnDuplicates: true }).map(s => [s.seriesId, s]))
+    }
+    return result
+  },
+
+  // === EVENTS (GET Operations - Cached with Deduplication) ===
+  getEventsList: async () => {
+    const result = await apiCache.get(() => apiService.getEventsList())
+    return deduplicateBy(result, (e) => e.eventId, { 
+      warnOnDuplicates: true, 
+      logPrefix: 'cachedApi.getEventsList' 
+    })
+  },
+  getEvent: (id: string) => apiCache.get((eventId: string) => apiService.getEventExternal(eventId), id),
+  getEventFull: (id: string) => apiCache.get((eventId: string) => apiService.getEventFull(eventId), id),
+  getEventImages: (id: string) => apiCache.get((eventId: string) => apiService.getEventImages(eventId), id),
+  getEventImagesBatch: async (ids: string[]) => {
+    const result = await apiCache.get((eventIds: string[]) => apiService.getEventImagesBatch(eventIds), ids)
+    // Result is a Map, convert to array for deduplication
+    if (result instanceof Map) {
+      const array = Array.from(result.values())
+      return new Map(deduplicateBy(array, (e: any) => e.eventId, { warnOnDuplicates: true }).map(e => [e.eventId, e]))
+    }
+    return result
+  },
+  getEventVenuesBatch: async (ids: string[]) => {
+    const result = await apiCache.get((eventIds: string[]) => apiService.getEventVenuesBatch(eventIds), ids)
+    // Result is a Map, return as-is (venues are already keyed by eventId)
+    return result
+  },
+  getEventHistory: (id: string) => apiCache.get((eventId: string) => apiService.getEventHistory(eventId), id),
+  getEventHistoryBatch: async (ids: string[]) => {
+    const result = await apiCache.get((eventIds: string[]) => apiService.getEventHistoryBatch(eventIds), ids)
+    // Result is a Map<eventId, EventHistoryResponse>, return as-is
+    return result
+  },
+
+  // === SPEAKERS (GET Operations - Cached with Deduplication) ===
+  getSpeakers: async (seriesId: string) => {
+    const result = await apiCache.get((id: string) => apiService.getSpeakers(id), seriesId)
+    if (result.speakers && Array.isArray(result.speakers)) {
+      result.speakers = deduplicateBy(result.speakers, (s: any) => s.speakerId, { warnOnDuplicates: true })
+    }
+    return result
+  },
+  getSpeaker: (seriesId: string, speakerId: string) => apiCache.get((sId: string, spId: string) => apiService.getSpeaker(sId, spId), seriesId, speakerId),
+  getEventSpeakers: async (eventId: string) => {
+    const result = await apiCache.get((id: string) => apiService.getEventSpeakers(id), eventId)
+    if (result.speakers && Array.isArray(result.speakers)) {
+      result.speakers = deduplicateBy(result.speakers, (s: any) => s.speakerId, { warnOnDuplicates: true })
+    }
+    return result
+  },
+  getEventsBySpeakerId: (speakerId: string) => apiCache.get((id: string) => apiService.getEventsBySpeakerId(id), speakerId),
+
+  // === ATTENDEES (GET Operations - Cached with Deduplication) ===
+  getEventAttendees: async (eventId: string) => {
+    const result = await apiCache.get((id: string) => apiService.getEventAttendees(id), eventId)
+    if (result.attendees && Array.isArray(result.attendees)) {
+      result.attendees = deduplicateBy(result.attendees, (a: any) => a.attendeeId, { 
+        warnOnDuplicates: true,
+        logPrefix: 'cachedApi.getEventAttendees'
+      })
+    }
+    return result
+  },
+  getAllEventAttendees: async (eventId: string) => {
+    const result = await apiCache.get((id: string) => apiService.getAllEventAttendees(id), eventId)
+    if (!Array.isArray(result)) {
+      console.error('[cachedApi.getAllEventAttendees] Expected array, got:', typeof result)
+      return []
+    }
+    return deduplicateBy(result, (a: any) => a.attendeeId, { 
+      warnOnDuplicates: true,
+      logPrefix: 'cachedApi.getAllEventAttendees'
+    })
+  },
+  getAttendee: (eventId: string, attendeeId: string) => apiCache.get((eId: string, aId: string) => apiService.getAttendee(eId, aId), eventId, attendeeId),
+
+  // === SPONSORS (GET Operations - Cached with Deduplication) ===
+  getSponsors: async (seriesId: string) => {
+    const result = await apiCache.get((id: string) => apiService.getSponsors(id), seriesId)
+    if (result.sponsors && Array.isArray(result.sponsors)) {
+      result.sponsors = deduplicateBy(result.sponsors, (s: any) => s.sponsorId, { warnOnDuplicates: true })
+    }
+    return result
+  },
+  getSponsor: (seriesId: string, sponsorId: string) => apiCache.get((sId: string, spId: string) => apiService.getSponsor(sId, spId), seriesId, sponsorId),
+  getEventSponsors: async (eventId: string) => {
+    const result = await apiCache.get((id: string) => apiService.getEventSponsors(id), eventId)
+    if (result.sponsors && Array.isArray(result.sponsors)) {
+      result.sponsors = deduplicateBy(result.sponsors, (s: any) => s.sponsorId, { warnOnDuplicates: true })
+    }
+    return result
+  },
+
+  // === OTHER GET Operations (Cached) ===
+  getClouds: () => apiCache.get(() => apiService.getClouds()),
+  getCloud: (cloudType: string) => apiCache.get((ct: string) => apiService.getCloud(ct), cloudType),
+  getLocales: () => apiCache.get(() => apiService.getLocales()),
+  getPublishingProfiles: () => apiCache.get(() => apiService.getPublishingProfiles()),
+  getPublishingProfile: (profileId: string) => apiCache.get((id: string) => apiService.getPublishingProfile(id), profileId),
+  getEventPublishingProfile: (eventId: string) => apiCache.get((id: string) => apiService.getEventPublishingProfile(id), eventId),
+  getCaasTags: () => apiService.getCaasTags(), // Already has internal caching
+
+  // === MUTATIONS (with cache invalidation) ===
+  
+  // Series Mutations
+  async createSeries(data: any) {
+    const result = await apiService.createSeriesExternal(data)
+    apiCache.invalidate('getSeriesList')
+    return result
+  },
+  async updateSeries(seriesId: string, data: any) {
+    const result = await apiService.updateSeriesExternal(seriesId, data)
+    apiCache.invalidate(seriesId)
+    apiCache.invalidate('getSeriesList')
+    return result
+  },
+  async publishSeries(seriesId: string, data: any) {
+    const result = await apiService.publishSeries(seriesId, data)
+    apiCache.invalidate(seriesId)
+    apiCache.invalidate('getSeriesList')
+    return result
+  },
+  async unpublishSeries(seriesId: string, data: any) {
+    const result = await apiService.unpublishSeries(seriesId, data)
+    apiCache.invalidate(seriesId)
+    apiCache.invalidate('getSeriesList')
+    return result
+  },
+  async archiveSeries(seriesId: string, data: any) {
+    const result = await apiService.archiveSeries(seriesId, data)
+    apiCache.invalidate(seriesId)
+    apiCache.invalidate('getSeriesList')
+    return result
+  },
+
+  // Event Mutations
+  async createEvent(data: any, locale: string) {
+    const result = await apiService.createEventExternal(data, locale)
+    apiCache.invalidate('getEventsList')
+    return result
+  },
+  async updateEvent(eventId: string, data: any) {
+    const result = await apiService.updateEventExternal(eventId, data)
+    apiCache.invalidate(eventId)
+    apiCache.invalidate('getEventsList')
+    return result
+  },
+  async deleteEvent(eventId: string) {
+    const result = await apiService.deleteEventExternal(eventId)
+    apiCache.invalidate(eventId)
+    apiCache.invalidate('getEventsList')
+    return result
+  },
+  async publishEvent(eventId: string, data: any) {
+    const result = await apiService.publishEvent(eventId, data)
+    apiCache.invalidate(eventId)
+    apiCache.invalidate('getEventsList')
+    return result
+  },
+  async unpublishEvent(eventId: string, data: any) {
+    const result = await apiService.unpublishEvent(eventId, data)
+    apiCache.invalidate(eventId)
+    apiCache.invalidate('getEventsList')
+    return result
+  },
+
+  // Speaker Mutations
+  async createSpeaker(data: any, seriesId: string) {
+    const result = await apiService.createSpeaker(data, seriesId)
+    apiCache.invalidate(seriesId)
+    apiCache.invalidate('getSpeakers')
+    return result
+  },
+  async updateSpeaker(data: any, seriesId: string) {
+    const result = await apiService.updateSpeaker(data, seriesId)
+    apiCache.invalidate(seriesId)
+    apiCache.invalidate('getSpeakers')
+    if (data.speakerId) apiCache.invalidate(data.speakerId)
+    return result
+  },
+  async deleteSpeaker(speakerId: string, seriesId: string) {
+    const result = await apiService.deleteSpeaker(speakerId, seriesId)
+    apiCache.invalidate(seriesId)
+    apiCache.invalidate(speakerId)
+    apiCache.invalidate('getSpeakers')
+    return result
+  },
+
+  // Attendee Mutations
+  async removeAttendeeFromEvent(eventId: string, attendeeId: string) {
+    const result = await apiService.removeAttendeeFromEvent(eventId, attendeeId)
+    apiCache.invalidate(eventId)
+    apiCache.invalidate('getEventAttendees')
+    apiCache.invalidate('getAllEventAttendees')
+    return result
+  },
+
+  // Cloud Mutations
+  async updateCloud(cloudType: string, data: any) {
+    const result = await apiService.updateCloud(cloudType, data)
+    apiCache.invalidate(cloudType)
+    apiCache.invalidate('getClouds')
+    return result
+  },
+
+  // === UTILITY METHODS ===
+  
+  /**
+   * Clear all cached data - use on logout or major state change
+   */
+  clearCache: () => apiCache.clear(),
+  
+  /**
+   * Invalidate specific cache entries by pattern
+   * @param pattern - String pattern to match against cache keys
+   */
+  invalidateCache: (pattern: string) => apiCache.invalidate(pattern),
+  
+  /**
+   * Get cache statistics for debugging
+   */
+  getCacheStats: () => apiCache.getStats(),
+  
+  /**
+   * Set cache timeout in milliseconds
+   */
+  setCacheTimeout: (timeout: number) => apiCache.setCacheTimeout(timeout)
+}
+
+// ============================================================================
 // BROWSER CONSOLE HELPERS
 // ============================================================================
 
@@ -1876,16 +2177,65 @@ export default apiService
  */
 if (typeof window !== 'undefined') {
   (window as any).apiService = apiService;
+  (window as any).cachedApi = cachedApi;
+  (window as any).apiCache = apiCache;
   (window as any).enableDryRun = () => apiService.enableDryRun();
   (window as any).disableDryRun = () => apiService.disableDryRun();
   (window as any).isDryRunEnabled = () => apiService.isDryRunEnabled();
+  
+  (window as any).clearApiCache = () => {
+    apiCache.clear()
+    console.log('%c✅ API Cache Cleared', 'color: #4caf50; font-weight: bold;')
+  }
+  
+  (window as any).getApiCacheStats = () => {
+    const stats = apiCache.getStats()
+    console.log('%c📊 API Cache Statistics', 'color: #2196f3; font-weight: bold;')
+    console.table({
+      'Cache Size': stats.size,
+      'Max Size': stats.maxSize,
+      'Pending Requests': stats.pendingSize,
+      'Cache Hits': stats.hits,
+      'Cache Misses': stats.misses,
+      'Evictions': stats.evictions,
+      'Hit Rate': `${stats.hitRate.toFixed(2)}%`
+    })
+    if (stats.keys.length > 0) {
+      console.log('%cCache Keys (first 10):', 'color: #9e9e9e;', stats.keys.slice(0, 10))
+    }
+    return stats
+  }
+  
+  (window as any).resetCacheStats = () => {
+    apiCache.resetStats()
+    console.log('%c🔄 Cache Statistics Reset', 'color: #ff9800; font-weight: bold;')
+  }
+  
+  // Dev mode cache inspector
+  if (process.env.NODE_ENV === 'development') {
+    (window as any).__CACHE_DEBUG__ = {
+      stats: () => apiCache.getStats(),
+      clear: () => apiCache.clear(),
+      invalidate: (pattern: string) => apiCache.invalidate(pattern),
+      inspect: (keyPattern: string) => {
+        const stats = apiCache.getStats()
+        const matchingKeys = stats.keys.filter(k => k.includes(keyPattern))
+        console.log(`Found ${matchingKeys.length} matching keys:`, matchingKeys)
+        return matchingKeys
+      }
+    }
+  }
   
   // Log availability on load
   console.log(
     '%c🛠️ API Debug Mode Available',
     'color: #2196f3; font-weight: bold;',
-    '\n   enableDryRun()  - Log POST/PUT/DELETE calls without sending',
-    '\n   disableDryRun() - Resume normal API operation'
+    '\n   enableDryRun()      - Log POST/PUT/DELETE calls without sending',
+    '\n   disableDryRun()     - Resume normal API operation',
+    '\n   clearApiCache()     - Clear all cached API responses',
+    '\n   getApiCacheStats()  - View cache statistics',
+    '\n   resetCacheStats()   - Reset hit/miss counters',
+    '\n   __CACHE_DEBUG__     - Advanced cache inspection (dev mode)'
   )
 }
 

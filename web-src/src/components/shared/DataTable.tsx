@@ -13,6 +13,7 @@ import Delete from '@spectrum-icons/workflow/Delete'
 import ViewDetail from '@spectrum-icons/workflow/ViewDetail'
 import ChevronLeft from '@spectrum-icons/workflow/ChevronLeft'
 import ChevronRight from '@spectrum-icons/workflow/ChevronRight'
+import { deduplicateBy } from '../../utils/deduplication'
 
 export interface TableColumn<T> {
   key: string
@@ -62,6 +63,14 @@ export function DataTable<T extends Record<string, any>>({
   const [currentPage, setCurrentPage] = useState(1)
   const [pageInputValue, setPageInputValue] = useState('1')
 
+  // Deduplicate data as safety net (last line of defense)
+  const deduplicatedData = useMemo(() => {
+    return deduplicateBy(data, getItemKey, {
+      warnOnDuplicates: true,
+      logPrefix: 'DataTable'
+    })
+  }, [data, getItemKey])
+
   // Handle column header click for sorting
   const handleSort = useCallback((columnKey: string) => {
     const column = columns.find(col => col.key === columnKey)
@@ -76,8 +85,8 @@ export function DataTable<T extends Record<string, any>>({
         })
         return prevColumn
       } else {
-        // Different column - set to ascending
-        setSortDirection('asc')
+        // Different column - default to descending on first click
+        setSortDirection('desc')
         return columnKey
       }
     })
@@ -85,12 +94,12 @@ export function DataTable<T extends Record<string, any>>({
 
   // Sort data based on current sort state
   const sortedData = useMemo(() => {
-    if (!sortColumn) return data
+    if (!sortColumn) return deduplicatedData
 
     const column = columns.find(col => col.key === sortColumn)
-    if (!column) return data
+    if (!column) return deduplicatedData
 
-    const sorted = [...data].sort((a, b) => {
+    const sorted = [...deduplicatedData].sort((a, b) => {
       // Use custom sort function if provided
       if (column.sortFn) {
         return column.sortFn(a, b)
@@ -119,7 +128,7 @@ export function DataTable<T extends Record<string, any>>({
     })
 
     return sortDirection === 'desc' ? sorted.reverse() : sorted
-  }, [data, sortColumn, sortDirection, columns])
+  }, [deduplicatedData, sortColumn, sortDirection, columns])
 
   // Calculate pagination
   const totalPages = Math.ceil(sortedData.length / pageSize)

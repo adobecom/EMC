@@ -8,7 +8,7 @@ import ErrorBoundary from 'react-error-boundary'
 import { HashRouter as Router, Routes, Route } from 'react-router-dom'
 import { TopNav } from './layout'
 import { ToastContainer } from './shared'
-import { ToastProvider } from '../contexts'
+import { ToastProvider, ApiProvider } from '../contexts'
 import { Runtime, IMS } from '../types'
 
 // Pages - route-level components
@@ -66,40 +66,42 @@ const App: React.FC<AppProps> = (props) => {
     <ErrorBoundary onError={onError} FallbackComponent={fallbackComponent}>
       <Router>
         <Provider theme={defaultTheme} colorScheme={'light'} scale={'medium'}>
-          <ToastProvider>
-            <Grid
-              areas={['header', 'content']}
-              columns={['1fr']}
-              rows={['auto', '1fr']}
-              gap='size-0'
-            >
-              <View gridArea='header' UNSAFE_style={{ position: 'sticky', top: 0, zIndex: 1000 }}>
-                <TopNav ims={props.ims} />
-              </View>
-              <View 
-                gridArea='content' 
-                UNSAFE_className='content-area'
+          <ApiProvider ims={props.ims}>
+            <ToastProvider>
+              <Grid
+                areas={['header', 'content']}
+                columns={['1fr']}
+                rows={['auto', '1fr']}
+                gap='size-0'
               >
-                <Routes>
-                  <Route path='/' element={<Home />} />
-                  <Route path='/overview' element={<OverviewDashboard ims={props.ims} />} />
-                  <Route path='/profile' element={<UserProfile ims={props.ims} />} />
-                  <Route path='/clouds' element={<CloudManagementConsole ims={props.ims} />} />
-                  <Route path='/series' element={<SeriesDashboard ims={props.ims} />} />
-                  <Route path='/series/new' element={<SeriesForm ims={props.ims} />} />
-                  <Route path='/series/edit/:id' element={<SeriesForm ims={props.ims} />} />
-                  <Route path='/events' element={<EventsDashboard ims={props.ims} />} />
-                  <Route path='/events/new/:eventType' element={<EventForm ims={props.ims} />} />
-                  <Route path='/events/edit/:id' element={<EventForm ims={props.ims} />} />
-                  <Route path='/attendees' element={<AttendeeDashboard ims={props.ims} />} />
-                  <Route path='/attendees/:eventId' element={<AttendeeDashboard ims={props.ims} />} />
-                  <Route path='/speakers' element={<SpeakersDashboard ims={props.ims} />} />
-                  <Route path='/about' element={<About />}/>
-                </Routes>
-              </View>
-            </Grid>
-            <ToastContainer />
-          </ToastProvider>
+                <View gridArea='header' UNSAFE_style={{ position: 'sticky', top: 0, zIndex: 1000 }}>
+                  <TopNav ims={props.ims} />
+                </View>
+                <View 
+                  gridArea='content' 
+                  UNSAFE_className='content-area'
+                >
+                  <Routes>
+                    <Route path='/' element={<Home />} />
+                    <Route path='/overview' element={<OverviewDashboard ims={props.ims} />} />
+                    <Route path='/profile' element={<UserProfile ims={props.ims} />} />
+                    <Route path='/clouds' element={<CloudManagementConsole ims={props.ims} />} />
+                    <Route path='/series' element={<SeriesDashboard ims={props.ims} />} />
+                    <Route path='/series/new' element={<SeriesForm ims={props.ims} />} />
+                    <Route path='/series/edit/:id' element={<SeriesForm ims={props.ims} />} />
+                    <Route path='/events' element={<EventsDashboard ims={props.ims} />} />
+                    <Route path='/events/new/:eventType' element={<EventForm ims={props.ims} />} />
+                    <Route path='/events/edit/:id' element={<EventForm ims={props.ims} />} />
+                    <Route path='/attendees' element={<AttendeeDashboard ims={props.ims} />} />
+                    <Route path='/attendees/:eventId' element={<AttendeeDashboard ims={props.ims} />} />
+                    <Route path='/speakers' element={<SpeakersDashboard ims={props.ims} />} />
+                    <Route path='/about' element={<About />}/>
+                  </Routes>
+                </View>
+              </Grid>
+              <ToastContainer />
+            </ToastProvider>
+          </ApiProvider>
         </Provider>
       </Router>
     </ErrorBoundary>

@@ -65,6 +65,8 @@ interface FormWizardProps {
   eventTypeLabel?: EventTypeLabel
   /** Event status for the status badge (defaults to 'draft' or 'published' based on isPublished) */
   eventStatus?: EventStatus
+  /** Optional actions to render in the header (e.g., history button) */
+  headerActions?: React.ReactNode
 }
 
 export const FormWizard: React.FC<FormWizardProps> = ({
@@ -81,7 +83,8 @@ export const FormWizard: React.FC<FormWizardProps> = ({
   maxStepReached = 0,
   onMaxStepChange,
   eventTypeLabel,
-  eventStatus
+  eventStatus,
+  headerActions
 }) => {
   const [currentStepIndex, setCurrentStepIndex] = useState(0)
   const [isNavigating, setIsNavigating] = useState(false)
@@ -634,7 +637,7 @@ export const FormWizard: React.FC<FormWizardProps> = ({
           </Text>
         )}
         
-        {/* Heading row with status badge */}
+        {/* Heading row with status badge and optional header actions */}
         <Flex direction="row" alignItems="center" gap="size-400">
           <Heading level={2} UNSAFE_style={TYPOGRAPHY.STEP_HEADING}>{currentStep.title}</Heading>
           
@@ -670,6 +673,12 @@ export const FormWizard: React.FC<FormWizardProps> = ({
               {statusLabel}
             </Text>
           </View>
+          
+          {/* Spacer to push header actions to the right */}
+          {headerActions && <View flex={1} />}
+          
+          {/* Optional header actions (e.g., history button) */}
+          {headerActions}
         </Flex>
       </View>
 

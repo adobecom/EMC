@@ -8,7 +8,7 @@ import {
 import Close from '@spectrum-icons/workflow/Close'
 import Add from '@spectrum-icons/workflow/Add'
 import { EventTag, CaasTagsResponse, CaasTag } from '../../types/domain'
-import { apiService } from '../../services/api'
+import { cachedApi } from '../../services/api'
 import { LoadingSpinner } from './LoadingSpinner'
 
 interface TagGroup {
@@ -41,7 +41,7 @@ export const TagSelector: React.FC<TagSelectorProps> = ({
       setError(null)
 
       try {
-        const response = await apiService.getCaasTags() as CaasTagsResponse
+        const response = await cachedApi.getCaasTags() as CaasTagsResponse
 
         if (!isMounted) return
 

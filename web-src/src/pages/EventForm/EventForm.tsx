@@ -14,9 +14,9 @@ import {
   SponsorData,
   EventApiResponse
 } from '../../types/domain'
-import { apiService } from '../../services/api'
+import { apiService, cachedApi } from '../../services/api'
 import { IMS } from '../../types'
-import { FormWizard, WizardStep, LoadingSpinner, FormCard } from '../../components/shared'
+import { FormWizard, WizardStep, LoadingSpinner, FormCard, HistoryTimeline } from '../../components/shared'
 import { 
   EventFormatComponent, 
   EventTagsComponent, 
@@ -83,6 +83,7 @@ function mapSponsorsToFormData(sponsors: any[], locale: string = 'en-US'): Spons
     partnerUrl: getLocalizedValue(sponsor, 'link', locale) || sponsor.link || sponsor.partnerUrl || '',
     imageUrl: sponsor.image?.imageUrl || sponsor.imageUrl || '',
     imageId: sponsor.image?.imageId || sponsor.imageId || '',
+    type: sponsor.sponsorType, // Map sponsorType from API to type in form
     isSaved: true,
     isFromSeries: true
   }))
@@ -261,7 +262,7 @@ const EventFormInner: React.FC<EventFormInnerProps> = ({ ims }) => {
   const loadEvent = async (eventIdToLoad: string) => {
     setLoading(true)
     try {
-      const response = await apiService.getEventFull(eventIdToLoad)
+      const response = await cachedApi.getEventFull(eventIdToLoad)
       
       if ('error' in response) {
         console.error('Failed to load event:', response)
@@ -572,6 +573,14 @@ const EventFormInner: React.FC<EventFormInnerProps> = ({ ims }) => {
     }
   }
 
+  // Render history timeline only in edit mode with a valid eventId
+  const renderHeaderActions = () => {
+    if (!isEditMode || !eventId) {
+      return null
+    }
+    return <HistoryTimeline resourceId={eventId} resourceType="event" />
+  }
+
   return (
     <View 
       UNSAFE_style={{
@@ -592,6 +601,7 @@ const EventFormInner: React.FC<EventFormInnerProps> = ({ ims }) => {
         maxStepReached={maxStepReached}
         onMaxStepChange={handleMaxStepChange}
         eventTypeLabel={getEventTypeLabel()}
+        headerActions={renderHeaderActions()}
       />
     </View>
   )

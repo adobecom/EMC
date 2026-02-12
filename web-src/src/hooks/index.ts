@@ -8,6 +8,7 @@ export { useEventFormComponent, useEventFormData } from './useEventFormComponent
 export { useEventFormSave } from './useEventFormSave'
 export { useRsvpConfig } from './useRsvpConfig'
 export { useSeriesFormComponent, useSeriesFormData } from './useSeriesFormComponent'
+export { useSafeState } from './useSafeState'
 export type { UseEventFormComponentOptions, UseEventFormComponentReturn } from './useEventFormComponent'
 export type { UseSeriesFormComponentOptions, UseSeriesFormComponentReturn } from './useSeriesFormComponent'
 export type { SaveOptions, SaveResult } from './useEventFormSave'

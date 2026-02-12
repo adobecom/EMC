@@ -2,7 +2,7 @@
 * <license header>
 */
 
-import React, { useEffect, useState, useMemo, useCallback } from 'react'
+import React, { useEffect, useMemo, useCallback } from 'react'
 import { Text, ActionButton, MenuTrigger, Menu, Item, Flex, Button, DialogTrigger, AlertDialog, ProgressCircle, View } from '@adobe/react-spectrum'
 import MoreSmallList from '@spectrum-icons/workflow/MoreSmallList'
 import PublishRemove from '@spectrum-icons/workflow/PublishRemove'
@@ -17,12 +17,13 @@ import { getEventTypeOptions, EventType } from '../../config/eventTypeConfig'
 import { TableColumn } from '../../components/shared/DataTable'
 import { StatusBadge, ResourceDashboardLayout } from '../../components/shared'
 import { EventDashboardItem } from '../../types/domain'
-import { apiService } from '../../services/api'
+import { apiService, cachedApi } from '../../services/api'
 import { thumbnailEnrichmentManager, venueEnrichmentManager, historyEnrichmentManager, EventThumbnail, EventVenueInfo, EventHistoryInfo } from '../../services/eventEnrichment'
 import { seriesEnrichmentManager, SeriesInfo } from '../../services/seriesEnrichment'
 import { IMS } from '../../types'
 import { useToast } from '../../contexts'
 import { filterEventData } from '../../utils/dataFilters'
+import { useSafeState } from '../../hooks'
 
 interface EventsDashboardProps {
   ims: IMS
@@ -30,27 +31,27 @@ interface EventsDashboardProps {
 
 export const EventsDashboard: React.FC<EventsDashboardProps> = () => {
   const toast = useToast()
-  const [events, setEvents] = useState<EventDashboardItem[]>([])
-  const [isLoading, setIsLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
-  const [thumbnails, setThumbnails] = useState<Map<string, EventThumbnail>>(new Map())
-  const [venues, setVenues] = useState<Map<string, EventVenueInfo>>(new Map())
-  const [series, setSeries] = useState<Map<string, SeriesInfo>>(new Map())
-  const [history, setHistory] = useState<Map<string, EventHistoryInfo>>(new Map())
-  const [visibleEventIds, setVisibleEventIds] = useState<string[]>([])
-  const [loadingThumbnails, setLoadingThumbnails] = useState<Set<string>>(new Set())
-  const [loadingVenues, setLoadingVenues] = useState<Set<string>>(new Set())
-  const [loadingSeries, setLoadingSeries] = useState<Set<string>>(new Set())
-  const [loadingHistory, setLoadingHistory] = useState<Set<string>>(new Set())
-  const [itemToDelete, setItemToDelete] = useState<EventDashboardItem | null>(null)
-  const [actionInProgress, setActionInProgress] = useState<string | null>(null)
+  const [events, setEvents] = useSafeState<EventDashboardItem[]>([])
+  const [isLoading, setIsLoading] = useSafeState(true)
+  const [error, setError] = useSafeState<string | null>(null)
+  const [thumbnails, setThumbnails] = useSafeState<Map<string, EventThumbnail>>(new Map())
+  const [venues, setVenues] = useSafeState<Map<string, EventVenueInfo>>(new Map())
+  const [series, setSeries] = useSafeState<Map<string, SeriesInfo>>(new Map())
+  const [history, setHistory] = useSafeState<Map<string, EventHistoryInfo>>(new Map())
+  const [visibleEventIds, setVisibleEventIds] = useSafeState<string[]>([])
+  const [loadingThumbnails, setLoadingThumbnails] = useSafeState<Set<string>>(new Set())
+  const [loadingVenues, setLoadingVenues] = useSafeState<Set<string>>(new Set())
+  const [loadingSeries, setLoadingSeries] = useSafeState<Set<string>>(new Set())
+  const [loadingHistory, setLoadingHistory] = useSafeState<Set<string>>(new Set())
+  const [itemToDelete, setItemToDelete] = useSafeState<EventDashboardItem | null>(null)
+  const [actionInProgress, setActionInProgress] = useSafeState<string | null>(null)
 
   const loadEventsData = async () => {
     setIsLoading(true)
     setError(null)
     
     try {
-      const data = await apiService.getEventsList()
+      const data = await cachedApi.getEventsList()
       
       // Transform API response to dashboard items
       const dashboardItems: EventDashboardItem[] = data.map(item => ({
@@ -122,7 +123,6 @@ export const EventsDashboard: React.FC<EventsDashboardProps> = () => {
       } catch (error) {
         console.error('Error fetching thumbnails:', error)
       } finally {
-        // Remove loading state for all requested events
         setLoadingThumbnails(prev => {
           const updated = new Set(prev)
           visibleEventIds.forEach(id => updated.delete(id))
@@ -160,7 +160,6 @@ export const EventsDashboard: React.FC<EventsDashboardProps> = () => {
       } catch (error) {
         console.error('Error fetching venues:', error)
       } finally {
-        // Remove loading state for all requested events
         setLoadingVenues(prev => {
           const updated = new Set(prev)
           visibleEventIds.forEach(id => updated.delete(id))
@@ -207,7 +206,6 @@ export const EventsDashboard: React.FC<EventsDashboardProps> = () => {
       } catch (error) {
         console.error('Error fetching series:', error)
       } finally {
-        // Remove loading state for all requested series
         setLoadingSeries(prev => {
           const updated = new Set(prev)
           seriesIds.forEach(id => updated.delete(id))
@@ -245,7 +243,6 @@ export const EventsDashboard: React.FC<EventsDashboardProps> = () => {
       } catch (error) {
         console.error('Error fetching history:', error)
       } finally {
-        // Remove loading state for all requested events
         setLoadingHistory(prev => {
           const updated = new Set(prev)
           visibleEventIds.forEach(id => updated.delete(id))
@@ -311,7 +308,7 @@ export const EventsDashboard: React.FC<EventsDashboardProps> = () => {
         
         try {
           // Fetch full event data (needed for complete payload with all localizations)
-          const eventResponse = await apiService.getEventFull(item.eventId)
+          const eventResponse = await cachedApi.getEventFull(item.eventId)
           
           if ('error' in eventResponse) {
             toast.error(`Failed to load event data: ${eventResponse.error}`)
@@ -403,7 +400,7 @@ export const EventsDashboard: React.FC<EventsDashboardProps> = () => {
         
         try {
           // Fetch full event data to get all fields for cloning
-          const eventResponse = await apiService.getEventFull(item.eventId)
+          const eventResponse = await cachedApi.getEventFull(item.eventId)
           
           if ('error' in eventResponse) {
             toast.error('Failed to load event data for cloning')
