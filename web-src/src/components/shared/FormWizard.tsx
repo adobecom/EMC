@@ -196,19 +196,7 @@ export const FormWizard: React.FC<FormWizardProps> = ({
       borderEndColor="gray-300"
       UNSAFE_style={SIDE_NAV_STICKY_STYLES}
     >
-      <View padding="size-300" flex={1}>
-        <Text UNSAFE_style={{ 
-          fontSize: '12px',
-          fontWeight: 500,
-          color: COLORS.GRAY_700,
-          letterSpacing: '0.5px',
-          marginBottom: '16px',
-          display: 'block'
-        }}>
-          EVENT CREATION
-        </Text>
-        
-        <Flex direction="column" gap="size-100">
+    <View padding="size-100">
           {/* Dashboard Link */}
           <button
             onClick={handleDashboardClick}
@@ -255,7 +243,21 @@ export const FormWizard: React.FC<FormWizardProps> = ({
               <Text>Dashboard</Text>
             </Flex>
           </button>
+    </View>
 
+      <View padding="size-300" flex={1}>
+        <Text UNSAFE_style={{ 
+          fontSize: '12px',
+          fontWeight: 500,
+          color: COLORS.GRAY_700,
+          letterSpacing: '0.5px',
+          marginBottom: '16px',
+          display: 'block'
+        }}>
+          EVENT DETAILS
+        </Text>
+        
+        <Flex direction="column" gap="size-100">
           {/* Add Content Section */}
           <View>
             <button
@@ -283,6 +285,9 @@ export const FormWizard: React.FC<FormWizardProps> = ({
             
             <Flex direction="column" gap="size-50">
               {steps.map((step, index) => {
+                // Session management is shown under the SESSIONS section instead
+                if (step.id === 'session-management') return null
+
                 const status = getStepStatus(index)
                 const isActive = status === 'active'
                 const isLocked = status === 'locked'
@@ -363,6 +368,70 @@ export const FormWizard: React.FC<FormWizardProps> = ({
             </Flex>
           </View>
         </Flex>
+      </View>
+      <View padding="size-300" flex={1}>
+        <Text UNSAFE_style={{ 
+          fontSize: '12px',
+          fontWeight: 500,
+          color: COLORS.GRAY_700,
+          letterSpacing: '0.5px',
+          marginBottom: '16px',
+          display: 'block'
+        }}>
+          SESSIONS
+        </Text>
+        {(() => {
+          const sessionStepIndex = steps.findIndex(s => s.id === 'session-management')
+          if (sessionStepIndex === -1) return null
+          const status = getStepStatus(sessionStepIndex)
+          const isActive = status === 'active'
+          const isLocked = status === 'locked'
+          const isDisabled = isLocked || isSubmitting || isNavigating
+          return (
+            <button
+              onClick={() => handleStepClick(sessionStepIndex)}
+              disabled={isDisabled}
+              style={{
+                border: 'none',
+                background: isActive ? COLORS.ADOBE_RED : COLORS.TRANSPARENT,
+                color: isActive ? COLORS.WHITE : isLocked ? COLORS.GRAY_600 : COLORS.GRAY_800,
+                padding: '8px 12px',
+                textAlign: 'left',
+                cursor: isDisabled ? 'not-allowed' : 'pointer',
+                borderRadius: '4px',
+                fontSize: '14px',
+                fontWeight: isActive ? 500 : 400,
+                opacity: isLocked ? 0.6 : 1,
+                transition: 'all 0.2s ease',
+                width: '100%',
+              }}
+              onMouseEnter={(e) => {
+                if (!isActive && !isDisabled) {
+                  e.currentTarget.style.backgroundColor = 'rgba(235, 16, 0, 0.1)'
+                  e.currentTarget.style.color = COLORS.ADOBE_RED
+                }
+              }}
+              onMouseLeave={(e) => {
+                if (!isActive) {
+                  e.currentTarget.style.backgroundColor = COLORS.TRANSPARENT
+                  e.currentTarget.style.color = isLocked ? COLORS.GRAY_600 : COLORS.GRAY_800
+                }
+              }}
+              onMouseDown={(e) => {
+                if (!isActive && !isDisabled) {
+                  e.currentTarget.style.backgroundColor = 'rgba(235, 16, 0, 0.2)'
+                }
+              }}
+              onMouseUp={(e) => {
+                if (!isActive && !isDisabled) {
+                  e.currentTarget.style.backgroundColor = 'rgba(235, 16, 0, 0.1)'
+                }
+              }}
+            >
+              Session Management
+            </button>
+          )
+        })()}
       </View>
 
       {/* Progress indicator at bottom */}
