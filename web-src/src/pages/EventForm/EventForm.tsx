@@ -14,7 +14,7 @@ import {
   SponsorData,
   EventApiResponse
 } from '../../types/domain'
-import { apiService, cachedApi } from '../../services/api'
+import { cachedApi } from '../../services/api'
 import { IMS } from '../../types'
 import { FormWizard, WizardStep, LoadingSpinner, FormCard, HistoryTimeline } from '../../components/shared'
 import { 
