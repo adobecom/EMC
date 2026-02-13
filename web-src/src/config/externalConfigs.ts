@@ -56,14 +56,14 @@ export const EXTERNAL_CONFIG_URLS = {
    * Used by: SeriesDetailsComponent
    * Structure: { data: [{ Code, Provider, Instance }] }
    */
-  targetCmsMap: `${ECC_CONFIG_BASE}/ecc/system/target-cms-map.json`,
+  targetCmsMap: `${ADOBE_EVENT_LIBS_BASE}/target-cms-map.json`,
   
   /**
    * Series templates for template picker
    * Used by: SeriesTemplateComponent
    * Structure: { data: [{ template-path, template-name, template-image, supported-event-type }] }
    */
-  seriesTemplates: `${ECC_CONFIG_BASE}/ecc/system/series-templates.json`,
+  seriesTemplates: `${ADOBE_EVENT_LIBS_BASE}/series-templates.json`,
 } as const
 
 /**
