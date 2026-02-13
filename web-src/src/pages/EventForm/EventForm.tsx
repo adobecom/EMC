@@ -25,7 +25,7 @@ import {
   SeriesApiResponse,
   SeriesTemplate
 } from '../../types/domain'
-import { apiService, cachedApi } from '../../services/api'
+import { cachedApi } from '../../services/api'
 import { configService } from '../../services/configService'
 import { IMS } from '../../types'
 import { FormWizard, WizardStep, LoadingSpinner, FormCard, HistoryTimeline } from '../../components/shared'
