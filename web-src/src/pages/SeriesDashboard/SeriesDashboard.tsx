@@ -172,6 +172,108 @@ export const SeriesDashboard: React.FC<SeriesDashboardProps> = () => {
     })
   }, [series, historyInfo, eventCountsBySeriesId])
 
+  const handleCreateSeries = useCallback(() => {
+    // Navigate to create series form
+    window.location.hash = '#/series/new'
+  }, [])
+
+  const handleMenuAction = useCallback(async (action: string, item: SeriesDashboardItem) => {
+    switch (action) {
+      case 'publish':
+        console.log('Publish series:', item)
+        try {
+          // Fetch full series data first to get modificationTime
+          const fullSeries = await apiService.getSeriesByIdExternal(item.seriesId)
+          if ('error' in fullSeries) {
+            throw new Error('Failed to fetch series data')
+          }
+          await apiService.publishSeries(item.seriesId, { modificationTime: fullSeries.modificationTime })
+          // Reload data to reflect changes
+          await loadSeriesData()
+        } catch (error) {
+          console.error('Failed to publish series:', error)
+          alert(`Failed to publish series: ${error instanceof Error ? error.message : 'Unknown error'}`)
+        }
+        break
+      case 'unpublish':
+        console.log('Unpublish series:', item)
+        try {
+          // Fetch full series data first to get modificationTime
+          const fullSeries = await apiService.getSeriesByIdExternal(item.seriesId)
+          if ('error' in fullSeries) {
+            throw new Error('Failed to fetch series data')
+          }
+          await apiService.unpublishSeries(item.seriesId, { modificationTime: fullSeries.modificationTime })
+          // Reload data to reflect changes
+          await loadSeriesData()
+        } catch (error) {
+          console.error('Failed to unpublish series:', error)
+          alert(`Failed to unpublish series: ${error instanceof Error ? error.message : 'Unknown error'}`)
+        }
+        break
+      case 'edit':
+        console.log('Edit series:', item)
+        window.location.hash = `#/series/edit/${item.seriesId}`
+        break
+      case 'clone':
+        console.log('Clone series:', item)
+        // TODO: Implement clone functionality
+        alert(`Clone functionality will be implemented for: ${item.seriesName}`)
+        break
+      case 'archive':
+        console.log('Archive series:', item)
+        try {
+          // Fetch full series data first to get modificationTime
+          const fullSeries = await apiService.getSeriesByIdExternal(item.seriesId)
+          if ('error' in fullSeries) {
+            throw new Error('Failed to fetch series data')
+          }
+          await apiService.archiveSeries(item.seriesId, { modificationTime: fullSeries.modificationTime })
+          // Reload data to reflect changes
+          await loadSeriesData()
+        } catch (error) {
+          console.error('Failed to archive series:', error)
+          alert(`Failed to archive series: ${error instanceof Error ? error.message : 'Unknown error'}`)
+        }
+        break
+      default:
+        console.log('Unknown action:', action)
+    }
+  }, [])
+
+  // Helper to get menu items based on status
+  const getMenuItems = useCallback((status: string | undefined) => {
+    const normalizedStatus = status?.toLowerCase()
+    const isArchived = normalizedStatus === 'archived'
+    const isUnknown = normalizedStatus === 'unknown' || !normalizedStatus
+    const isDraft = normalizedStatus === 'draft'
+    const isPublished = normalizedStatus === 'published'
+
+    if (isArchived || isUnknown) {
+      return [{ key: 'clone', icon: <Duplicate />, label: 'Clone' }]
+    }
+    
+    if (isDraft) {
+      return [
+        { key: 'publish', icon: <PublishRemove />, label: 'Publish' },
+        { key: 'edit', icon: <Edit />, label: 'Edit' },
+        { key: 'clone', icon: <Duplicate />, label: 'Clone' },
+        { key: 'archive', icon: <Archive />, label: 'Archive' }
+      ]
+    }
+    
+    if (isPublished) {
+      return [
+        { key: 'unpublish', icon: <PublishRemove />, label: 'Unpublish' },
+        { key: 'edit', icon: <Edit />, label: 'Edit' },
+        { key: 'clone', icon: <Duplicate />, label: 'Clone' },
+        { key: 'archive', icon: <Archive />, label: 'Archive' }
+      ]
+    }
+    
+    return [{ key: 'clone', icon: <Duplicate />, label: 'Clone' }]
+  }, [])
+
   const columns = useMemo<TableColumn<SeriesDashboardItem>[]>(() => [
     {
       key: 'seriesName',
@@ -299,11 +401,7 @@ export const SeriesDashboard: React.FC<SeriesDashboardProps> = () => {
       width: 100,
       sortable: false,
       render: (item) => {
-        const status = item.seriesStatus?.toLowerCase()
-        const isArchived = status === 'archived'
-        const isUnknown = status === 'unknown' || !status
-        const isDraft = status === 'draft'
-        const isPublished = status === 'published'
+        const menuItems = getMenuItems(item.seriesStatus)
         
         return (
           <MenuTrigger>
@@ -311,57 +409,12 @@ export const SeriesDashboard: React.FC<SeriesDashboardProps> = () => {
               <MoreSmallList />
             </ActionButton>
             <Menu onAction={(key) => handleMenuAction(key as string, item)}>
-              {/* Archived/Unknown: only clone */}
-              {(isArchived || isUnknown) && (
-                <Item key="clone">
-                  <Duplicate />
-                  <Text>Clone</Text>
+              {menuItems.map(menuItem => (
+                <Item key={menuItem.key}>
+                  {menuItem.icon}
+                  <Text>{menuItem.label}</Text>
                 </Item>
-              )}
-              
-              {/* Draft: publish, clone, edit, archive */}
-              {isDraft && (
-                <>
-                  <Item key="publish">
-                    <PublishRemove />
-                    <Text>Publish</Text>
-                  </Item>
-                  <Item key="edit">
-                    <Edit />
-                    <Text>Edit</Text>
-                  </Item>
-                  <Item key="clone">
-                    <Duplicate />
-                    <Text>Clone</Text>
-                  </Item>
-                  <Item key="archive">
-                    <Archive />
-                    <Text>Archive</Text>
-                  </Item>
-                </>
-              )}
-              
-              {/* Published: unpublish, clone, edit, archive */}
-              {isPublished && (
-                <>
-                  <Item key="unpublish">
-                    <PublishRemove />
-                    <Text>Unpublish</Text>
-                  </Item>
-                  <Item key="edit">
-                    <Edit />
-                    <Text>Edit</Text>
-                  </Item>
-                  <Item key="clone">
-                    <Duplicate />
-                    <Text>Clone</Text>
-                  </Item>
-                  <Item key="archive">
-                    <Archive />
-                    <Text>Archive</Text>
-                  </Item>
-                </>
-              )}
+              ))}
             </Menu>
           </MenuTrigger>
         )

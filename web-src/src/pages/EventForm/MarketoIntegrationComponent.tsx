@@ -118,7 +118,8 @@ export const MarketoIntegrationComponent: React.FC = () => {
     updateFormData({ marketoIntegration: updated })
   }
   
-  const handleEventTypeChange = (key: React.Key) => {
+  const handleEventTypeChange = (key: React.Key | null) => {
+    if (key === null) return
     const value = String(key)
     
     if (value === 'no-integration') {
@@ -130,7 +131,8 @@ export const MarketoIntegrationComponent: React.FC = () => {
     }
   }
   
-  const handlePoiChange = (key: React.Key) => {
+  const handlePoiChange = (key: React.Key | null) => {
+    if (key === null) return
     const value = String(key)
     if (value === 'no-poi') {
       // Remove eventPoi from the integration data

@@ -4,6 +4,9 @@ application:
   # These will be injected at build time by Parcel
   env:
     CLIENT_IDENTITY: $CLIENT_IDENTITY
+    # ENVIRONMENT determines which API tier to use: 'dev', 'stage', or 'prod'
+    # Set via CI/CD or .env file. Defaults to 'dev' if not specified.
+    ENVIRONMENT: $ENVIRONMENT
   extensions:
     dx/excshell/1:
       operations:

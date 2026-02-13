@@ -2,7 +2,7 @@
 * <license header>
 */
 
-import { useEffect, useCallback, useRef } from 'react'
+import { useEffect, useRef } from 'react'
 import {
   useEventFormContext,
   ComponentCallbacks,
