@@ -1,0 +1,202 @@
+---
+description: EventForm and SeriesForm wizard patterns, lifecycle hooks, and form state management
+globs: web-src/src/pages/EventForm/**,web-src/src/pages/SeriesForm/**,web-src/src/contexts/EventFormContext*,web-src/src/contexts/SeriesFormContext*,web-src/src/hooks/useEventForm*,web-src/src/hooks/useSeriesForm*
+alwaysApply: false
+---
+
+# EMC Form Wizard Patterns
+
+## EventForm Architecture
+
+The EventForm is a multi-step wizard located at `web-src/src/pages/EventForm/`.
+It has **4 steps** with **14 modular sub-components**.
+
+### Steps and Components
+
+| Step | Name                  | Components                                                            |
+| ---- | --------------------- | --------------------------------------------------------------------- |
+| 1    | Basic Info            | EventFormatComponent, EventTagsComponent, EventInfoComponent, DateTimeComponent, VenueComponent (in-person only), AgendaComponent |
+| 2    | Speakers & Hosts      | SpeakersComponent                                                     |
+| 3    | Additional Content    | EventImagesComponent, SponsorsComponent, PromotionalContentComponent, PageMetadataComponent, MarketoIntegrationComponent |
+| 4    | RSVP                  | RegistrationConfigComponent                                           |
+
+**Note:** Some components render conditionally based on event type (`InPerson` vs `Webinar`).
+Use `useEventTypeFeatures()` to check feature flags.
+
+### State Architecture
+
+```
+EventFormProvider (context + useReducer)
+  └── EventForm.tsx (wizard container)
+       ├── Step 1: BasicInfoStep
+       │   ├── EventFormatComponent
+       │   ├── EventTagsComponent
+       │   ├── EventInfoComponent
+       │   ├── DateTimeComponent
+       │   ├── VenueComponent (conditional)
+       │   └── AgendaComponent
+       ├── Step 2: SpeakersStep
+       │   └── SpeakersComponent
+       ├── Step 3: ContentStep
+       │   ├── EventImagesComponent
+       │   ├── SponsorsComponent
+       │   └── PromotionalContentComponent
+       └── Step 4: RsvpStep
+           └── RegistrationConfigComponent
+```
+
+## useEventFormComponent Hook
+
+This is the **primary integration hook** for EventForm sub-components.
+Every form component should use it to register with the form lifecycle.
+
+### Registration Pattern
+```tsx
+function VenueComponent() {
+  const {
+    formData,          // Current form state (read-only)
+    updateFormData,    // Update central form state
+    eventId,           // Current event ID (null for new)
+    seriesId,          // Parent series ID
+    locale,            // Current locale
+    isEditMode,        // Create vs edit
+    isDirty,           // Has unsaved changes
+    isSaving,          // Save in progress
+    isLoading,         // Data loading
+  } = useEventFormComponent({
+    componentId: 'venue',  // Unique ID for this component
+
+    // Called during save to gather this component's payload
+    onGatherPayload: () => ({
+      venue: venueData,
+    }),
+
+    // Called after event is saved — for component-specific API calls
+    onAfterSave: async (eventId, response) => {
+      if (venueData?.venueName) {
+        await apiService.createVenue(eventId, venueData)
+      }
+    },
+
+    // Called when event data is loaded from API
+    onLoadResponse: (response) => {
+      setVenueData(response.venue)
+    },
+
+    // Validation — return true or error message string
+    validate: () => {
+      if (!venueData?.venueName) return 'Venue name is required'
+      return true
+    },
+  })
+
+  return (
+    <FormCard title="Venue">
+      <TextField
+        label="Venue Name"
+        value={formData.venue?.venueName || ''}
+        onChange={(value) => updateFormData({
+          venue: { ...formData.venue, venueName: value }
+        })}
+      />
+    </FormCard>
+  )
+}
+```
+
+### Simplified Access (read/write only)
+```tsx
+// For components that don't need lifecycle callbacks:
+function SimpleInput() {
+  const { formData, updateFormData } = useEventFormData()
+  return (
+    <TextField
+      value={formData.title || ''}
+      onChange={(value) => updateFormData({ title: value })}
+    />
+  )
+}
+```
+
+## Save Flow
+
+1. User clicks Save/Publish
+2. `useEventFormSave` validates all registered components
+3. Gathers payloads from all `onGatherPayload` callbacks
+4. Merges into single payload and sends to API
+5. On success, runs all `onAfterSave` callbacks **in parallel**
+6. Shows success/error toast
+
+## Form Persistence
+
+- Drafts auto-saved to **sessionStorage** (debounced, ~1 second)
+- Storage key: `emc_draft_{eventId}` or `emc_draft_new-{eventType}-{seriesId}`
+- Managed by `utils/formPersistence.ts`
+- Cleared on successful save or explicit discard
+
+## EventFormData Type
+
+The central form state type is `EventFormData` in `types/domain.ts`.
+It includes: title, description, date/time, venue, speakers, sponsors, images,
+agenda, registration config, locale/localizations, tags, and metadata.
+
+When adding new form fields:
+1. Add the field to `EventFormData` in `types/domain.ts`
+2. Add it to the relevant data filter in `utils/dataFilters.ts`
+3. Update the payload builder in `services/payloadBuilders.ts`
+4. Use `updateFormData({ newField: value })` in the component
+
+## Creating a New Form Component
+
+```tsx
+// 1. Create the component file in pages/EventForm/
+// 2. Use useEventFormComponent with a unique componentId
+// 3. Register lifecycle callbacks as needed
+// 4. Export from pages/EventForm/index.ts
+// 5. Add to the appropriate step in EventForm.tsx
+
+import React from 'react'
+import { TextField } from '@adobe/react-spectrum'
+import { FormCard } from '../../components/shared'
+import { useEventFormComponent } from '../../hooks'
+
+interface MyNewComponentProps {
+  onChange?: (data: Partial<EventFormData>) => void
+}
+
+const MyNewComponent: React.FC<MyNewComponentProps> = () => {
+  const { formData, updateFormData } = useEventFormComponent({
+    componentId: 'myNewComponent',
+    validate: () => {
+      // Return true or error message
+      return true
+    },
+  })
+
+  return (
+    <FormCard title="My New Section">
+      {/* Form fields here */}
+    </FormCard>
+  )
+}
+
+export default MyNewComponent
+```
+
+## SeriesForm
+
+The SeriesForm follows similar patterns but is simpler (single-step or fewer steps).
+Uses `SeriesFormContext`, `SeriesFormProvider`, and `useSeriesFormComponent`.
+Located at `web-src/src/pages/SeriesForm/`.
+
+## Event Types
+
+Events have types that affect form behavior:
+
+| Type        | Constant             | Route Parameter |
+| ----------- | -------------------- | --------------- |
+| In-Person   | `EVENT_TYPES.IN_PERSON` (`'InPerson'`) | `in-person`  |
+| Webinar     | `EVENT_TYPES.WEBINAR` (`'Webinar'`)    | `webinar`    |
+
+Use `useEventTypeFeatures()` to conditionally render components based on event type.
+Example: VenueComponent only appears for in-person events.

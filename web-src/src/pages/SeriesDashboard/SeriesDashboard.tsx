@@ -2,7 +2,7 @@
 * <license header>
 */
 
-import React, { useEffect, useState, useMemo, useCallback } from 'react'
+import React, { useEffect, useMemo, useCallback } from 'react'
 import { Flex, Text, ActionButton, MenuTrigger, Menu, Item } from '@adobe/react-spectrum'
 import MoreSmallList from '@spectrum-icons/workflow/MoreSmallList'
 import PublishRemove from '@spectrum-icons/workflow/PublishRemove'
@@ -12,32 +12,33 @@ import Archive from '@spectrum-icons/workflow/Archive'
 import { TableColumn } from '../../components/shared/DataTable'
 import { StatusBadge, ResourceDashboardLayout } from '../../components/shared'
 import { SeriesDashboardItem, EventApiResponse } from '../../types/domain'
-import { apiService } from '../../services/api'
+import { apiService, cachedApi } from '../../services/api'
 import { IMS } from '../../types'
 import { 
   seriesHistoryEnrichmentManager, 
   SeriesHistoryInfo 
 } from '../../services/seriesEnrichment'
 import { createShimmerStyle } from '../../styles/designSystem'
+import { useSafeState } from '../../hooks'
 
 interface SeriesDashboardProps {
   ims: IMS
 }
 
 export const SeriesDashboard: React.FC<SeriesDashboardProps> = () => {
-  const [series, setSeries] = useState<SeriesDashboardItem[]>([])
-  const [isLoading, setIsLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
+  const [series, setSeries] = useSafeState<SeriesDashboardItem[]>([])
+  const [isLoading, setIsLoading] = useSafeState(true)
+  const [error, setError] = useSafeState<string | null>(null)
   
   // Cache all events once for counting
-  const [allEvents, setAllEvents] = useState<EventApiResponse[]>([])
+  const [allEvents, setAllEvents] = useSafeState<EventApiResponse[]>([])
   
   // Enrichment state
-  const [visibleSeriesIds, setVisibleSeriesIds] = useState<string[]>([])
-  const [historyInfo, setHistoryInfo] = useState<Map<string, SeriesHistoryInfo>>(new Map())
-  const [loadingHistory, setLoadingHistory] = useState<Set<string>>(new Set())
-  const [historyErrors, setHistoryErrors] = useState<Set<string>>(new Set())
-  const [historyAttempted, setHistoryAttempted] = useState<Set<string>>(new Set())
+  const [visibleSeriesIds, setVisibleSeriesIds] = useSafeState<string[]>([])
+  const [historyInfo, setHistoryInfo] = useSafeState<Map<string, SeriesHistoryInfo>>(new Map())
+  const [loadingHistory, setLoadingHistory] = useSafeState<Set<string>>(new Set())
+  const [historyErrors, setHistoryErrors] = useSafeState<Set<string>>(new Set())
+  const [historyAttempted, setHistoryAttempted] = useSafeState<Set<string>>(new Set())
 
   const loadSeriesData = async () => {
     setIsLoading(true)
@@ -48,8 +49,8 @@ export const SeriesDashboard: React.FC<SeriesDashboardProps> = () => {
       
       // Fetch both series and events in parallel
       const [seriesData, eventsData] = await Promise.all([
-        apiService.getSeriesList(),
-        apiService.getEventsList()
+        cachedApi.getSeriesList(),
+        cachedApi.getEventsList()
       ])
       
       console.log(`✅ Fetched ${seriesData.length} series and ${eventsData.length} events`)
@@ -182,11 +183,13 @@ export const SeriesDashboard: React.FC<SeriesDashboardProps> = () => {
         console.log('Publish series:', item)
         try {
           // Fetch full series data first to get modificationTime
-          const fullSeries = await apiService.getSeriesByIdExternal(item.seriesId)
+          const fullSeries = await cachedApi.getSeriesFull(item.seriesId)
+
           if ('error' in fullSeries) {
             throw new Error('Failed to fetch series data')
           }
           await apiService.publishSeries(item.seriesId, { modificationTime: fullSeries.modificationTime })
+          
           // Reload data to reflect changes
           await loadSeriesData()
         } catch (error) {
@@ -198,11 +201,13 @@ export const SeriesDashboard: React.FC<SeriesDashboardProps> = () => {
         console.log('Unpublish series:', item)
         try {
           // Fetch full series data first to get modificationTime
-          const fullSeries = await apiService.getSeriesByIdExternal(item.seriesId)
+          const fullSeries = await cachedApi.getSeriesFull(item.seriesId)
+
           if ('error' in fullSeries) {
             throw new Error('Failed to fetch series data')
           }
           await apiService.unpublishSeries(item.seriesId, { modificationTime: fullSeries.modificationTime })
+          
           // Reload data to reflect changes
           await loadSeriesData()
         } catch (error) {
@@ -223,11 +228,13 @@ export const SeriesDashboard: React.FC<SeriesDashboardProps> = () => {
         console.log('Archive series:', item)
         try {
           // Fetch full series data first to get modificationTime
-          const fullSeries = await apiService.getSeriesByIdExternal(item.seriesId)
+          const fullSeries = await cachedApi.getSeriesFull(item.seriesId)
+
           if ('error' in fullSeries) {
             throw new Error('Failed to fetch series data')
           }
           await apiService.archiveSeries(item.seriesId, { modificationTime: fullSeries.modificationTime })
+          
           // Reload data to reflect changes
           await loadSeriesData()
         } catch (error) {

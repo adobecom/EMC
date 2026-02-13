@@ -40,7 +40,7 @@ export const EVENT_TYPE_CONFIG: Record<EventType, EventTypeFeatures> = {
     label: 'In-Person Event',
     description: 'Physical event at a venue location',
     hasVenue: true,
-    hasPageMetadata: false,
+    hasPageMetadata: true,
     hasMarketoIntegration: true,
     hasPhysicalCapacity: true,
     hasVirtualCapacity: false,

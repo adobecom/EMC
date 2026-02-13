@@ -28,7 +28,7 @@ import ChevronDown from '@spectrum-icons/workflow/ChevronDown'
 import ChevronRight from '@spectrum-icons/workflow/ChevronRight'
 import DragHandle from '@spectrum-icons/workflow/DragHandle'
 import { detectSocialPlatform, isValidUrl, toApiSocialLink, fromApiSocialLink } from '../../utils/socialPlatformDetector'
-import { apiService } from '../../services/api'
+import { apiService, cachedApi } from '../../services/api'
 import { useEventFormComponent } from '../../hooks/useEventFormComponent'
 import { uploadImage, UploadTracker } from '../../services/requestHelpers'
 import { tokenStorage } from '../../services/tokenStorage'
@@ -138,7 +138,7 @@ export const SpeakersComponent: React.FC = () => {
       // We must fetch the current event speakers from the API
       let savedSpeakers: any[] = []
       try {
-        const speakersResponse = await apiService.getEventSpeakers(savedEventId)
+        const speakersResponse = await cachedApi.getEventSpeakers(savedEventId)
         if (speakersResponse && !('error' in speakersResponse)) {
           savedSpeakers = speakersResponse.speakers || speakersResponse || []
           if (!Array.isArray(savedSpeakers)) {
@@ -274,7 +274,7 @@ export const SpeakersComponent: React.FC = () => {
     const loadSeriesSpeakers = async () => {
       setIsLoadingSpeakers(true)
       try {
-        const response = await apiService.getSpeakers(seriesId)
+        const response = await cachedApi.getSpeakers(seriesId)
         if (isMounted && response && !('error' in response)) {
           const speakers = response.speakers || response || []
           setSeriesSpeakers(Array.isArray(speakers) ? speakers : [])
@@ -581,7 +581,7 @@ export const SpeakersComponent: React.FC = () => {
         })
 
         // Refresh series speakers list
-        const refreshed = await apiService.getSpeakers(seriesId)
+        const refreshed = await cachedApi.getSpeakers(seriesId)
         if (refreshed && !('error' in refreshed)) {
           const speakers = refreshed.speakers || refreshed || []
           setSeriesSpeakers(Array.isArray(speakers) ? speakers : [])
