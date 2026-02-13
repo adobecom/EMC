@@ -1,0 +1,166 @@
+---
+description: React component patterns, hooks, state management, and Spectrum v3 usage for EMC
+globs: web-src/**/*.tsx,web-src/**/*.ts
+alwaysApply: false
+---
+
+# EMC React Component Patterns
+
+## React Spectrum v3 — NOT S2
+
+This project uses `@adobe/react-spectrum` (v3). **Do NOT use S2 imports or patterns.**
+
+```tsx
+// CORRECT — v3 imports
+import { Button, TextField, Flex, View, Text, Dialog, DialogTrigger } from '@adobe/react-spectrum'
+import Edit from '@spectrum-icons/workflow/Edit'
+
+// WRONG — S2 imports (not installed)
+// import { Button } from '@react-spectrum/s2'
+```
+
+### Spectrum v3 Key Rules
+- Use `onPress` for buttons (not `onClick`) — handles keyboard + pointer
+- Layout: `Flex`, `Grid`, `View` with Spectrum dimension props (`size-*`, `static-size-*`)
+- Spacing: Use Spectrum tokens like `size-100`, `size-200` in `gap`, `margin*`, `padding*`
+- Styling escape hatch: `UNSAFE_style` and `UNSAFE_className` (minimize usage)
+- Theme: `defaultTheme`, `colorScheme='light'`, `scale='medium'` (set in App.tsx)
+- Collections: `<Picker>`, `<ComboBox>`, `<ListView>` use `<Item key={}>` children
+
+## Component Patterns
+
+### Functional Components Only
+```tsx
+// Standard pattern — React.FC with typed props
+interface MyComponentProps {
+  ims: IMS
+  data?: SomeType
+}
+
+const MyComponent: React.FC<MyComponentProps> = ({ ims, data }) => {
+  // hooks at top
+  const { apiService } = useApi()
+  const { showToast } = useToast()
+  
+  return <View>...</View>
+}
+
+export default MyComponent
+```
+
+### Context Usage
+```tsx
+// Access API service
+const { apiService } = useApi()
+
+// Show toast notifications
+const { showToast } = useToast()
+showToast('Event saved', 'success')
+
+// Access event form state (inside EventFormProvider)
+const { formData, updateFormData } = useEventFormComponent({ componentId: 'myComponent' })
+```
+
+### Custom Hooks
+
+| Hook                       | Purpose                                    | Location         |
+| -------------------------- | ------------------------------------------ | ---------------- |
+| `useLoadData(loadFn)`      | Data fetching with loading/error/reload    | `hooks/`         |
+| `useEventFormComponent()`  | EventForm lifecycle registration           | `hooks/`         |
+| `useEventFormData()`       | Simplified form data access (read/write)   | `hooks/`         |
+| `useEventFormSave()`       | Save/publish logic for event form          | `hooks/`         |
+| `useSeriesFormComponent()` | SeriesForm lifecycle registration          | `hooks/`         |
+| `useDevToken()`            | Dev token state management                 | `hooks/`         |
+| `useEventTypeFeatures()`   | Feature flags per event type               | `hooks/`         |
+| `useRsvpConfig()`          | RSVP form configuration                    | `hooks/`         |
+| `useSafeState()`           | State updates safe after unmount           | `hooks/`         |
+
+### Data Loading Pattern
+```tsx
+const { data, loading, error, reload } = useLoadData(async () => {
+  return await apiService.getEventsList(seriesId)
+})
+
+if (loading) return <LoadingSpinner message="Loading events..." />
+if (error) return <Text>Error: {error.message}</Text>
+```
+
+## Shared Components
+
+### DataTable
+```tsx
+<DataTable
+  items={events}
+  columns={[
+    { key: 'title', name: 'Title', sortable: true },
+    { key: 'status', name: 'Status', render: (item) => <StatusBadge status={item.status} /> },
+  ]}
+  actions={[
+    { type: 'edit', onAction: (item) => navigate(`/events/edit/${item.eventId}`) },
+    { type: 'delete', onAction: (item) => handleDelete(item) },
+  ]}
+  pageSize={10}
+  isLoading={loading}
+/>
+```
+
+### FormWizard
+```tsx
+<FormWizard
+  steps={steps}
+  currentStep={currentStep}
+  onStepChange={setCurrentStep}
+  onSave={handleSave}
+  onPublish={handlePublish}
+  isSaving={isSaving}
+  renderSideNav={() => <StepNavigation />}
+/>
+```
+
+### ResourceDashboardLayout
+```tsx
+<ResourceDashboardLayout
+  title="Events"
+  searchPlaceholder="Search events..."
+  onSearch={handleSearch}
+  actions={<Button onPress={handleCreate}>Create Event</Button>}
+>
+  <DataTable ... />
+</ResourceDashboardLayout>
+```
+
+## Dialog Pattern
+```tsx
+// Controlled dialog with Spectrum DialogTrigger
+<DialogTrigger isOpen={isOpen} onOpenChange={(open) => !open && onClose()}>
+  <div style={{ display: 'none' }} />  {/* Hidden trigger element */}
+  <Dialog size="M">
+    <Heading>Dialog Title</Heading>
+    <Divider />
+    <Content>
+      {/* Dialog content */}
+    </Content>
+    <ButtonGroup>
+      <Button variant="secondary" onPress={onClose}>Cancel</Button>
+      <Button variant="accent" onPress={onConfirm}>Confirm</Button>
+    </ButtonGroup>
+  </Dialog>
+</DialogTrigger>
+```
+
+## Type Definitions
+
+All domain types live in `web-src/src/types/`:
+- `domain.ts` — EventFormData, SeriesApiResponse, Venue, ProfileData, SponsorData, etc.
+- `runtime.ts` — IMS, Runtime, IMSProfile (Adobe ExC Shell types)
+- `attendee.ts` — Attendee-specific types
+- Types are re-exported through `types/index.ts`
+
+When creating new types, add them to the appropriate file in `types/` and export from `index.ts`.
+
+## Code Style
+
+- No semicolons (project convention)
+- Prefer `const` arrow functions for components
+- Barrel exports (`index.ts`) in every directory
+- Import order: React → third-party → local (contexts → hooks → services → types → utils)

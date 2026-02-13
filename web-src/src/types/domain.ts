@@ -554,7 +554,7 @@ export interface VenueData {
 // Comprehensive Event Form Data
 export interface EventFormData {
   // Step 1: Basic Info
-  cloudType: 'CreativeCloud' | 'ExperienceCloud'
+  cloudType: 'CreativeCloud' | 'ExperienceCloud' | ''
   eventType: 'in-person' | 'webinar'
   seriesId: string
   organizationId: string

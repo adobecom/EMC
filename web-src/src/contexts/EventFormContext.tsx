@@ -85,6 +85,9 @@ export interface EventFormState {
   
   // Wizard navigation state
   maxStepReached: number
+  
+  // Format selection state (cloud + series must be confirmed before form is usable)
+  isFormatConfirmed: boolean
 }
 
 /**
@@ -105,6 +108,8 @@ type EventFormAction =
   | { type: 'SET_LOAD_ERROR'; payload: string | null }
   | { type: 'SET_PUBLISHED'; payload: boolean }
   | { type: 'SET_MAX_STEP_REACHED'; payload: number }
+  | { type: 'SET_FORMAT_CONFIRMED'; payload: boolean }
+  | { type: 'RESET_FOR_RESELECT'; payload: { eventType: 'in-person' | 'webinar' } }
   | { type: 'RESET_TO_SAVED' }
 
 /**
@@ -126,6 +131,7 @@ export interface EventFormContextValue {
   isLoading: boolean
   isPublished: boolean
   maxStepReached: number
+  isFormatConfirmed: boolean
   
   // Actions
   updateFormData: (updates: Partial<EventFormData>) => void
@@ -141,6 +147,8 @@ export interface EventFormContextValue {
   setLoadError: (error: string | null) => void
   setPublished: (published: boolean) => void
   setMaxStepReached: (step: number) => void
+  setFormatConfirmed: (confirmed: boolean) => void
+  resetForReselect: () => void
   
   // Component registration
   registerComponent: (id: string, callbacks: ComponentCallbacks) => void
@@ -160,7 +168,7 @@ export interface EventFormContextValue {
 const DEFAULT_LOCALE = 'en-US'
 
 export const createDefaultFormData = (): EventFormData => ({
-  cloudType: 'CreativeCloud',
+  cloudType: '',
   eventType: 'in-person',
   seriesId: '',
   organizationId: '',
@@ -216,6 +224,7 @@ const createInitialState = (initialData?: Partial<EventFormData>): EventFormStat
   loadError: null,
   isPublished: false,
   maxStepReached: 0,
+  isFormatConfirmed: false,
 })
 
 // ============================================================================
@@ -281,6 +290,22 @@ function eventFormReducer(state: EventFormState, action: EventFormAction): Event
     
     case 'SET_MAX_STEP_REACHED':
       return { ...state, maxStepReached: Math.max(state.maxStepReached, action.payload) }
+    
+    case 'SET_FORMAT_CONFIRMED':
+      return { ...state, isFormatConfirmed: action.payload }
+    
+    case 'RESET_FOR_RESELECT':
+      return {
+        ...state,
+        isFormatConfirmed: false,
+        seriesId: '',
+        formData: {
+          ...createDefaultFormData(),
+          eventType: action.payload.eventType,
+        },
+        isDirty: false,
+        maxStepReached: 0,
+      }
     
     case 'RESET_TO_SAVED':
       // If we have an API response, we'd need to map it back to formData
@@ -403,6 +428,12 @@ export const EventFormProvider: React.FC<EventFormProviderProps> = ({
     dispatch({ type: 'SET_MAX_STEP_REACHED', payload: step })
   }, [])
   
+  const setFormatConfirmed = useCallback((confirmed: boolean) => {
+    dispatch({ type: 'SET_FORMAT_CONFIRMED', payload: confirmed })
+  }, [])
+  
+  // Note: resetForReselect is defined after clearStorage in the PERSISTENCE section
+  
   // ============================================================================
   // COMPONENT REGISTRATION
   // ============================================================================
@@ -448,6 +479,11 @@ export const EventFormProvider: React.FC<EventFormProviderProps> = ({
     clearFormDraft(storageKey)
   }, [storageKey])
   
+  const resetForReselect = useCallback(() => {
+    clearStorage()
+    dispatch({ type: 'RESET_FOR_RESELECT', payload: { eventType: state.formData.eventType } })
+  }, [clearStorage, state.formData.eventType])
+  
   // Auto-persist on form data changes (debounced via effect)
   useEffect(() => {
     if (!autoPersist || !state.isDirty) return
@@ -479,6 +515,7 @@ export const EventFormProvider: React.FC<EventFormProviderProps> = ({
     isLoading: state.isLoading,
     isPublished: state.isPublished,
     maxStepReached: state.maxStepReached,
+    isFormatConfirmed: state.isFormatConfirmed,
     
     // Actions
     updateFormData,
@@ -494,6 +531,8 @@ export const EventFormProvider: React.FC<EventFormProviderProps> = ({
     setLoadError,
     setPublished,
     setMaxStepReached,
+    setFormatConfirmed,
+    resetForReselect,
     
     // Component registration
     registerComponent,
@@ -519,6 +558,8 @@ export const EventFormProvider: React.FC<EventFormProviderProps> = ({
     setLoadError,
     setPublished,
     setMaxStepReached,
+    setFormatConfirmed,
+    resetForReselect,
     registerComponent,
     unregisterComponent,
     getRegisteredComponents,
