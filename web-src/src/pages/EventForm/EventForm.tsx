@@ -552,7 +552,7 @@ interface EventFormInnerProps {
   ims: IMS
 }
 
-const EventFormInner: React.FC<EventFormInnerProps> = ({ ims }) => {
+const EventFormInner: React.FC<EventFormInnerProps> = ({ ims: _ims }) => {
   const navigate = useNavigate()
   const { id: eventIdParam } = useParams<{ id: string }>()
   const toast = useToast()
@@ -585,7 +585,7 @@ const EventFormInner: React.FC<EventFormInnerProps> = ({ ims }) => {
   } = useEventFormContext()
   
   // Get save hook
-  const { saveEvent, publishEvent, saveDraft, isSaving, saveError } = useEventFormSave()
+  const { publishEvent, saveDraft, isSaving, saveError } = useEventFormSave()
   
   // Show toast when saveError changes
   useEffect(() => {

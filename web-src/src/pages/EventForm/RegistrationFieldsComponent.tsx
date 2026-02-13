@@ -341,9 +341,8 @@ export const RegistrationFieldsComponent: React.FC<RegistrationFieldsComponentPr
             <Text UNSAFE_style={{ fontWeight: 600, fontSize: '12px', color: 'var(--spectrum-global-color-gray-600)' }}>
               MAKE IT REQUIRED
             </Text>
-            <Text UNSAFE_style={{ fontWeight: 600, fontSize: '12px', color: 'var(--spectrum-global-color-gray-600)' }}>
-              {/* Drag handle header - empty */}
-            </Text>
+            {/* Drag handle header - empty placeholder */}
+            <span style={{ fontWeight: 600, fontSize: '12px', color: 'var(--spectrum-global-color-gray-600)' }} />
           </div>
 
           {/* Field rows */}

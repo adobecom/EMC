@@ -357,11 +357,11 @@ export const UserProfile: React.FC<UserProfileProps> = ({ ims }) => {
                 width="size-1000"
                 height="size-1000"
                 backgroundColor="gray-300"
-                borderRadius="full"
                 UNSAFE_style={{
                   display: 'flex',
                   alignItems: 'center',
-                  justifyContent: 'center'
+                  justifyContent: 'center',
+                  borderRadius: '50%'
                 }}
               >
                 <User size="XL" />

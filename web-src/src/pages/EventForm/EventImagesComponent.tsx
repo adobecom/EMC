@@ -8,7 +8,7 @@ import {
   Heading,
   Text
 } from '@adobe/react-spectrum'
-import { EventImageData } from '../../types/domain'
+import type { EventImageData as _EventImageData } from '../../types/domain'
 import { ImageUploader } from '../../components/shared'
 import { TYPOGRAPHY } from '../../styles/designSystem'
 import { useEventFormComponent } from '../../hooks/useEventFormComponent'

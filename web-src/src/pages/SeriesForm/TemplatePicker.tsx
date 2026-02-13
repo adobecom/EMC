@@ -89,7 +89,7 @@ export const TemplatePicker: React.FC<TemplatePickerProps> = ({
   onSelect,
   templates,
   selectedTemplateId,
-  isLoading = false
+  isLoading: _isLoading = false
 }) => {
   // ============================================================================
   // STATE

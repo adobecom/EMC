@@ -198,19 +198,21 @@ const DocSectionComponent: React.FC<DocSectionComponentProps> = ({
           >
             {isExpanded ? <ChevronDown size="S" /> : <ChevronRight size="S" />}
           </ActionButton>
-          <View 
-            UNSAFE_style={{ color: 'var(--spectrum-global-color-gray-700)', flexShrink: 0 }}
+          <div 
+            style={{ color: 'var(--spectrum-global-color-gray-700)', flexShrink: 0, cursor: 'pointer' }}
             onClick={onToggle}
           >
             {section.icon}
-          </View>
-          <Flex 
-            direction="column" 
-            gap="size-50" 
-            UNSAFE_style={{ 
+          </div>
+          <div 
+            style={{ 
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '4px',
               alignItems: 'flex-start',
               textAlign: 'left',
-              flex: 1
+              flex: 1,
+              cursor: 'pointer'
             }}
             onClick={onToggle}
           >
@@ -224,7 +226,7 @@ const DocSectionComponent: React.FC<DocSectionComponentProps> = ({
             >
               {section.description}
             </Text>
-          </Flex>
+          </div>
         </Flex>
       </View>
 
