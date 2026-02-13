@@ -6,7 +6,7 @@ import React, { useEffect, useCallback, useRef } from 'react'
 import { View, Flex, Divider } from '@adobe/react-spectrum'
 import { useNavigate, useParams } from 'react-router-dom'
 import { SeriesApiResponse } from '../../types/domain'
-import { apiService } from '../../services/api'
+import { apiService, cachedApi } from '../../services/api'
 import { IMS } from '../../types'
 import { FormCard, LoadingSpinner, SingleStepFormLayout, HistoryTimeline } from '../../components/shared'
 import { SeriesDetailsComponent } from './SeriesDetailsComponent'
@@ -134,7 +134,7 @@ const SeriesFormInner: React.FC<SeriesFormInnerProps> = ({ ims: _ims }) => {
   const loadSeries = async (seriesIdToLoad: string) => {
     setLoading(true)
     try {
-      const response = await apiService.getSeriesByIdExternal(seriesIdToLoad)
+      const response = await cachedApi.getSeriesById(seriesIdToLoad)
       
       if ('error' in response) {
         console.error('Failed to load series:', response)

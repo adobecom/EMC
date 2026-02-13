@@ -41,10 +41,11 @@ import User from '@spectrum-icons/workflow/User'
 import { TableColumn } from '../../components/shared/DataTable'
 import { ResourceDashboardLayout } from '../../components/shared'
 import { SeriesSpeaker, SeriesApiResponse, EventApiResponse } from '../../types/domain'
-import { apiService } from '../../services/api'
+import { apiService, cachedApi } from '../../services/api'
 import { IMS } from '../../types'
 import { useToast } from '../../contexts'
 import { createShimmerStyle, COLORS } from '../../styles/designSystem'
+import { useSafeState } from '../../hooks'
 import { SpeakerFormDialog } from './SpeakerFormDialog'
 import { CascadeConfirmDialog, CascadeAction } from './CascadeConfirmDialog'
 import { SpeakerEventConnectionsDialog } from './SpeakerEventConnectionsDialog'
@@ -68,32 +69,32 @@ export const SpeakersDashboard: React.FC<SpeakersDashboardProps> = () => {
   // ============================================================================
   
   // Series selection
-  const [seriesList, setSeriesList] = useState<SeriesApiResponse[]>([])
-  const [selectedSeriesId, setSelectedSeriesId] = useState<string | null>(null)
-  const [isLoadingSeries, setIsLoadingSeries] = useState(true)
+  const [seriesList, setSeriesList] = useSafeState<SeriesApiResponse[]>([])
+  const [selectedSeriesId, setSelectedSeriesId] = useSafeState<string | null>(null)
+  const [isLoadingSeries, setIsLoadingSeries] = useSafeState(true)
   
   // Speakers data
-  const [speakers, setSpeakers] = useState<SpeakerDashboardItem[]>([])
-  const [isLoadingSpeakers, setIsLoadingSpeakers] = useState(false)
-  const [error, setError] = useState<string | null>(null)
+  const [speakers, setSpeakers] = useSafeState<SpeakerDashboardItem[]>([])
+  const [isLoadingSpeakers, setIsLoadingSpeakers] = useSafeState(false)
+  const [error, setError] = useSafeState<string | null>(null)
   
   // Event connections loading
-  const [loadingEventCounts, setLoadingEventCounts] = useState<Set<string>>(new Set())
-  const [eventConnections, setEventConnections] = useState<Map<string, EventApiResponse[]>>(new Map())
+  const [loadingEventCounts, setLoadingEventCounts] = useSafeState<Set<string>>(new Set())
+  const [eventConnections, setEventConnections] = useSafeState<Map<string, EventApiResponse[]>>(new Map())
   
   // Ref to track which speaker IDs we've already loaded (prevents infinite loop)
   const loadedSpeakerIdsRef = useRef<Set<string>>(new Set())
   
   // Action states
-  const [actionInProgress, setActionInProgress] = useState<string | null>(null)
+  const [actionInProgress, setActionInProgress] = useSafeState<string | null>(null)
   
   // Dialog states
-  const [isFormDialogOpen, setIsFormDialogOpen] = useState(false)
-  const [editingSpeaker, setEditingSpeaker] = useState<SpeakerDashboardItem | null>(null)
-  const [speakerToDelete, setSpeakerToDelete] = useState<SpeakerDashboardItem | null>(null)
-  const [speakerForCascade, setSpeakerForCascade] = useState<SpeakerDashboardItem | null>(null)
-  const [cascadeAction, setCascadeAction] = useState<CascadeAction | null>(null)
-  const [speakerForConnections, setSpeakerForConnections] = useState<SpeakerDashboardItem | null>(null)
+  const [isFormDialogOpen, setIsFormDialogOpen] = useSafeState(false)
+  const [editingSpeaker, setEditingSpeaker] = useSafeState<SpeakerDashboardItem | null>(null)
+  const [speakerToDelete, setSpeakerToDelete] = useSafeState<SpeakerDashboardItem | null>(null)
+  const [speakerForCascade, setSpeakerForCascade] = useSafeState<SpeakerDashboardItem | null>(null)
+  const [cascadeAction, setCascadeAction] = useSafeState<CascadeAction | null>(null)
+  const [speakerForConnections, setSpeakerForConnections] = useSafeState<SpeakerDashboardItem | null>(null)
   
   // ============================================================================
   // DATA LOADING
@@ -104,7 +105,8 @@ export const SpeakersDashboard: React.FC<SpeakersDashboardProps> = () => {
     const loadSeriesList = async () => {
       setIsLoadingSeries(true)
       try {
-        const data = await apiService.getSeriesList()
+        const data = await cachedApi.getSeriesList()
+        
         setSeriesList(data)
         
         // Auto-select first series if available
@@ -118,7 +120,7 @@ export const SpeakersDashboard: React.FC<SpeakersDashboardProps> = () => {
         setIsLoadingSeries(false)
       }
     }
-    
+
     loadSeriesList()
   }, [])
   
@@ -133,7 +135,7 @@ export const SpeakersDashboard: React.FC<SpeakersDashboardProps> = () => {
     setError(null)
     
     try {
-      const response = await apiService.getSpeakers(selectedSeriesId)
+      const response = await cachedApi.getSpeakers(selectedSeriesId)
       
       if ('error' in response) {
         throw new Error(response.error)
@@ -181,7 +183,7 @@ export const SpeakersDashboard: React.FC<SpeakersDashboardProps> = () => {
       const results = await Promise.all(
         speakersToLoad.map(async (speakerId) => {
           try {
-            const response = await apiService.getEventsBySpeakerId(speakerId)
+            const response = await cachedApi.getEventsBySpeakerId(speakerId)
             if (response && !('error' in response)) {
               const events = response.events || response || []
               return { speakerId, events: Array.isArray(events) ? events : [] }

@@ -1,0 +1,138 @@
+---
+description: API service patterns, caching, request helpers, and data fetching for EMC
+globs: web-src/src/services/**,web-src/src/contexts/ApiContext*
+alwaysApply: false
+---
+
+# EMC API Service Patterns
+
+## Architecture Overview
+
+The API layer lives in `web-src/src/services/` with this structure:
+
+| File                  | Role                                                |
+| --------------------- | --------------------------------------------------- |
+| `api.ts`              | Central ApiService class + cachedApi wrapper         |
+| `requestHelpers.ts`   | `constructRequestHeaders`, `safeFetch`, URL validation |
+| `cacheUtils.ts`       | `apiCache`, throttle, debounce, memoized fetch       |
+| `configService.ts`    | RSVP config, metadata catalogue, series templates    |
+| `payloadBuilders.ts`  | Payload construction for speakers, sponsors, events  |
+| `tokenStorage.ts`     | Dev token management (localStorage)                  |
+| `dataEnrichment.ts`   | Series/event data enrichment                         |
+| `eventEnrichment.ts`  | Event-specific enrichment                            |
+| `seriesEnrichment.ts` | Series-specific enrichment                           |
+
+## ApiService Class
+
+`ApiService` is the central HTTP client. It is instantiated once and provided via `ApiContext`.
+
+```tsx
+// Access via context hook
+const { apiService } = useApi()
+
+// Methods follow this pattern:
+const events = await apiService.getEventsList(seriesId)
+const event = await apiService.getEventDetails(eventId)
+await apiService.createEvent(seriesId, eventData)
+await apiService.updateEvent(eventId, eventData)
+```
+
+### Key Features
+- **Auth headers**: Set by `ApiProvider` from IMS token and org ID
+- **Input validation**: `validateString()` / `validateObject()` before every API call
+- **Dry-run mode**: `apiService.enableDryRun()` — logs POST/PUT/DELETE without executing
+- **Environment-aware**: Uses `getApiHost('esp' | 'esl')` from `config/constants.ts`
+- **Two API targets**: ESP (events platform) and ESL (events service layer)
+
+### Auth Flow
+```tsx
+// ApiProvider sets auth headers on mount and when IMS changes:
+apiService.setAuthHeaders({
+  'Authorization': `Bearer ${imsToken}`,
+  'x-gw-ims-org-id': imsOrgId,
+})
+```
+
+## cachedApi Wrapper
+
+`cachedApi` wraps ApiService GET methods with caching and deduplication:
+
+```tsx
+// Use cachedApi for reads (10s cache, dedup, auto-invalidate on mutations)
+const series = await cachedApi.getSeriesList()
+const events = await cachedApi.getEventsList(seriesId)
+
+// Mutations go through apiService directly (and auto-invalidate related caches)
+await apiService.createEvent(seriesId, data)
+```
+
+### Cache Behavior
+- **TTL**: 10 seconds (configurable via `setCacheTimeout()`)
+- **Deduplication**: Concurrent identical requests share one fetch
+- **Invalidation**: Mutations invalidate related cache patterns automatically
+- **Console helpers**: `window.clearApiCache()`, `window.getApiCacheStats()`
+
+## Request Helpers
+
+### constructRequestHeaders(authToken, method?)
+```tsx
+// Returns headers with auth, org ID, content-type (skipped for GET/HEAD/DELETE)
+const headers = constructRequestHeaders(token, 'POST')
+// → { 'Authorization': 'Bearer ...', 'x-gw-ims-org-id': '...', 'content-type': 'application/json' }
+```
+
+### safeFetch(url, options)
+```tsx
+// Validates URL against ALLOWED_HOSTS before fetching
+const response = await safeFetch('https://events-service-platform.adobe.io/events', {
+  method: 'GET',
+  headers,
+})
+```
+
+- **ALLOWED_HOSTS**: Derived from `API_CONFIG` in `config/constants.ts` + core Adobe domains
+- Rejects URLs to non-allowed hosts
+- Returns standard fetch Response
+
+## Environment Configuration
+
+API hosts are defined in `config/constants.ts`:
+
+```tsx
+import { getApiHost, getCurrentEnvironment } from '../config/constants'
+
+const espHost = getApiHost('esp')  // e.g., 'https://events-service-platform-stage.adobe.io'
+const eslHost = getApiHost('esl')  // e.g., 'https://events-service-layer-stage.adobe.io'
+```
+
+Environment is auto-detected from `window.location.hostname`.
+
+## Data Filters and Payload Builders
+
+`payloadBuilders.ts` + `utils/dataFilters.ts` handle API payload construction:
+
+- `SPEAKER_DATA_FILTER`, `SPONSOR_DATA_FILTER`, etc. define submittable/localizable/cloneable fields
+- Payload builders merge localizations and strip non-submittable fields
+- Always use these when constructing payloads — don't send raw form data to APIs
+
+## Security Rules
+
+- **ALWAYS** use `safeFetch()` or go through `ApiService` — never raw `fetch()` to external APIs
+- **ALWAYS** validate inputs with `validateString()` / `validateObject()` before API calls
+- **NEVER** log tokens or sensitive data — use `tokenStorage` for dev tokens only
+- **NEVER** hardcode API hosts — use `getApiHost()` from constants
+- **NEVER** bypass ALLOWED_HOSTS validation
+- Dev token features are **localhost-only** — do not expose in production paths
+
+## Error Handling Pattern
+
+```tsx
+try {
+  const result = await apiService.updateEvent(eventId, payload)
+  showToast('Event updated successfully', 'success')
+} catch (error) {
+  console.error('Failed to update event:', error)
+  showToast('Failed to update event', 'error')
+  // Don't expose raw error messages to users
+}
+```
