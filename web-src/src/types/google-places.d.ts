@@ -56,6 +56,17 @@ declare namespace google {
       constructor()
       extend(point: LatLng): void
     }
+
+    // Event utility namespace
+    namespace event {
+      function clearInstanceListeners(instance: object): void
+      function addListener(instance: object, eventName: string, handler: Function): MapsEventListener
+      function removeListener(listener: MapsEventListener): void
+    }
+
+    interface MapsEventListener {
+      remove(): void
+    }
   }
 }
 

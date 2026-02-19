@@ -49,6 +49,17 @@ const VENUE_NAME_MAX_LENGTH = 80
  * Lifecycle Integration:
  * - Uses useEventFormComponent hook for context integration
  * - onAfterSave: Creates or replaces venue via API after event is saved
+ * 
+ * State Architecture:
+ * - venueNameValue (local): Controls the Google Places autocomplete <input> only.
+ *   Always shows the Google Places name (or typed search text).
+ * - alternativeVenueName (local): The user-provided alternative display name.
+ * - venue.venueName (context): The name sent to the API.
+ *   Equals googlePlaceName when no alternative is active, or the alternative name.
+ * - venue.googlePlaceName (context): Immutable record of the Google Places name.
+ *   Set only by place selection; never touched by manual typing or alternative name.
+ * - venue.placeId (context): Set only by place selection.
+ *   Cleared when user edits the main input (signals "needs re-selection").
  */
 export const VenueComponent: React.FC = () => {
   // ============================================================================
@@ -64,9 +75,13 @@ export const VenueComponent: React.FC = () => {
     componentId: 'venue',
     
     /**
-     * After the main event save, create or update the venue and upload pending image
+     * After the main event save, create or update the venue and upload pending image.
+     *
+     * Important: `eventResponse` comes from the event update/create API and may
+     * NOT include nested venue data. We therefore fetch the existing venue via a
+     * dedicated GET so the create-vs-update decision is always correct.
      */
-    onAfterSave: async (savedEventId: string, eventResponse: EventApiResponse) => {
+    onAfterSave: async (savedEventId: string, _eventResponse: EventApiResponse) => {
       const venueData = formData.venue
       
       // ========================================================================
@@ -91,9 +106,7 @@ export const VenueComponent: React.FC = () => {
             
             if (result.imageUrl && result.imageId) {
               console.log('Venue image uploaded successfully:', result)
-              // Clear the pending file to prevent repeat uploads
               pendingImageFileRef.current = null
-              // Update venue data with the uploaded image info
               updateFormData({
                 venue: {
                   ...venueData,
@@ -106,7 +119,6 @@ export const VenueComponent: React.FC = () => {
           }
         } catch (error) {
           console.error('Failed to upload venue image:', error)
-          // Don't block venue creation if image upload fails
         }
       }
       
@@ -114,13 +126,42 @@ export const VenueComponent: React.FC = () => {
       // 2. Create or update venue
       // ========================================================================
       
-      // Skip if no venue name entered
+      // Skip entirely if no venue name is entered
       if (!venueData?.venueName?.trim()) {
         return
       }
       
-      // Build the localized venue payload
-      const venuePayload = getVenuePayload({
+      // --- Fetch existing venue (authoritative; don't rely on eventResponse) ---
+      let existingVenue: any = null
+      try {
+        const venueResult = await apiService.getEventVenue(savedEventId)
+        if (venueResult && !('error' in venueResult)) {
+          existingVenue = venueResult
+        }
+      } catch {
+        // No existing venue or fetch failed — treat as new
+      }
+      
+      // --- Detect changes -------------------------------------------------------
+      if (existingVenue) {
+        const existingLocalized = existingVenue.localizations?.[locale] || {}
+        
+        const placeIdSame = venueData.placeId === existingVenue.placeId
+        const venueNameSame = venueData.venueName === existingVenue.venueName
+        const additionalInfoSame =
+          (venueData.additionalInformation || '') ===
+          (existingLocalized.additionalInformation ?? existingVenue.additionalInformation ?? '')
+        
+        if (placeIdSame && venueNameSame && additionalInfoSame) {
+          // Nothing relevant changed — skip the API call entirely
+          console.log('Venue unchanged — skipping venue API call')
+          return
+        }
+      }
+      
+      // --- Build payload --------------------------------------------------------
+      // Start from form data for the fields the user may have changed
+      const basePayload = getVenuePayload({
         venueName: venueData.venueName,
         placeId: venueData.placeId,
         coordinates: venueData.coordinates,
@@ -130,38 +171,56 @@ export const VenueComponent: React.FC = () => {
         additionalInformation: venueData.additionalInformation,
       }, locale)
       
-      const existingVenue = eventResponse.venue
+      // For updates, fill in any required fields that our form data might be
+      // missing (e.g. addressComponents is not always round-tripped from the GET)
+      if (existingVenue) {
+        if (!basePayload.formattedAddress) {
+          basePayload.formattedAddress =
+            existingVenue.formattedAddress || existingVenue.address || ''
+        }
+        if (!basePayload.addressComponents && existingVenue.addressComponents) {
+          basePayload.addressComponents = existingVenue.addressComponents
+        }
+        if (basePayload.coordinates === undefined && existingVenue.coordinates) {
+          basePayload.coordinates = existingVenue.coordinates
+        }
+        if (basePayload.gmtOffset === undefined && existingVenue.gmtOffset !== undefined) {
+          basePayload.gmtOffset = existingVenue.gmtOffset
+        }
+        if (!basePayload.placeId && existingVenue.placeId) {
+          basePayload.placeId = existingVenue.placeId
+        }
+      }
       
       try {
         if (!existingVenue) {
-          const result = await apiService.createVenue(savedEventId, venuePayload)
+          // ---- CREATE (POST) ----
+          const result = await apiService.createVenue(savedEventId, basePayload)
           if ('error' in result) {
             console.error('Failed to create venue:', result)
             return
           }
           console.log('Venue created successfully:', result)
         } else {
-          const hasPlaceIdChanged = venuePayload.placeId !== existingVenue.placeId
-          const hasAdditionalInfoChanged = venueData.additionalInformation !== existingVenue.additionalInformation
-          
-          if (hasPlaceIdChanged || hasAdditionalInfoChanged) {
-            const result = await apiService.replaceVenue(
-              savedEventId,
-              existingVenue.venueId,
-              {
-                ...venuePayload,
-                venueId: existingVenue.venueId,
-                creationTime: existingVenue.creationTime,
-                modificationTime: existingVenue.modificationTime,
-              }
-            )
-            
-            if ('error' in result) {
-              console.error('Failed to replace venue:', result)
-              return
-            }
-            console.log('Venue replaced successfully:', result)
+          // ---- UPDATE (PUT) — include venueId + timestamps as required by API ----
+          const putPayload = {
+            ...basePayload,
+            venueId: existingVenue.venueId,
+            creationTime: existingVenue.creationTime,
+            modificationTime: existingVenue.modificationTime,
           }
+          
+          const result = await apiService.replaceVenue(
+            savedEventId,
+            existingVenue.venueId,
+            putPayload
+          )
+          
+          if ('error' in result) {
+            console.error('Failed to update venue:', result)
+            return
+          }
+          console.log('Venue updated successfully:', result)
         }
       } catch (error) {
         console.error('Error saving venue:', error)
@@ -199,12 +258,22 @@ export const VenueComponent: React.FC = () => {
   // ============================================================================
   
   const venueNameInputRef = useRef<HTMLInputElement>(null)
-  const [autocomplete, setAutocomplete] = useState<google.maps.places.Autocomplete | null>(null)
-  const [venueNameValue, setVenueNameValue] = useState(venue.venueName || '')
   const [placesApiError, setPlacesApiError] = useState<string | null>(null)
-  const [showAlternativeNameField, setShowAlternativeNameField] = useState(venue.useAlternativeVenueName || false)
-  const [alternativeVenueName, setAlternativeVenueName] = useState('')
   const [hasAttemptedSubmit, setHasAttemptedSubmit] = useState(false)
+  
+  // The Google Places autocomplete input value (tracks the Google name / search text)
+  const [venueNameValue, setVenueNameValue] = useState(
+    venue.googlePlaceName || venue.venueName || ''
+  )
+  
+  // Alternative venue name state
+  const [showAlternativeNameField, setShowAlternativeNameField] = useState(
+    venue.useAlternativeVenueName || false
+  )
+  const [alternativeVenueName, setAlternativeVenueName] = useState(
+    // If alt name was active, the current venueName IS the alternative name
+    venue.useAlternativeVenueName ? (venue.venueName || '') : ''
+  )
   
   // Deferred image upload state - used when creating new events (no eventId yet)
   const [pendingImageFile, setPendingImageFile] = useState<File | null>(null)
@@ -216,99 +285,116 @@ export const VenueComponent: React.FC = () => {
   }, [pendingImageFile])
   
   // ============================================================================
-  // HELPERS
+  // REFS FOR CALLBACK STABILITY
   // ============================================================================
   
-  const updateVenue = useCallback((updates: Partial<VenueData>) => {
-    updateFormData({
-      venue: { ...venue, ...updates }
-    })
-  }, [venue, updateFormData])
+  // Ref-based venue updater: always reads the latest venue from formData,
+  // so callbacks in long-lived listeners never merge with stale data.
+  const formDataRef = useRef(formData)
+  useEffect(() => { formDataRef.current = formData }, [formData])
+  
+  const updateVenueStable = useCallback((updates: Partial<VenueData>) => {
+    const currentVenue = formDataRef.current.venue || {
+      venueName: '',
+      formattedAddress: ''
+    }
+    updateFormData({ venue: { ...currentVenue, ...updates } })
+  }, [updateFormData])
+  
+  // Ref for the place_changed handler so the Google listener always calls
+  // through to the latest version without effect re-runs.
+  const showAltFieldRef = useRef(showAlternativeNameField)
+  useEffect(() => { showAltFieldRef.current = showAlternativeNameField }, [showAlternativeNameField])
   
   // ============================================================================
-  // GOOGLE PLACES AUTOCOMPLETE
+  // GOOGLE PLACES AUTOCOMPLETE — initialised once
   // ============================================================================
+  
+  const autocompleteRef = useRef<google.maps.places.Autocomplete | null>(null)
   
   useEffect(() => {
     let isMounted = true
-    let autocompleteInstance: google.maps.places.Autocomplete | null = null
 
     const initAutocomplete = async () => {
       try {
         await loadGooglePlacesAPI()
-        if (!isMounted) return
+        if (!isMounted || !venueNameInputRef.current) return
+        
+        // Guard against double-init (StrictMode or fast re-mount)
+        if (autocompleteRef.current) return
 
-        if (venueNameInputRef.current && !autocomplete) {
-          autocompleteInstance = new window.google.maps.places.Autocomplete(
-            venueNameInputRef.current,
-            {
-              types: ['establishment'],
-              fields: ['place_id', 'name', 'formatted_address', 'address_components', 'geometry', 'utc_offset_minutes']
-            }
-          )
-
-          autocompleteInstance.addListener('place_changed', () => {
-            if (!isMounted) return
-            
-            const place = autocompleteInstance?.getPlace()
-            
-            if (!place || place.name === undefined) {
-              if (window.google?.maps?.places) {
-                console.warn('Google Places API error - possibly domain restriction')
-                setPlacesApiError('Autocomplete unavailable. Please enter venue details manually.')
-              }
-              return
-            }
-            
-            if (place && place.place_id) {
-              setPlacesApiError(null)
-              
-              const updates: Partial<VenueData> = {
-                venueName: place.name || '',
-                googlePlaceName: place.name || '', // Store original Google name
-                formattedAddress: place.formatted_address || '',
-                placeId: place.place_id
-              }
-
-              if (place.geometry && place.geometry.location) {
-                updates.coordinates = {
-                  lat: place.geometry.location.lat(),
-                  lon: place.geometry.location.lng()
-                }
-              }
-
-              if (place.utc_offset_minutes !== undefined) {
-                updates.gmtOffset = place.utc_offset_minutes / 60
-              }
-              
-              if (place.address_components) {
-                updates.addressComponents = place.address_components.map((component: any) => ({
-                  longName: component.long_name,
-                  shortName: component.short_name,
-                  types: component.types
-                }))
-              }
-
-              setVenueNameValue(place.name || '')
-              // Reset alternative name when selecting new venue
-              setAlternativeVenueName('')
-              setShowAlternativeNameField(false)
-              updateVenue({
-                ...updates,
-                useAlternativeVenueName: false
-              })
-            }
-          })
-
-          if (isMounted) {
-            setAutocomplete(autocompleteInstance)
+        const instance = new window.google.maps.places.Autocomplete(
+          venueNameInputRef.current,
+          {
+            types: ['establishment'],
+            fields: [
+              'place_id', 'name', 'formatted_address',
+              'address_components', 'geometry', 'utc_offset_minutes'
+            ]
           }
-        }
+        )
+
+        instance.addListener('place_changed', () => {
+          if (!isMounted) return
+          
+          const place = instance.getPlace()
+          
+          if (!place || place.name === undefined) {
+            if (window.google?.maps?.places) {
+              console.warn('Google Places API error - possibly domain restriction')
+              setPlacesApiError('Autocomplete unavailable. Please enter venue details manually.')
+            }
+            return
+          }
+          
+          if (place.place_id) {
+            setPlacesApiError(null)
+            
+            const updates: Partial<VenueData> = {
+              venueName: place.name || '',
+              googlePlaceName: place.name || '',
+              formattedAddress: place.formatted_address || '',
+              placeId: place.place_id,
+              useAlternativeVenueName: false
+            }
+
+            if (place.geometry?.location) {
+              updates.coordinates = {
+                lat: place.geometry.location.lat(),
+                lon: place.geometry.location.lng()
+              }
+            }
+
+            if (place.utc_offset_minutes !== undefined) {
+              updates.gmtOffset = place.utc_offset_minutes / 60
+            }
+            
+            if (place.address_components) {
+              updates.addressComponents = place.address_components.map((c: any) => ({
+                longName: c.long_name,
+                shortName: c.short_name,
+                types: c.types
+              }))
+            }
+
+            // Update local input to show the selected place name
+            setVenueNameValue(place.name || '')
+            // Reset alternative name
+            setAlternativeVenueName('')
+            setShowAlternativeNameField(false)
+            // Persist to form context (uses ref — always latest venue)
+            updateVenueStable(updates)
+          }
+        })
+
+        autocompleteRef.current = instance
       } catch (error) {
         if (!isMounted) return
         
         console.error('Error initializing Google Places Autocomplete:', error)
-        const errorMessage = error instanceof Error ? error.message : 'Failed to load Google Places API'
+        const errorMessage = error instanceof Error
+          ? error.message
+          : 'Failed to load Google Places API'
         setPlacesApiError(errorMessage)
       }
     }
@@ -317,81 +403,122 @@ export const VenueComponent: React.FC = () => {
 
     return () => {
       isMounted = false
-      if (autocompleteInstance && window.google?.maps) {
-        // Use type assertion for Google Maps event API
-        (window.google.maps as any).event?.clearInstanceListeners(autocompleteInstance)
+      if (autocompleteRef.current && window.google?.maps) {
+        (window.google.maps as any).event?.clearInstanceListeners(autocompleteRef.current)
+        autocompleteRef.current = null
       }
     }
-  }, [autocomplete, updateVenue])
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []) // Intentionally empty — initialise once; callbacks use refs.
   
-  // Sync local state with context when venue changes externally
+  // ============================================================================
+  // SYNC — only for external changes (e.g. edit-mode load from API)
+  // ============================================================================
+  
+  const isInitialSyncDone = useRef(false)
+  
   useEffect(() => {
-    if (venue.venueName !== venueNameValue) {
-      setVenueNameValue(venue.venueName || '')
+    // Don't overwrite the Google Places input when the alternative field
+    // controls venue.venueName — it would clobber the search text.
+    if (showAlternativeNameField) return
+    
+    const contextName = venue.googlePlaceName || venue.venueName || ''
+    if (contextName && contextName !== venueNameValue) {
+      setVenueNameValue(contextName)
     }
-    if (venue.useAlternativeVenueName !== showAlternativeNameField) {
-      setShowAlternativeNameField(venue.useAlternativeVenueName || false)
+    
+    // On first load (edit mode), sync alternative name state too
+    if (!isInitialSyncDone.current && venue.useAlternativeVenueName) {
+      setShowAlternativeNameField(true)
+      setAlternativeVenueName(venue.venueName || '')
+      isInitialSyncDone.current = true
     }
-  }, [venue.venueName, venue.useAlternativeVenueName])
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [venue.venueName, venue.googlePlaceName, venue.useAlternativeVenueName])
 
   // ============================================================================
   // EVENT HANDLERS
   // ============================================================================
   
+  /**
+   * User is typing in the Google Places autocomplete input.
+   * This is a search query — the actual venue is only confirmed when they
+   * pick from the autocomplete dropdown (place_changed).
+   * 
+   * We clear stale place data so that validation catches the intermediate state.
+   */
   const handleVenueNameChange = (value: string) => {
     setVenueNameValue(value)
-    updateVenue({ venueName: value })
+
+    // Clear place-specific data — the user is searching for a new venue.
+    // Keep non-place fields (images, instructions, post-event toggles).
+    updateVenueStable({
+      // Update venueName only if alternative name is NOT controlling it
+      venueName: showAlternativeNameField ? formDataRef.current.venue?.venueName || '' : value,
+      placeId: undefined,
+      googlePlaceName: undefined,
+      coordinates: undefined,
+      formattedAddress: '',
+      gmtOffset: undefined,
+      addressComponents: undefined
+    })
   }
   
+  /**
+   * Toggle the alternative venue name field.
+   * 
+   * On enable: pre-populate with the current Google name; main input keeps
+   *   showing the Google name for autocomplete purposes.
+   * On disable: revert venue.venueName to the Google Places name (or the
+   *   current main input value as fallback).
+   */
   const handleAlternativeNameToggle = () => {
-    const newValue = !showAlternativeNameField
-    setShowAlternativeNameField(newValue)
+    const enabling = !showAlternativeNameField
+    setShowAlternativeNameField(enabling)
     
-    if (newValue) {
-      // Opening alternative name field - pre-populate with Google name
-      setAlternativeVenueName(venue.googlePlaceName || venue.venueName || '')
-      updateVenue({
-        useAlternativeVenueName: true
-      })
+    if (enabling) {
+      // Pre-fill the alternative field with the current Google name
+      const currentGoogleName = venue.googlePlaceName || venueNameValue || ''
+      setAlternativeVenueName(currentGoogleName)
+      updateVenueStable({ useAlternativeVenueName: true })
     } else {
-      // Closing alternative name field - revert to Google name
+      // Revert to the Google Places name
+      const googleName = venue.googlePlaceName || venueNameValue || ''
       setAlternativeVenueName('')
-      if (venue.googlePlaceName) {
-        updateVenue({
-          venueName: venue.googlePlaceName,
-          useAlternativeVenueName: false
-        })
-        setVenueNameValue(venue.googlePlaceName)
-      } else {
-        updateVenue({
-          useAlternativeVenueName: false
-        })
-      }
+      setVenueNameValue(googleName)
+      updateVenueStable({
+        venueName: googleName,
+        useAlternativeVenueName: false
+      })
     }
   }
   
+  /**
+   * User is editing the alternative venue name.
+   * Updates venue.venueName (the API submission name) but does NOT
+   * touch the Google Places input or placeId.
+   */
   const handleAlternativeNameChange = (value: string) => {
     setAlternativeVenueName(value)
-    // Update the venueName with the alternative name
-    updateVenue({ venueName: value })
+    updateVenueStable({ venueName: value })
   }
   
   const handleShowVenuePostEventChange = (checked: boolean) => {
-    updateVenue({ showVenuePostEvent: checked })
+    updateVenueStable({ showVenuePostEvent: checked })
   }
   
   const handleShowVenueImagePostEventChange = (checked: boolean) => {
-    updateVenue({ showVenueImagePostEvent: checked })
+    updateVenueStable({ showVenueImagePostEvent: checked })
   }
   
   const handleAdditionalInfoChange = (value: string) => {
-    updateVenue({ additionalInformation: value })
+    updateVenueStable({ additionalInformation: value })
   }
   
   const handleImageChange = (imageUrl: string | undefined, imageId: string | undefined) => {
     // Clear pending file since we now have an uploaded image
     setPendingImageFile(null)
-    updateVenue({ 
+    updateVenueStable({ 
       venueImageUrl: imageUrl, 
       venueImageId: imageId 
     })
@@ -400,7 +527,7 @@ export const VenueComponent: React.FC = () => {
   const handleImageRemove = () => {
     // Clear both pending file and uploaded image
     setPendingImageFile(null)
-    updateVenue({ 
+    updateVenueStable({ 
       venueImageUrl: undefined, 
       venueImageId: undefined 
     })

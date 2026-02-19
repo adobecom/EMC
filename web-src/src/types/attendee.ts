@@ -9,6 +9,11 @@
 
 /**
  * Registration status enum (from OpenAPI RegistrationStatus)
+ * 
+ * Note: The GET attendees list endpoint does NOT return registrationStatus
+ * on each attendee. It is only available as a query filter (`?type=registered`
+ * or `?type=waitlisted`). The frontend hydrates this field at runtime by
+ * querying both types and merging the results.
  */
 export type RegistrationStatus = 'registered' | 'waitlisted'
 
@@ -162,7 +167,9 @@ export function mapRegistrationStatusToDisplay(
 }
 
 /**
- * Calculate attendee statistics from attendee list
+ * Calculate attendee statistics from attendee list.
+ * registrationStatus is hydrated at runtime by getAllEventAttendees
+ * (which queries both ?type=registered and ?type=waitlisted).
  */
 export function calculateAttendeeStats(attendees: Attendee[]): AttendeeStats {
   return {

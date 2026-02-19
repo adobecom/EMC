@@ -3,13 +3,13 @@
 */
 
 import React, { useEffect, useState } from 'react'
-import { View, Flex, Text, Button, ActionButton } from '@adobe/react-spectrum'
+import { View, Flex, Text, Button } from '@adobe/react-spectrum'
 import Close from '@spectrum-icons/workflow/Close'
 import CheckmarkCircle from '@spectrum-icons/workflow/CheckmarkCircle'
 import AlertCircle from '@spectrum-icons/workflow/AlertCircle'
 import InfoOutline from '@spectrum-icons/workflow/InfoOutline'
 import { useToast, Toast, ToastVariant } from '../../contexts/ToastContext'
-import { Z_INDEX, COLORS } from '../../styles/designSystem'
+import { Z_INDEX } from '../../styles/designSystem'
 
 // ============================================================================
 // STYLES
@@ -142,7 +142,7 @@ const ToastItem: React.FC<ToastItemProps> = ({ toast, onDismiss }) => {
       role="alert"
       aria-live={toast.variant === 'negative' ? 'assertive' : 'polite'}
     >
-      <Flex direction="row" alignItems="flex-start" gap="size-150">
+      <Flex direction="row" alignItems="start" gap="size-150">
         {/* Icon */}
         <View UNSAFE_style={{ marginTop: 2 }}>
           {getIcon()}

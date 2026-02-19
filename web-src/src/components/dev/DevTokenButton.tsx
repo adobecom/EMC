@@ -36,13 +36,15 @@ export const DevTokenButton: React.FC<DevTokenButtonProps> = ({ onTokenChange })
   }
 
   useEffect(() => {
-    if (isDevMode) {
-      checkToken()
-      
-      // Check token validity every minute
-      const interval = setInterval(checkToken, 60000)
-      return () => clearInterval(interval)
+    if (!isDevMode) {
+      return
     }
+    
+    checkToken()
+    
+    // Check token validity every minute
+    const interval = setInterval(checkToken, 60000)
+    return () => clearInterval(interval)
   }, [isDevMode])
 
   const handleTokenSaved = (token: string) => {

@@ -17,7 +17,7 @@ import { FLEX_GAP } from '../../styles/designSystem'
 import { useSeriesFormComponent } from '../../hooks/useSeriesFormComponent'
 import { SUPPORTED_CLOUDS } from '../../config/constants'
 import { EXTERNAL_CONFIG_URLS } from '../../config/externalConfigs'
-import { TargetCms } from '../../types/domain'
+import type { TargetCms as _TargetCms } from '../../types/domain'
 
 interface TargetCmsOption {
   code: string

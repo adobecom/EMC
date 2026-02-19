@@ -1,0 +1,168 @@
+---
+description: Design system tokens, layout patterns, and styling guidelines for EMC
+globs: web-src/src/styles/**,web-src/src/index.css,web-src/src/components/shared/**,web-src/src/components/layout/**
+alwaysApply: false
+---
+
+# EMC Design System
+
+## Token Source
+
+All design tokens live in `web-src/src/styles/designSystem.ts`.
+Import tokens from there — **do not use magic numbers**.
+
+```tsx
+import {
+  SPACING, FORM_SPACING, LAYOUT_DIMENSIONS,
+  COLORS, TYPOGRAPHY, Z_INDEX, BORDERS,
+  STICKY_GNAV_STYLES, FIXED_ACTION_BAR_STYLES,
+  SCROLLABLE_CONTENT_STYLES, SIDE_NAV_STICKY_STYLES,
+  LAYOUT_PATTERNS, FLEX_GAP,
+} from '../../styles/designSystem'
+```
+
+## Spacing System (8px grid)
+
+| Token       | Value | Use Case                      |
+| ----------- | ----- | ----------------------------- |
+| `SPACING.NONE` | 0px | No spacing                   |
+| `SPACING.XXS`  | 4px | Label-to-input gap           |
+| `SPACING.XS`   | 8px | Tight spacing                |
+| `SPACING.SM`   | 12px | Small gaps                  |
+| `SPACING.MD`   | 16px | Default field gap            |
+| `SPACING.LG`   | 24px | Section gaps, card padding   |
+| `SPACING.XL`   | 32px | Large section gaps           |
+| `SPACING.XXL`  | 40px | Major separations            |
+| `SPACING.XXXL` | 48px | Page-level spacing           |
+| `SPACING.HUGE` | 64px | Hero-level spacing           |
+| `SPACING.MAX`  | 80px | Maximum spacing              |
+
+### Form-Specific Spacing
+```tsx
+FORM_SPACING.SECTION_GAP   // 24px — between form cards
+FORM_SPACING.FIELD_GAP     // 16px — between fields within a section
+FORM_SPACING.LABEL_GAP     // 4px  — between label and input
+FORM_SPACING.CARD_PADDING  // 24px — inside form cards
+FORM_SPACING.HEADING_GAP   // 12px — heading to content
+```
+
+## Layout Dimensions
+
+```tsx
+LAYOUT_DIMENSIONS.GNAV_HEIGHT      // 56px  (TopNav)
+LAYOUT_DIMENSIONS.ACTION_BAR_HEIGHT // 60px  (FormWizard action bar)
+LAYOUT_DIMENSIONS.SIDE_NAV_WIDTH   // 240px (FormWizard step nav)
+```
+
+### Calculated Heights
+```tsx
+SAFE_AREA_HEIGHT           // 121px (gnav + action bar + padding)
+FORM_CONTENT_HEIGHT        // calc(100vh - 121px)
+CONTENT_HEIGHT_NO_ACTION_BAR // calc(100vh - 56px)
+```
+
+## Colors
+
+### Brand Colors
+- `COLORS.ADOBE_RED` (`#EB1000`) — Adobe brand red, used in step headings
+
+### Spectrum CSS Variables (preferred for theme consistency)
+- `COLORS.GRAY_100` through `COLORS.GRAY_800` — via `var(--spectrum-global-color-gray-*)`
+- `COLORS.BLUE_400` — links and accents
+- `COLORS.RED_600` — errors and destructive actions
+
+### Status Colors
+- `COLORS.STATUS_DRAFT` (`#2D9D92`) — teal
+- `COLORS.STATUS_PUBLISHED` (`#CD3ACE`) — purple
+- `COLORS.STATUS_ARCHIVED` (`#666666`) — gray
+- `COLORS.STATUS_CANCELLED` (`#D7373F`) — red
+
+## Typography Tokens
+
+| Token                          | Size  | Weight | Use Case                    |
+| ------------------------------ | ----- | ------ | --------------------------- |
+| `TYPOGRAPHY.STEP_HEADING`      | 24px  | 900    | Wizard step titles          |
+| `TYPOGRAPHY.COMPONENT_HEADING` | 28px  | 700    | Section headings            |
+| `TYPOGRAPHY.SUBSECTION_HEADING`| 18px  | 700    | Subsection headings         |
+| `TYPOGRAPHY.FIELD_LABEL`       | 14px  | 600    | Field labels                |
+| `TYPOGRAPHY.HELPER_TEXT`       | 12px  | 400    | Helper/description text     |
+| `TYPOGRAPHY.SECTION_DESCRIPTION`| 14px | 400    | Section description text    |
+
+**Note:** All typography tokens have `margin: 0`. Use container `gap` for spacing.
+
+## Z-Index Scale
+
+| Token                   | Value | Layer                          |
+| ----------------------- | ----- | ------------------------------ |
+| `Z_INDEX.DROPDOWN`      | 10    | Dropdowns, autocompletes       |
+| `Z_INDEX.STICKY_ELEMENT`| 50    | Sticky table headers, etc.     |
+| `Z_INDEX.ACTION_BAR`    | 100   | Fixed action bars              |
+| `Z_INDEX.MODAL_BACKDROP`| 500   | Dialog backdrops               |
+| `Z_INDEX.MODAL`         | 600   | Dialogs                        |
+| `Z_INDEX.GNAV`          | 1000  | Global navigation              |
+| `Z_INDEX.TOOLTIP`       | 1100  | Tooltips                       |
+| `Z_INDEX.NOTIFICATION`  | 1200  | Toast notifications            |
+
+## Pre-Built Style Objects
+
+```tsx
+// Sticky global nav (already applied in App.tsx)
+STICKY_GNAV_STYLES     // { position: 'sticky', top: 0, zIndex: 1000 }
+
+// Fixed action bar at bottom of form pages
+FIXED_ACTION_BAR_STYLES // { position: 'fixed', bottom: 0, ... boxShadow }
+
+// Scrollable form content area
+SCROLLABLE_CONTENT_STYLES // { minHeight, maxHeight: FORM_CONTENT_HEIGHT, overflow: 'auto' }
+
+// Sticky side navigation in form wizard
+SIDE_NAV_STICKY_STYLES    // { alignSelf: 'flex-start', ... minHeight/maxHeight }
+```
+
+## Styling Priority
+
+1. **Spectrum component props** (preferred) — `width`, `height`, `margin*`, `padding*` with tokens
+2. **Design system tokens** via `UNSAFE_style` — for app-specific patterns
+3. **Global CSS** (`index.css`) — for nav, tables, panels with BEM-style classes
+4. **Component CSS** files — for complex custom components (e.g., `AutocompleteTextField.css`)
+
+### Spectrum Dimension Props (use these first)
+```tsx
+// Spectrum v3 dimension props accept size tokens directly
+<View padding="size-200" width="size-6000">
+<Flex gap="size-200" direction="column">
+<Button marginStart="size-100">
+```
+
+### UNSAFE_style Escape Hatch
+```tsx
+// When Spectrum props aren't enough, use UNSAFE_style with design tokens
+<View UNSAFE_style={{
+  ...TYPOGRAPHY.COMPONENT_HEADING,
+  marginBottom: SPACING.LG,
+}}>
+```
+
+### Global CSS Classes (from index.css)
+- `.top-nav`, `.nav-link`, `.is-selected` — navigation
+- `.custom-data-table` — table styling
+- `.user-panel-*` — user panel
+- `.content-area` — main content area
+
+## Shimmer / Loading Skeletons
+
+```tsx
+import { SHIMMER_BASE, createShimmerStyle } from '../../styles/designSystem'
+
+// Create a shimmer placeholder
+<div style={createShimmerStyle(200, 20)} />  // width: 200px, height: 20px
+```
+
+## Adding New Tokens
+
+When adding new design tokens:
+1. Add to the appropriate section in `designSystem.ts`
+2. Use `as const` for type safety
+3. Add JSDoc comment explaining the token's purpose
+4. Follow the 8px grid for spacing values
+5. Prefer Spectrum CSS variables for colors (theme-compatible)

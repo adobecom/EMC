@@ -1531,18 +1531,28 @@ class ApiService {
   }
 
   /**
-   * Get all event attendees with pagination
+   * Get all event attendees with pagination.
+   *
+   * The GET attendees endpoint does not return registrationStatus on each
+   * attendee object. Instead, the `?type=` query param filters by registration
+   * type. We query both `type=registered` and `type=waitlisted`, hydrate each
+   * attendee with the appropriate registrationStatus, and merge the results.
    */
   async getAllEventAttendees(eventId: string): Promise<any[] | ErrorResponse> {
     validateString(eventId, 'event ID')
 
-    const recurGetAttendees = async (fullAttendeeArr: any[] = [], nextPageToken: string | null = null): Promise<any[] | ErrorResponse> => {
-      const endpoint = nextPageToken 
-        ? `/v1/events/${eventId}/attendees?nextPageToken=${nextPageToken}` 
-        : `/v1/events/${eventId}/attendees`
-      
+    const recurGetAttendees = async (
+      type: 'registered' | 'waitlisted',
+      fullAttendeeArr: any[] = [],
+      nextPageToken: string | null = null
+    ): Promise<any[] | ErrorResponse> => {
+      const params = new URLSearchParams({ type })
+      if (nextPageToken) params.set('nextPageToken', nextPageToken)
+
+      const endpoint = `/v1/events/${eventId}/attendees?${params.toString()}`
+
       const result = await this.callExternalApi<any>('esp', endpoint, 'GET', undefined, {
-        operationName: 'getAllEventAttendees (paginated)',
+        operationName: `getAllEventAttendees (type=${type}, paginated)`,
         shouldReturnFullResponse: true
       })
 
@@ -1550,14 +1560,34 @@ class ApiService {
         return result
       }
 
+      const hydratedAttendees = (result.attendees || []).map((attendee: any) => ({
+        ...attendee,
+        registrationStatus: type
+      }))
+
+      const accumulated = fullAttendeeArr.concat(hydratedAttendees)
+
       if (result.nextPageToken) {
-        return recurGetAttendees(fullAttendeeArr.concat(result.attendees), result.nextPageToken)
+        return recurGetAttendees(type, accumulated, result.nextPageToken)
       }
 
-      return fullAttendeeArr.concat(result.attendees || [])
+      return accumulated
     }
 
-    return recurGetAttendees()
+    const [registered, waitlisted] = await Promise.all([
+      recurGetAttendees('registered'),
+      recurGetAttendees('waitlisted')
+    ])
+
+    // If both errored, return the first error
+    if ('error' in registered && 'error' in waitlisted) {
+      return registered
+    }
+
+    const registeredList = 'error' in registered ? [] : registered
+    const waitlistedList = 'error' in waitlisted ? [] : waitlisted
+
+    return registeredList.concat(waitlistedList)
   }
 
   // ============================================================================
