@@ -3,7 +3,7 @@
 */
 
 import React, { useEffect, useMemo, useCallback } from 'react'
-import { Text, ActionButton, MenuTrigger, Menu, Item, Flex, Button, DialogTrigger, AlertDialog, ProgressCircle, View } from '@adobe/react-spectrum'
+import { Text, ActionButton, MenuTrigger, Menu, Item, Flex, Button, DialogTrigger, AlertDialog, ProgressCircle, View, Link } from '@adobe/react-spectrum'
 import MoreSmallList from '@spectrum-icons/workflow/MoreSmallList'
 import PublishRemove from '@spectrum-icons/workflow/PublishRemove'
 import ViewDetail from '@spectrum-icons/workflow/ViewDetail'
@@ -685,9 +685,12 @@ export const EventsDashboard: React.FC<EventsDashboardProps> = () => {
         return aCount - bCount
       },
       render: (item) => (
-        <Text>
-          {item.attendeeCount !== undefined ? item.attendeeCount : 0} / {item.attendeeLimit !== undefined ? item.attendeeLimit : '-'}
-        </Text>
+        <Link href={`#/attendees/${item.eventId}`}>
+          <Text>
+            {item.attendeeCount !== undefined ? item.attendeeCount : 0} / {item.attendeeLimit !== undefined ? item.attendeeLimit : '-'}
+          </Text>
+        </Link>
+
       )
     },
     {
