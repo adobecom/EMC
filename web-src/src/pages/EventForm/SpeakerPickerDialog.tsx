@@ -408,7 +408,7 @@ export const SpeakerPickerDialog: React.FC<SpeakerPickerDialogProps> = ({
           <Flex direction="row" gap={FLEX_GAP.FIELD} alignItems="end">
             {/* Avatar placeholder */}
             <View>
-              <View width="100%" UNSAFE_style={{ maxWidth: '120px' }}>
+              <View width="100%">
                 <ImageUploader
                   label="Photo"
                   imageUrl={createForm.imageUrl}
@@ -416,7 +416,6 @@ export const SpeakerPickerDialog: React.FC<SpeakerPickerDialogProps> = ({
                   imageKind="speaker-photo"
                   altText={`${createForm.firstName} ${createForm.lastName}`}
                   maxSizeMB={25}
-                  width={120}
                   dropzoneTitle="Add Photo"
                   dropzoneDimensions=""
                   deferUpload={true}
@@ -454,10 +453,10 @@ export const SpeakerPickerDialog: React.FC<SpeakerPickerDialogProps> = ({
           </Flex>
 
           <TextField
-            label="Company"
+            label="Title / Role"
             value={createForm.title}
             onChange={(v) => updateCreateField('title', v)}
-            placeholder="e.g., Senior Designer at Adobe"
+            placeholder="e.g., Senior Product Designer"
           />
 
           <RichTextEditor
