@@ -366,7 +366,6 @@ export const EventsDashboard: React.FC<EventsDashboardProps> = () => {
           : localStartTimeMillis + 10
 
         const previewUrl = new URL(item.detailPagePath)
-        previewUrl.searchParams.set('previewMode', 'true')
         previewUrl.searchParams.set('timing', String(timing))
         const espenv = getEspEnvParam()
         if (espenv) {

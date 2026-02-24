@@ -793,7 +793,6 @@ const EventFormInner: React.FC<EventFormInnerProps> = ({ ims: _ims }) => {
       : localStartTimeMillis + 10
     
     const previewUrl = new URL(eventResponse.detailPagePath)
-    previewUrl.searchParams.set('previewMode', 'true')
     previewUrl.searchParams.set('timing', String(timing))
     const espenv = getEspEnvParam()
     if (espenv) {
