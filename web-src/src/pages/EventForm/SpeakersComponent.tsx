@@ -96,7 +96,7 @@ export const SpeakersComponent: React.FC = () => {
   const {
     formData,
     updateFormData,
-    seriesId,
+    seriesId: contextSeriesId,
     locale,
   } = useEventFormComponent({
     componentId: 'speakers',
@@ -207,6 +207,9 @@ export const SpeakersComponent: React.FC = () => {
   const [pickerOpen, setPickerOpen] = useState(false)
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null)
   const [dragOverIndex, setDragOverIndex] = useState<number | null>(null)
+
+  // Use formData.seriesId when context seriesId is empty (e.g. when editing a loaded event)
+  const seriesId = contextSeriesId || formData.seriesId || ''
 
   useEffect(() => {
     if (!seriesId) return
@@ -465,18 +468,16 @@ export const SpeakersComponent: React.FC = () => {
         </Button>
       )}
 
-      {seriesId && (
-        <SpeakerPickerDialog
-          isOpen={pickerOpen}
-          onClose={() => setPickerOpen(false)}
-          onSelect={handlePickerSelect}
-          seriesSpeakers={seriesSpeakers}
-          selectedSpeakerIds={selectedSpeakerIds}
-          seriesId={seriesId}
-          locale={locale}
-          onSpeakersRefresh={refreshSeriesSpeakers}
-        />
-      )}
+      <SpeakerPickerDialog
+        isOpen={pickerOpen}
+        onClose={() => setPickerOpen(false)}
+        onSelect={handlePickerSelect}
+        seriesSpeakers={seriesSpeakers}
+        selectedSpeakerIds={selectedSpeakerIds}
+        seriesId={seriesId}
+        locale={locale}
+        onSpeakersRefresh={refreshSeriesSpeakers}
+      />
     </Flex>
   )
 }

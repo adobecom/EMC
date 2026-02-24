@@ -5,7 +5,7 @@
 import React, { useState, useMemo, useCallback, useEffect } from 'react'
 import {
   Dialog,
-  DialogTrigger,
+  DialogContainer,
   Heading,
   Content,
   TextField,
@@ -548,13 +548,14 @@ export const SpeakerPickerDialog: React.FC<SpeakerPickerDialogProps> = ({
   )
 
   return (
-    <DialogTrigger isOpen={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <div style={{ display: 'none' }} />
-      <Dialog size="L" UNSAFE_style={{ maxHeight: '80vh' }}>
-        <Content UNSAFE_style={{ overflow: 'auto' }}>
-          {view === 'select' ? renderSelectView() : renderCreateView()}
-        </Content>
-      </Dialog>
-    </DialogTrigger>
+    <DialogContainer onDismiss={onClose}>
+      {isOpen && (
+        <Dialog size="L" isDismissable UNSAFE_style={{ maxHeight: '80vh' }}>
+          <Content UNSAFE_style={{ overflow: 'auto' }}>
+            {view === 'select' ? renderSelectView() : renderCreateView()}
+          </Content>
+        </Dialog>
+      )}
+    </DialogContainer>
   )
 }
