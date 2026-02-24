@@ -48,6 +48,7 @@ import { useEventFeatureFlags } from '../../hooks/useEventTypeFeatures'
 import { EventFormProvider, useEventFormContext, useToast } from '../../contexts'
 import { useEventFormSave } from '../../hooks/useEventFormSave'
 import { COLORS, Z_INDEX, TYPOGRAPHY } from '../../styles/designSystem'
+import { getEspEnvParam } from '../../config/constants'
 
 // ============================================================================
 // HELPERS
@@ -791,12 +792,15 @@ const EventFormInner: React.FC<EventFormInnerProps> = ({ ims: _ims }) => {
       ? localStartTimeMillis - 10 
       : localStartTimeMillis + 10
     
-    // Build the preview URL with parameters
-    const detailPagePath = eventResponse.detailPagePath
-    const separator = detailPagePath.includes('?') ? '&' : '?'
-    const previewUrl = `${detailPagePath}${separator}previewMode=true&timing=${timing}`
+    const previewUrl = new URL(eventResponse.detailPagePath)
+    previewUrl.searchParams.set('previewMode', 'true')
+    previewUrl.searchParams.set('timing', String(timing))
+    const espenv = getEspEnvParam()
+    if (espenv) {
+      previewUrl.searchParams.set('espenv', espenv)
+    }
     
-    window.open(previewUrl, '_blank')
+    window.open(previewUrl.toString(), '_blank')
   }, [state.eventDataResp])
   
   // ============================================================================
