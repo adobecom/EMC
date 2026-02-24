@@ -14,12 +14,13 @@ import {
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom'
 import type { EventApiResponse } from '../../types/domain'
 import type { Attendee, AttendeeStats } from '../../types/attendee'
-import type { Campaign } from '../../types/campaign'
+import type { Campaign, CampaignFormData, CampaignCreatePayload, CampaignUpdatePayload, CampaignListResponse } from '../../types/campaign'
 import { calculateAttendeeStats } from '../../types/attendee'
 import { apiService } from '../../services/api'
 import { useRsvpConfig } from '../../hooks/useRsvpConfig'
 import { IMS } from '../../types'
 import { LoadingSpinner } from '../../components/shared'
+import { useToast as useToastContext } from '../../contexts'
 import { EventInfoComponent } from './EventInfoComponent'
 import { EventSelectorComponent } from './EventSelectorComponent'
 import { RegistrationsTab } from './RegistrationsTab'
@@ -29,20 +30,12 @@ interface RegistrationsProps {
   ims: IMS
 }
 
-/**
- * Registrations Dashboard - Main container component with tabbed interface
- * 
- * Features:
- * - Event selection with searchable picker
- * - Event info panel with statistics
- * - Tabbed interface for Registrations and Campaigns
- */
 export const Registrations: React.FC<RegistrationsProps> = ({ ims: _ims }) => {
   const { eventId: paramEventId } = useParams<{ eventId: string }>()
   const [searchParams] = useSearchParams()
   const navigate = useNavigate()
+  const toast = useToastContext()
 
-  // Determine initial event ID from URL params or query string
   const initialEventId = paramEventId || searchParams.get('eventId') || ''
 
   // State
@@ -51,31 +44,30 @@ export const Registrations: React.FC<RegistrationsProps> = ({ ims: _ims }) => {
   const [attendees, setAttendees] = useState<Attendee[]>([])
   const [campaigns, setCampaigns] = useState<Campaign[]>([])
   const [selectedTab, setSelectedTab] = useState<React.Key>('registrations')
-  
+
   const [isLoadingEvents, setIsLoadingEvents] = useState(true)
   const [isLoadingAttendees, setIsLoadingAttendees] = useState(false)
+  const [isLoadingCampaigns, setIsLoadingCampaigns] = useState(false)
   const [, setError] = useState<string | null>(null)
 
-  // Get selected event
-  const selectedEvent = useMemo(() => 
+  const selectedEvent = useMemo(() =>
     events.find(e => e.eventId === selectedEventId) || null,
     [events, selectedEventId]
   )
 
-  // Get RSVP config for the selected event's cloud type
   const { columnConfig, isLoading: isLoadingConfig } = useRsvpConfig(selectedEvent?.cloudType)
 
-  // Load events on mount
+  // ---- Data loading ----
+
   useEffect(() => {
     const loadEvents = async () => {
       setIsLoadingEvents(true)
       try {
         const eventsData = await apiService.getEventsList()
-        
+
         if (Array.isArray(eventsData)) {
           setEvents(eventsData)
-          
-          // If no event selected and we have events, select the first one
+
           if (!selectedEventId && eventsData.length > 0) {
             setSelectedEventId(eventsData[0].eventId)
           }
@@ -91,7 +83,6 @@ export const Registrations: React.FC<RegistrationsProps> = ({ ims: _ims }) => {
     loadEvents()
   }, [])
 
-  // Load attendees when event changes
   useEffect(() => {
     if (!selectedEventId) {
       setAttendees([])
@@ -101,25 +92,23 @@ export const Registrations: React.FC<RegistrationsProps> = ({ ims: _ims }) => {
     const loadAttendees = async () => {
       setIsLoadingAttendees(true)
       setError(null)
-      
+
       try {
         const result = await apiService.getAllEventAttendees(selectedEventId)
-        
+
         if ('error' in result) {
           console.error('Failed to load attendees:', result)
           setAttendees([])
           setError('Failed to load attendees')
           return
         }
-        
-        // Add eventId to each attendee for reference
+
         const attendeesWithEventId = result.map(a => ({
           ...a,
           eventId: selectedEventId
         }))
-        
+
         setAttendees(attendeesWithEventId)
-        
       } catch (err) {
         console.error('Failed to load attendees:', err)
         setAttendees([])
@@ -132,82 +121,54 @@ export const Registrations: React.FC<RegistrationsProps> = ({ ims: _ims }) => {
     loadAttendees()
   }, [selectedEventId])
 
-  // Load campaigns when event changes (mock data for now)
-  useEffect(() => {
+  const loadCampaigns = useCallback(async () => {
     if (!selectedEventId) {
       setCampaigns([])
       return
     }
 
-    // Mock campaigns for frontend development
-    // TODO: Replace with actual API call when backend is ready
-    const mockCampaigns: Campaign[] = [
-      {
-        campaignId: 'campaign-1',
-        eventId: selectedEventId,
-        name: 'Partner Promotion',
-        urlParam: 'partner-promo',
-        capacityLimit: 50,
-        registrationCount: 23,
-        isActive: true,
-        creationTime: Date.now() - 86400000 * 7,
-        modificationTime: Date.now() - 86400000 * 2,
-        createdBy: 'admin@adobe.com'
-      },
-      {
-        campaignId: 'campaign-2',
-        eventId: selectedEventId,
-        name: 'Email Newsletter',
-        urlParam: 'email-newsletter',
-        capacityLimit: 100,
-        registrationCount: 67,
-        isActive: true,
-        creationTime: Date.now() - 86400000 * 14,
-        modificationTime: Date.now() - 86400000 * 1,
-        createdBy: 'marketing@adobe.com'
-      },
-      {
-        campaignId: 'campaign-3',
-        eventId: selectedEventId,
-        name: 'Social Media',
-        urlParam: 'social',
-        registrationCount: 45,
-        isActive: false,
-        creationTime: Date.now() - 86400000 * 21,
-        modificationTime: Date.now() - 86400000 * 5,
-        createdBy: 'social@adobe.com'
+    setIsLoadingCampaigns(true)
+    try {
+      const result = await apiService.getEventCampaigns(selectedEventId) as CampaignListResponse
+      if ('error' in result) {
+        console.error('Failed to load campaigns:', result)
+        setCampaigns([])
+        return
       }
-    ]
-    setCampaigns(mockCampaigns)
+      setCampaigns(result.campaigns || [])
+    } catch (err) {
+      console.error('Failed to load campaigns:', err)
+      setCampaigns([])
+    } finally {
+      setIsLoadingCampaigns(false)
+    }
   }, [selectedEventId])
 
-  // Calculate statistics from ALL attendees
-  const stats: AttendeeStats = useMemo(() => 
+  useEffect(() => {
+    loadCampaigns()
+  }, [loadCampaigns])
+
+  // ---- Statistics ----
+
+  const stats: AttendeeStats = useMemo(() =>
     calculateAttendeeStats(attendees),
     [attendees]
   )
 
-  // Handle event selection change
+  // ---- Handlers ----
+
   const handleEventChange = useCallback((eventId: string) => {
     setSelectedEventId(eventId)
-    // Update URL without full navigation
     navigate(`/registrations/${eventId}`, { replace: true })
   }, [navigate])
 
-  // Handle back navigation
   const handleBackClick = useCallback(() => {
     navigate('/events')
   }, [navigate])
 
-  // Handle campaign update
-  const handleCampaignsChange = useCallback((updatedCampaigns: Campaign[]) => {
-    setCampaigns(updatedCampaigns)
-  }, [])
-
-  // Handle attendee list refresh
   const handleAttendeesRefresh = useCallback(async () => {
     if (!selectedEventId) return
-    
+
     setIsLoadingAttendees(true)
     try {
       const result = await apiService.getAllEventAttendees(selectedEventId)
@@ -221,7 +182,70 @@ export const Registrations: React.FC<RegistrationsProps> = ({ ims: _ims }) => {
     }
   }, [selectedEventId])
 
-  // Loading state
+  const handleCreateCampaign = useCallback(async (formData: CampaignFormData) => {
+    const payload: CampaignCreatePayload = {
+      name: formData.name,
+      status: formData.status,
+      attendeeLimit: formData.attendeeLimit,
+    }
+
+    const result = await apiService.createCampaign(selectedEventId, payload as unknown as Record<string, unknown>)
+
+    if ('error' in result) {
+      toast.error(`Failed to create campaign: ${result.error}`)
+      throw new Error(result.error)
+    }
+
+    toast.success('Campaign created')
+    await loadCampaigns()
+  }, [selectedEventId, loadCampaigns, toast])
+
+  const handleUpdateCampaign = useCallback(async (
+    campaignId: string,
+    formData: CampaignFormData,
+    modificationTime: number
+  ) => {
+    const payload: CampaignUpdatePayload = {
+      name: formData.name,
+      status: formData.status,
+      modificationTime,
+    }
+
+    const result = await apiService.updateCampaign(
+      selectedEventId,
+      campaignId,
+      payload as unknown as Record<string, unknown>
+    )
+
+    if ('error' in result) {
+      const is409 = (result as any).status === 409
+      if (is409) {
+        toast.error('Campaign was modified by someone else. Please refresh and try again.')
+        await loadCampaigns()
+      } else {
+        toast.error(`Failed to update campaign: ${result.error}`)
+      }
+      throw new Error(result.error)
+    }
+
+    toast.success('Campaign updated')
+    await loadCampaigns()
+  }, [selectedEventId, loadCampaigns, toast])
+
+  const handleDeleteCampaign = useCallback(async (campaignId: string) => {
+    const result = await apiService.deleteCampaign(selectedEventId, campaignId)
+
+    if ('error' in result) {
+      toast.error(`Failed to delete campaign: ${result.error}`)
+      throw new Error(result.error)
+    }
+
+    toast.success('Campaign deleted')
+    await loadCampaigns()
+  }, [selectedEventId, loadCampaigns, toast])
+
+  // ---- Render ----
+
   if (isLoadingEvents) {
     return (
       <View padding="size-400">
@@ -233,13 +257,12 @@ export const Registrations: React.FC<RegistrationsProps> = ({ ims: _ims }) => {
   return (
     <View width="100%" padding="size-400" UNSAFE_style={{ boxSizing: 'border-box' }}>
       {/* Header with Back Button and Event Selector */}
-      <div style={{ 
+      <div style={{
         display: 'flex',
         alignItems: 'center',
         gap: '16px',
         marginBottom: '24px'
       }}>
-        {/* Back Button */}
         <button
           onClick={handleBackClick}
           style={{
@@ -260,10 +283,8 @@ export const Registrations: React.FC<RegistrationsProps> = ({ ims: _ims }) => {
           <span>Back</span>
         </button>
 
-        {/* Page Title */}
         <Heading level={1} UNSAFE_style={{ margin: 0, flex: 1 }}>Event report</Heading>
 
-        {/* Event Selector */}
         <div style={{ width: '280px' }}>
           <EventSelectorComponent
             events={events}
@@ -316,7 +337,10 @@ export const Registrations: React.FC<RegistrationsProps> = ({ ims: _ims }) => {
                   eventId={selectedEventId}
                   event={selectedEvent}
                   campaigns={campaigns}
-                  onCampaignsChange={handleCampaignsChange}
+                  isLoading={isLoadingCampaigns}
+                  onCreateCampaign={handleCreateCampaign}
+                  onUpdateCampaign={handleUpdateCampaign}
+                  onDeleteCampaign={handleDeleteCampaign}
                 />
               </View>
             </Item>

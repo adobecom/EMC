@@ -1720,6 +1720,50 @@ class ApiService {
       { operationName: `assignPublishingProfileToEvent(${eventId}, ${profileId})`, shouldReturnFullResponse: true }
     )
   }
+
+  // --------------------------------------------------------------------------
+  // Campaigns
+  // --------------------------------------------------------------------------
+
+  async getEventCampaigns(eventId: string): Promise<any | ErrorResponse> {
+    validateString(eventId, 'event ID')
+    return this.callExternalApi('esp', `/v1/events/${eventId}/campaigns`, 'GET', undefined,
+      { operationName: 'getEventCampaigns', shouldReturnFullResponse: true }
+    )
+  }
+
+  async getCampaign(eventId: string, campaignId: string): Promise<any | ErrorResponse> {
+    validateString(eventId, 'event ID')
+    validateString(campaignId, 'campaign ID')
+    return this.callExternalApi('esp', `/v1/events/${eventId}/campaigns/${campaignId}`, 'GET', undefined,
+      { operationName: 'getCampaign', shouldReturnFullResponse: true }
+    )
+  }
+
+  async createCampaign(eventId: string, payload: Record<string, unknown>): Promise<any | ErrorResponse> {
+    validateString(eventId, 'event ID')
+    validateObject(payload, 'campaign payload')
+    return this.callExternalApi('esp', `/v1/events/${eventId}/campaigns`, 'POST', payload,
+      { operationName: 'createCampaign', shouldReturnFullResponse: true }
+    )
+  }
+
+  async updateCampaign(eventId: string, campaignId: string, payload: Record<string, unknown>): Promise<any | ErrorResponse> {
+    validateString(eventId, 'event ID')
+    validateString(campaignId, 'campaign ID')
+    validateObject(payload, 'campaign payload')
+    return this.callExternalApi('esp', `/v1/events/${eventId}/campaigns/${campaignId}`, 'PUT', payload,
+      { operationName: 'updateCampaign', shouldReturnFullResponse: true }
+    )
+  }
+
+  async deleteCampaign(eventId: string, campaignId: string): Promise<any | ErrorResponse> {
+    validateString(eventId, 'event ID')
+    validateString(campaignId, 'campaign ID')
+    return this.callExternalApi('esp', `/v1/events/${eventId}/campaigns/${campaignId}`, 'DELETE', undefined,
+      { operationName: 'deleteCampaign', shouldReturnFullResponse: true }
+    )
+  }
 }
 
 // ============================================================================

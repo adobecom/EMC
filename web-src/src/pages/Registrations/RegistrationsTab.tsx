@@ -4,7 +4,6 @@
 
 import React, { useState, useCallback, useMemo } from 'react'
 import {
-  View,
   SearchField,
   AlertDialog,
   DialogTrigger

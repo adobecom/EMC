@@ -3,123 +3,133 @@
 */
 
 /**
- * Campaign type definitions
- * 
- * A Campaign is an object attached to an event that provides a unique
- * registration URL with optional capacity limits.
+ * Campaign type definitions aligned with the ESP API contract.
+ *
+ * API base: POST/GET/PUT/DELETE /v1/events/{eventId}/campaigns[/{campaignId}]
  */
 
+export type CampaignStatus = 'Active' | 'Archived'
+
 /**
- * Campaign data from the API
+ * EventCampaign response object returned by the API.
  */
 export interface Campaign {
-  /** Unique identifier for the campaign */
   campaignId: string
-  /** Parent event ID */
-  eventId: string
-  /** Campaign name for display */
   name: string
-  /** Auto-generated URL slug appended to event URL */
-  urlParam: string
-  /** Optional capacity limit for this campaign */
-  capacityLimit?: number
-  /** Number of registrations through this campaign */
-  registrationCount: number
-  /** Whether the campaign is currently active */
-  isActive: boolean
-  /** Creation timestamp */
+  status: CampaignStatus
+  attendeeLimit: number
+  attendeeCount: number
+  waitlistAttendeeCount: number
+  url: string
   creationTime: number
-  /** Last modification timestamp */
   modificationTime: number
-  /** User who created the campaign */
-  createdBy?: string
-  /** User who last modified the campaign */
-  modifiedBy?: string
 }
 
 /**
- * Campaign form data for create/update operations
+ * Payload for POST /v1/events/{eventId}/campaigns
+ */
+export interface CampaignCreatePayload {
+  name: string
+  status?: CampaignStatus
+  attendeeLimit?: number
+}
+
+/**
+ * Payload for PUT /v1/events/{eventId}/campaigns/{campaignId}
+ *
+ * `modificationTime` is required for optimistic concurrency control.
+ * Read-only fields (attendeeLimit, attendeeCount, etc.) are stripped
+ * server-side.
+ */
+export interface CampaignUpdatePayload {
+  name?: string
+  status?: CampaignStatus
+  url?: string
+  modificationTime: number
+}
+
+/**
+ * Shape used by the campaign form dialog (create + edit).
  */
 export interface CampaignFormData {
   name: string
-  capacityLimit?: number
-  isActive: boolean
+  attendeeLimit?: number
+  status: CampaignStatus
 }
 
 /**
- * Campaign statistics for dashboard display
+ * Wrapper returned by GET /v1/events/{eventId}/campaigns
+ */
+export interface CampaignListResponse {
+  campaigns: Campaign[]
+}
+
+/**
+ * Dashboard statistics derived from a campaign list.
  */
 export interface CampaignStats {
   totalCampaigns: number
   activeCampaigns: number
-  totalCampaignRegistrations: number
-  /** Available capacity across all campaigns */
+  totalRegistrations: number
+  totalWaitlisted: number
   availableCapacity: number
 }
 
 /**
- * Generate a URL-safe slug from a campaign name
- */
-export function generateUrlParam(name: string): string {
-  return name
-    .toLowerCase()
-    .replace(/[^a-z0-9\s-]/g, '')
-    .replace(/\s+/g, '-')
-    .replace(/-+/g, '-')
-    .substring(0, 50)
-}
-
-/**
- * Calculate campaign statistics
+ * Calculate campaign statistics for the stats bar.
  */
 export function calculateCampaignStats(
   campaigns: Campaign[],
   eventCapacity?: number
 ): CampaignStats {
-  const activeCampaigns = campaigns.filter(c => c.isActive)
-  const totalCampaignRegistrations = campaigns.reduce(
-    (sum, c) => sum + c.registrationCount,
+  const activeCampaigns = campaigns.filter(c => c.status === 'Active')
+  const totalRegistrations = campaigns.reduce(
+    (sum, c) => sum + c.attendeeCount,
     0
   )
-  
-  // Calculate total allocated capacity from campaign limits
+  const totalWaitlisted = campaigns.reduce(
+    (sum, c) => sum + c.waitlistAttendeeCount,
+    0
+  )
   const allocatedCapacity = campaigns.reduce(
-    (sum, c) => sum + (c.capacityLimit || 0),
+    (sum, c) => sum + c.attendeeLimit,
     0
   )
-  
-  const availableCapacity = eventCapacity 
+
+  const availableCapacity = eventCapacity
     ? Math.max(0, eventCapacity - allocatedCapacity)
-    : Infinity
+    : 0
 
   return {
     totalCampaigns: campaigns.length,
     activeCampaigns: activeCampaigns.length,
-    totalCampaignRegistrations,
-    availableCapacity: availableCapacity === Infinity ? 0 : availableCapacity
+    totalRegistrations,
+    totalWaitlisted,
+    availableCapacity,
   }
 }
 
 /**
- * Validate campaign capacity against event limits
+ * Validate that a proposed attendeeLimit fits within the remaining event
+ * capacity (excluding the campaign being edited).
  */
 export function validateCampaignCapacity(
-  newCapacity: number,
-  currentCampaignCapacity: number,
-  otherCampaignsCapacity: number,
+  newLimit: number,
+  _currentCampaignLimit: number,
+  otherCampaignsTotal: number,
   eventCapacity?: number
 ): { isValid: boolean; message?: string } {
   if (!eventCapacity) {
     return { isValid: true }
   }
 
-  const totalAllocated = otherCampaignsCapacity + newCapacity
-  
+  const totalAllocated = otherCampaignsTotal + newLimit
+
   if (totalAllocated > eventCapacity) {
-    const available = eventCapacity - otherCampaignsCapacity
+    const available = eventCapacity - otherCampaignsTotal
     return {
       isValid: false,
-      message: `Capacity exceeds event limit. Maximum available: ${available}`
+      message: `Capacity exceeds event limit. Maximum available: ${available}`,
     }
   }
 
