@@ -110,7 +110,7 @@ declare global {
 // Constants
 // ============================================================================
 
-const IMS_LIB_URL = 'https://auth.services.adobe.com/imslib/imslib.min.js'
+const IMS_LIB_CDN_URL = 'https://auth.services.adobe.com/imslib/imslib.min.js'
 const IMS_SCRIPT_ID = 'adobe-imslib-script'
 
 // ============================================================================
@@ -131,8 +131,11 @@ class ImsAuthService {
 
   /**
    * Dynamically load the imslib script and wait for `window.adobeImsFactory`
-   * to become available.  The factory is always created by the script
-   * regardless of whether window.adobeid was pre-set.
+   * to become available.
+   *
+   * Strategy:
+   *   1. Try loading the bundled local copy (same-origin — bypasses CORS/COEP).
+   *   2. If that fails, fall back to the Adobe CDN via a <script> tag.
    */
   private loadScript(): Promise<void> {
     if (this.scriptLoadPromise) {
@@ -145,38 +148,61 @@ class ImsAuthService {
       return this.scriptLoadPromise
     }
 
-    this.scriptLoadPromise = new Promise<void>((resolve, reject) => {
-      // Avoid duplicate script tags
+    this.scriptLoadPromise = this.loadLocalImsLib()
+      .catch((localErr) => {
+        console.warn('⚠️ IMS: Local imslib failed, falling back to CDN…', localErr)
+        return this.loadCdnImsLib()
+      })
+
+    return this.scriptLoadPromise
+  }
+
+  /**
+   * Load the bundled local copy of imslib.min.js via dynamic import.
+   * Same-origin — completely avoids CORS / COEP issues.
+   */
+  private async loadLocalImsLib(): Promise<void> {
+    console.log('🔐 Loading Adobe IMS library (local bundle)…')
+    await import('../deps/imslib.min.js')
+    // The IIFE inside the file sets window.adobeImsFactory on execution
+    if (typeof window.adobeImsFactory === 'undefined') {
+      throw new Error('Local imslib loaded but window.adobeImsFactory was not created')
+    }
+    console.log('✅ IMS library loaded from local bundle')
+  }
+
+  /**
+   * Fallback: load imslib from Adobe CDN via a <script> tag.
+   */
+  private loadCdnImsLib(): Promise<void> {
+    return new Promise<void>((resolve, reject) => {
       const existing = document.getElementById(IMS_SCRIPT_ID) as HTMLScriptElement | null
       if (existing) {
         if (typeof window.adobeImsFactory !== 'undefined') {
           resolve()
           return
         }
-        existing.addEventListener('load', () => {
-          this.waitForFactory(resolve, reject)
-        })
+        existing.addEventListener('load', () => this.waitForFactory(resolve, reject))
         existing.addEventListener('error', () =>
-          reject(new Error(`Failed to load Adobe IMS library from: ${IMS_LIB_URL}`))
+          reject(new Error(`Failed to load Adobe IMS library from CDN: ${IMS_LIB_CDN_URL}`))
         )
         return
       }
 
-      console.log('🔐 Loading Adobe IMS library…')
+      console.log('🔐 Loading Adobe IMS library (CDN fallback)…')
       const script = document.createElement('script')
       script.id = IMS_SCRIPT_ID
-      script.src = IMS_LIB_URL
+      script.src = IMS_LIB_CDN_URL
       script.type = 'text/javascript'
 
-      script.onload = () => {
-        this.waitForFactory(resolve, reject)
-      }
+      script.onload = () => this.waitForFactory(resolve, reject)
 
       script.onerror = () => {
         reject(new Error(
-          `Failed to load Adobe IMS library from: ${IMS_LIB_URL}\n` +
+          `Failed to load Adobe IMS library from: ${IMS_LIB_CDN_URL}\n` +
           'Possible causes:\n' +
-          '  • No internet connection (the library is loaded from Adobe's CDN)\n' +
+          '  • COEP/CORS policy blocking cross-origin scripts\n' +
+          '  • No internet connection\n' +
           '  • A Content Security Policy blocking the script\n' +
           '  • The CDN being unreachable in your environment'
         ))
@@ -184,8 +210,6 @@ class ImsAuthService {
 
       document.head.appendChild(script)
     })
-
-    return this.scriptLoadPromise
   }
 
   /**
@@ -250,6 +274,7 @@ class ImsAuthService {
           environment: env.IMS_ENV,
           useLocalStorage: false,
           logsEnabled: env.isDevelopment(),
+          redirect_uri: window.location.origin + window.location.pathname,
 
           // Called when initialization finishes (always fires, even without a session)
           onReady: () => {

@@ -78,12 +78,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({
       return
     }
 
-    if (!imsAuthService.isLibraryAvailable()) {
-      console.warn('⚠️ IMS library not available - standalone auth disabled')
-      setIsLoading(false)
-      return
-    }
-
     setIsLoading(true)
 
     // Initialize IMS library; the onAccessToken callback fires when a token arrives
