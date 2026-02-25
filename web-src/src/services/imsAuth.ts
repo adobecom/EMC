@@ -131,12 +131,8 @@ class ImsAuthService {
   // ============================================================================
 
   /**
-   * Dynamically load the imslib script and wait for `window.adobeImsFactory`
-   * to become available.
-   *
-   * Strategy:
-   *   1. Try loading the bundled local copy (same-origin — bypasses CORS/COEP).
-   *   2. If that fails, fall back to the Adobe CDN via a <script> tag.
+   * Dynamically load the imslib script from Adobe CDN and wait for
+   * `window.adobeImsFactory` to become available.
    */
   private loadScript(): Promise<void> {
     if (this.scriptLoadPromise) {
@@ -149,32 +145,13 @@ class ImsAuthService {
       return this.scriptLoadPromise
     }
 
-    this.scriptLoadPromise = this.loadLocalImsLib()
-      .catch((localErr) => {
-        console.warn('IMS: local imslib unavailable, falling back to CDN.', localErr)
-        return this.loadCdnImsLib()
-      })
+    this.scriptLoadPromise = this.loadCdnImsLib()
 
     return this.scriptLoadPromise
   }
 
   /**
-   * Load the bundled local copy of imslib.min.js via dynamic import.
-   * Same-origin — completely avoids CORS / COEP issues.
-   */
-  private async loadLocalImsLib(): Promise<void> {
-    if (env.isDevelopment()) {
-      console.log('IMS: loading library from local bundle')
-    }
-    await import('../deps/imslib.min.js')
-    // The IIFE inside the file sets window.adobeImsFactory on execution
-    if (typeof window.adobeImsFactory === 'undefined') {
-      throw new Error('Local imslib loaded but window.adobeImsFactory was not set')
-    }
-  }
-
-  /**
-   * Fallback: load imslib from Adobe CDN via a <script> tag.
+   * Load imslib from Adobe CDN via a <script> tag.
    */
   private loadCdnImsLib(): Promise<void> {
     return new Promise<void>((resolve, reject) => {
