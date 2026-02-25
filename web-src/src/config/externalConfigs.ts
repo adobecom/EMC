@@ -29,7 +29,7 @@ export const ECC_CONFIG_BASE = 'https://dev--ecc-milo--adobecom.aem.live'
 export const EXTERNAL_CONFIG_URLS = {
   /**
    * RSVP form field configurations per cloud type
-   * Used by: RegistrationFieldsComponent, AttendeeDashboard
+   * Used by: RegistrationFieldsComponent, Registrations
    * Structure: Array of { Field, Type, Label?, Required?, Placeholder?, Options? }
    */
   rsvp: {
