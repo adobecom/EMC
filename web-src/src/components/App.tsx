@@ -8,8 +8,10 @@ import ErrorBoundary from 'react-error-boundary'
 import { HashRouter as Router, Routes, Route } from 'react-router-dom'
 import { TopNav } from './layout'
 import { ToastContainer } from './shared'
-import { ToastProvider, ApiProvider } from '../contexts'
+import { ToastProvider, ApiProvider, AuthProvider } from '../contexts'
+import { useAuth } from '../contexts/AuthContext'
 import { Runtime, IMS } from '../types'
+import type { AuthMode } from '../contexts/AuthContext'
 
 // Pages - route-level components
 import {
@@ -29,21 +31,26 @@ import {
 interface AppProps {
   runtime: Runtime
   ims: IMS
+  authMode: AuthMode
 }
 
-const App: React.FC<AppProps> = (props) => {
-  console.log('runtime object:', props.runtime)
-  console.log('ims object:', props.ims)
+// Inner component that consumes AuthContext so it can react to auth state changes
+const AppContent: React.FC<{ runtime: Runtime }> = ({ runtime }) => {
+  const { ims, updateFromShell } = useAuth()
 
-  // use exc runtime event handlers
-  // respond to configuration change events (e.g. user switches org)
-  props.runtime.on('configuration', ({ imsOrg, imsToken, locale }) => {
-    console.log('configuration change', { imsOrg, imsToken, locale })
-  })
-  // respond to history change events
-  props.runtime.on('history', ({ type, path }) => {
-    console.log('history change', { type, path })
-  })
+  // Sync configuration changes from ExC Shell (e.g. org switch)
+  React.useEffect(() => {
+    runtime.on('configuration', ({ imsOrg, imsToken }) => {
+      console.log('🔄 ExC Shell configuration change', { imsOrg })
+      if (imsToken && imsOrg) {
+        updateFromShell({ ...ims, token: imsToken, org: imsOrg })
+      }
+    })
+
+    runtime.on('history', ({ type, path }) => {
+      console.log('history change', { type, path })
+    })
+  }, [runtime, updateFromShell])
 
   // error handler on UI rendering failure
   const onError = (_e: Error, _componentStack: string) => {
@@ -66,7 +73,7 @@ const App: React.FC<AppProps> = (props) => {
     <ErrorBoundary onError={onError} FallbackComponent={fallbackComponent}>
       <Router>
         <Provider theme={defaultTheme} colorScheme={'light'} scale={'medium'}>
-          <ApiProvider ims={props.ims}>
+          <ApiProvider ims={ims}>
             <ToastProvider>
               <Grid
                 areas={['header', 'content']}
@@ -75,7 +82,7 @@ const App: React.FC<AppProps> = (props) => {
                 gap='size-0'
               >
                 <View gridArea='header' UNSAFE_style={{ position: 'sticky', top: 0, zIndex: 1000 }}>
-                  <TopNav ims={props.ims} />
+                  <TopNav ims={ims} />
                 </View>
                 <View 
                   gridArea='content' 
@@ -83,18 +90,18 @@ const App: React.FC<AppProps> = (props) => {
                 >
                   <Routes>
                     <Route path='/' element={<Home />} />
-                    <Route path='/overview' element={<OverviewDashboard ims={props.ims} />} />
-                    <Route path='/profile' element={<UserProfile ims={props.ims} />} />
-                    <Route path='/clouds' element={<CloudManagementConsole ims={props.ims} />} />
-                    <Route path='/series' element={<SeriesDashboard ims={props.ims} />} />
-                    <Route path='/series/new' element={<SeriesForm ims={props.ims} />} />
-                    <Route path='/series/edit/:id' element={<SeriesForm ims={props.ims} />} />
-                    <Route path='/events' element={<EventsDashboard ims={props.ims} />} />
-                    <Route path='/events/new/:eventType' element={<EventForm ims={props.ims} />} />
-                    <Route path='/events/edit/:id' element={<EventForm ims={props.ims} />} />
-                    <Route path='/attendees' element={<AttendeeDashboard ims={props.ims} />} />
-                    <Route path='/attendees/:eventId' element={<AttendeeDashboard ims={props.ims} />} />
-                    <Route path='/speakers' element={<SpeakersDashboard ims={props.ims} />} />
+                    <Route path='/overview' element={<OverviewDashboard ims={ims} />} />
+                    <Route path='/profile' element={<UserProfile ims={ims} />} />
+                    <Route path='/clouds' element={<CloudManagementConsole ims={ims} />} />
+                    <Route path='/series' element={<SeriesDashboard ims={ims} />} />
+                    <Route path='/series/new' element={<SeriesForm ims={ims} />} />
+                    <Route path='/series/edit/:id' element={<SeriesForm ims={ims} />} />
+                    <Route path='/events' element={<EventsDashboard ims={ims} />} />
+                    <Route path='/events/new/:eventType' element={<EventForm ims={ims} />} />
+                    <Route path='/events/edit/:id' element={<EventForm ims={ims} />} />
+                    <Route path='/attendees' element={<AttendeeDashboard ims={ims} />} />
+                    <Route path='/attendees/:eventId' element={<AttendeeDashboard ims={ims} />} />
+                    <Route path='/speakers' element={<SpeakersDashboard ims={ims} />} />
                     <Route path='/about' element={<About />}/>
                   </Routes>
                 </View>
@@ -105,6 +112,18 @@ const App: React.FC<AppProps> = (props) => {
         </Provider>
       </Router>
     </ErrorBoundary>
+  )
+}
+
+const App: React.FC<AppProps> = ({ runtime, ims, authMode }) => {
+  console.log('runtime object:', runtime)
+  console.log('ims object:', ims)
+  console.log('authMode:', authMode)
+
+  return (
+    <AuthProvider initialIms={ims} authMode={authMode}>
+      <AppContent runtime={runtime} />
+    </AuthProvider>
   )
 }
 

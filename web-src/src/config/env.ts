@@ -39,6 +39,20 @@ export const env = {
   
   // API Key for external requests
   API_KEY: process.env.API_KEY || 'acom_event_service',
+
+  // ============================================================================
+  // IMS AUTHENTICATION (Standalone mode - without Experience Cloud Shell)
+  // ============================================================================
+  // IMS Client ID registered with IDOPS/IMSS
+  // Loaded from .env file: IMS_CLIENT_ID=your-client-id
+  IMS_CLIENT_ID: process.env.IMS_CLIENT_ID || 'acom_event_mgmt_console',
+
+  // OAuth scopes for IMS authentication
+  // Loaded from .env file: IMS_SCOPES=AdobeID,gnav,openid
+  IMS_SCOPES: process.env.IMS_SCOPES || 'AdobeID,gnav,openid',
+
+  // IMS environment: 'prod' for production, 'stg1' for staging
+  IMS_ENV: process.env.IMS_ENV || 'prod',
   
   /**
    * Environment tier for API endpoint selection
