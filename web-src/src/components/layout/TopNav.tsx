@@ -4,20 +4,30 @@
 
 import React from 'react'
 import { NavLink } from 'react-router-dom'
-import { Flex, View } from '@adobe/react-spectrum'
+import { Flex, View, Button } from '@adobe/react-spectrum'
+import Login from '@spectrum-icons/workflow/Login'
 import { IMS } from '../../types'
 import { UserPanel } from '../user'
 import { DevTokenButton } from '../dev'
 import { STICKY_GNAV_STYLES } from '../../styles/designSystem'
+import { useAuth } from '../../contexts/AuthContext'
 
 interface TopNavProps {
   ims: IMS
 }
 
 const TopNav: React.FC<TopNavProps> = ({ ims }) => {
+  const { isAuthenticated, isLoading, signIn, authMode } = useAuth()
+
+  // Only show the standalone sign-in button when:
+  //   - Running in standalone mode (not the ExC Shell)
+  //   - Not yet authenticated
+  //   - Not in the middle of initializing auth
+  const showSignIn = authMode === 'standalone' && !isAuthenticated && !isLoading
+
   return (
     <View 
-      backgroundColor="gray-100" 
+      backgroundColor="gray-100"
       borderBottomWidth="thin" 
       borderBottomColor="gray-300"
       UNSAFE_className="top-nav"
@@ -48,7 +58,7 @@ const TopNav: React.FC<TopNavProps> = ({ ims }) => {
           </a>
         </View>
 
-        {/* Center: Navigation Links - Order: Home, Overview, Clouds, Series, Events, Attendees, About */}
+        {/* Center: Navigation Links */}
         <Flex 
           direction="row" 
           alignItems="center" 
@@ -106,10 +116,24 @@ const TopNav: React.FC<TopNavProps> = ({ ims }) => {
           </NavLink>
         </Flex>
 
-        {/* Right: Dev Token Button and User Panel */}
+        {/* Right: Auth controls + User Panel */}
         <Flex direction="row" alignItems="center" gap="size-100">
+          {/* Dev token fallback — localhost only */}
           <DevTokenButton />
-          <UserPanel ims={ims} compact />
+
+          {showSignIn ? (
+            /* Standalone mode, not signed in: show a Sign In button */
+            <Button
+              variant="accent"
+              onPress={signIn}
+            >
+              <Login />
+              <span>Sign In</span>
+            </Button>
+          ) : (
+            /* Signed in (either mode): show user panel */
+            !isLoading && <UserPanel ims={ims} compact />
+          )}
         </Flex>
       </Flex>
     </View>
@@ -117,4 +141,3 @@ const TopNav: React.FC<TopNavProps> = ({ ims }) => {
 }
 
 export default TopNav
-

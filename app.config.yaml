@@ -7,8 +7,13 @@ application:
     # ENVIRONMENT determines which API tier to use: 'dev', 'stage', or 'prod'
     # Set via CI/CD or .env file. Defaults to 'dev' if not specified.
     ENVIRONMENT: $ENVIRONMENT
+    # IMS Authentication for standalone mode (without Experience Cloud Shell)
+    # IMS_CLIENT_ID and IMS_SCOPES are used when the app runs outside the shell
+    IMS_CLIENT_ID: $IMS_CLIENT_ID
+    IMS_SCOPES: $IMS_SCOPES
   extensions:
     dx/excshell/1:
+      # Uses the default ExC Shell client (exc_app) — no custom IMS config required
       operations:
         view:
           - type: web
