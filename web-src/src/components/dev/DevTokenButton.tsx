@@ -19,9 +19,8 @@ export const DevTokenButton: React.FC<DevTokenButtonProps> = ({ onTokenChange })
   const [hasValidToken, setHasValidToken] = useState(false)
   const [expirationInfo, setExpirationInfo] = useState<any>(null)
   const [isDevMode] = useState(() => {
-    // Show dev token UI on localhost and allowed dev instances
-    // (never in Experience Cloud Shell - runtime detection handles that in index.tsx)
-    return env.isDevelopment()
+    // Dev token UI only when ?devtokenmode=true on an allowed host
+    return env.isDevTokenModeEnabled()
   })
 
   const checkToken = () => {

@@ -23,6 +23,7 @@ import { getSeriesListMock, getEventsListMock } from '../mocks'
 import { tokenStorage } from './tokenStorage'
 import { constructRequestHeaders, safeFetch } from './requestHelpers'
 import { getCurrentEnvironment, getApiHost, SUPPORTED_CLOUDS } from '../config/constants'
+import { env } from '../config/env'
 import { apiCache } from './cacheUtils'
 import { deduplicateBy } from '../utils/deduplication'
 
@@ -324,23 +325,30 @@ class ApiService {
   // ============================================================================
 
   /**
-   * Get the current auth token - checks both stored dev token and IMS token from context
-   * Priority: 1) tokenStorage (dev mode) 2) configured headers (ExC Shell IMS)
+   * Get the current auth token.
+   * When dev token mode is enabled (?devtokenmode=true on an allowed host): 1) tokenStorage 2) configured headers.
+   * Otherwise: only configured headers (IMS from shell/standalone).
    */
   private getAuthToken(): string | null {
-    // First check tokenStorage (dev mode)
-    const storedToken = tokenStorage.getValidToken()
-    if (storedToken) {
-      return storedToken
+    if (env.isDevTokenModeEnabled()) {
+      const storedToken = tokenStorage.getValidToken()
+      if (storedToken) return storedToken
     }
-    
-    // Fall back to IMS token set via setAuthHeaders (ExC Shell mode)
+
     const authHeader = this.config.headers?.authorization
     if (authHeader && authHeader.startsWith('Bearer ')) {
       return authHeader.substring(7) // Remove "Bearer " prefix
     }
-    
+
     return null
+  }
+
+  /**
+   * Get the auth token for use by components that make direct API calls (e.g. uploads, external APIs).
+   * Uses the same logic as getAuthToken (dev token only when ?devtokenmode=true).
+   */
+  getAuthTokenForExternalUse(): string | null {
+    return this.getAuthToken()
   }
 
   /**

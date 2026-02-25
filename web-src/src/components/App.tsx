@@ -99,8 +99,8 @@ const AppContent: React.FC<{ runtime: Runtime }> = ({ runtime }) => {
                     <Route path='/events' element={<EventsDashboard ims={ims} />} />
                     <Route path='/events/new/:eventType' element={<EventForm ims={ims} />} />
                     <Route path='/events/edit/:id' element={<EventForm ims={ims} />} />
-                    <Route path='/registrations' element={<AttendeeDashboard ims={ims} />} />
-                    <Route path='/registrations/:eventId' element={<AttendeeDashboard ims={ims} />} />
+                    <Route path='/registrations' element={<Registrations ims={ims} />} />
+                    <Route path='/registrations/:eventId' element={<Registrations ims={ims} />} />
                     <Route path='/speakers' element={<SpeakersDashboard ims={ims} />} />
                     <Route path='/about' element={<About />}/>
                   </Routes>

@@ -22,7 +22,6 @@ import { useEventFormComponent } from '../../hooks/useEventFormComponent'
 import { apiService } from '../../services/api'
 import { getVenuePayload } from '../../utils/dataFilters'
 import { uploadImage } from '../../services/requestHelpers'
-import { tokenStorage } from '../../services/tokenStorage'
 import { getCurrentEnvironment, getApiHost } from '../../config/constants'
 import '../../../src/types/google-places.d.ts'
 
@@ -90,7 +89,7 @@ export const VenueComponent: React.FC = () => {
       const pendingFile = pendingImageFileRef.current
       if (pendingFile) {
         try {
-          const token = tokenStorage.getValidToken()
+          const token = apiService.getAuthTokenForExternalUse()
           if (token) {
             const currentEnv = getCurrentEnvironment()
             const host = getApiHost('esp', currentEnv)

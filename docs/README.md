@@ -72,9 +72,10 @@ A system that lets you use real Adobe IMS tokens from production sites in your l
 
 **Quick Start:**
 1. Run `npm run dev`
-2. Get token from adobe.com: `window.adobeIMS?.getAccessToken()`
-3. Click "Dev Token" button in app and paste
-4. Start making API calls!
+2. Open **`http://localhost:3000/?devtokenmode=true`** (dev token requires this URL parameter)
+3. Get token from adobe.com: `window.adobeIMS?.getAccessToken()`
+4. Click "Dev Token" button in app and paste
+5. Start making API calls!
 
 ## 🎨 UI/UX Documentation
 
