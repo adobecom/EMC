@@ -26,6 +26,7 @@
  */
 
 import { env } from '../config/env'
+import { getImsEnvironment } from '../config/constants'
 import { IMS, IMSProfile } from '../types'
 
 // ============================================================================
@@ -150,7 +151,7 @@ class ImsAuthService {
 
     this.scriptLoadPromise = this.loadLocalImsLib()
       .catch((localErr) => {
-        console.warn('⚠️ IMS: Local imslib failed, falling back to CDN…', localErr)
+        console.warn('IMS: local imslib unavailable, falling back to CDN.', localErr)
         return this.loadCdnImsLib()
       })
 
@@ -162,13 +163,14 @@ class ImsAuthService {
    * Same-origin — completely avoids CORS / COEP issues.
    */
   private async loadLocalImsLib(): Promise<void> {
-    console.log('🔐 Loading Adobe IMS library (local bundle)…')
+    if (env.isDevelopment()) {
+      console.log('IMS: loading library from local bundle')
+    }
     await import('../deps/imslib.min.js')
     // The IIFE inside the file sets window.adobeImsFactory on execution
     if (typeof window.adobeImsFactory === 'undefined') {
-      throw new Error('Local imslib loaded but window.adobeImsFactory was not created')
+      throw new Error('Local imslib loaded but window.adobeImsFactory was not set')
     }
-    console.log('✅ IMS library loaded from local bundle')
   }
 
   /**
@@ -189,7 +191,9 @@ class ImsAuthService {
         return
       }
 
-      console.log('🔐 Loading Adobe IMS library (CDN fallback)…')
+      if (env.isDevelopment()) {
+        console.log('IMS: loading library from CDN')
+      }
       const script = document.createElement('script')
       script.id = IMS_SCRIPT_ID
       script.src = IMS_LIB_CDN_URL
@@ -267,65 +271,72 @@ class ImsAuthService {
 
     this.initializePromise = this.loadScript().then(() => {
       return new Promise<void>((resolve) => {
-        // Build the config that imslib expects (same shape as window.adobeid)
+        // IMS environment is derived from the build-time ENVIRONMENT tier:
+        //   'prod'  → 'prod'  IMS
+        //   any other (dev / stage / personal workspace) → 'stg1' IMS
+        const imsEnv = getImsEnvironment()
+
         const imsConfig: AdobeIdConfig = {
           client_id: env.IMS_CLIENT_ID,
           scope: env.IMS_SCOPES,
-          environment: env.IMS_ENV,
+          environment: imsEnv,
           useLocalStorage: false,
-          logsEnabled: env.isDevelopment(),
+          logsEnabled: false,
           redirect_uri: window.location.origin + window.location.pathname,
 
           // Called when initialization finishes (always fires, even without a session)
           onReady: () => {
-            console.log('✅ IMS library ready')
-            // Check if there is already a valid session
+            if (env.isDevelopment()) {
+              console.log('IMS: library ready')
+            }
             this.checkExistingSession(onAccessToken)
             resolve()
           },
 
           // Fires when a valid access token is received (sign-in redirect or refresh)
           onAccessToken: (tokenObj: AdobeIMSTokenObject) => {
-            console.log('✅ IMS: Access token received')
+            if (env.isDevelopment()) {
+              console.log('IMS: access token received')
+            }
             this.handleTokenReceived(tokenObj, onAccessToken)
           },
 
           // Fires on re-authentication
           onReauthAccessToken: (tokenObj: AdobeIMSTokenObject) => {
-            console.log('🔄 IMS: Re-auth access token received')
+            if (env.isDevelopment()) {
+              console.log('IMS: re-auth token received')
+            }
             this.handleTokenReceived(tokenObj, onAccessToken)
           },
 
           // Fires when the current token expires
           onAccessTokenHasExpired: () => {
-            console.warn('⚠️ IMS: Access token expired')
+            console.warn('IMS: access token expired')
             this.currentIms = null
             this.notifyListeners(null)
           },
 
           // Fires on errors during initialization
           onError: (type: string, message: string, details?: any) => {
-            console.error(`❌ IMS Error [${type}]:`, message, details ?? '')
+            console.error(`IMS error [${type}]: ${message}`, details ?? '')
             // Resolve so the app renders in an unauthenticated state
             resolve()
           }
         }
 
-        console.log('🔐 Initializing Adobe IMS…')
-        console.log(`   client_id   : ${imsConfig.client_id}`)
-        console.log(`   scope       : ${imsConfig.scope}`)
-        console.log(`   environment : ${imsConfig.environment}`)
+        if (env.isDevelopment()) {
+          console.log(`IMS: initializing (env: ${imsEnv})`)
+        }
 
         try {
           // Create the IMS instance via the factory — this sets window.adobeIMS
-          const imsInstance = window.adobeImsFactory!.createIMSLib(imsConfig, 'adobeIMS')
-          console.log(`   imslib ver  : ${imsInstance.version}`)
+          window.adobeImsFactory!.createIMSLib(imsConfig, 'adobeIMS')
 
           // Tell the library to process any token in the URL fragment, check
           // for existing sessions, etc.
-          imsInstance.initialize()
+          window.adobeIMS!.initialize()
         } catch (err) {
-          console.error('❌ IMS: Failed to create/initialize instance:', err)
+          console.error('IMS: failed to create/initialize instance:', err)
           // Still resolve so app renders unauthenticated
           resolve()
         }
@@ -344,17 +355,21 @@ class ImsAuthService {
     try {
       const isSignedIn = window.adobeIMS!.isSignedInUser()
       if (!isSignedIn) {
-        console.log('ℹ️ IMS: No existing session')
+        if (env.isDevelopment()) {
+          console.log('IMS: no existing session')
+        }
         return
       }
 
       const tokenObj = window.adobeIMS!.getAccessToken()
       if (!tokenObj) return
 
-      console.log('✅ IMS: Existing session found')
+      if (env.isDevelopment()) {
+        console.log('IMS: existing session found')
+      }
       await this.handleTokenReceived(tokenObj, callback)
     } catch (err) {
-      console.warn('⚠️ IMS: Error checking existing session', err)
+      console.warn('IMS: error checking existing session', err)
     }
   }
 
@@ -385,23 +400,20 @@ class ImsAuthService {
    */
   signIn(): void {
     if (this.isLibraryAvailable()) {
-      console.log('🔐 IMS: Redirecting to sign in…')
       window.adobeIMS!.signIn()
       return
     }
 
-    console.log('⏳ IMS: Library not yet ready, waiting to sign in…')
     this.initialize()
       .then(() => {
         if (this.isLibraryAvailable()) {
-          console.log('🔐 IMS: Now redirecting to sign in…')
           window.adobeIMS!.signIn()
         } else {
-          console.error('❌ IMS: Library still not available after initialize')
+          console.error('IMS: library not available after initialize')
         }
       })
       .catch((err) => {
-        console.error('❌ IMS: Could not load library for sign in:', err)
+        console.error('IMS: could not load library for sign-in:', err)
         alert(
           'Unable to load Adobe authentication. ' +
           'Please check your internet connection and try again.'
@@ -414,10 +426,9 @@ class ImsAuthService {
    */
   signOut(): void {
     if (!this.isLibraryAvailable()) {
-      console.error('❌ IMS library not available — cannot sign out')
+      console.error('IMS: library not available — cannot sign out')
       return
     }
-    console.log('🚪 IMS: Signing out…')
     this.currentIms = null
     this.notifyListeners(null)
     window.adobeIMS!.signOut()
@@ -459,7 +470,7 @@ class ImsAuthService {
       this.notifyListeners(ims)
       if (callback) callback(ims)
     } catch (err) {
-      console.error('❌ IMS: Failed to fetch profile after token receipt', err)
+      console.error('IMS: failed to fetch profile after token receipt', err)
       const ims: IMS = { token: tokenObj.token }
       this.currentIms = ims
       this.notifyListeners(ims)
@@ -469,6 +480,8 @@ class ImsAuthService {
 
   private mapProfile(profile: AdobeIMSProfile | null): IMSProfile | undefined {
     if (!profile) return undefined
+    // Map only known fields — do not spread the raw profile to avoid leaking
+    // unexpected or sensitive data from the IMS response.
     return {
       userId: profile.userId,
       name: (
@@ -477,7 +490,9 @@ class ImsAuthService {
         undefined
       ),
       email: profile.email,
-      ...profile
+      account_type: profile.account_type,
+      ownerOrg: profile.ownerOrg,
+      projectedProductContext: profile.projectedProductContext,
     }
   }
 
@@ -486,7 +501,7 @@ class ImsAuthService {
     try {
       return await window.adobeIMS!.getProfile()
     } catch (err) {
-      console.warn('⚠️ IMS: Could not fetch profile', err)
+      console.warn('IMS: could not fetch profile', err)
       return null
     }
   }
@@ -496,7 +511,7 @@ class ImsAuthService {
       try {
         listener(ims)
       } catch (err) {
-        console.error('❌ IMS auth state listener error', err)
+        console.error('IMS: auth state listener error', err)
       }
     })
   }

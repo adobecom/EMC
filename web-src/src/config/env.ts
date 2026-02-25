@@ -43,17 +43,19 @@ export const env = {
   // ============================================================================
   // IMS AUTHENTICATION (Standalone mode - without Experience Cloud Shell)
   // ============================================================================
-  // IMS Client ID registered with IDOPS/IMSS
+  // IMS Client ID registered with IDOPS/IMSS — used only in standalone (imslib) mode.
+  // In ExC Shell mode the shell's own exc_app client ID is used automatically.
   // Loaded from .env file: IMS_CLIENT_ID=your-client-id
   IMS_CLIENT_ID: process.env.IMS_CLIENT_ID || 'acom_event_mgmt_console',
 
-  // OAuth scopes for IMS authentication
+  // OAuth scopes for IMS authentication (standalone mode)
   // Loaded from .env file: IMS_SCOPES=AdobeID,gnav,openid
   IMS_SCOPES: process.env.IMS_SCOPES || 'AdobeID,gnav,openid',
 
-  // IMS environment: 'prod' for production, 'stg1' for staging
-  IMS_ENV: process.env.IMS_ENV || 'prod',
-  
+  // IMS environment is derived automatically from ENVIRONMENT tier.
+  // 'prod' tier -> 'prod' IMS; everything else (dev/stage/personal) -> 'stg1' IMS.
+  // See getImsEnvironment() in config/constants.ts.
+
   /**
    * Environment tier for API endpoint selection
    * Set at build time via CI/CD or .env file
@@ -114,4 +116,5 @@ if (typeof window !== 'undefined' && env.isDevelopment()) {
 }
 
 export default env
+
 

@@ -8,23 +8,12 @@ application:
     # Set via CI/CD or .env file. Defaults to 'dev' if not specified.
     ENVIRONMENT: $ENVIRONMENT
     # IMS Authentication for standalone mode (without Experience Cloud Shell)
-    # Set IMS_CLIENT_ID and IMS_SCOPES in .env file
+    # IMS_CLIENT_ID and IMS_SCOPES are used when the app runs outside the shell
     IMS_CLIENT_ID: $IMS_CLIENT_ID
     IMS_SCOPES: $IMS_SCOPES
-    IMS_ENV: $IMS_ENV
   extensions:
     dx/excshell/1:
-      # =========================================================================
-      # CUSTOM IMS CONFIGURATION
-      # =========================================================================
-      # Custom IMS authentication for Unified Shell integration
-      # Requires: IMS_CLIENT_ID and IMS_SCOPES in .env file
-      # See: docs/UNIFIED_SHELL_REGISTRATION.md for setup instructions
-      # =========================================================================
-      sandbox:
-        ims:
-          client_id: $IMS_CLIENT_ID
-          scopes: $IMS_SCOPES
+      # Uses the default ExC Shell client (exc_app) — no custom IMS config required
       operations:
         view:
           - type: web
