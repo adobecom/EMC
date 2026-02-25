@@ -98,11 +98,12 @@ export const SpeakerSelector: React.FC<SpeakerSelectorProps> = ({
     apiService.getSessionSpeakers(sessionId).then((res) => {
       if (cancelled) return;
       setLoadingSessionSpeakers(false);
-      if (res.success && res.data?.speakers) {
-        setSessionSpeakers(res.data.speakers);
-      } else {
+      if (res && "error" in res) {
         setSessionSpeakers([]);
+        return;
       }
+      const speakers = (res as any)?.speakers ?? [];
+      setSessionSpeakers(Array.isArray(speakers) ? speakers : []);
     });
     return () => {
       cancelled = true;

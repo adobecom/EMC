@@ -170,30 +170,30 @@ export const SessionDialog: React.FC<SessionDialogProps> = ({
     apiService.getSession(session.id).then((res) => {
       if (cancelled) return;
       setLoadingDetails(false);
-      if (res.success && res.data) {
-        const raw = res.data as unknown as Record<string, unknown>;
-        const mapped = mapApiToSession(raw);
-        setName(mapped.name);
-        setDescription(mapped.description ?? "");
-        setSelectedTags(stringsToEventTags(mapped.tags));
-        const startDt = safeParseDateTimeString(mapped.startDateTime);
-        setDate(
-          startDt
-            ? new CalendarDate(startDt.year, startDt.month, startDt.day)
-            : null,
-        );
-        setStartTime(parseTimeFromDateTime(mapped.startDateTime));
-        setEndTime(parseTimeFromDateTime(mapped.endDateTime));
-        const ct = raw.creationTime as number | undefined;
-        const mt = raw.modificationTime as number | undefined;
-        setSessionTimestamps(
-          typeof ct === "number" || typeof mt === "number"
-            ? { creationTime: ct, modificationTime: mt }
-            : {},
-        );
-      } else {
-        setDetailError(res.error ?? "Failed to load session");
+      if (res && "error" in res) {
+        setDetailError(res.error?.message || String(res.error));
+        return;
       }
+      const raw = res as Record<string, unknown>;
+      const mapped = mapApiToSession(raw);
+      setName(mapped.name);
+      setDescription(mapped.description ?? "");
+      setSelectedTags(stringsToEventTags(mapped.tags));
+      const startDt = safeParseDateTimeString(mapped.startDateTime);
+      setDate(
+        startDt
+          ? new CalendarDate(startDt.year, startDt.month, startDt.day)
+          : null,
+      );
+      setStartTime(parseTimeFromDateTime(mapped.startDateTime));
+      setEndTime(parseTimeFromDateTime(mapped.endDateTime));
+      const ct = raw.creationTime as number | undefined;
+      const mt = raw.modificationTime as number | undefined;
+      setSessionTimestamps(
+        typeof ct === "number" || typeof mt === "number"
+          ? { creationTime: ct, modificationTime: mt }
+          : {},
+      );
     });
     return () => {
       cancelled = true;

@@ -42,16 +42,16 @@ export const Sessions: React.FC = () => {
     }
     setLoadError(null);
     try {
-      const response = (await apiService.getSessions(eventId)) as {
-        data?: Session[];
-        sessions?: unknown[];
-      };
-      const raw = response?.data ?? response?.sessions ?? [];
+      const response = await apiService.getSessions(eventId);
+      if (response && "error" in response) {
+        setLoadError(response.error?.message || String(response.error));
+        setSessions([]);
+        return;
+      }
+      const raw = response?.sessions ?? response?.data ?? [];
       const list = Array.isArray(raw) ? raw : [];
       setSessions(
-        list.map((item: Record<string, unknown>) =>
-          mapApiSessionToSession(item),
-        ),
+        list.map((item: any) => mapApiSessionToSession(item)),
       );
     } catch (err) {
       const message =
@@ -67,10 +67,10 @@ export const Sessions: React.FC = () => {
 
   const handleDeleteSession = async (sessionId: string) => {
     const res = await apiService.deleteSession(sessionId);
-    if (res.success) {
-      setSessions((prev) => prev.filter((s) => s.id !== sessionId));
+    if ("error" in res) {
+      setLoadError(res.error?.message || String(res.error));
     } else {
-      setLoadError(res.error ?? "Failed to delete session");
+      setSessions((prev) => prev.filter((s) => s.id !== sessionId));
     }
   };
 
@@ -84,13 +84,12 @@ export const Sessions: React.FC = () => {
       tags: data.tags,
     };
     const res = await apiService.createSession(eventId, payload);
-    if (res.success && res.data) {
-      const raw = res.data as Record<string, unknown>;
-      setSessions((prev) => [...prev, mapApiSessionToSession(raw)]);
-    } else {
-      setLoadError(res.error ?? "Failed to create session");
-      throw new Error(res.error ?? "Failed to create session");
+    if ("error" in res) {
+      const msg = res.error?.message || String(res.error);
+      setLoadError(msg);
+      throw new Error(msg);
     }
+    setSessions((prev) => [...prev, mapApiSessionToSession(res as any)]);
   };
 
   const handleUpdateSession = async (
@@ -109,15 +108,14 @@ export const Sessions: React.FC = () => {
     if (data.modificationTime != null)
       payload.modificationTime = data.modificationTime;
     const res = await apiService.updateSession(sessionId, eventId, payload);
-    if (res.success && res.data) {
-      const raw = res.data as Record<string, unknown>;
-      setSessions((prev) =>
-        prev.map((s) => (s.id === sessionId ? mapApiSessionToSession(raw) : s)),
-      );
-    } else {
-      setLoadError(res.error ?? "Failed to update session");
-      throw new Error(res.error ?? "Failed to update session");
+    if ("error" in res) {
+      const msg = res.error?.message || String(res.error);
+      setLoadError(msg);
+      throw new Error(msg);
     }
+    setSessions((prev) =>
+      prev.map((s) => (s.id === sessionId ? mapApiSessionToSession(res as any) : s)),
+    );
   };
 
   return (
