@@ -24,6 +24,7 @@ import { IMS } from '../../types'
 import { useToast } from '../../contexts'
 import { filterEventData } from '../../utils/dataFilters'
 import { useSafeState } from '../../hooks'
+import { getEspEnvParam } from '../../config/constants'
 
 interface EventsDashboardProps {
   ims: IMS
@@ -364,12 +365,14 @@ export const EventsDashboard: React.FC<EventsDashboardProps> = () => {
           ? localStartTimeMillis - 10 
           : localStartTimeMillis + 10
 
-        // Build the preview URL with parameters
-        const separator = item.detailPagePath.includes('?') ? '&' : '?'
-        const previewUrl = `${item.detailPagePath}${separator}previewMode=true&timing=${timing}`
+        const previewUrl = new URL(item.detailPagePath)
+        previewUrl.searchParams.set('timing', String(timing))
+        const espenv = getEspEnvParam()
+        if (espenv) {
+          previewUrl.searchParams.set('espenv', espenv)
+        }
 
-        // Open in new tab
-        window.open(previewUrl, '_blank')
+        window.open(previewUrl.toString(), '_blank')
         break
       }
 
