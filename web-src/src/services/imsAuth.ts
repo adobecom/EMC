@@ -1,31 +1,45 @@
 /*
  * IMS Auth Service
- * Wraps Adobe's imslib.min.js (window.adobeIMS) for standalone OAuth authentication.
+ * Wraps Adobe's imslib.min.js for standalone OAuth authentication.
  * Used when the app is NOT loaded inside the Adobe Experience Cloud Shell.
  *
- * This service handles loading imslib.min.js dynamically so there is no race
- * condition between the script loading and our code running.
+ * HOW THE LIBRARY WORKS (from reading the minified source):
  *
- * window.adobeIMS key methods (available after the script loads):
- *   - initialize(config)     : Initialize with client_id, scope, etc.
- *   - signIn()               : Redirect to Adobe login page
- *   - signOut()              : Sign out and clear session
- *   - getAccessToken()       : Returns { token, expire, sid } or null
- *   - getProfile()           : Returns user profile object
- *   - isSignedInUser()       : Returns boolean
+ *   1. When imslib.min.js loads it always creates `window.adobeImsFactory`.
+ *   2. It then checks for `window.adobeid` (a config object with client_id).
+ *      - If found it auto-creates `window.adobeIMS` via
+ *        adobeImsFactory.createIMSLib(window.adobeid, "adobeIMS")
+ *        and calls `.initialize()`.
+ *      - If NOT found, `window.adobeIMS` is NEVER created.
+ *   3. We can manually create the instance after the script loads by calling:
+ *        window.adobeImsFactory.createIMSLib(config, "adobeIMS")
+ *      which sets window.adobeIMS = new instance and returns it.
+ *      Then we call instance.initialize() ourselves.
+ *
+ *   Key instance methods:
+ *     .initialize()        → processes URL fragment for tokens, refreshes session, calls onReady
+ *     .signIn(params?)     → redirects to Adobe login
+ *     .signOut(params?)    → clears session and redirects to Adobe logout
+ *     .getAccessToken()    → returns { token, expire, sid, … } or null
+ *     .getProfile()        → returns Promise<profile>
+ *     .isSignedInUser()    → boolean
  */
 
 import { env } from '../config/env'
 import { IMS, IMSProfile } from '../types'
 
 // ============================================================================
-// Type declarations for window.adobeIMS (the imslib global)
+// Type declarations for imslib globals
 // ============================================================================
 
 export interface AdobeIMSTokenObject {
   token: string
-  expire: string
+  expire: Date | string
   sid?: string
+  impersonatorId?: string
+  isImpersonatedSession?: boolean
+  pbaSatisfiedPolicies?: string[]
+  isGuestToken?: boolean
 }
 
 export interface AdobeIMSProfile {
@@ -47,33 +61,48 @@ export interface AdobeIMSProfile {
   [key: string]: any
 }
 
-export interface AdobeIMSConfig {
-  client_id: string
-  scope: string
-  locale?: string
-  environment?: string
-  redirect_uri?: string
-  onAccessToken?: (token: AdobeIMSTokenObject) => void
-  onReauthAccessToken?: (token: AdobeIMSTokenObject) => void
-  onError?: (type: string, message: string) => void
-  onReady?: () => void
-  onAccessTokenHasExpired?: () => void
-  onLogout?: () => void
-}
-
+/** The instance returned by adobeImsFactory.createIMSLib / window.adobeIMS */
 export interface AdobeIMS {
-  initialize(config: AdobeIMSConfig): void
-  signIn(params?: Record<string, string>): void
+  initialize(): Promise<void>
+  signIn(params?: any, context?: any, responseType?: string): Promise<void>
   signOut(params?: Record<string, string>): void
   getAccessToken(): AdobeIMSTokenObject | null
+  getReauthAccessToken(): AdobeIMSTokenObject | null
   getProfile(): Promise<AdobeIMSProfile>
   isSignedInUser(): boolean
-  refreshToken(): void
+  refreshToken(params?: any): Promise<any>
+  enableLogging(): void
+  disableLogging(): void
+  version: string
+}
+
+/** Config object passed to createIMSLib (same shape as window.adobeid) */
+export interface AdobeIdConfig {
+  client_id: string
+  scope?: string
+  environment?: string
+  redirect_uri?: string | (() => string)
+  locale?: string
+  useLocalStorage?: boolean
+  logsEnabled?: boolean
+  modalMode?: boolean
+  autoValidateToken?: boolean
+  alwaysRemoveTokenFromUrl?: boolean
+  onAccessToken?: (token: AdobeIMSTokenObject) => void
+  onReauthAccessToken?: (token: AdobeIMSTokenObject) => void
+  onAccessTokenHasExpired?: (err?: any) => void
+  onReady?: (context?: any) => void
+  onError?: (type: string, message: string, details?: any) => void
+  onSignOutEventReceived?: () => void
 }
 
 declare global {
   interface Window {
     adobeIMS?: AdobeIMS
+    adobeImsFactory?: {
+      createIMSLib: (config: AdobeIdConfig | null, instanceName?: string) => AdobeIMS
+    }
+    adobeid?: AdobeIdConfig
   }
 }
 
@@ -101,69 +130,55 @@ class ImsAuthService {
   // ============================================================================
 
   /**
-   * Dynamically load the imslib script and wait for it to be ready.
-   * Caches the promise so concurrent callers wait on the same load.
+   * Dynamically load the imslib script and wait for `window.adobeImsFactory`
+   * to become available.  The factory is always created by the script
+   * regardless of whether window.adobeid was pre-set.
    */
   private loadScript(): Promise<void> {
     if (this.scriptLoadPromise) {
       return this.scriptLoadPromise
     }
 
-    // If the script is already in the DOM and window.adobeIMS exists, resolve immediately
-    if (typeof window.adobeIMS !== 'undefined') {
+    // Already loaded — factory exists
+    if (typeof window.adobeImsFactory !== 'undefined') {
       this.scriptLoadPromise = Promise.resolve()
       return this.scriptLoadPromise
     }
 
-    this.scriptLoadPromise = new Promise((resolve, reject) => {
-      // Don't add the script twice if it's already in the DOM (e.g. from index.html)
-      const existing = document.getElementById(IMS_SCRIPT_ID)
+    this.scriptLoadPromise = new Promise<void>((resolve, reject) => {
+      // Avoid duplicate script tags
+      const existing = document.getElementById(IMS_SCRIPT_ID) as HTMLScriptElement | null
       if (existing) {
-        // Script tag exists but adobeIMS isn't ready yet — wait for its load event
-        // If it already fired, resolve immediately
-        if (typeof window.adobeIMS !== 'undefined') {
+        if (typeof window.adobeImsFactory !== 'undefined') {
           resolve()
           return
         }
-        existing.addEventListener('load', () => resolve())
+        existing.addEventListener('load', () => {
+          this.waitForFactory(resolve, reject)
+        })
         existing.addEventListener('error', () =>
           reject(new Error(`Failed to load Adobe IMS library from: ${IMS_LIB_URL}`))
         )
         return
       }
 
-      console.log('🔐 Loading Adobe IMS library...')
+      console.log('🔐 Loading Adobe IMS library…')
       const script = document.createElement('script')
       script.id = IMS_SCRIPT_ID
       script.src = IMS_LIB_URL
       script.type = 'text/javascript'
 
       script.onload = () => {
-        if (typeof window.adobeIMS === 'undefined') {
-          // Some environments may set up adobeIMS asynchronously; poll briefly
-          let attempts = 0
-          const poll = setInterval(() => {
-            attempts++
-            if (typeof window.adobeIMS !== 'undefined') {
-              clearInterval(poll)
-              resolve()
-            } else if (attempts >= 20) {
-              clearInterval(poll)
-              reject(new Error('Adobe IMS library loaded but window.adobeIMS was not created'))
-            }
-          }, 100)
-        } else {
-          resolve()
-        }
+        this.waitForFactory(resolve, reject)
       }
 
       script.onerror = () => {
         reject(new Error(
           `Failed to load Adobe IMS library from: ${IMS_LIB_URL}\n` +
-          'This may be caused by:\n' +
-          '  - No internet connection (the library is loaded from Adobe\'s CDN)\n' +
-          '  - A Content Security Policy blocking the script\n' +
-          '  - The CDN being unreachable in your environment'
+          'Possible causes:\n' +
+          '  • No internet connection (the library is loaded from Adobe's CDN)\n' +
+          '  • A Content Security Policy blocking the script\n' +
+          '  • The CDN being unreachable in your environment'
         ))
       }
 
@@ -173,22 +188,53 @@ class ImsAuthService {
     return this.scriptLoadPromise
   }
 
+  /**
+   * After the script's onload fires, verify that `window.adobeImsFactory`
+   * exists.  It should be synchronous but we poll briefly just in case.
+   */
+  private waitForFactory(
+    resolve: () => void,
+    reject: (err: Error) => void
+  ): void {
+    if (typeof window.adobeImsFactory !== 'undefined') {
+      resolve()
+      return
+    }
+    // Extremely unlikely — but poll a handful of times
+    let attempts = 0
+    const poll = setInterval(() => {
+      attempts++
+      if (typeof window.adobeImsFactory !== 'undefined') {
+        clearInterval(poll)
+        resolve()
+      } else if (attempts >= 20) {
+        clearInterval(poll)
+        reject(new Error(
+          'Adobe IMS script loaded but window.adobeImsFactory was not created. ' +
+          'The CDN may have returned an error page instead of JavaScript.'
+        ))
+      }
+    }, 100)
+  }
+
   // ============================================================================
   // Public API
   // ============================================================================
 
   /**
-   * Check whether window.adobeIMS is currently available.
+   * Whether the IMS instance (window.adobeIMS) is available.
    */
   isLibraryAvailable(): boolean {
     return typeof window !== 'undefined' && typeof window.adobeIMS !== 'undefined'
   }
 
   /**
-   * Load the IMS library (if needed) and initialize it with app credentials.
-   * Safe to call multiple times — subsequent calls return the cached Promise.
+   * Load the IMS library (if needed), create the IMS instance, and
+   * initialize it.  Safe to call many times — subsequent calls return
+   * the cached Promise.
    *
-   * @param onAccessToken  Called with a populated IMS object once a token is available.
+   * @param onAccessToken  Called with a populated IMS object when a
+   *                        token becomes available.
    */
   initialize(onAccessToken?: (ims: IMS) => void): Promise<void> {
     if (this.initializePromise) {
@@ -196,60 +242,67 @@ class ImsAuthService {
     }
 
     this.initializePromise = this.loadScript().then(() => {
-      return new Promise<void>((resolve, reject) => {
-        const config: AdobeIMSConfig = {
+      return new Promise<void>((resolve) => {
+        // Build the config that imslib expects (same shape as window.adobeid)
+        const imsConfig: AdobeIdConfig = {
           client_id: env.IMS_CLIENT_ID,
           scope: env.IMS_SCOPES,
           environment: env.IMS_ENV,
+          useLocalStorage: false,
+          logsEnabled: env.isDevelopment(),
 
-          // Called when IMS is ready (after initialize completes its async setup)
+          // Called when initialization finishes (always fires, even without a session)
           onReady: () => {
             console.log('✅ IMS library ready')
+            // Check if there is already a valid session
+            this.checkExistingSession(onAccessToken)
             resolve()
           },
 
-          // Called when a valid access token is available (sign-in redirect or existing session)
+          // Fires when a valid access token is received (sign-in redirect or refresh)
           onAccessToken: (tokenObj: AdobeIMSTokenObject) => {
             console.log('✅ IMS: Access token received')
             this.handleTokenReceived(tokenObj, onAccessToken)
           },
 
-          // Called when a re-authentication token is obtained
+          // Fires on re-authentication
           onReauthAccessToken: (tokenObj: AdobeIMSTokenObject) => {
             console.log('🔄 IMS: Re-auth access token received')
             this.handleTokenReceived(tokenObj, onAccessToken)
           },
 
-          // Called when the current token has expired
+          // Fires when the current token expires
           onAccessTokenHasExpired: () => {
             console.warn('⚠️ IMS: Access token expired')
             this.currentIms = null
             this.notifyListeners(null)
           },
 
-          // Called when the user signs out
-          onLogout: () => {
-            console.log('🚪 IMS: User signed out')
-            this.currentIms = null
-            this.notifyListeners(null)
-          },
-
-          onError: (type: string, message: string) => {
-            console.error(`❌ IMS Error [${type}]:`, message)
-            // Resolve instead of reject so the app can still render in an unauthenticated state
+          // Fires on errors during initialization
+          onError: (type: string, message: string, details?: any) => {
+            console.error(`❌ IMS Error [${type}]:`, message, details ?? '')
+            // Resolve so the app renders in an unauthenticated state
             resolve()
           }
         }
 
-        console.log('🔐 Initializing Adobe IMS...')
-        console.log(`   client_id : ${config.client_id}`)
-        console.log(`   scope     : ${config.scope}`)
-        console.log(`   environment: ${config.environment}`)
+        console.log('🔐 Initializing Adobe IMS…')
+        console.log(`   client_id   : ${imsConfig.client_id}`)
+        console.log(`   scope       : ${imsConfig.scope}`)
+        console.log(`   environment : ${imsConfig.environment}`)
 
         try {
-          window.adobeIMS!.initialize(config)
+          // Create the IMS instance via the factory — this sets window.adobeIMS
+          const imsInstance = window.adobeImsFactory!.createIMSLib(imsConfig, 'adobeIMS')
+          console.log(`   imslib ver  : ${imsInstance.version}`)
+
+          // Tell the library to process any token in the URL fragment, check
+          // for existing sessions, etc.
+          imsInstance.initialize()
         } catch (err) {
-          reject(err)
+          console.error('❌ IMS: Failed to create/initialize instance:', err)
+          // Still resolve so app renders unauthenticated
+          resolve()
         }
       })
     })
@@ -258,9 +311,30 @@ class ImsAuthService {
   }
 
   /**
-   * Check if a valid token is currently cached by the IMS library.
-   * Call after initialize() resolves.
-   * Returns null if the user is not signed in.
+   * Check if the user already has a valid session after IMS is ready.
+   */
+  private async checkExistingSession(callback?: (ims: IMS) => void): Promise<void> {
+    if (!this.isLibraryAvailable()) return
+
+    try {
+      const isSignedIn = window.adobeIMS!.isSignedInUser()
+      if (!isSignedIn) {
+        console.log('ℹ️ IMS: No existing session')
+        return
+      }
+
+      const tokenObj = window.adobeIMS!.getAccessToken()
+      if (!tokenObj) return
+
+      console.log('✅ IMS: Existing session found')
+      await this.handleTokenReceived(tokenObj, callback)
+    } catch (err) {
+      console.warn('⚠️ IMS: Error checking existing session', err)
+    }
+  }
+
+  /**
+   * Get the current IMS state (fetches profile if needed).
    */
   async getCurrentIms(): Promise<IMS | null> {
     if (!this.isLibraryAvailable()) return null
@@ -270,13 +344,6 @@ class ImsAuthService {
 
     const tokenObj = window.adobeIMS!.getAccessToken()
     if (!tokenObj) return null
-
-    // Check the token hasn't expired
-    const expireDate = new Date(tokenObj.expire)
-    if (expireDate <= new Date()) {
-      console.warn('⚠️ IMS: Cached token has expired')
-      return null
-    }
 
     const profile = await this.fetchProfile()
     const ims: IMS = {
@@ -289,22 +356,24 @@ class ImsAuthService {
   }
 
   /**
-   * Redirect to Adobe sign-in. Requires the library to be initialized first.
-   * If the library isn't ready yet, waits for it then signs in.
+   * Redirect to Adobe sign-in.  Waits for the library if not ready yet.
    */
   signIn(): void {
     if (this.isLibraryAvailable()) {
-      console.log('🔐 IMS: Redirecting to sign in...')
+      console.log('🔐 IMS: Redirecting to sign in…')
       window.adobeIMS!.signIn()
       return
     }
 
-    // Library not available yet — try initializing first
-    console.log('⏳ IMS: Library not yet ready, waiting to sign in...')
+    console.log('⏳ IMS: Library not yet ready, waiting to sign in…')
     this.initialize()
       .then(() => {
-        console.log('🔐 IMS: Now redirecting to sign in...')
-        window.adobeIMS!.signIn()
+        if (this.isLibraryAvailable()) {
+          console.log('🔐 IMS: Now redirecting to sign in…')
+          window.adobeIMS!.signIn()
+        } else {
+          console.error('❌ IMS: Library still not available after initialize')
+        }
       })
       .catch((err) => {
         console.error('❌ IMS: Could not load library for sign in:', err)
@@ -320,25 +389,24 @@ class ImsAuthService {
    */
   signOut(): void {
     if (!this.isLibraryAvailable()) {
-      console.error('❌ IMS library not available - cannot sign out')
+      console.error('❌ IMS library not available — cannot sign out')
       return
     }
-    console.log('🚪 IMS: Signing out...')
+    console.log('🚪 IMS: Signing out…')
     this.currentIms = null
     this.notifyListeners(null)
     window.adobeIMS!.signOut()
   }
 
   /**
-   * Get the most recently received IMS state (no async fetch).
+   * Get the most recently received IMS state (synchronous, no fetch).
    */
   getCachedIms(): IMS | null {
     return this.currentIms
   }
 
   /**
-   * Subscribe to auth state changes (sign in / sign out / expiry).
-   * Returns an unsubscribe function.
+   * Subscribe to auth state changes.  Returns an unsubscribe function.
    */
   onAuthStateChange(listener: AuthStateListener): () => void {
     this.listeners.push(listener)
