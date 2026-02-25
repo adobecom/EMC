@@ -146,6 +146,17 @@ export function getApiHost(service: 'esp' | 'esl', overrideEnv?: Environment): s
 }
 
 /**
+ * Get the `espenv` query parameter value to append to event preview URLs.
+ * This tells the event detail page which ESP backend to call.
+ * Returns null for production (parameter should be omitted entirely).
+ */
+export function getEspEnvParam(): string | null {
+  const currentEnv = getCurrentEnvironment()
+  if (currentEnv === ENVIRONMENTS.PROD) return null
+  return currentEnv
+}
+
+/**
  * Check if running in local development (localhost)
  */
 export function isLocalDevelopment(): boolean {

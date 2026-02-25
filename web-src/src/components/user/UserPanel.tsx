@@ -12,11 +12,14 @@ import {
   ActionButton,
   MenuTrigger,
   Menu,
-  Item
+  Item,
+  Section
 } from '@adobe/react-spectrum'
 import UserIcon from '@spectrum-icons/workflow/User'
 import InfoIcon from '@spectrum-icons/workflow/Info'
+import LogOut from '@spectrum-icons/workflow/LogOut'
 import { IMS } from '../../types'
+import { useAuth } from '../../contexts/AuthContext'
 
 interface UserPanelProps {
   ims: IMS
@@ -25,6 +28,7 @@ interface UserPanelProps {
 
 export const UserPanel: React.FC<UserPanelProps> = ({ ims, compact = false }) => {
   const navigate = useNavigate()
+  const { signOut, authMode } = useAuth()
 
   // Extract user info from IMS
   const userName = ims.profile?.name || 'Guest User'
@@ -42,6 +46,14 @@ export const UserPanel: React.FC<UserPanelProps> = ({ ims, compact = false }) =>
 
   const handleViewProfile = () => {
     navigate('/profile')
+  }
+
+  const handleMenuAction = (key: React.Key) => {
+    if (key === 'profile') {
+      handleViewProfile()
+    } else if (key === 'signout') {
+      signOut()
+    }
   }
 
   // If no IMS profile, show minimal panel
@@ -102,19 +114,34 @@ export const UserPanel: React.FC<UserPanelProps> = ({ ims, compact = false }) =>
           </Flex>
         </ActionButton>
 
-        <Menu onAction={(key) => {
-          if (key === 'profile') {
-            handleViewProfile()
-          }
-        }}>
-          <Item key="profile" textValue="View Profile">
-            <UserIcon />
-            <Text>View Profile</Text>
-          </Item>
-          <Item key="info" textValue="User Info">
-            <InfoIcon />
-            <Text>User ID: {userId.substring(0, 12)}...</Text>
-          </Item>
+        <Menu onAction={handleMenuAction}>
+          <Section>
+            <Item key="profile" textValue="View Profile">
+              <UserIcon />
+              <Text>View Profile</Text>
+            </Item>
+            <Item key="info" textValue="User Info">
+              <InfoIcon />
+              <Text>User ID: {userId.substring(0, 12)}...</Text>
+            </Item>
+          </Section>
+          {/* Sign Out is only meaningful in standalone mode; in ExC Shell the shell handles it */}
+          {authMode === 'standalone' ? (
+            <Section>
+              <Item key="signout" textValue="Sign Out">
+                <LogOut />
+                <Text>Sign Out</Text>
+              </Item>
+            </Section>
+          ) : (
+            // Empty section to satisfy Menu children type - ExC Shell manages sign-out
+            <Section aria-label="shell-mode">
+              <Item key="shell-info" textValue="Managed by Experience Cloud">
+                <InfoIcon />
+                <Text>Sign out via Experience Cloud</Text>
+              </Item>
+            </Section>
+          ) as any}
         </Menu>
       </MenuTrigger>
 
@@ -132,4 +159,3 @@ export const UserPanel: React.FC<UserPanelProps> = ({ ims, compact = false }) =>
     </View>
   )
 }
-

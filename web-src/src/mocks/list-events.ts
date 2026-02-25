@@ -7313,7 +7313,7 @@ export const mockEventsList: EventApiResponse[] = [
           "en-US": {
               "cta": [
                   {
-                      "url": "https://www.adobe.com/events/create-now/create-now-chicago/chicago/il/us/2025-07-24.html?previewMode=true&cachebuster=1749592711538&timing=1753405199990",
+                      "url": "https://www.adobe.com/events/create-now/create-now-chicago/chicago/il/us/2025-07-24.html?cachebuster=1749592711538&timing=1753405199990",
                       "label": "Stay for Create Now (registration required)"
                   }
               ],
