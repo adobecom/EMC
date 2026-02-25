@@ -19,7 +19,6 @@ import {
   ApiResponse,
   ApiListResponse
 } from '../types/domain'
-import { getSeriesListMock, getEventsListMock } from '../mocks'
 import { tokenStorage } from './tokenStorage'
 import { constructRequestHeaders, safeFetch } from './requestHelpers'
 import { getCurrentEnvironment, getApiHost, SUPPORTED_CLOUDS } from '../config/constants'
@@ -455,60 +454,39 @@ class ApiService {
   // ============================================================================
 
   /**
-   * Get series list from ESP API with token authentication and mock fallback
+   * Get series list from ESP API with token authentication
    */
   async getSeriesList(): Promise<SeriesApiResponse[]> {
     const token = this.getAuthToken()
-    
+
     if (!token) {
-      console.warn('⚠️ No valid authentication token. Using mock data.')
-      console.log('💡 Click the "Dev Token" button to add a token for real API access')
-      
-      try {
-        const data = await getSeriesListMock()
-        console.log('📦 Using mock series data:', data.length, 'items')
-        return data
-      } catch (error) {
-        console.error('Error fetching mock series:', error)
-        return []
-      }
+      console.warn('⚠️ No valid authentication token. Add a Dev Token for API access.')
+      return []
     }
 
-    try {
-      const env = getCurrentEnvironment()
-      console.log(`🔄 Fetching series from real API (${env} environment)...`)
-      
-      const headers = constructRequestHeaders(token, 'GET')
-      const host = getApiHost('esp', env)
-      const url = `${host}/v1/series`
+    const env = getCurrentEnvironment()
+    console.log(`🔄 Fetching series from real API (${env} environment)...`)
 
-      const response = await safeFetch(url, {
-        method: 'GET',
-        headers: headers as any
-      })
+    const headers = constructRequestHeaders(token, 'GET')
+    const host = getApiHost('esp', env)
+    const url = `${host}/v1/series`
 
-      const data = await response.json()
+    const response = await safeFetch(url, {
+      method: 'GET',
+      headers: headers as any
+    })
 
-      if (!response.ok) {
-        console.error(`❌ API Error: ${response.status}`, data)
-        throw new Error(`API returned ${response.status}`)
-      }
+    const data = await response.json()
 
-      const series = data.series || []
-      console.log('✅ Successfully loaded series from API:', series.length, 'items')
-      
-      return series
-    } catch (error) {
-      console.error('❌ Error fetching series from API:', error)
-      console.log('📦 Falling back to mock data')
-      
-      try {
-        return await getSeriesListMock()
-      } catch (mockError) {
-        console.error('Error fetching mock series:', mockError)
-        return []
-      }
+    if (!response.ok) {
+      console.error(`❌ API Error: ${response.status}`, data)
+      throw new Error(`API returned ${response.status}`)
     }
+
+    const series = data.series || []
+    console.log('✅ Successfully loaded series from API:', series.length, 'items')
+
+    return series
   }
 
   async createSeriesExternal(seriesData: any): Promise<any | ErrorResponse> {
@@ -679,60 +657,39 @@ class ApiService {
   // ============================================================================
 
   /**
-   * Get events list from ESP API with token authentication and mock fallback
+   * Get events list from ESP API with token authentication
    */
   async getEventsList(): Promise<EventApiResponse[]> {
     const token = this.getAuthToken()
-    
+
     if (!token) {
-      console.warn('⚠️ No valid authentication token. Using mock data.')
-      console.log('💡 Click the "Dev Token" button to add a token for real API access')
-      
-      try {
-        const data = await getEventsListMock()
-        console.log('📦 Using mock events data:', data.length, 'items')
-        return data
-      } catch (error) {
-        console.error('Error fetching mock events:', error)
-        return []
-      }
+      console.warn('⚠️ No valid authentication token. Add a Dev Token for API access.')
+      return []
     }
 
-    try {
-      const env = getCurrentEnvironment()
-      console.log(`🔄 Fetching events from real API (${env} environment)...`)
-      
-      const headers = constructRequestHeaders(token, 'GET')
-      const host = getApiHost('esp', env)
-      const url = `${host}/v1/events`
+    const env = getCurrentEnvironment()
+    console.log(`🔄 Fetching events from real API (${env} environment)...`)
 
-      const response = await safeFetch(url, {
-        method: 'GET',
-        headers: headers as any
-      })
+    const headers = constructRequestHeaders(token, 'GET')
+    const host = getApiHost('esp', env)
+    const url = `${host}/v1/events`
 
-      const data = await response.json()
+    const response = await safeFetch(url, {
+      method: 'GET',
+      headers: headers as any
+    })
 
-      if (!response.ok) {
-        console.error(`❌ API Error: ${response.status}`, data)
-        throw new Error(`API returned ${response.status}`)
-      }
+    const data = await response.json()
 
-      const events = data.events || []
-      console.log('✅ Successfully loaded events from API:', events.length, 'items')
-      
-      return events
-    } catch (error) {
-      console.error('❌ Error fetching events from API:', error)
-      console.log('📦 Falling back to mock data')
-      
-      try {
-        return await getEventsListMock()
-      } catch (mockError) {
-        console.error('Error fetching mock events:', mockError)
-        return []
-      }
+    if (!response.ok) {
+      console.error(`❌ API Error: ${response.status}`, data)
+      throw new Error(`API returned ${response.status}`)
     }
+
+    const events = data.events || []
+    console.log('✅ Successfully loaded events from API:', events.length, 'items')
+
+    return events
   }
 
   async createEventExternal(payload: any, locale: string): Promise<any | ErrorResponse> {
