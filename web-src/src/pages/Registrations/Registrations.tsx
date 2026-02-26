@@ -19,7 +19,7 @@ import { calculateAttendeeStats } from '../../types/attendee'
 import { apiService } from '../../services/api'
 import { useRsvpConfig } from '../../hooks/useRsvpConfig'
 import { IMS } from '../../types'
-import { LoadingSpinner } from '../../components/shared'
+import { BlurredLoadingOverlay } from '../../components/shared'
 import { useToast as useToastContext } from '../../contexts'
 import { EventInfoComponent } from './EventInfoComponent'
 import { EventSelectorComponent } from './EventSelectorComponent'
@@ -246,13 +246,16 @@ export const Registrations: React.FC<RegistrationsProps> = ({ ims: _ims }) => {
 
   // ---- Render ----
 
-  if (isLoadingEvents) {
-    return (
-      <View padding="size-400">
-        <LoadingSpinner message="Loading events..." />
-      </View>
-    )
-  }
+  const isLoading = isLoadingEvents || isLoadingAttendees || isLoadingCampaigns || isLoadingConfig
+  const loadingMessage = isLoadingEvents
+    ? 'Loading events...'
+    : isLoadingConfig
+      ? 'Loading configuration...'
+      : isLoadingAttendees
+        ? 'Loading attendees...'
+        : isLoadingCampaigns
+          ? 'Loading campaigns...'
+          : 'Loading...'
 
   return (
     <View width="100%" padding="size-400" UNSAFE_style={{ boxSizing: 'border-box' }}>
@@ -302,7 +305,6 @@ export const Registrations: React.FC<RegistrationsProps> = ({ ims: _ims }) => {
           <EventInfoComponent
             event={selectedEvent}
             stats={stats}
-            isLoading={isLoadingAttendees}
           />
         </View>
       )}
@@ -325,8 +327,6 @@ export const Registrations: React.FC<RegistrationsProps> = ({ ims: _ims }) => {
                   selectedEventId={selectedEventId}
                   attendees={attendees}
                   columnConfig={columnConfig}
-                  isLoadingAttendees={isLoadingAttendees}
-                  isLoadingConfig={isLoadingConfig}
                   onAttendeesRefresh={handleAttendeesRefresh}
                 />
               </View>
@@ -337,7 +337,6 @@ export const Registrations: React.FC<RegistrationsProps> = ({ ims: _ims }) => {
                   eventId={selectedEventId}
                   event={selectedEvent}
                   campaigns={campaigns}
-                  isLoading={isLoadingCampaigns}
                   onCreateCampaign={handleCreateCampaign}
                   onUpdateCampaign={handleUpdateCampaign}
                   onDeleteCampaign={handleDeleteCampaign}
@@ -347,6 +346,12 @@ export const Registrations: React.FC<RegistrationsProps> = ({ ims: _ims }) => {
           </TabPanels>
         </Tabs>
       </View>
+
+      <BlurredLoadingOverlay
+        visible={isLoading}
+        message={loadingMessage}
+        ariaLabel={loadingMessage.replace(/\.\.\.$/, '')}
+      />
     </View>
   )
 }

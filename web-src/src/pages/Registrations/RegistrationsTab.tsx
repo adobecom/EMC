@@ -20,8 +20,6 @@ interface RegistrationsTabProps {
   selectedEventId: string
   attendees: Attendee[]
   columnConfig: AttendeeColumnConfig[]
-  isLoadingAttendees: boolean
-  isLoadingConfig: boolean
   onAttendeesRefresh: () => Promise<void>
 }
 
@@ -37,9 +35,7 @@ interface RegistrationsTabProps {
 export const RegistrationsTab: React.FC<RegistrationsTabProps> = ({
   selectedEventId,
   attendees,
-  columnConfig,
-  isLoadingAttendees,
-  isLoadingConfig
+  columnConfig
 }) => {
   // State
   const [filters, setFilters] = useState<AttendeeFilters>({})
@@ -159,7 +155,6 @@ export const RegistrationsTab: React.FC<RegistrationsTabProps> = ({
             selectedIds={selectedIds}
             onSelectionChange={setSelectedIds}
             onAttendeeAction={handleAttendeeAction}
-            isLoading={isLoadingAttendees || isLoadingConfig}
             emptyMessage={
               !selectedEventId 
                 ? 'Select an event to view attendees'

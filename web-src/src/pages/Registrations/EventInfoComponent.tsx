@@ -17,7 +17,6 @@ import { useSafeState } from '../../hooks'
 interface EventInfoComponentProps {
   event: EventApiResponse | null
   stats: AttendeeStats
-  isLoading?: boolean
 }
 
 interface EventImage {
