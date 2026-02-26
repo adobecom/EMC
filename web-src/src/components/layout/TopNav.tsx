@@ -124,10 +124,14 @@ const TopNav: React.FC<TopNavProps> = ({ ims }) => {
           {showSignIn ? (
             /* Standalone mode, not signed in: show a Sign In button */
             <Button
-              variant="accent"
+              variant="primary"
+              style="fill"
               onPress={signIn}
+              UNSAFE_style={{ fontSize: 12, padding: '4px 12px' }}
             >
-              <Login />
+              <Login 
+                UNSAFE_style={{ marginRight: 4 }}
+              />
               <span>Sign In</span>
             </Button>
           ) : (
