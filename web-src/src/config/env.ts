@@ -14,7 +14,7 @@
 export type EnvironmentTier = 'dev' | 'stage' | 'prod'
 
 /**
- * Hostnames where dev token functionality is allowed
+ * Hostnames where dev token functionality is allowed (when ?devtokenmode=true is present)
  * Includes localhost and all dev/developer namespace workspaces
  */
 const DEV_TOKEN_ALLOWED_HOSTNAMES = [
@@ -27,6 +27,18 @@ const DEV_TOKEN_ALLOWED_HOSTNAMES = [
   '14257-emc-shameeb.adobeio-static.net',
   '14257-emc-rkhan.adobeio-static.net',
 ]
+
+/**
+ * Whether the dev token system is enabled.
+ * True only when (1) hostname is in the allowlist AND (2) URL has ?devtokenmode=true.
+ * Use this to show the Dev Token UI and to use stored dev tokens for API auth.
+ */
+export function isDevTokenModeEnabled(): boolean {
+  if (typeof window === 'undefined') return false
+  const hostname = window.location.hostname
+  const devTokenMode = new URLSearchParams(window.location.search).get('devtokenmode') === 'true'
+  return DEV_TOKEN_ALLOWED_HOSTNAMES.includes(hostname) && devTokenMode
+}
 
 /**
  * Environment configuration
@@ -73,12 +85,15 @@ export const env = {
   // Environment mode
   NODE_ENV: process.env.NODE_ENV || 'development',
   
-  // Check if in development mode (localhost or dev instances)
-  // This controls whether dev token UI is shown
+  // Check if on a development host (localhost or dev instances).
+  // For dev token UI and API usage, use isDevTokenModeEnabled() which also requires ?devtokenmode=true.
   isDevelopment: () => {
     const hostname = window.location.hostname
     return DEV_TOKEN_ALLOWED_HOSTNAMES.includes(hostname)
   },
+
+  /** Dev token system only active when hostname is allowed AND URL has ?devtokenmode=true */
+  isDevTokenModeEnabled,
   
   // Check if running on localhost specifically
   isLocalhost: () => {

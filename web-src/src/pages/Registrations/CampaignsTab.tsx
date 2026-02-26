@@ -35,7 +35,6 @@ interface CampaignsTabProps {
   eventId: string
   event: EventApiResponse | null
   campaigns: Campaign[]
-  isLoading: boolean
   onCreateCampaign: (data: CampaignFormData) => Promise<void>
   onUpdateCampaign: (campaignId: string, data: CampaignFormData, modificationTime: number) => Promise<void>
   onDeleteCampaign: (campaignId: string) => Promise<void>
@@ -45,7 +44,6 @@ export const CampaignsTab: React.FC<CampaignsTabProps> = ({
   eventId,
   event,
   campaigns,
-  isLoading,
   onCreateCampaign,
   onUpdateCampaign,
   onDeleteCampaign,
@@ -281,13 +279,8 @@ export const CampaignsTab: React.FC<CampaignsTabProps> = ({
           data={campaigns}
           getItemKey={(item) => item.campaignId}
           pageSize={10}
-          isLoading={isLoading}
           emptyState={<EmptyCampaignsState onCreateClick={handleCreateClick} />}
         />
-      ) : isLoading ? (
-        <View padding="size-400">
-          <Text>Loading campaigns...</Text>
-        </View>
       ) : (
         <EmptyCampaignsState onCreateClick={handleCreateClick} />
       )}

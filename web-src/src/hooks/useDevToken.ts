@@ -24,9 +24,8 @@ export function useDevToken(): UseDevTokenReturn {
   const [token, setToken] = useState<string | null>(null)
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [isDevMode] = useState(() => {
-    // Check if running in development mode (localhost or dev instances)
-    // Note: This ensures dev token UI never shows in Experience Cloud Shell
-    return env.isDevelopment()
+    // Dev token UI only when ?devtokenmode=true on an allowed host
+    return env.isDevTokenModeEnabled()
   })
 
   useEffect(() => {

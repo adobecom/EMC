@@ -85,7 +85,6 @@ EMC/
 │       ├── utils/                # dataFilters, deduplication, formPersistence,
 │       │                         #   loadGooglePlaces, socialPlatformDetector
 │       ├── styles/               # designSystem.ts (tokens, layout patterns)
-│       └── mocks/                # list-events, list-series mock data
 │
 ├── docs/                        # Architecture and usage docs (⚠ some outdated)
 │   ├── backend-reference/       # openapi.json (Adobe Event Service API spec)

@@ -26,9 +26,8 @@ import { SeriesSpeaker, SocialLinkFormData } from '../../types/domain'
 import { RichTextEditor, ImageUploader } from '../../components/shared'
 import { TYPOGRAPHY, FLEX_GAP } from '../../styles/designSystem'
 import { detectSocialPlatform, isValidUrl, toApiSocialLink } from '../../utils/socialPlatformDetector'
-import { cachedApi } from '../../services/api'
+import { cachedApi, apiService } from '../../services/api'
 import { uploadImage, UploadTracker } from '../../services/requestHelpers'
-import { tokenStorage } from '../../services/tokenStorage'
 import { getCurrentEnvironment, getApiHost } from '../../config/constants'
 
 interface SpeakerPickerDialogProps {
@@ -154,7 +153,7 @@ export const SpeakerPickerDialog: React.FC<SpeakerPickerDialogProps> = ({
     altText: string
   ): Promise<{ imageUrl: string; imageId: string } | null> => {
     try {
-      const token = tokenStorage.getValidToken()
+      const token = apiService.getAuthTokenForExternalUse()
       if (!token) throw new Error('No authentication token available')
 
       const env = getCurrentEnvironment()

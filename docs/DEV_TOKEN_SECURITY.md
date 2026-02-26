@@ -2,9 +2,13 @@
 
 ## Overview
 
-The EMC application uses a **two-path bootstrap architecture** that ensures the dev token system only activates on localhost and approved dev instances, and never interferes with real IMS sessions in the Adobe Experience Cloud Shell.
+The EMC application uses a **two-path bootstrap architecture** that ensures the dev token system only activates when **explicitly enabled** and never interferes with real IMS sessions in the Adobe Experience Cloud Shell.
 
-**Approved development environments:**
+The dev token system is enabled **only when both** of the following are true:
+1. **URL has `?devtokenmode=true`** — explicit opt-in; without it, the dev token UI is hidden and stored dev tokens are not used for API calls.
+2. **Host is in the allowlist** — one of the approved development hostnames below.
+
+**Approved development hostnames** (dev token still requires `?devtokenmode=true`):
 - `localhost` / `127.0.0.1`
 - `14257-emc-dev.adobeio-static.net`
 - `14257-emc-qiyundai.adobeio-static.net`
@@ -71,62 +75,47 @@ function bootstrapInExcShell(): void {
 - ✅ Org switching supported
 - ✅ User profile available
 
-### Path 2: Localhost Development
+### Path 2: Standalone (e.g. localhost)
 
-**File**: `web-src/src/index.tsx` → `bootstrapRaw()`
+**File**: `web-src/src/index.tsx` → `bootstrapStandalone()`
 
-```typescript
-function bootstrapRaw(): void {
-  const mockRuntime: RuntimeType = { on: () => {}, done: () => {} }
-  
-  // Check for stored dev token
-  const storedToken = tokenStorage.getValidToken()
-  
-  const mockIms: IMS = {
-    token: storedToken || undefined  // ← Dev token from localStorage
-  }
-  
-  ReactDOM.render(
-    <App runtime={mockRuntime} ims={mockIms} />,
-    document.getElementById('root')
-  )
-}
-```
+When the ExC runtime is not available (e.g. localhost), the app uses standalone IMS auth. The **dev token system** (button + use of stored token for API calls) is only active when the URL has **`?devtokenmode=true`** and the host is in the allowlist. When enabled:
+
+- ApiService and components use `tokenStorage.getValidToken()` (via `getAuthToken()` / `getAuthTokenForExternalUse()`) when a stored dev token exists.
+- Dev token button **appears** in top nav; token management UI is available.
 
 **Characteristics:**
-- ✅ Uses dev token from localStorage
-- ✅ Only runs when ExC runtime fails to load (i.e., on localhost)
-- ✅ Dev token button **appears** in top nav
-- ✅ Token management UI available
+- ✅ When `?devtokenmode=true`: dev token from localStorage can be used for API auth
+- ✅ Only runs when ExC runtime fails to load (e.g. on localhost)
+- ✅ Dev token button **appears** only when `?devtokenmode=true` on an allowed host
+- ✅ Token management UI available in that mode
 - ✅ Suitable for local development
-- ⚠️ No org switching
-- ⚠️ No user profile
+- ⚠️ No org switching when using dev token
+- ⚠️ No user profile when using dev token
 
 ## Security Guarantees
 
 ### 1. Development Environment UI
 
-The dev token button visibility is controlled by hostname checking against an allowlist:
+The dev token button visibility and use of stored dev tokens for API auth are controlled by `isDevTokenModeEnabled()`: hostname must be in the allowlist **and** the URL must include `?devtokenmode=true`:
 
 ```typescript
 // web-src/src/config/env.ts
 
-const DEV_TOKEN_ALLOWED_HOSTNAMES = [
-  'localhost',
-  '127.0.0.1',
-  // Main dev instance
-  '14257-emc-dev.adobeio-static.net',
-  // Developer namespace workspaces
-  '14257-emc-qiyundai.adobeio-static.net',
-  '14257-emc-shameeb.adobeio-static.net',
-  '14257-emc-rkhan.adobeio-static.net',
-]
+const DEV_TOKEN_ALLOWED_HOSTNAMES = [ ... ]
 
-// Used by DevTokenButton and useDevToken hook
-env.isDevelopment() // true if hostname is in the allowlist
+// Dev token system only active when BOTH conditions hold:
+export function isDevTokenModeEnabled(): boolean {
+  const hostname = window.location.hostname
+  const devTokenMode = new URLSearchParams(window.location.search).get('devtokenmode') === 'true'
+  return DEV_TOKEN_ALLOWED_HOSTNAMES.includes(hostname) && devTokenMode
+}
+
+// Used by DevTokenButton, useDevToken hook, and ApiService.getAuthToken()
+env.isDevTokenModeEnabled()
 ```
 
-**Result**: Dev token UI only shows on localhost and approved dev instances, **never on staging or production**.
+**Result**: Dev token UI and stored-token API usage only apply when the user opens the app with `?devtokenmode=true` on an allowed host — **never on staging or production**, and not on localhost unless the parameter is present.
 
 ### 2. Separate Bootstrap Paths
 
@@ -187,6 +176,7 @@ ims.token = storedToken || undefined  // From localStorage only
 ┌───────────────────────────────────────────────────────────────┐
 │                        Localhost                               │
 │  (localhost:3000 or 127.0.0.1:3000)                           │
+│  ⚠️ Dev token only if URL has ?devtokenmode=true               │
 └────────────────────────┬──────────────────────────────────────┘
                          │
                          ▼
@@ -197,32 +187,25 @@ ims.token = storedToken || undefined  // From localStorage only
                          │
                          ▼
               ┌──────────────────────┐
-              │   bootstrapRaw()     │
+              │ bootstrapStandalone()│
               └──────────┬───────────┘
                          │
                          ▼
               ┌──────────────────────┐
-              │  Check localStorage  │
-              │  for dev token       │
+              │ ?devtokenmode=true   │
+              │ in URL?              │
               └──────────┬───────────┘
                          │
           ┌──────────────┴──────────────┐
           │                             │
-    ✅ Found                       ❌ Not Found
+        YES ✅                        NO ❌
           │                             │
           ▼                             ▼
 ┌─────────────────┐          ┌────────────────────┐
-│  Use Dev Token  │          │  No Token          │
-│  ✅ API Ready   │          │  ⚠️ APIs will fail │
+│  Show Dev Token │          │  No Dev Token UI   │
+│  UI; use stored │          │  Stored token not  │
+│  token if any   │          │  used for API calls │
 └─────────────────┘          └────────────────────┘
-          │                             │
-          └──────────────┬──────────────┘
-                         │
-                         ▼
-              ┌──────────────────────┐
-              │  Show Dev Token UI   │
-              │  🔑 Button visible   │
-              └──────────────────────┘
 ```
 
 ## Component Token Usage
@@ -263,11 +246,14 @@ const response = await apiService.getEvents()
 # Start app on localhost
 npm run dev
 
+# Open with dev token mode enabled:
+# http://localhost:3000/?devtokenmode=true
+
 # Expected:
-# - bootstrapRaw() called
+# - bootstrapStandalone() path (no ExC Shell)
 # - Dev Token button visible
 # - Can add/manage tokens
-# - Token from localStorage used
+# - Token from localStorage used for API calls when present
 ```
 
 ### Test 2: Experience Cloud Shell ✅
@@ -284,16 +270,28 @@ aio app deploy
 # - localStorage dev token ignored
 ```
 
-### Test 3: Deployed App with ?devMode=true ✅
+### Test 3: Localhost without ?devtokenmode=true ✅
 
 ```bash
-# Try to force dev mode on deployed app
-# Visit: https://experience.adobe.com/?devMode=true#/@org/app-id
+# Open localhost WITHOUT the query param
+# Visit: http://localhost:3000/  (no ?devtokenmode=true)
 
-# Expected (after fix):
+# Expected:
+# - Dev Token button NOT visible
+# - Stored dev token in localStorage is NOT used for API calls
+# - Only IMS (standalone OAuth) token is used
+```
+
+### Test 4: Deployed App with ?devtokenmode=true ✅
+
+```bash
+# Try to enable dev token on deployed app
+# Visit: https://experience.adobe.com/?devtokenmode=true#/@org/app-id
+
+# Expected:
 # - bootstrapInExcShell() still called
 # - Real IMS token still used
-# - Dev Token button STILL NOT visible (hostname check fails)
+# - Dev Token button STILL NOT visible (hostname not in allowlist)
 # - No security bypass possible
 ```
 
@@ -314,15 +312,15 @@ aio app deploy
 | `web-src/src/components/DevTokenButton.tsx` | Dev token UI (localhost check) |
 | `web-src/src/components/DevTokenDialog.tsx` | Token input dialog |
 | `web-src/src/services/tokenStorage.ts` | Token storage/parsing |
-| `web-src/src/config/env.ts` | Environment detection |
+| `web-src/src/config/env.ts` | `isDevTokenModeEnabled()` — hostname allowlist + `?devtokenmode=true` |
 
 ## Summary
 
 ✅ **Dev token system is secure and isolated:**
-- Only activates on localhost and approved dev instances
+- Only activates when **`?devtokenmode=true`** is in the URL **and** host is in the allowlist (localhost or approved dev instances)
 - Never interferes with real IMS sessions
 - Completely separate bootstrap paths
-- No URL parameter bypasses
+- Explicit opt-in required; no accidental use of dev tokens
 - No token mixing or fallbacks
 
 ✅ **Real IMS sessions are protected:**
