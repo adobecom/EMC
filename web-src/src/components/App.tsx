@@ -8,6 +8,7 @@ import ErrorBoundary from 'react-error-boundary'
 import { HashRouter as Router, Routes, Route } from 'react-router-dom'
 import { TopNav } from './layout'
 import { ToastContainer } from './shared'
+import { AuthGate } from './AuthGate'
 import { ToastProvider, ApiProvider, AuthProvider } from '../contexts'
 import { useAuth } from '../contexts/AuthContext'
 import { Runtime, IMS } from '../types'
@@ -99,8 +100,8 @@ const AppContent: React.FC<{ runtime: Runtime }> = ({ runtime }) => {
                     <Route path='/events' element={<EventsDashboard ims={ims} />} />
                     <Route path='/events/new/:eventType' element={<EventForm ims={ims} />} />
                     <Route path='/events/edit/:id' element={<EventForm ims={ims} />} />
-                    <Route path='/registrations' element={<AttendeeDashboard ims={ims} />} />
-                    <Route path='/registrations/:eventId' element={<AttendeeDashboard ims={ims} />} />
+                    <Route path='/registrations' element={<Registrations ims={ims} />} />
+                    <Route path='/registrations/:eventId' element={<Registrations ims={ims} />} />
                     <Route path='/speakers' element={<SpeakersDashboard ims={ims} />} />
                     <Route path='/about' element={<About />}/>
                   </Routes>
@@ -122,7 +123,9 @@ const App: React.FC<AppProps> = ({ runtime, ims, authMode }) => {
 
   return (
     <AuthProvider initialIms={ims} authMode={authMode}>
-      <AppContent runtime={runtime} />
+      <AuthGate>
+        <AppContent runtime={runtime} />
+      </AuthGate>
     </AuthProvider>
   )
 }
