@@ -80,9 +80,9 @@ EMC/
 │       ├── services/             # api.ts, cacheUtils, requestHelpers, payloadBuilders,
 │       │                         #   tokenStorage, configService, dataEnrichment,
 │       │                         #   seriesEnrichment, eventEnrichment
-│       ├── config/               # constants.ts, env.ts, eventTypeConfig, externalConfigs
+│       ├── config/               # constants.ts, env.ts, localeMapping, eventTypeConfig, externalConfigs
 │       ├── types/                # domain.ts, runtime.ts, attendee.ts, google-places.d.ts
-│       ├── utils/                # dataFilters, deduplication, formPersistence,
+│       ├── utils/                # dataFilters, deduplication, eventFormMappers, formPersistence,
 │       │                         #   loadGooglePlaces, socialPlatformDetector
 │       ├── styles/               # designSystem.ts (tokens, layout patterns)
 │
