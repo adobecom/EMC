@@ -10,7 +10,7 @@ import Edit from '@spectrum-icons/workflow/Edit'
 import Duplicate from '@spectrum-icons/workflow/Duplicate'
 import Archive from '@spectrum-icons/workflow/Archive'
 import { TableColumn } from '../../components/shared/DataTable'
-import { StatusBadge, ResourceDashboardLayout } from '../../components/shared'
+import { StatusBadge, ResourceDashboardLayout, BlurredLoadingOverlay } from '../../components/shared'
 import { SeriesDashboardItem, EventApiResponse } from '../../types/domain'
 import { apiService, cachedApi } from '../../services/api'
 import { IMS } from '../../types'
@@ -437,23 +437,28 @@ export const SeriesDashboard: React.FC<SeriesDashboardProps> = () => {
   const getItemKey = useCallback((item: SeriesDashboardItem) => item.seriesId, [])
 
   return (
-    <ResourceDashboardLayout
-      title="All Series"
-      totalCount={enrichedSeries.length}
-      isLoading={isLoading}
-      error={error}
-      data={enrichedSeries}
-      columns={columns}
-      getItemKey={getItemKey}
-      onVisibleIdsChange={handleVisibleIdsChange}
-      onRefresh={loadSeriesData}
-      onCreate={handleCreateSeries}
-      createLabel="Create new series"
-      emptyStateTitle="No Series Found"
-      emptyStateDescription="Get started by creating your first series"
-      loadingMessage="Loading series..."
-      searchPlaceholder="Search series..."
-      searchKeys={['seriesName', 'seriesDescription', 'cloudType', 'seriesStatus']}
-    />
+    <>
+      <ResourceDashboardLayout
+        title="All Series"
+        totalCount={enrichedSeries.length}
+        error={error}
+        data={enrichedSeries}
+        columns={columns}
+        getItemKey={getItemKey}
+        onVisibleIdsChange={handleVisibleIdsChange}
+        onRefresh={loadSeriesData}
+        onCreate={handleCreateSeries}
+        createLabel="Create new series"
+        emptyStateTitle="No Series Found"
+        emptyStateDescription="Get started by creating your first series"
+        searchPlaceholder="Search series..."
+        searchKeys={['seriesName', 'seriesDescription', 'cloudType', 'seriesStatus']}
+      />
+      <BlurredLoadingOverlay
+        visible={isLoading}
+        message="Loading series..."
+        ariaLabel="Loading series"
+      />
+    </>
   )
 }

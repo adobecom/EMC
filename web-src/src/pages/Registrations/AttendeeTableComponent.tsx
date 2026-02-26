@@ -10,7 +10,7 @@ import {
 } from '@adobe/react-spectrum'
 import type { Attendee, AttendeeColumnConfig } from '../../types/attendee'
 import { getAttendeeName } from '../../types/attendee'
-import { DataTable, TableColumn, LoadingSpinner } from '../../components/shared'
+import { DataTable, TableColumn } from '../../components/shared'
 import { COLORS } from '../../styles/designSystem'
 
 interface AttendeeTableComponentProps {
@@ -19,7 +19,6 @@ interface AttendeeTableComponentProps {
   selectedIds: Set<string>
   onSelectionChange: (ids: Set<string>) => void
   onAttendeeAction?: (action: 'view' | 'edit' | 'delete', attendee: Attendee) => void
-  isLoading?: boolean
   emptyMessage?: string
 }
 
@@ -131,7 +130,6 @@ function renderCellValue(attendee: Attendee, config: AttendeeColumnConfig): Reac
 export const AttendeeTableComponent: React.FC<AttendeeTableComponentProps> = ({
   attendees,
   columnConfig,
-  isLoading = false,
   emptyMessage = 'No attendees found'
 }) => {
   // Build columns from config
@@ -154,10 +152,6 @@ export const AttendeeTableComponent: React.FC<AttendeeTableComponentProps> = ({
       ...stickyCols.map((c) => buildColumn(c))
     ]
   }, [columnConfig])
-
-  if (isLoading) {
-    return <LoadingSpinner message="Loading attendees..." />
-  }
 
   return (
     <View width="100%" UNSAFE_style={{ maxWidth: '100%', overflow: 'hidden' }}>

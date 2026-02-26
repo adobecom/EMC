@@ -24,6 +24,8 @@ npm run dev
 aio app run --local
 ```
 
+**Enable dev token mode:** Open the app with **`?devtokenmode=true`** in the URL (e.g. `http://localhost:3000/?devtokenmode=true`). The Dev Token button and use of stored dev tokens for API calls are only active when this parameter is present on an allowed host.
+
 ### 2. Get a Token
 
 1. Open [adobe.com](https://adobe.com) in your browser and sign in
@@ -36,10 +38,11 @@ aio app run --local
 
 ### 3. Add Token to the App
 
-1. Look for the **"Dev Token"** button in the top navigation bar
-2. Click it to open the token dialog
-3. Paste the token (either the full object or just the token string)
-4. Click **"Save Token"**
+1. Ensure the URL includes **`?devtokenmode=true`** (e.g. `http://localhost:3000/?devtokenmode=true`).
+2. Look for the **"Dev Token"** button in the top navigation bar.
+3. Click it to open the token dialog.
+4. Paste the token (either the full object or just the token string).
+5. Click **"Save Token"**.
 
 That's it! The token will be stored and used for all API calls until it expires.
 
@@ -67,7 +70,7 @@ When providing just the token string, the system will automatically parse the JW
 
 ### DevTokenButton
 
-A button that appears in the top navigation (only in dev mode) showing:
+A button that appears in the top navigation when **dev token mode is enabled** (URL has `?devtokenmode=true` and host is in the allowlist), showing:
 - **Green "Active" badge** - Valid token is stored
 - **Gray "None" badge** - No token found
 - **Tooltip** - Shows expiration info
@@ -113,11 +116,10 @@ tokenStorage.clearToken()
 
 Location: `web-src/src/index.tsx`
 
-When the app starts in local mode (`bootstrapRaw`):
-1. Checks localStorage for a stored token
-2. Validates the token expiration
-3. If valid, injects it into the mock IMS object
-4. If invalid, logs helpful instructions
+When the app runs in standalone mode (e.g. localhost, no ExC Shell), it uses `bootstrapStandalone()`. The **dev token** is only used when the URL has **`?devtokenmode=true`** and the host is in the allowlist. In that case:
+1. ApiService and components may use the stored token from localStorage (via `getAuthToken()` / `getAuthTokenForExternalUse()`).
+2. The Dev Token button is shown so you can add or update the token.
+3. If no valid token is stored, the app still runs but API calls will fail until you add one or sign in via IMS.
 
 ### API Request Headers
 
@@ -263,13 +265,13 @@ function MyComponent() {
 
 ⚠️ **Important Security Notes:**
 
-1. **Development Environments Only**: Dev token UI **only appears on localhost and approved dev instances** (see `DEV_TOKEN_ALLOWED_HOSTNAMES` in `env.ts`)
-2. **Never Interferes with Real IMS**: When running in Adobe Experience Cloud Shell, the dev token system is completely bypassed - the real IMS token from the shell is always used
+1. **Explicit opt-in**: Dev token UI and use of stored dev tokens **only apply when the URL has `?devtokenmode=true`** and the host is in the allowlist (see `isDevTokenModeEnabled()` in `env.ts`).
+2. **Never Interferes with Real IMS**: When running in Adobe Experience Cloud Shell, the dev token system is completely bypassed — the real IMS token from the shell is always used.
 3. **Two Separate Bootstrap Paths**:
-   - **Experience Cloud Shell**: Uses `bootstrapInExcShell()` with real IMS token - dev token never checked
-   - **Localhost**: Uses `bootstrapRaw()` with dev token from localStorage
-4. **localStorage**: Tokens are stored in browser localStorage (not secure for production, but only accessible on localhost)
-5. **No Encryption**: Tokens are stored in plain text (acceptable since localhost only)
+   - **Experience Cloud Shell**: Uses `bootstrapInExcShell()` with real IMS token — dev token never checked.
+   - **Standalone (e.g. localhost)**: Uses `bootstrapStandalone()`; dev token from localStorage is only used when `?devtokenmode=true` is in the URL.
+4. **localStorage**: Tokens are stored in browser localStorage (only used when dev token mode is enabled).
+5. **No Encryption**: Tokens are stored in plain text (acceptable when restricted to local/dev use).
 6. **Expiration**: Tokens are automatically validated against expiration
 7. **URL Validation**: All API calls are validated against an allowed hosts list
 
@@ -298,7 +300,8 @@ function MyComponent() {
 
 ### Dialog Not Showing
 
-The dialog only appears when running on allowed development environments. Check:
+The dev token button and dialog only appear when **dev token mode is enabled**. Check:
+- The URL includes **`?devtokenmode=true`** (e.g. `http://localhost:3000/?devtokenmode=true`)
 - You're running on `localhost`, `127.0.0.1`, or an approved dev instance
 - The `DevTokenButton` is rendered in `TopNav`
 - Approved dev instances include:
@@ -307,7 +310,7 @@ The dialog only appears when running on allowed development environments. Check:
   - `14257-emc-shameeb.adobeio-static.net`
   - `14257-emc-rkhan.adobeio-static.net`
 
-**Note**: The dev token button will NEVER show when running in Adobe Experience Cloud Shell, even with URL parameters. This is by design to prevent confusion with the real IMS session.
+**Note**: The dev token button will NEVER show when running in Adobe Experience Cloud Shell, even with URL parameters. Without `?devtokenmode=true`, the button is also hidden on localhost and dev instances.
 
 ## Architecture
 

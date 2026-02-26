@@ -4,7 +4,7 @@
 
 import React, { useEffect, useMemo, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Text, ActionButton, MenuTrigger, Menu, Item, Flex, Button, DialogTrigger, AlertDialog, ProgressCircle, View, Link } from '@adobe/react-spectrum'
+import { Text, ActionButton, MenuTrigger, Menu, Item, Flex, Button, DialogTrigger, AlertDialog, Link } from '@adobe/react-spectrum'
 import MoreSmallList from '@spectrum-icons/workflow/MoreSmallList'
 import PublishRemove from '@spectrum-icons/workflow/PublishRemove'
 import ViewDetail from '@spectrum-icons/workflow/ViewDetail'
@@ -16,7 +16,7 @@ import Globe from '@spectrum-icons/workflow/Globe'
 import Location from '@spectrum-icons/workflow/Location'
 import { getEventTypeOptions, EventType } from '../../config/eventTypeConfig'
 import { TableColumn } from '../../components/shared/DataTable'
-import { StatusBadge, ResourceDashboardLayout } from '../../components/shared'
+import { StatusBadge, ResourceDashboardLayout, BlurredLoadingOverlay } from '../../components/shared'
 import { EventDashboardItem } from '../../types/domain'
 import { apiService, cachedApi } from '../../services/api'
 import { thumbnailEnrichmentManager, venueEnrichmentManager, historyEnrichmentManager, EventThumbnail, EventVenueInfo, EventHistoryInfo } from '../../services/eventEnrichment'
@@ -900,7 +900,6 @@ export const EventsDashboard: React.FC<EventsDashboardProps> = () => {
       <ResourceDashboardLayout
         title="All Events"
         totalCount={events.length}
-        isLoading={isLoading}
         error={error}
         data={events}
         columns={columns}
@@ -910,49 +909,21 @@ export const EventsDashboard: React.FC<EventsDashboardProps> = () => {
         createButton={createEventButton}
         emptyStateTitle="No Events Found"
         emptyStateDescription="Get started by creating your first event"
-        loadingMessage="Loading events..."
         searchPlaceholder="Search events..."
         searchKeys={['eventName', 'eventType', 'cloudType', 'hostEmail', 'seriesId']}
       />
 
-      {/* Loading Overlay for Actions */}
-      {actionInProgress && (
-        <View
-          position="fixed"
-          top="size-0"
-          left="size-0"
-          right="size-0"
-          bottom="size-0"
-          UNSAFE_style={{
-            backgroundColor: 'rgba(0, 0, 0, 0.4)',
-            backdropFilter: 'blur(2px)',
-            zIndex: 9999,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            pointerEvents: 'all',
-            cursor: 'wait'
-          }}
-        >
-          <View
-            backgroundColor="gray-50"
-            padding="size-400"
-            borderRadius="medium"
-            UNSAFE_style={{
-              boxShadow: '0 8px 32px rgba(0, 0, 0, 0.2)',
-              display: 'flex',
-              flexDirection: 'column',
-              alignItems: 'center',
-              gap: '16px'
-            }}
-          >
-            <ProgressCircle size="L" isIndeterminate aria-label="Processing action" />
-            <Text UNSAFE_style={{ fontSize: '16px', fontWeight: 500 }}>
-              Processing...
-            </Text>
-          </View>
-        </View>
-      )}
+      <BlurredLoadingOverlay
+        visible={isLoading}
+        message="Loading events..."
+        ariaLabel="Loading events"
+      />
+      <BlurredLoadingOverlay
+        visible={!!actionInProgress}
+        message="Processing..."
+        ariaLabel="Processing action"
+        zIndex={9999}
+      />
 
       {/* Delete Confirmation Dialog */}
       <DialogTrigger

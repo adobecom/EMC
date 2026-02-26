@@ -8,7 +8,6 @@ import {
   Flex,
   Heading,
   Text,
-  ProgressCircle,
   ActionButton
 } from '@adobe/react-spectrum'
 import Refresh from '@spectrum-icons/workflow/Refresh'
@@ -19,6 +18,7 @@ import Globe from '@spectrum-icons/workflow/Globe'
 import Location from '@spectrum-icons/workflow/Location'
 import Data from '@spectrum-icons/workflow/Data'
 import { cachedApi } from '../../services/api'
+import { BlurredLoadingOverlay } from '../../components/shared'
 import { EventApiResponse, SeriesApiResponse } from '../../types/domain'
 import { COLORS, SPACING, TYPOGRAPHY } from '../../styles/designSystem'
 import { IMS } from '../../types'
@@ -155,10 +155,9 @@ const DistributionBar: React.FC<DistributionBarProps> = ({ items, total }) => {
  */
 interface TemplateBreakdownProps {
   templateCounts: Map<string, { count: number; seriesCount: number }>
-  isLoading: boolean
 }
 
-const TemplateBreakdown: React.FC<TemplateBreakdownProps> = ({ templateCounts, isLoading }) => {
+const TemplateBreakdown: React.FC<TemplateBreakdownProps> = ({ templateCounts }) => {
   // Sort by event count descending
   const sortedTemplates = useMemo(() => {
     return Array.from(templateCounts.entries())
@@ -191,23 +190,6 @@ const TemplateBreakdown: React.FC<TemplateBreakdownProps> = ({ templateCounts, i
     // Get the meaningful parts (last 2-3 segments)
     const meaningful = parts.slice(-3).filter(p => p && p !== 'template' && p !== 'simple')
     return meaningful.join(' / ') || templatePath
-  }
-
-  if (isLoading) {
-    return (
-      <View
-        backgroundColor="gray-50"
-        borderWidth="thin"
-        borderColor="gray-200"
-        borderRadius="medium"
-        padding="size-300"
-        minHeight="200px"
-      >
-        <Flex alignItems="center" justifyContent="center" height="100%">
-          <ProgressCircle size="L" isIndeterminate aria-label="Loading template data" />
-        </Flex>
-      </View>
-    )
   }
 
   const totalEvents = Array.from(templateCounts.values()).reduce((sum, t) => sum + t.count, 0)
@@ -465,15 +447,7 @@ export const OverviewDashboard: React.FC<OverviewDashboardProps> = () => {
           </Flex>
         </Flex>
 
-        {isLoading ? (
-          <Flex alignItems="center" justifyContent="center" minHeight="size-6000">
-            <Flex direction="column" alignItems="center" gap="size-200">
-              <ProgressCircle size="L" isIndeterminate aria-label="Loading dashboard" />
-              <Text>Loading dashboard data...</Text>
-            </Flex>
-          </Flex>
-        ) : (
-          <>
+        <>
             {/* Primary Stats Row */}
             <View
               UNSAFE_style={{
@@ -675,10 +649,7 @@ export const OverviewDashboard: React.FC<OverviewDashboardProps> = () => {
 
               {/* Right Column - Template Breakdown */}
               <View flex="1" minWidth="size-4600">
-                <TemplateBreakdown
-                  templateCounts={stats.templateCounts}
-                  isLoading={isLoading}
-                />
+                <TemplateBreakdown templateCounts={stats.templateCounts} />
               </View>
             </Flex>
 
@@ -709,9 +680,14 @@ export const OverviewDashboard: React.FC<OverviewDashboardProps> = () => {
                 </ActionButton>
               </Flex>
             </View>
-          </>
-        )}
+        </>
       </Flex>
+
+      <BlurredLoadingOverlay
+        visible={isLoading}
+        message="Loading dashboard data..."
+        ariaLabel="Loading dashboard"
+      />
     </View>
   )
 }
