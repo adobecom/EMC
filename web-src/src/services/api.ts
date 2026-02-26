@@ -449,6 +449,68 @@ class ApiService {
     return this.callExternalApi<T>(service, endpoint, 'PUT', mergedBody, { operationName })
   }
 
+  /**
+   * Fetch all pages of a paginated list endpoint.
+   * Uses iterative loop (not recursion) to avoid stack overflow.
+   * Backend returns nextPageToken in response; pass it back as next-page-token (kebab-case) URL param.
+   */
+  private async fetchAllPages<T = any>(options: {
+    service: 'esp' | 'esl'
+    baseEndpoint: string
+    listKey: string
+    baseParams?: Record<string, string>
+    operationName?: string
+    maxPages?: number
+  }): Promise<T[] | ErrorResponse> {
+    const {
+      service,
+      baseEndpoint,
+      listKey,
+      baseParams = {},
+      operationName = `fetchAllPages(${baseEndpoint})`,
+      maxPages = 100
+    } = options
+
+    const items: T[] = []
+    let nextPageToken: string | null = null
+    let pageCount = 0
+
+    while (pageCount < maxPages) {
+      const params = new URLSearchParams(baseParams)
+      if (nextPageToken) {
+        params.set('next-page-token', nextPageToken)
+      }
+      const queryString = params.toString()
+      const endpoint = queryString ? `${baseEndpoint}?${queryString}` : baseEndpoint
+
+      const result = await this.callExternalApi<any>(service, endpoint, 'GET', undefined, {
+        operationName: `${operationName} (page ${pageCount + 1})`,
+        shouldReturnFullResponse: true
+      })
+
+      if ('error' in result) {
+        return result
+      }
+
+      const pageItems = result[listKey]
+      if (Array.isArray(pageItems)) {
+        items.push(...pageItems)
+      }
+
+      nextPageToken = result.nextPageToken || null
+      if (!nextPageToken) {
+        break
+      }
+      pageCount++
+    }
+
+    if (pageCount >= maxPages && nextPageToken) {
+      console.warn(`⚠️ ${operationName}: hit maxPages limit (${maxPages}), some data may be truncated`)
+    }
+
+    return items
+  }
+
   // ============================================================================
   // SERIES EXTERNAL APIs
   // ============================================================================
@@ -467,26 +529,20 @@ class ApiService {
     const env = getCurrentEnvironment()
     console.log(`🔄 Fetching series from real API (${env} environment)...`)
 
-    const headers = constructRequestHeaders(token, 'GET')
-    const host = getApiHost('esp', env)
-    const url = `${host}/v1/series`
-
-    const response = await safeFetch(url, {
-      method: 'GET',
-      headers: headers as any
+    const result = await this.fetchAllPages<SeriesApiResponse>({
+      service: 'esp',
+      baseEndpoint: '/v1/series',
+      listKey: 'series',
+      operationName: 'getSeriesList'
     })
 
-    const data = await response.json()
-
-    if (!response.ok) {
-      console.error(`❌ API Error: ${response.status}`, data)
-      throw new Error(`API returned ${response.status}`)
+    if ('error' in result) {
+      console.error(`❌ API Error:`, result)
+      throw new Error(`API returned ${result.status}`)
     }
 
-    const series = data.series || []
-    console.log('✅ Successfully loaded series from API:', series.length, 'items')
-
-    return series
+    console.log('✅ Successfully loaded series from API:', result.length, 'items')
+    return result
   }
 
   async createSeriesExternal(seriesData: any): Promise<any | ErrorResponse> {
@@ -670,26 +726,20 @@ class ApiService {
     const env = getCurrentEnvironment()
     console.log(`🔄 Fetching events from real API (${env} environment)...`)
 
-    const headers = constructRequestHeaders(token, 'GET')
-    const host = getApiHost('esp', env)
-    const url = `${host}/v1/events`
-
-    const response = await safeFetch(url, {
-      method: 'GET',
-      headers: headers as any
+    const result = await this.fetchAllPages<EventApiResponse>({
+      service: 'esp',
+      baseEndpoint: '/v1/events',
+      listKey: 'events',
+      operationName: 'getEventsList'
     })
 
-    const data = await response.json()
-
-    if (!response.ok) {
-      console.error(`❌ API Error: ${response.status}`, data)
-      throw new Error(`API returned ${response.status}`)
+    if ('error' in result) {
+      console.error(`❌ API Error:`, result)
+      throw new Error(`API returned ${result.status}`)
     }
 
-    const events = data.events || []
-    console.log('✅ Successfully loaded events from API:', events.length, 'items')
-
-    return events
+    console.log('✅ Successfully loaded events from API:', result.length, 'items')
+    return result
   }
 
   async createEventExternal(payload: any, locale: string): Promise<any | ErrorResponse> {
@@ -882,9 +932,14 @@ class ApiService {
 
   async getEventImages(eventId: string): Promise<any | ErrorResponse> {
     validateString(eventId, 'event ID')
-    return this.callExternalApi('esp', `/v1/events/${eventId}/images`, 'GET', undefined,
-      { operationName: 'getEventImages', shouldReturnFullResponse: true }
-    )
+    const result = await this.fetchAllPages<any>({
+      service: 'esp',
+      baseEndpoint: `/v1/events/${eventId}/images`,
+      listKey: 'images',
+      operationName: 'getEventImages'
+    })
+    if ('error' in result) return result
+    return { images: result }
   }
 
   async getEventHistory(eventId: string): Promise<any | ErrorResponse> {
@@ -1065,9 +1120,14 @@ class ApiService {
 
   async getSpeakers(seriesId: string): Promise<any | ErrorResponse> {
     validateString(seriesId, 'series ID')
-    return this.callExternalApi('esp', `/v1/series/${seriesId}/speakers`, 'GET', undefined,
-      { operationName: 'getSpeakers', shouldReturnFullResponse: true }
-    )
+    const result = await this.fetchAllPages<any>({
+      service: 'esp',
+      baseEndpoint: `/v1/series/${seriesId}/speakers`,
+      listKey: 'speakers',
+      operationName: 'getSpeakers'
+    })
+    if ('error' in result) return result
+    return { speakers: result }
   }
 
   async addSpeakerToEvent(speakerData: any, eventId: string): Promise<any | ErrorResponse> {
@@ -1080,9 +1140,14 @@ class ApiService {
 
   async getEventSpeakers(eventId: string): Promise<any | ErrorResponse> {
     validateString(eventId, 'event ID')
-    return this.callExternalApi('esp', `/v1/events/${eventId}/speakers`, 'GET', undefined,
-      { operationName: 'getEventSpeakers', shouldReturnFullResponse: true }
-    )
+    const result = await this.fetchAllPages<any>({
+      service: 'esp',
+      baseEndpoint: `/v1/events/${eventId}/speakers`,
+      listKey: 'speakers',
+      operationName: 'getEventSpeakers'
+    })
+    if ('error' in result) return result
+    return { speakers: result }
   }
 
   async getEventSpeaker(eventId: string, speakerId: string): Promise<any | ErrorResponse> {
@@ -1142,9 +1207,14 @@ class ApiService {
    */
   async getEventsBySpeakerId(speakerId: string): Promise<any | ErrorResponse> {
     validateString(speakerId, 'speaker ID')
-    return this.callExternalApi('esp', `/v1/speakers/${speakerId}/events`, 'GET', undefined,
-      { operationName: `getEventsBySpeakerId(${speakerId})`, shouldReturnFullResponse: true }
-    )
+    const result = await this.fetchAllPages<any>({
+      service: 'esp',
+      baseEndpoint: `/v1/speakers/${speakerId}/events`,
+      listKey: 'events',
+      operationName: `getEventsBySpeakerId(${speakerId})`
+    })
+    if ('error' in result) return result
+    return { events: result }
   }
 
   // ============================================================================
@@ -1180,9 +1250,14 @@ class ApiService {
 
   async getSponsors(seriesId: string): Promise<any | ErrorResponse> {
     validateString(seriesId, 'series ID')
-    return this.callExternalApi('esp', `/v1/series/${seriesId}/sponsors`, 'GET', undefined,
-      { operationName: 'getSponsors', shouldReturnFullResponse: true }
-    )
+    const result = await this.fetchAllPages<any>({
+      service: 'esp',
+      baseEndpoint: `/v1/series/${seriesId}/sponsors`,
+      listKey: 'sponsors',
+      operationName: 'getSponsors'
+    })
+    if ('error' in result) return result
+    return { sponsors: result }
   }
 
   async addSponsorToEvent(sponsorData: any, eventId: string): Promise<any | ErrorResponse> {
@@ -1195,9 +1270,14 @@ class ApiService {
 
   async getEventSponsors(eventId: string): Promise<any | ErrorResponse> {
     validateString(eventId, 'event ID')
-    return this.callExternalApi('esp', `/v1/events/${eventId}/sponsors`, 'GET', undefined,
-      { operationName: 'getEventSponsors', shouldReturnFullResponse: true }
-    )
+    const result = await this.fetchAllPages<any>({
+      service: 'esp',
+      baseEndpoint: `/v1/events/${eventId}/sponsors`,
+      listKey: 'sponsors',
+      operationName: 'getEventSponsors'
+    })
+    if ('error' in result) return result
+    return { sponsors: result }
   }
 
   async getEventSponsor(eventId: string, sponsorId: string): Promise<any | ErrorResponse> {
@@ -1297,9 +1377,14 @@ class ApiService {
 
   async getEventAttendees(eventId: string): Promise<any | ErrorResponse> {
     validateString(eventId, 'event ID')
-    return this.callExternalApi('esp', `/v1/events/${eventId}/attendees`, 'GET', undefined,
-      { operationName: 'getEventAttendees', shouldReturnFullResponse: true }
-    )
+    const result = await this.fetchAllPages<any>({
+      service: 'esp',
+      baseEndpoint: `/v1/events/${eventId}/attendees`,
+      listKey: 'attendees',
+      operationName: 'getEventAttendees'
+    })
+    if ('error' in result) return result
+    return { attendees: result }
   }
 
   async getAttendee(eventId: string, attendeeId: string): Promise<any | ErrorResponse> {
@@ -1321,42 +1406,28 @@ class ApiService {
   async getAllEventAttendees(eventId: string): Promise<any[] | ErrorResponse> {
     validateString(eventId, 'event ID')
 
-    const recurGetAttendees = async (
-      type: 'registered' | 'waitlisted',
-      fullAttendeeArr: any[] = [],
-      nextPageToken: string | null = null
-    ): Promise<any[] | ErrorResponse> => {
-      const params = new URLSearchParams({ type })
-      if (nextPageToken) params.set('nextPageToken', nextPageToken)
-
-      const endpoint = `/v1/events/${eventId}/attendees?${params.toString()}`
-
-      const result = await this.callExternalApi<any>('esp', endpoint, 'GET', undefined, {
-        operationName: `getAllEventAttendees (type=${type}, paginated)`,
-        shouldReturnFullResponse: true
+    const fetchByType = async (type: 'registered' | 'waitlisted'): Promise<any[] | ErrorResponse> => {
+      const result = await this.fetchAllPages<any>({
+        service: 'esp',
+        baseEndpoint: `/v1/events/${eventId}/attendees`,
+        listKey: 'attendees',
+        baseParams: { type },
+        operationName: `getAllEventAttendees (type=${type})`
       })
 
       if ('error' in result) {
         return result
       }
 
-      const hydratedAttendees = (result.attendees || []).map((attendee: any) => ({
+      return result.map((attendee: any) => ({
         ...attendee,
         registrationStatus: type
       }))
-
-      const accumulated = fullAttendeeArr.concat(hydratedAttendees)
-
-      if (result.nextPageToken) {
-        return recurGetAttendees(type, accumulated, result.nextPageToken)
-      }
-
-      return accumulated
     }
 
     const [registered, waitlisted] = await Promise.all([
-      recurGetAttendees('registered'),
-      recurGetAttendees('waitlisted')
+      fetchByType('registered'),
+      fetchByType('waitlisted')
     ])
 
     // If both errored, return the first error
