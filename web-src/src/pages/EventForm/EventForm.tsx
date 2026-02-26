@@ -28,7 +28,7 @@ import {
 import { cachedApi } from '../../services/api'
 import { configService } from '../../services/configService'
 import { IMS } from '../../types'
-import { FormWizard, WizardStep, LoadingSpinner, FormCard, HistoryTimeline } from '../../components/shared'
+import { FormWizard, WizardStep, BlurredLoadingOverlay, FormCard, HistoryTimeline } from '../../components/shared'
 import { 
   EventFormatComponent, 
   EventTagsComponent, 
@@ -930,7 +930,7 @@ const EventFormInner: React.FC<EventFormInnerProps> = ({ ims: _ims }) => {
   // ============================================================================
   
   if (isLoading) {
-    return <LoadingSpinner message="Loading event data..." />
+    return <BlurredLoadingOverlay visible={true} message="Loading event data..." ariaLabel="Loading event" />
   }
   
   // Determine event type label for display
