@@ -8,6 +8,7 @@ import ErrorBoundary from 'react-error-boundary'
 import { HashRouter as Router, Routes, Route } from 'react-router-dom'
 import { TopNav } from './layout'
 import { ToastContainer } from './shared'
+import { AuthGate } from './AuthGate'
 import { ToastProvider, ApiProvider, AuthProvider } from '../contexts'
 import { useAuth } from '../contexts/AuthContext'
 import { Runtime, IMS } from '../types'
@@ -122,7 +123,9 @@ const App: React.FC<AppProps> = ({ runtime, ims, authMode }) => {
 
   return (
     <AuthProvider initialIms={ims} authMode={authMode}>
-      <AppContent runtime={runtime} />
+      <AuthGate>
+        <AppContent runtime={runtime} />
+      </AuthGate>
     </AuthProvider>
   )
 }

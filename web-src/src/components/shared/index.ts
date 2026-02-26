@@ -2,6 +2,7 @@
 * <license header>
 */
 
+export { GateScreen } from './GateScreen'
 export { DataTable } from './DataTable'
 export type { TableColumn, TableAction } from './DataTable'
 export { FormWizard } from './FormWizard'
