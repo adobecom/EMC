@@ -63,12 +63,24 @@ export const API_CONFIG = {
 } as const
 
 /**
+ * Profile API (cc-collab) for IMS user avatar
+ * Production uses cc-collab.adobe.io; dev/stage use cc-collab-stage.adobe.io
+ */
+export const PROFILE_API_CONFIG = {
+  [ENVIRONMENTS.DEV]: { host: 'https://cc-collab-stage.adobe.io' },
+  [ENVIRONMENTS.STAGE]: { host: 'https://cc-collab-stage.adobe.io' },
+  [ENVIRONMENTS.PROD]: { host: 'https://cc-collab.adobe.io' },
+} as const
+
+/**
  * Derive allowed hosts from API_CONFIG and add core domains
  */
 export const ALLOWED_HOSTS: Record<string, boolean> = {
   [DOMAINS.ADOBE_COM]: true,
   [DOMAINS.STAGE_ADOBE_COM]: true,
   [DOMAINS.LOCALHOST]: true,
+  'cc-collab.adobe.io': true,
+  'cc-collab-stage.adobe.io': true,
   ...Object.values(API_CONFIG.esl).reduce((acc, envConfig) => {
     try {
       const url = new URL(envConfig.host)
@@ -143,6 +155,15 @@ export function getCurrentEnvironment(): Environment {
 export function getApiHost(service: 'esp' | 'esl', overrideEnv?: Environment): string {
   const currentEnv = overrideEnv || env.ENVIRONMENT
   return API_CONFIG[service][currentEnv].host
+}
+
+/**
+ * Get Profile API host for IMS avatar
+ * Prod uses cc-collab.adobe.io; dev/stage use cc-collab-stage.adobe.io
+ */
+export function getProfileApiHost(overrideEnv?: Environment): string {
+  const currentEnv = overrideEnv || env.ENVIRONMENT
+  return PROFILE_API_CONFIG[currentEnv].host
 }
 
 /**
