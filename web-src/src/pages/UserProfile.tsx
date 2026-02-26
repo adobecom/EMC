@@ -19,6 +19,7 @@ import Key from '@spectrum-icons/workflow/Key'
 import Box from '@spectrum-icons/workflow/Box'
 import { IMS } from '../types'
 import { COLORS, TYPOGRAPHY } from '../styles/designSystem'
+import { useProfileAvatar } from '../hooks/useProfileAvatar'
 
 interface UserProfileProps {
   ims: IMS
@@ -274,6 +275,8 @@ const formatLabel = (key: string): string => {
  * UserProfile - Displays user profile information from IMS
  */
 export const UserProfile: React.FC<UserProfileProps> = ({ ims }) => {
+  const { avatarUrl } = useProfileAvatar(ims)
+
   if (!ims.profile) {
     return (
       <View padding="size-400" maxWidth="900px" marginX="auto">
@@ -340,9 +343,9 @@ export const UserProfile: React.FC<UserProfileProps> = ({ ims }) => {
         <Flex direction="row" alignItems="center" gap="size-300" wrap="wrap">
           {/* Avatar */}
           <View>
-            {profile.avatarSrc ? (
-              <img 
-                src={profile.avatarSrc} 
+            {avatarUrl ? (
+              <img
+                src={avatarUrl}
                 alt={profile.displayName || profile.name || 'User avatar'}
                 style={{
                   width: '80px',

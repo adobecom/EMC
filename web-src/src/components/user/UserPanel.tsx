@@ -20,6 +20,7 @@ import InfoIcon from '@spectrum-icons/workflow/Info'
 import LogOut from '@spectrum-icons/workflow/LogOut'
 import { IMS } from '../../types'
 import { useAuth } from '../../contexts/AuthContext'
+import { useProfileAvatar } from '../../hooks/useProfileAvatar'
 
 interface UserPanelProps {
   ims: IMS
@@ -29,6 +30,7 @@ interface UserPanelProps {
 export const UserPanel: React.FC<UserPanelProps> = ({ ims, compact = false }) => {
   const navigate = useNavigate()
   const { signOut, authMode } = useAuth()
+  const { avatarUrl } = useProfileAvatar(ims)
 
   // Extract user info from IMS
   const userName = ims.profile?.name || 'Guest User'
@@ -66,7 +68,15 @@ export const UserPanel: React.FC<UserPanelProps> = ({ ims, compact = false }) =>
         marginBottom={compact ? 'size-0' : 'size-300'}
       >
         <Flex direction="row" alignItems="center" gap="size-150">
-          <Avatar size="avatar-size-400" src="https://pps-stage.services.adobe.com/api/profile/image/default/22c90d64-691f-439f-b7fd-7fe06ccb01a7/138" />
+          <View
+            backgroundColor="blue-600"
+            width="size-400"
+            height="size-400"
+            borderRadius="medium"
+            UNSAFE_className="user-avatar"
+          >
+            <Text UNSAFE_className="user-initials-compact">GU</Text>
+          </View>
           <Text UNSAFE_className="user-name">Guest User</Text>
         </Flex>
       </View>
@@ -87,18 +97,26 @@ export const UserPanel: React.FC<UserPanelProps> = ({ ims, compact = false }) =>
           UNSAFE_className={compact ? 'user-panel-button-compact' : 'user-panel-button'}
         >
           <Flex direction="row" alignItems="center" gap="size-150" width="100%">
-            {/* Avatar with initials */}
-            <View 
-              backgroundColor="blue-600"
-              width={compact ? 'size-400' : 'size-500'}
-              height={compact ? 'size-400' : 'size-500'}
-              borderRadius="medium"
-              UNSAFE_className="user-avatar"
-            >
-              <Text UNSAFE_className={compact ? 'user-initials-compact' : 'user-initials'}>
-                {getInitials(userName)}
-              </Text>
-            </View>
+            {/* Avatar: image when available, else initials */}
+            {avatarUrl ? (
+              <Avatar
+                size={compact ? 'avatar-size-400' : 'avatar-size-500'}
+                src={avatarUrl}
+                alt={userName}
+              />
+            ) : (
+              <View
+                backgroundColor="blue-600"
+                width={compact ? 'size-400' : 'size-500'}
+                height={compact ? 'size-400' : 'size-500'}
+                borderRadius="medium"
+                UNSAFE_className="user-avatar"
+              >
+                <Text UNSAFE_className={compact ? 'user-initials-compact' : 'user-initials'}>
+                  {getInitials(userName)}
+                </Text>
+              </View>
+            )}
 
             {/* User info - only show name in compact mode */}
             <Flex direction="column" gap="size-25" flex UNSAFE_className="user-info-container">
