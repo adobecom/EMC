@@ -13,6 +13,7 @@ import React, {
 } from 'react'
 import { EventFormData, EventApiResponse } from '../types/domain'
 import { saveFormDraft, loadFormDraft, clearFormDraft } from '../utils/formPersistence'
+import { mapApiResponseToFormData } from '../utils/eventFormMappers'
 
 // ============================================================================
 // TYPES
@@ -100,6 +101,7 @@ type EventFormAction =
   | { type: 'SET_EDIT_MODE'; payload: boolean }
   | { type: 'SET_EVENT_RESPONSE'; payload: EventApiResponse | null }
   | { type: 'UPDATE_FORM_DATA'; payload: Partial<EventFormData> }
+  | { type: 'POPULATE_FORM_DATA'; payload: Partial<EventFormData> }
   | { type: 'RESET_FORM_DATA'; payload: EventFormData }
   | { type: 'SET_DIRTY'; payload: boolean }
   | { type: 'SET_SAVE_STATUS'; payload: SaveStatus }
@@ -135,10 +137,14 @@ export interface EventFormContextValue {
   
   // Actions
   updateFormData: (updates: Partial<EventFormData>) => void
+  /** Populate form from API response without marking dirty (for load/edit) */
+  populateFormDataFromResponse: (updates: Partial<EventFormData>) => void
   setEventResponse: (response: EventApiResponse | null) => void
   setEventId: (id: string | null) => void
   setSeriesId: (id: string) => void
   setLocale: (locale: string) => void
+  /** Switch locale and re-map form data from eventDataResp for the new locale */
+  setLocaleAndRemapFormData: (locale: string) => void
   setEditMode: (isEdit: boolean) => void
   resetToSaved: () => void
   setSaveStatus: (status: SaveStatus) => void
@@ -262,6 +268,13 @@ function eventFormReducer(state: EventFormState, action: EventFormAction): Event
         formData: { ...state.formData, ...action.payload },
         isDirty: true
       }
+
+    case 'POPULATE_FORM_DATA':
+      return {
+        ...state,
+        formData: { ...state.formData, ...action.payload },
+        isDirty: false
+      }
     
     case 'RESET_FORM_DATA':
       return {
@@ -376,6 +389,10 @@ export const EventFormProvider: React.FC<EventFormProviderProps> = ({
   const updateFormData = useCallback((updates: Partial<EventFormData>) => {
     dispatch({ type: 'UPDATE_FORM_DATA', payload: updates })
   }, [])
+
+  const populateFormDataFromResponse = useCallback((updates: Partial<EventFormData>) => {
+    dispatch({ type: 'POPULATE_FORM_DATA', payload: updates })
+  }, [])
   
   const setEventResponse = useCallback((response: EventApiResponse | null) => {
     dispatch({ type: 'SET_EVENT_RESPONSE', payload: response })
@@ -395,7 +412,15 @@ export const EventFormProvider: React.FC<EventFormProviderProps> = ({
   const setLocale = useCallback((locale: string) => {
     dispatch({ type: 'SET_LOCALE', payload: locale })
   }, [])
-  
+
+  const setLocaleAndRemapFormData = useCallback((newLocale: string) => {
+    dispatch({ type: 'SET_LOCALE', payload: newLocale })
+    if (state.eventDataResp) {
+      const mapped = mapApiResponseToFormData(state.eventDataResp, newLocale)
+      dispatch({ type: 'POPULATE_FORM_DATA', payload: mapped })
+    }
+  }, [state.eventDataResp])
+
   const setEditMode = useCallback((isEdit: boolean) => {
     dispatch({ type: 'SET_EDIT_MODE', payload: isEdit })
   }, [])
@@ -519,10 +544,12 @@ export const EventFormProvider: React.FC<EventFormProviderProps> = ({
     
     // Actions
     updateFormData,
+    populateFormDataFromResponse,
     setEventResponse,
     setEventId,
     setSeriesId,
     setLocale,
+    setLocaleAndRemapFormData,
     setEditMode,
     resetToSaved,
     setSaveStatus,
@@ -546,10 +573,12 @@ export const EventFormProvider: React.FC<EventFormProviderProps> = ({
   }), [
     state,
     updateFormData,
+    populateFormDataFromResponse,
     setEventResponse,
     setEventId,
     setSeriesId,
     setLocale,
+    setLocaleAndRemapFormData,
     setEditMode,
     resetToSaved,
     setSaveStatus,

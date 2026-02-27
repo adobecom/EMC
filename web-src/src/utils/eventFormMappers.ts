@@ -1,0 +1,161 @@
+/* 
+ * Event form data mappers for API response <-> form state
+ * Extracted for reuse when switching locale and re-mapping form data
+ */
+
+import {
+  EventFormData,
+  ProfileData,
+  SponsorData,
+  EventApiResponse
+} from '../types/domain'
+import { fromApiSocialLink } from './socialPlatformDetector'
+
+/**
+ * Get a localized value from an object, falling back to direct property
+ */
+export function getLocalizedValue(obj: any, fieldName: string, locale: string): any {
+  const localized = obj?.localizations?.[locale]?.[fieldName]
+  if (localized !== undefined && localized !== null && localized !== '') {
+    return localized
+  }
+  return obj?.[fieldName]
+}
+
+/**
+ * Map API speaker data to ProfileData format
+ */
+export function mapSpeakersToProfiles(speakers: any[], locale: string = 'en-US'): ProfileData[] {
+  return speakers.map(speaker => ({
+    type: speaker.speakerType === 'host' ? 'host' : 'speaker',
+    speakerId: speaker.speakerId,
+    firstName: getLocalizedValue(speaker, 'firstName', locale) || speaker.firstName || '',
+    lastName: getLocalizedValue(speaker, 'lastName', locale) || speaker.lastName || '',
+    title: getLocalizedValue(speaker, 'title', locale) || speaker.title || '',
+    bio: getLocalizedValue(speaker, 'bio', locale) || speaker.bio || '',
+    imageUrl: speaker.photo?.imageUrl || speaker.imageUrl || '',
+    imageId: speaker.photo?.imageId || speaker.imageId || '',
+    socialLinks: (speaker.socialLinks || []).map((link: any) => fromApiSocialLink(link)),
+    isSaved: true,
+    isFromSeries: true
+  }))
+}
+
+/**
+ * Map API sponsor data to SponsorData format
+ */
+export function mapSponsorsToFormData(sponsors: any[], locale: string = 'en-US'): SponsorData[] {
+  return sponsors.map((sponsor, index) => ({
+    id: sponsor.sponsorId || `sponsor-${index}`,
+    sponsorId: sponsor.sponsorId,
+    partnerName: getLocalizedValue(sponsor, 'name', locale) || sponsor.name || sponsor.partnerName || '',
+    partnerUrl: getLocalizedValue(sponsor, 'link', locale) || sponsor.link || sponsor.partnerUrl || '',
+    imageUrl: sponsor.image?.imageUrl || sponsor.imageUrl || '',
+    imageId: sponsor.image?.imageId || sponsor.imageId || '',
+    type: sponsor.sponsorType,
+    isSaved: true,
+    isFromSeries: true
+  }))
+}
+
+/**
+ * Map API response to form data for a given locale
+ */
+export function mapApiResponseToFormData(event: EventApiResponse, locale: string): Partial<EventFormData> {
+  const localized = event.localizations?.[locale] || {}
+
+  const parsedTags = event.tags
+    ? event.tags.split(',').map((tag: string) => ({
+        name: tag.split('/').pop() || tag,
+        caasId: tag.trim()
+      }))
+    : []
+
+  const agendaItems = (localized.agenda || []).map((item: any, index: number) => ({
+    id: `agenda-${index}`,
+    title: item.title || '',
+    description: item.description || '',
+    startDateTime: item.startTime
+      ? `${event.localStartDate}T${item.startTime}`
+      : '',
+    endDateTime: item.endTime
+      ? `${event.localStartDate}T${item.endTime}`
+      : ''
+  }))
+
+  const cta = localized.cta?.[0]
+
+  const venueLocalized = event.venue?.localizations?.[locale] || {}
+  const venueData = event.venue ? {
+    venueName: event.venue.venueName || '',
+    formattedAddress: event.venue.formattedAddress || event.venue.address || '',
+    placeId: event.venue.placeId,
+    coordinates: event.venue.coordinates,
+    gmtOffset: event.venue.gmtOffset ?? event.gmtOffset,
+    addressComponents: event.venue.addressComponents,
+    additionalInformation: venueLocalized.additionalInformation
+      ?? event.venue.additionalInformation
+      ?? event.venue.additionalInfo
+      ?? '',
+    venueImageUrl: event.venue.imageUrl,
+    venueImageId: event.venue.imageId,
+    showVenuePostEvent: event.showVenuePostEvent ?? true,
+    showAdditionalInfoPostEvent: event.showVenueAdditionalInfoPostEvent ?? true,
+    googlePlaceName: event.venue.venueName || ''
+  } : undefined
+
+  const mappedEventType = event.eventType?.toLowerCase() === 'webinar' ? 'webinar' : 'in-person'
+
+  return {
+    cloudType: (event.cloudType as 'CreativeCloud' | 'ExperienceCloud') || 'CreativeCloud',
+    eventType: mappedEventType as 'in-person' | 'webinar',
+    seriesId: event.seriesId || '',
+    name: localized.title || '',
+    enTitle: event.enTitle || '',
+    urlTitle: event.detailPagePath?.split('/').slice(-5, -4).join('/') || '',
+    description: localized.eventDetails || '',
+    shortDescription: localized.description || '',
+    language: locale.split('-')[0] || 'en',
+    defaultLocale: locale,
+    isPrivate: event.isPrivate || false,
+    tags: parsedTags,
+    startDateTime: event.localStartDate && event.localStartTime
+      ? `${event.localStartDate}T${event.localStartTime.slice(0, 5)}`
+      : '',
+    endDateTime: event.localEndDate && event.localEndTime
+      ? `${event.localEndDate}T${event.localEndTime.slice(0, 5)}`
+      : '',
+    timezone: event.timezone,
+    venue: venueData,
+    attendeeLimit: event.attendeeLimit,
+    status: event.published ? 'published' : 'draft',
+    registrationOpen: true,
+    allowWaitlist: event.allowWaitlisting || false,
+    allowGuestRegistration: event.allowGuestRegistration || false,
+    hostEmail: event.hostEmail || '',
+    rsvpDescription: localized.rsvpDescription || '',
+    registrationType: (event.registration?.type === 'ESP' || event.registration?.type === 'Marketo')
+      ? event.registration.type
+      : 'ESP',
+    marketoFormUrl: event.registration?.formData || '',
+    visibleRsvpFields: event.rsvpFormFields?.visible || [],
+    requiredRsvpFields: event.rsvpFormFields?.required || [],
+    images: event.images || [],
+    profiles: mapSpeakersToProfiles(event.speakers || [], locale),
+    communityForumUrl: cta?.url || '',
+    secondaryLinkTitle: cta?.label || '',
+    agendaItems: agendaItems,
+    showAgendaPostEvent: event.showAgendaPostEvent || false,
+    sponsors: mapSponsorsToFormData(event.sponsors || [], locale),
+    promotionalItems: (localized.promotionalItems || [])
+      .filter((item: any) => {
+        if (typeof item === 'string') return item.trim() !== ''
+        return item && item.title
+      })
+      .map((item: any) => {
+        if (typeof item === 'string') return { title: item }
+        return item
+      }),
+    marketoIntegration: event.marketoIntegration,
+  }
+}
