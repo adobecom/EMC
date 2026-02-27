@@ -24,7 +24,6 @@ interface ResourceDashboardLayoutProps<T> {
   totalCount: number
   
   // State
-  isLoading: boolean
   error: string | null
   data: T[]
   
@@ -46,9 +45,6 @@ interface ResourceDashboardLayoutProps<T> {
   emptyStateTitle?: string
   emptyStateDescription?: string
   
-  // Loading message
-  loadingMessage?: string
-  
   // Search configuration
   searchPlaceholder?: string
   searchKeys?: (keyof T)[] | string[]
@@ -57,7 +53,6 @@ interface ResourceDashboardLayoutProps<T> {
 export function ResourceDashboardLayout<T extends Record<string, any>>({
   title,
   totalCount,
-  isLoading,
   error,
   data,
   columns,
@@ -72,7 +67,6 @@ export function ResourceDashboardLayout<T extends Record<string, any>>({
   onVisibleIdsChange,
   emptyStateTitle = 'No Items Found',
   emptyStateDescription = 'Get started by creating your first item',
-  loadingMessage = 'Loading...',
   searchPlaceholder = 'Search...',
   searchKeys = []
 }: ResourceDashboardLayoutProps<T>): React.ReactElement {
@@ -207,14 +201,14 @@ export function ResourceDashboardLayout<T extends Record<string, any>>({
 
         {/* Table */}
         <View flex="1" borderRadius="medium">
-          {isLoading || isSearching ? (
+          {isSearching ? (
             <Flex 
               justifyContent="center" 
               alignItems="center" 
               height="100%"
               UNSAFE_className="fade-in"
             >
-              <LoadingSpinner message={isSearching ? 'Searching...' : loadingMessage} />
+              <LoadingSpinner message="Searching..." />
             </Flex>
           ) : (
             <div className="fade-in">

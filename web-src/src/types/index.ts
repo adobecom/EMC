@@ -20,3 +20,6 @@ export * from './domain'
 
 // Attendee-related types
 export * from './attendee'
+
+// Campaign-related types
+export * from './campaign'

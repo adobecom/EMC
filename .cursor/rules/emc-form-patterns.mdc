@@ -54,15 +54,16 @@ Every form component should use it to register with the form lifecycle.
 ```tsx
 function VenueComponent() {
   const {
-    formData,          // Current form state (read-only)
-    updateFormData,    // Update central form state
-    eventId,           // Current event ID (null for new)
-    seriesId,          // Parent series ID
-    locale,            // Current locale
-    isEditMode,        // Create vs edit
-    isDirty,           // Has unsaved changes
-    isSaving,          // Save in progress
-    isLoading,         // Data loading
+    formData,                    // Current form state (read-only)
+    updateFormData,              // Update central form state
+    setLocaleAndRemapFormData,   // Switch locale and re-map form from eventDataResp
+    eventId,                     // Current event ID (null for new)
+    seriesId,                    // Parent series ID
+    locale,                      // Current locale (IETF, e.g. en-US)
+    isEditMode,                  // Create vs edit
+    isDirty,                     // Has unsaved changes
+    isSaving,                    // Save in progress
+    isLoading,                   // Data loading
   } = useEventFormComponent({
     componentId: 'venue',  // Unique ID for this component
 

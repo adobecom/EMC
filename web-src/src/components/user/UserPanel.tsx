@@ -12,11 +12,15 @@ import {
   ActionButton,
   MenuTrigger,
   Menu,
-  Item
+  Item,
+  Section
 } from '@adobe/react-spectrum'
 import UserIcon from '@spectrum-icons/workflow/User'
 import InfoIcon from '@spectrum-icons/workflow/Info'
+import LogOut from '@spectrum-icons/workflow/LogOut'
 import { IMS } from '../../types'
+import { useAuth } from '../../contexts/AuthContext'
+import { useProfileAvatar } from '../../hooks/useProfileAvatar'
 
 interface UserPanelProps {
   ims: IMS
@@ -25,6 +29,8 @@ interface UserPanelProps {
 
 export const UserPanel: React.FC<UserPanelProps> = ({ ims, compact = false }) => {
   const navigate = useNavigate()
+  const { signOut, authMode } = useAuth()
+  const { avatarUrl } = useProfileAvatar(ims)
 
   // Extract user info from IMS
   const userName = ims.profile?.name || 'Guest User'
@@ -44,6 +50,14 @@ export const UserPanel: React.FC<UserPanelProps> = ({ ims, compact = false }) =>
     navigate('/profile')
   }
 
+  const handleMenuAction = (key: React.Key) => {
+    if (key === 'profile') {
+      handleViewProfile()
+    } else if (key === 'signout') {
+      signOut()
+    }
+  }
+
   // If no IMS profile, show minimal panel
   if (!ims.profile) {
     return (
@@ -54,7 +68,15 @@ export const UserPanel: React.FC<UserPanelProps> = ({ ims, compact = false }) =>
         marginBottom={compact ? 'size-0' : 'size-300'}
       >
         <Flex direction="row" alignItems="center" gap="size-150">
-          <Avatar size="avatar-size-400" src="https://pps-stage.services.adobe.com/api/profile/image/default/22c90d64-691f-439f-b7fd-7fe06ccb01a7/138" />
+          <View
+            backgroundColor="blue-600"
+            width="size-400"
+            height="size-400"
+            borderRadius="medium"
+            UNSAFE_className="user-avatar"
+          >
+            <Text UNSAFE_className="user-initials-compact">GU</Text>
+          </View>
           <Text UNSAFE_className="user-name">Guest User</Text>
         </Flex>
       </View>
@@ -75,18 +97,26 @@ export const UserPanel: React.FC<UserPanelProps> = ({ ims, compact = false }) =>
           UNSAFE_className={compact ? 'user-panel-button-compact' : 'user-panel-button'}
         >
           <Flex direction="row" alignItems="center" gap="size-150" width="100%">
-            {/* Avatar with initials */}
-            <View 
-              backgroundColor="blue-600"
-              width={compact ? 'size-400' : 'size-500'}
-              height={compact ? 'size-400' : 'size-500'}
-              borderRadius="medium"
-              UNSAFE_className="user-avatar"
-            >
-              <Text UNSAFE_className={compact ? 'user-initials-compact' : 'user-initials'}>
-                {getInitials(userName)}
-              </Text>
-            </View>
+            {/* Avatar: image when available, else initials */}
+            {avatarUrl ? (
+              <Avatar
+                size={compact ? 'avatar-size-400' : 'avatar-size-500'}
+                src={avatarUrl}
+                alt={userName}
+              />
+            ) : (
+              <View
+                backgroundColor="blue-600"
+                width={compact ? 'size-400' : 'size-500'}
+                height={compact ? 'size-400' : 'size-500'}
+                borderRadius="medium"
+                UNSAFE_className="user-avatar"
+              >
+                <Text UNSAFE_className={compact ? 'user-initials-compact' : 'user-initials'}>
+                  {getInitials(userName)}
+                </Text>
+              </View>
+            )}
 
             {/* User info - only show name in compact mode */}
             <Flex direction="column" gap="size-25" flex UNSAFE_className="user-info-container">
@@ -102,19 +132,34 @@ export const UserPanel: React.FC<UserPanelProps> = ({ ims, compact = false }) =>
           </Flex>
         </ActionButton>
 
-        <Menu onAction={(key) => {
-          if (key === 'profile') {
-            handleViewProfile()
-          }
-        }}>
-          <Item key="profile" textValue="View Profile">
-            <UserIcon />
-            <Text>View Profile</Text>
-          </Item>
-          <Item key="info" textValue="User Info">
-            <InfoIcon />
-            <Text>User ID: {userId.substring(0, 12)}...</Text>
-          </Item>
+        <Menu onAction={handleMenuAction}>
+          <Section>
+            <Item key="profile" textValue="View Profile">
+              <UserIcon />
+              <Text>View Profile</Text>
+            </Item>
+            <Item key="info" textValue="User Info">
+              <InfoIcon />
+              <Text>User ID: {userId.substring(0, 12)}...</Text>
+            </Item>
+          </Section>
+          {/* Sign Out is only meaningful in standalone mode; in ExC Shell the shell handles it */}
+          {authMode === 'standalone' ? (
+            <Section>
+              <Item key="signout" textValue="Sign Out">
+                <LogOut />
+                <Text>Sign Out</Text>
+              </Item>
+            </Section>
+          ) : (
+            // Empty section to satisfy Menu children type - ExC Shell manages sign-out
+            <Section aria-label="shell-mode">
+              <Item key="shell-info" textValue="Managed by Experience Cloud">
+                <InfoIcon />
+                <Text>Sign out via Experience Cloud</Text>
+              </Item>
+            </Section>
+          ) as any}
         </Menu>
       </MenuTrigger>
 
@@ -132,4 +177,3 @@ export const UserPanel: React.FC<UserPanelProps> = ({ ims, compact = false }) =>
     </View>
   )
 }
-

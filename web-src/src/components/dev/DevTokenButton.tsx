@@ -8,6 +8,7 @@ import { ActionButton, Badge, Flex, Text, Tooltip, TooltipTrigger } from '@adobe
 import Key from '@spectrum-icons/workflow/Key'
 import { tokenStorage } from '../../services/tokenStorage'
 import { DevTokenDialog } from './DevTokenDialog'
+import { env } from '../../config/env'
 
 interface DevTokenButtonProps {
   onTokenChange?: (token: string | null) => void
@@ -18,9 +19,8 @@ export const DevTokenButton: React.FC<DevTokenButtonProps> = ({ onTokenChange })
   const [hasValidToken, setHasValidToken] = useState(false)
   const [expirationInfo, setExpirationInfo] = useState<any>(null)
   const [isDevMode] = useState(() => {
-    // Only show dev token UI on localhost (never in Experience Cloud Shell)
-    return window.location.hostname === 'localhost' || 
-           window.location.hostname === '127.0.0.1'
+    // Dev token UI only when ?devtokenmode=true on an allowed host
+    return env.isDevTokenModeEnabled()
   })
 
   const checkToken = () => {

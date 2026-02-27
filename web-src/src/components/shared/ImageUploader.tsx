@@ -15,7 +15,6 @@ import {
 import Delete from '@spectrum-icons/workflow/Delete'
 import ImageAdd from '@spectrum-icons/workflow/ImageAdd'
 import { uploadImage, UploadTracker } from '../../services/requestHelpers'
-import { tokenStorage } from '../../services/tokenStorage'
 import { getCurrentEnvironment, getApiHost } from '../../config/constants'
 import { apiService } from '../../services/api'
 
@@ -230,7 +229,7 @@ export const ImageUploader: React.FC<ImageUploaderProps> = ({
     setUploadProgress(0)
 
     try {
-      const token = tokenStorage.getValidToken()
+      const token = apiService.getAuthTokenForExternalUse()
       if (!token) {
         throw new Error('No authentication token available')
       }
