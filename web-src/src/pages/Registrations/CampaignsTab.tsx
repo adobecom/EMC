@@ -16,6 +16,7 @@ import {
   ButtonGroup,
   TextField,
   NumberField,
+  Switch,
   AlertDialog,
   Divider,
   Picker,
@@ -27,7 +28,7 @@ import Delete from '@spectrum-icons/workflow/Delete'
 import Copy from '@spectrum-icons/workflow/Copy'
 import type { EventApiResponse } from '../../types/domain'
 import type { Campaign, CampaignFormData, CampaignStatus } from '../../types/campaign'
-import { calculateCampaignStats, validateCampaignCapacity } from '../../types/campaign'
+import { calculateCampaignStats } from '../../types/campaign'
 import { DataTable, TableColumn } from '../../components/shared'
 import { COLORS, SPACING } from '../../styles/designSystem'
 
@@ -54,16 +55,7 @@ export const CampaignsTab: React.FC<CampaignsTabProps> = ({
   const [isSaving, setIsSaving] = useState(false)
   const [copiedId, setCopiedId] = useState<string | null>(null)
 
-  const stats = useMemo(() =>
-    calculateCampaignStats(campaigns, event?.attendeeLimit),
-    [campaigns, event?.attendeeLimit]
-  )
-
-  const getOtherCampaignsCapacity = useCallback((excludeCampaignId?: string) => {
-    return campaigns
-      .filter(c => c.campaignId !== excludeCampaignId)
-      .reduce((sum, c) => sum + c.attendeeLimit, 0)
-  }, [campaigns])
+  const stats = useMemo(() => calculateCampaignStats(campaigns), [campaigns])
 
   const handleSaveCampaign = useCallback(async (formData: CampaignFormData) => {
     setIsSaving(true)
@@ -247,13 +239,6 @@ export const CampaignsTab: React.FC<CampaignsTabProps> = ({
           <StatItem label="Active" value={stats.activeCampaigns} />
           <StatItem label="Registrations" value={stats.totalRegistrations} />
           <StatItem label="Waitlisted" value={stats.totalWaitlisted} />
-          {event?.attendeeLimit && (
-            <StatItem
-              label="Available Capacity"
-              value={stats.availableCapacity}
-              subtext={`of ${event.attendeeLimit} total`}
-            />
-          )}
         </Flex>
       </View>
 
@@ -300,7 +285,6 @@ export const CampaignsTab: React.FC<CampaignsTabProps> = ({
           <CampaignFormDialog
             campaign={editingCampaign}
             eventCapacity={event?.attendeeLimit}
-            otherCampaignsCapacity={getOtherCampaignsCapacity(editingCampaign?.campaignId)}
             isSaving={isSaving}
             onSave={(data) => {
               handleSaveCampaign(data)
@@ -397,7 +381,6 @@ const EmptyCampaignsState: React.FC<{ onCreateClick: () => void }> = ({ onCreate
 interface CampaignFormDialogProps {
   campaign: Campaign | null
   eventCapacity?: number
-  otherCampaignsCapacity: number
   isSaving: boolean
   onSave: (data: CampaignFormData) => void
   onCancel: () => void
@@ -406,44 +389,33 @@ interface CampaignFormDialogProps {
 const CampaignFormDialog: React.FC<CampaignFormDialogProps> = ({
   campaign,
   eventCapacity,
-  otherCampaignsCapacity,
   isSaving,
   onSave,
   onCancel
 }) => {
   const [name, setName] = useState(campaign?.name || '')
   const [attendeeLimit, setAttendeeLimit] = useState<number | undefined>(campaign?.attendeeLimit)
+  const [noCapacityLimit, setNoCapacityLimit] = useState(false)
   const [status, setStatus] = useState<CampaignStatus>(campaign?.status ?? 'Active')
-  const [capacityError, setCapacityError] = useState<string | null>(null)
-
-  const handleCapacityChange = (value: number) => {
-    setAttendeeLimit(value)
-
-    if (value && eventCapacity) {
-      const validation = validateCampaignCapacity(
-        value,
-        campaign?.attendeeLimit || 0,
-        otherCampaignsCapacity,
-        eventCapacity
-      )
-      setCapacityError(validation.isValid ? null : (validation.message || null))
-    } else {
-      setCapacityError(null)
-    }
-  }
 
   const handleSave = () => {
     if (!name.trim()) return
-    if (capacityError) return
+
+    const effectiveLimit = noCapacityLimit && eventCapacity != null
+      ? eventCapacity
+      : (attendeeLimit != null && !Number.isNaN(attendeeLimit) ? attendeeLimit : undefined)
 
     onSave({
       name: name.trim(),
-      attendeeLimit: attendeeLimit || undefined,
+      attendeeLimit: effectiveLimit,
       status
     })
   }
 
-  const isValid = name.trim().length > 0 && !capacityError
+  const hasValidLimit = noCapacityLimit
+    ? eventCapacity != null
+    : (attendeeLimit != null && !Number.isNaN(attendeeLimit) && attendeeLimit >= 1)
+  const isValid = name.trim().length > 0 && hasValidLimit
 
   return (
     <Dialog size="M">
@@ -474,18 +446,28 @@ const CampaignFormDialog: React.FC<CampaignFormDialogProps> = ({
 
           {/* Attendee Limit (only on create) */}
           {!campaign && (
-            <View>
+            <Flex direction="column" gap="size-200">
               <NumberField
                 label="Attendee limit"
-                value={attendeeLimit ?? NaN}
-                onChange={handleCapacityChange}
+                value={noCapacityLimit && eventCapacity != null ? eventCapacity : (attendeeLimit ?? NaN)}
+                onChange={(value) => setAttendeeLimit(value)}
                 minValue={1}
-                maxValue={eventCapacity || 10000}
                 width="100%"
-                validationState={capacityError ? 'invalid' : undefined}
-                description={capacityError || 'Must not exceed remaining event capacity'}
+                isDisabled={noCapacityLimit}
               />
-            </View>
+              <Switch
+                isSelected={noCapacityLimit}
+                onChange={setNoCapacityLimit}
+                isDisabled={eventCapacity == null}
+              >
+                No capacity limit (use full event capacity)
+              </Switch>
+              {eventCapacity == null && (
+                <Text UNSAFE_style={{ fontSize: '12px', color: COLORS.GRAY_600 }}>
+                  Event has no capacity limit set
+                </Text>
+              )}
+            </Flex>
           )}
 
           {/* Status Picker */}
