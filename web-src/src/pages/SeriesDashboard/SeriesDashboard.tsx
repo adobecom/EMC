@@ -45,7 +45,6 @@ export const SeriesDashboard: React.FC<SeriesDashboardProps> = () => {
     setError(null)
     
     try {
-      console.log('🔄 Fetching series list and events in parallel...')
       
       // Fetch both series and events in parallel
       const [seriesData, eventsData] = await Promise.all([
@@ -53,7 +52,6 @@ export const SeriesDashboard: React.FC<SeriesDashboardProps> = () => {
         cachedApi.getEventsList()
       ])
       
-      console.log(`✅ Fetched ${seriesData.length} series and ${eventsData.length} events`)
       
       // Store events for later counting
       setAllEvents(eventsData)
@@ -98,7 +96,6 @@ export const SeriesDashboard: React.FC<SeriesDashboardProps> = () => {
         return
       }
 
-      console.log('👤 Fetching history for series:', seriesToLoad)
       
       // Mark as attempted and loading
       setHistoryAttempted(prev => new Set([...prev, ...seriesToLoad]))
@@ -180,7 +177,6 @@ export const SeriesDashboard: React.FC<SeriesDashboardProps> = () => {
   const handleMenuAction = useCallback(async (action: string, item: SeriesDashboardItem) => {
     switch (action) {
       case 'publish':
-        console.log('Publish series:', item)
         try {
           // Fetch full series data first to get modificationTime
           const fullSeries = await cachedApi.getSeriesFull(item.seriesId)
@@ -198,7 +194,6 @@ export const SeriesDashboard: React.FC<SeriesDashboardProps> = () => {
         }
         break
       case 'unpublish':
-        console.log('Unpublish series:', item)
         try {
           // Fetch full series data first to get modificationTime
           const fullSeries = await cachedApi.getSeriesFull(item.seriesId)
@@ -216,16 +211,13 @@ export const SeriesDashboard: React.FC<SeriesDashboardProps> = () => {
         }
         break
       case 'edit':
-        console.log('Edit series:', item)
         window.location.hash = `#/series/edit/${item.seriesId}`
         break
       case 'clone':
-        console.log('Clone series:', item)
         // TODO: Implement clone functionality
         alert(`Clone functionality will be implemented for: ${item.seriesName}`)
         break
       case 'archive':
-        console.log('Archive series:', item)
         try {
           // Fetch full series data first to get modificationTime
           const fullSeries = await cachedApi.getSeriesFull(item.seriesId)
@@ -243,7 +235,7 @@ export const SeriesDashboard: React.FC<SeriesDashboardProps> = () => {
         }
         break
       default:
-        console.log('Unknown action:', action)
+        break
     }
   }, [])
 

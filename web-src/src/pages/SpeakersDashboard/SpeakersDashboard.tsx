@@ -189,8 +189,7 @@ export const SpeakersDashboard: React.FC<SpeakersDashboardProps> = () => {
               return { speakerId, events: Array.isArray(events) ? events : [] }
             }
             return { speakerId, events: [] }
-          } catch (err) {
-            console.warn(`Failed to load events for speaker ${speakerId}:`, err)
+          } catch (_err) {
             return { speakerId, events: [] }
           }
         })
@@ -306,8 +305,8 @@ export const SpeakersDashboard: React.FC<SpeakersDashboardProps> = () => {
                   editingSpeaker.speakerId,
                   event.eventId
                 )
-              } catch (err) {
-                console.warn(`Failed to update speaker in event ${event.eventId}:`, err)
+              } catch (_err) {
+                // Update failed - continue
               }
             })
           )
@@ -350,8 +349,8 @@ export const SpeakersDashboard: React.FC<SpeakersDashboardProps> = () => {
           events.map(async (event) => {
             try {
               await apiService.removeSpeakerFromEvent(speakerToDelete.speakerId, event.eventId)
-            } catch (err) {
-              console.warn(`Failed to remove speaker from event ${event.eventId}:`, err)
+            } catch (_err) {
+              // Remove failed - continue
             }
           })
         )
@@ -409,7 +408,7 @@ export const SpeakersDashboard: React.FC<SpeakersDashboardProps> = () => {
         handleViewConnections(item)
         break
       default:
-        console.log('Unknown action:', action)
+        break
     }
   }, [handleEditSpeaker, handleDeleteSpeaker, handleViewConnections])
   

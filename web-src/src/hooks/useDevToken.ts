@@ -34,10 +34,8 @@ export function useDevToken(): UseDevTokenReturn {
       const validToken = tokenStorage.getValidToken()
       
       if (validToken) {
-        console.log('✅ Found valid stored token')
         setToken(validToken)
       } else {
-        console.log('⚠️ No valid token found - API calls will fail')
         // Optionally auto-show dialog if no token
         // setIsDialogOpen(true)
       }
@@ -50,7 +48,6 @@ export function useDevToken(): UseDevTokenReturn {
   const handleTokenSaved = (newToken: string) => {
     setToken(newToken)
     setIsDialogOpen(false)
-    console.log('🎉 Token updated successfully')
   }
 
   return {

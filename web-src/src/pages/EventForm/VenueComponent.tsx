@@ -104,7 +104,6 @@ export const VenueComponent: React.FC = () => {
             const result = await uploadImage(pendingFile, config, token)
             
             if (result.imageUrl && result.imageId) {
-              console.log('Venue image uploaded successfully:', result)
               pendingImageFileRef.current = null
               updateFormData({
                 venue: {
@@ -153,7 +152,6 @@ export const VenueComponent: React.FC = () => {
         
         if (placeIdSame && venueNameSame && additionalInfoSame) {
           // Nothing relevant changed — skip the API call entirely
-          console.log('Venue unchanged — skipping venue API call')
           return
         }
       }
@@ -199,7 +197,6 @@ export const VenueComponent: React.FC = () => {
             console.error('Failed to create venue:', result)
             return
           }
-          console.log('Venue created successfully:', result)
         } else {
           // ---- UPDATE (PUT) — include venueId + timestamps as required by API ----
           const putPayload = {
@@ -219,7 +216,6 @@ export const VenueComponent: React.FC = () => {
             console.error('Failed to update venue:', result)
             return
           }
-          console.log('Venue updated successfully:', result)
         }
       } catch (error) {
         console.error('Error saving venue:', error)
@@ -340,7 +336,6 @@ export const VenueComponent: React.FC = () => {
           
           if (!place || place.name === undefined) {
             if (window.google?.maps?.places) {
-              console.warn('Google Places API error - possibly domain restriction')
               setPlacesApiError('Autocomplete unavailable. Please enter venue details manually.')
             }
             return

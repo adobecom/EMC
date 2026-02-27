@@ -86,7 +86,7 @@ export const ALLOWED_HOSTS: Record<string, boolean> = {
       const url = new URL(envConfig.host)
       acc[url.hostname] = true
     } catch (e) {
-      console.warn('Invalid URL in API_CONFIG.esl:', envConfig.host)
+      // Invalid URL - skip this host
     }
     return acc
   }, {} as Record<string, boolean>),
@@ -95,7 +95,7 @@ export const ALLOWED_HOSTS: Record<string, boolean> = {
       const url = new URL(envConfig.host)
       acc[url.hostname] = true
     } catch (e) {
-      console.warn('Invalid URL in API_CONFIG.esp:', envConfig.host)
+      // Invalid URL - skip this host
     }
     return acc
   }, {} as Record<string, boolean>),

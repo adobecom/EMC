@@ -470,7 +470,7 @@ export const EventsDashboard: React.FC<EventsDashboardProps> = () => {
         break
 
       default:
-        console.log('Unknown action:', action)
+        break
     }
   }, [actionInProgress, toast])
 

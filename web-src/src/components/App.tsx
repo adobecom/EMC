@@ -42,15 +42,12 @@ const AppContent: React.FC<{ runtime: Runtime }> = ({ runtime }) => {
   // Sync configuration changes from ExC Shell (e.g. org switch)
   React.useEffect(() => {
     runtime.on('configuration', ({ imsOrg, imsToken }) => {
-      console.log('🔄 ExC Shell configuration change', { imsOrg })
       if (imsToken && imsOrg) {
         updateFromShell({ ...ims, token: imsToken, org: imsOrg })
       }
     })
 
-    runtime.on('history', ({ type, path }) => {
-      console.log('history change', { type, path })
-    })
+    runtime.on('history', () => {})
   }, [runtime, updateFromShell])
 
   // error handler on UI rendering failure
@@ -117,10 +114,6 @@ const AppContent: React.FC<{ runtime: Runtime }> = ({ runtime }) => {
 }
 
 const App: React.FC<AppProps> = ({ runtime, ims, authMode }) => {
-  console.log('runtime object:', runtime)
-  console.log('ims object:', ims)
-  console.log('authMode:', authMode)
-
   return (
     <AuthProvider initialIms={ims} authMode={authMode}>
       <AuthGate>
