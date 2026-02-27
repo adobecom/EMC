@@ -113,7 +113,7 @@ export const GateScreen: React.FC<GateScreenProps> = ({
           alignItems: 'center',
           gap: '16px',
           minWidth: 360,
-          maxWidth: 480,
+          maxWidth: 480
         }}
       >
         {isLoading ? (
