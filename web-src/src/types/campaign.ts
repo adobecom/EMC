@@ -72,16 +72,12 @@ export interface CampaignStats {
   activeCampaigns: number
   totalRegistrations: number
   totalWaitlisted: number
-  availableCapacity: number
 }
 
 /**
  * Calculate campaign statistics for the stats bar.
  */
-export function calculateCampaignStats(
-  campaigns: Campaign[],
-  eventCapacity?: number
-): CampaignStats {
+export function calculateCampaignStats(campaigns: Campaign[]): CampaignStats {
   const activeCampaigns = campaigns.filter(c => c.status === 'Active')
   const totalRegistrations = campaigns.reduce(
     (sum, c) => sum + c.attendeeCount,
@@ -91,47 +87,11 @@ export function calculateCampaignStats(
     (sum, c) => sum + c.waitlistAttendeeCount,
     0
   )
-  const allocatedCapacity = campaigns.reduce(
-    (sum, c) => sum + c.attendeeLimit,
-    0
-  )
-
-  const availableCapacity = eventCapacity
-    ? Math.max(0, eventCapacity - allocatedCapacity)
-    : 0
 
   return {
     totalCampaigns: campaigns.length,
     activeCampaigns: activeCampaigns.length,
     totalRegistrations,
     totalWaitlisted,
-    availableCapacity,
   }
-}
-
-/**
- * Validate that a proposed attendeeLimit fits within the remaining event
- * capacity (excluding the campaign being edited).
- */
-export function validateCampaignCapacity(
-  newLimit: number,
-  _currentCampaignLimit: number,
-  otherCampaignsTotal: number,
-  eventCapacity?: number
-): { isValid: boolean; message?: string } {
-  if (!eventCapacity) {
-    return { isValid: true }
-  }
-
-  const totalAllocated = otherCampaignsTotal + newLimit
-
-  if (totalAllocated > eventCapacity) {
-    const available = eventCapacity - otherCampaignsTotal
-    return {
-      isValid: false,
-      message: `Capacity exceeds event limit. Maximum available: ${available}`,
-    }
-  }
-
-  return { isValid: true }
 }
