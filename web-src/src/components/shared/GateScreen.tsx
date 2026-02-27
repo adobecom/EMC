@@ -2,12 +2,13 @@
  * <license header>
  */
 
-import React from 'react'
-import { Flex, View, Text, Button } from '@adobe/react-spectrum'
+import React, { useState } from 'react'
+import { View, Text, Button, ProgressCircle } from '@adobe/react-spectrum'
 import { SPACING, COLORS, TYPOGRAPHY } from '../../styles/designSystem'
+import { GATE_BACKGROUND_IMAGES } from '../../assets/gate-backgrounds'
 
-/** Background color for gate screen (matches other repo) */
-const GATE_BACKGROUND = '#E8E8E8'
+/** Fallback background when images are unavailable */
+const GATE_BACKGROUND_FALLBACK = '#E8E8E8'
 
 /**
  * Browser access forbidden icon - from ecc-milo browser-access-forbidden-lg.svg
@@ -67,69 +68,99 @@ interface GateScreenProps {
 
 /**
  * Full-screen gate shown when the user does not have sufficient access.
- * Uses Spectrum components with layout matching the other repo.
+ * Uses Spectrum components with layout matching BlurredLoadingOverlay card pattern.
  */
 export const GateScreen: React.FC<GateScreenProps> = ({
   onRequestAccess,
   isLoading = false
 }) => {
+  const [backgroundImage] = useState(() => {
+    if (GATE_BACKGROUND_IMAGES.length === 0) return null
+    return GATE_BACKGROUND_IMAGES[
+      Math.floor(Math.random() * GATE_BACKGROUND_IMAGES.length)
+    ]
+  })
+
+  const outerStyle: React.CSSProperties = {
+    position: 'fixed',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: GATE_BACKGROUND_FALLBACK,
+    backgroundSize: 'cover',
+    backgroundPosition: 'center',
+    display: 'flex',
+    alignItems: 'center',
+    textAlign: 'center',
+    justifyContent: 'center'
+  }
+  if (backgroundImage) {
+    outerStyle.backgroundImage = `url(${backgroundImage})`
+  }
+
   return (
-    <View
-      UNSAFE_style={{
-        position: 'fixed',
-        top: 0,
-        left: 0,
-        right: 0,
-        bottom: 0,
-        backgroundColor: GATE_BACKGROUND,
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center'
-      }}
-    >
-      <Flex
-        direction="column"
-        alignItems="center"
-        gap="size-0"
+    <View UNSAFE_style={outerStyle}>
+      <View
+        padding="size-800"
+        borderRadius="medium"
         UNSAFE_style={{
-          margin: SPACING.HUGE,
-          textAlign: 'center'
+          background: 'rgba(255, 255, 255, 0.90)',
+          backdropFilter: 'blur(10px)',
+          boxShadow: '0 8px 32px rgba(0, 0, 0, 0.8)',
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          gap: '16px',
+          minWidth: 360,
+          maxWidth: 480
         }}
       >
-        <Text
-          UNSAFE_style={{
-            ...TYPOGRAPHY.COMPONENT_HEADING,
-            color: COLORS.DARK_GRAY,
-            fontWeight: 600,
-            marginBottom: SPACING.SM
-          }}
-        >
-          You need to sign in to access this page.
-        </Text>
+        {isLoading ? (
+          <>
+            <ProgressCircle
+              size="L"
+              isIndeterminate
+              aria-label="Checking access"
+            />
+            <Text UNSAFE_style={{ fontSize: '16px', fontWeight: 500 }}>
+              Checking access...
+            </Text>
+          </>
+        ) : (
+          <>
+            <Text
+              UNSAFE_style={{
+                ...TYPOGRAPHY.COMPONENT_HEADING,
+                color: COLORS.DARK_GRAY,
+                fontWeight: 600
+              }}
+            >
+              Events Management Console
+            </Text>
 
-        <View UNSAFE_style={{ margin: SPACING.XXL }}>
-          <BrowserLockIcon />
-        </View>
+            <View UNSAFE_style={{ margin: SPACING.XXL }}>
+              <BrowserLockIcon />
+            </View>
 
-        <Text
-          UNSAFE_style={{
-            ...TYPOGRAPHY.SECTION_DESCRIPTION,
-            color: COLORS.DARK_GRAY,
-            maxWidth: 420,
-            marginBottom: SPACING.LG
-          }}
-        >
-          Please sign in with an authorized account to continue.
-        </Text>
+            <Text
+              UNSAFE_style={{
+                ...TYPOGRAPHY.SECTION_DESCRIPTION,
+                color: COLORS.DARK_GRAY,
+                maxWidth: 420
+              }}
+            >
+              Please sign in with an authorized account to continue.
+            </Text>
 
-        <Button
-          variant="accent"
-          onPress={onRequestAccess}
-          isDisabled={isLoading}
-        >
-          {isLoading ? 'Checking access...' : 'Sign In'}
-        </Button>
-      </Flex>
+            <Button 
+            variant="accent"
+            onPress={onRequestAccess}>
+              Sign In
+            </Button>
+          </>
+        )}
+      </View>
     </View>
   )
 }
