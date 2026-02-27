@@ -1442,6 +1442,34 @@ class ApiService {
   }
 
   // ============================================================================
+  // HEALTH / PING
+  // ============================================================================
+
+  /**
+   * Ping ESP to verify API reachability and token validity.
+   * Used by the gate screen as the final step of the access check.
+   *
+   * TODO: Whitelist /v1/ping on CGW (Cluster Gateway) to fix CORS, then revert
+   * to using GET /v1/ping and checking for "pong" response instead of locales.
+   */
+  async pingEsp(): Promise<boolean> {
+    const token = this.getAuthToken()
+    if (!token) {
+      return false
+    }
+
+    try {
+      // Temporarily use locales as health check (ping has CORS issues)
+      const result = await this.callExternalApi('esp', '/v1/locales', 'GET', undefined,
+        { operationName: 'pingEsp (via locales)', shouldReturnFullResponse: true }
+      )
+      return !('error' in result)
+    } catch {
+      return false
+    }
+  }
+
+  // ============================================================================
   // CLOUD & LOCALE APIs
   // ============================================================================
 
