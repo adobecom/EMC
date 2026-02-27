@@ -154,10 +154,7 @@ export const GateScreen: React.FC<GateScreenProps> = ({
             </Text>
 
             <Button 
-            variant="accent" 
-            UNSAFE_style={{
-              padding: 'size-400',
-            }}
+            variant="accent"
             onPress={onRequestAccess}>
               Sign In
             </Button>
