@@ -102,11 +102,11 @@ export const GateScreen: React.FC<GateScreenProps> = ({
   return (
     <View UNSAFE_style={outerStyle}>
       <View
-        // backgroundColor="gray-50"
         padding="size-800"
         borderRadius="medium"
         UNSAFE_style={{
-          background: 'rgba(255, 255, 255, 0.95)',
+          background: 'rgba(255, 255, 255, 0.90)',
+          backdropFilter: 'blur(10px)',
           boxShadow: '0 8px 32px rgba(0, 0, 0, 0.8)',
           display: 'flex',
           flexDirection: 'column',
@@ -153,7 +153,12 @@ export const GateScreen: React.FC<GateScreenProps> = ({
               Please sign in with an authorized account to continue.
             </Text>
 
-            <Button variant="accent" onPress={onRequestAccess}>
+            <Button 
+            variant="accent" 
+            UNSAFE_style={{
+              padding: 'size-400',
+            }}
+            onPress={onRequestAccess}>
               Sign In
             </Button>
           </>
