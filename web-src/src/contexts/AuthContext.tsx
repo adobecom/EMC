@@ -14,6 +14,8 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react'
 import { IMS } from '../types'
 import { imsAuthService } from '../services/imsAuth'
+import { apiService } from '../services/api'
+import { env } from '../config/env'
 
 // ============================================================================
 // Types
@@ -28,6 +30,8 @@ export interface AuthContextValue {
   isAuthenticated: boolean
   /** Whether auth is being initialized (IMS lib loading / token check in progress). */
   isLoading: boolean
+  /** Whether ESP ping succeeded (API reachable and token valid). Gate stays until true. */
+  isApiReady: boolean
   /** Which auth mode is active. */
   authMode: AuthMode
   /** Trigger IMS sign-in flow (standalone mode only). */
@@ -68,8 +72,39 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({
 
   const [ims, setIms] = useState<IMS>(initialIms || emptyIms)
   const [isLoading, setIsLoading] = useState<boolean>(authMode === 'standalone')
+  const [isApiReady, setIsApiReady] = useState<boolean>(false)
 
   const isAuthenticated = Boolean(ims.token)
+
+  // When authenticated, ping ESP to verify API reachability before allowing access
+  useEffect(() => {
+    if (!ims.token) {
+      setIsApiReady(false)
+      return
+    }
+
+    setIsApiReady(false)
+    let cancelled = false
+
+    const runPing = async () => {
+      if (env.isDevelopment()) {
+        console.log('🔌 ESP ping: verifying API access...')
+      }
+      apiService.setAuthHeaders(ims.token, ims.org)
+      const ok = await apiService.pingEsp()
+      if (env.isDevelopment()) {
+        console.log('🔌 ESP ping:', ok ? 'pong received' : 'failed')
+      }
+      if (!cancelled && ok) {
+        setIsApiReady(true)
+      }
+    }
+
+    runPing()
+    return () => {
+      cancelled = true
+    }
+  }, [ims.token, ims.org])
 
   // In standalone mode, initialize the IMS library and check for an existing session
   useEffect(() => {
@@ -118,6 +153,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({
   const signOut = useCallback(() => {
     imsAuthService.signOut()
     setIms(emptyIms)
+    setIsApiReady(false)
   }, [])
 
   /**
@@ -133,6 +169,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({
     ims,
     isAuthenticated,
     isLoading,
+    isApiReady,
     authMode,
     signIn,
     signOut,

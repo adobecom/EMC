@@ -12,23 +12,23 @@ interface AuthGateProps {
 }
 
 /**
- * Wraps app content and shows a gate screen until the user is authenticated.
- * - ExC Shell: always renders children (shell provides IMS before render).
- * - Standalone: shows GateScreen until IMS init completes and user has a token.
+ * Wraps app content and shows a gate screen until the user is authenticated
+ * and the ESP API ping succeeds.
+ * - ExC Shell: gates until IMS from ready event + ESP ping succeeds.
+ * - Standalone: gates until IMS init completes, user has a token, and ESP ping succeeds.
  */
 export const AuthGate: React.FC<AuthGateProps> = ({ children }) => {
-  const { authMode, isLoading, isAuthenticated, signIn } = useAuth()
+  const { isLoading, isAuthenticated, isApiReady, signIn } = useAuth()
 
-  if (authMode === 'shell') {
-    return <>{children}</>
-  }
+  const showGate = isLoading || !isAuthenticated || !isApiReady
+  const isCheckingAccess = isLoading || (isAuthenticated && !isApiReady)
 
-  if (isLoading || !isAuthenticated) {
+  if (showGate) {
     return (
       <Provider theme={defaultTheme} colorScheme="light" scale="medium">
         <GateScreen
           onRequestAccess={signIn}
-          isLoading={isLoading}
+          isLoading={isCheckingAccess}
         />
       </Provider>
     )
