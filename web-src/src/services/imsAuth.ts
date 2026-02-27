@@ -168,9 +168,6 @@ class ImsAuthService {
         return
       }
 
-      if (env.isDevelopment()) {
-        console.log('IMS: loading library from CDN')
-      }
       const script = document.createElement('script')
       script.id = IMS_SCRIPT_ID
       script.src = IMS_LIB_CDN_URL
@@ -263,32 +260,22 @@ class ImsAuthService {
 
           // Called when initialization finishes (always fires, even without a session)
           onReady: () => {
-            if (env.isDevelopment()) {
-              console.log('IMS: library ready')
-            }
             this.checkExistingSession(onAccessToken)
             resolve()
           },
 
           // Fires when a valid access token is received (sign-in redirect or refresh)
           onAccessToken: (tokenObj: AdobeIMSTokenObject) => {
-            if (env.isDevelopment()) {
-              console.log('IMS: access token received')
-            }
             this.handleTokenReceived(tokenObj, onAccessToken)
           },
 
           // Fires on re-authentication
           onReauthAccessToken: (tokenObj: AdobeIMSTokenObject) => {
-            if (env.isDevelopment()) {
-              console.log('IMS: re-auth token received')
-            }
             this.handleTokenReceived(tokenObj, onAccessToken)
           },
 
           // Fires when the current token expires
           onAccessTokenHasExpired: () => {
-            console.warn('IMS: access token expired')
             this.currentIms = null
             this.notifyListeners(null)
           },
@@ -299,10 +286,6 @@ class ImsAuthService {
             // Resolve so the app renders in an unauthenticated state
             resolve()
           }
-        }
-
-        if (env.isDevelopment()) {
-          console.log(`IMS: initializing (env: ${imsEnv})`)
         }
 
         try {
@@ -332,21 +315,15 @@ class ImsAuthService {
     try {
       const isSignedIn = window.adobeIMS!.isSignedInUser()
       if (!isSignedIn) {
-        if (env.isDevelopment()) {
-          console.log('IMS: no existing session')
-        }
         return
       }
 
       const tokenObj = window.adobeIMS!.getAccessToken()
       if (!tokenObj) return
 
-      if (env.isDevelopment()) {
-        console.log('IMS: existing session found')
-      }
       await this.handleTokenReceived(tokenObj, callback)
     } catch (err) {
-      console.warn('IMS: error checking existing session', err)
+      // Session check failed - continue without session
     }
   }
 
@@ -478,7 +455,6 @@ class ImsAuthService {
     try {
       return await window.adobeIMS!.getProfile()
     } catch (err) {
-      console.warn('IMS: could not fetch profile', err)
       return null
     }
   }

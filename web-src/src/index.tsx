@@ -36,7 +36,6 @@ try {
   // Success: bootstrap in ExC Shell mode
   init(bootstrapInExcShell)
 } catch (e) {
-  console.log('ℹ️  Application not running inside Adobe Experience Cloud Shell — using standalone IMS auth')
   bootstrapStandalone()
 }
 
@@ -49,8 +48,6 @@ function bootstrapStandalone(): void {
     on: () => {},
     done: () => {}
   }
-
-  console.log('🔐 Bootstrapping in standalone mode with Adobe IMS library...')
 
   // Render the app immediately in an unauthenticated / loading state.
   // AuthProvider (mounted inside App) will initialize the IMS library
@@ -70,7 +67,6 @@ function bootstrapInExcShell(): void {
   // ready event brings in authentication/user info from the shell
   runtime.on('ready', ({ imsOrg, imsToken, imsProfile }) => {
     runtime.done()
-    console.log('✅ ExC Shell ready — received IMS profile:', imsProfile)
 
     const ims: IMS = {
       profile: imsProfile,

@@ -529,8 +529,7 @@ const EventFormInner: React.FC<EventFormInnerProps> = ({ ims: _ims }) => {
     
     // Then save to API
     const result = await saveDraft({
-      onSuccess: (savedEventId) => {
-        console.log('Event saved successfully:', savedEventId)
+      onSuccess: () => {
         toast.success(isEditMode ? 'Event updated successfully!' : 'Event saved successfully!')
       },
       onError: (error) => {
@@ -552,8 +551,7 @@ const EventFormInner: React.FC<EventFormInnerProps> = ({ ims: _ims }) => {
     
     // Then save to API
     const result = await saveDraft({
-      onSuccess: (savedEventId) => {
-        console.log('Event saved before advancing:', savedEventId)
+      onSuccess: () => {
         // Show a subtle success toast for auto-save during navigation
         toast.success('Progress saved', { duration: 2000 })
       },
@@ -618,7 +616,6 @@ const EventFormInner: React.FC<EventFormInnerProps> = ({ ims: _ims }) => {
     const eventResponse = state.eventDataResp
     
     if (!eventResponse?.detailPagePath) {
-      console.warn('Cannot preview - event has no detail page path')
       return
     }
     

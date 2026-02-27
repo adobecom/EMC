@@ -641,8 +641,6 @@ export const SponsorsComponent: React.FC = () => {
       if (imageData.imageUrl && imageData.imageId) {
         return { imageUrl: imageData.imageUrl, imageId: imageData.imageId }
       }
-      
-      console.warn('Unexpected image upload response format:', result)
       return null
     } catch (err) {
       console.error('Failed to upload sponsor image:', err)

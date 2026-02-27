@@ -100,9 +100,6 @@ class ApiService {
    */
   static enableDryRun(): void {
     ApiService.dryRunMode = true
-    console.log('%c🔒 DRY-RUN MODE ENABLED', 'background: #ff9800; color: black; padding: 4px 8px; border-radius: 4px; font-weight: bold;')
-    console.log('   POST, PUT, and DELETE calls will be logged but not sent to the backend.')
-    console.log('   To disable: apiService.disableDryRun() or window.disableDryRun()')
   }
   
   /**
@@ -110,8 +107,6 @@ class ApiService {
    */
   static disableDryRun(): void {
     ApiService.dryRunMode = false
-    console.log('%c🔓 DRY-RUN MODE DISABLED', 'background: #4caf50; color: white; padding: 4px 8px; border-radius: 4px; font-weight: bold;')
-    console.log('   API calls will now be sent to the backend normally.')
   }
   
   /**
@@ -132,20 +127,12 @@ class ApiService {
    * Log a dry-run call with formatted output
    */
   private logDryRunCall(
-    method: string,
-    url: string,
-    body?: any,
-    operationName?: string
+    _method: string,
+    _url: string,
+    _body?: any,
+    _operationName?: string
   ): void {
-    console.group(`%c🔒 DRY-RUN: ${operationName || `${method} ${url}`}`, 'background: #ff9800; color: black; padding: 2px 6px; border-radius: 3px;')
-    console.log('%cMethod:', 'font-weight: bold;', method)
-    console.log('%cURL:', 'font-weight: bold;', url)
-    if (body) {
-      console.log('%cPayload:', 'font-weight: bold;')
-      console.log(JSON.stringify(body, null, 2))
-      console.log('%cRaw payload object:', 'font-weight: bold; color: #666;', body)
-    }
-    console.groupEnd()
+    // Dry-run: no logging
   }
 
   /**
@@ -371,7 +358,6 @@ class ApiService {
     const token = this.getAuthToken()
     
     if (!token) {
-      console.warn(`⚠️ No valid authentication token for ${operationName}`)
       return { status: 'No Token', error: 'No valid authentication token' }
     }
 
@@ -505,7 +491,7 @@ class ApiService {
     }
 
     if (pageCount >= maxPages && nextPageToken) {
-      console.warn(`⚠️ ${operationName}: hit maxPages limit (${maxPages}), some data may be truncated`)
+      // Hit maxPages limit - some data may be truncated
     }
 
     return items
@@ -522,12 +508,8 @@ class ApiService {
     const token = this.getAuthToken()
 
     if (!token) {
-      console.warn('⚠️ No valid authentication token. Add a Dev Token for API access.')
       return []
     }
-
-    const env = getCurrentEnvironment()
-    console.log(`🔄 Fetching series from real API (${env} environment)...`)
 
     const result = await this.fetchAllPages<SeriesApiResponse>({
       service: 'esp',
@@ -541,7 +523,6 @@ class ApiService {
       throw new Error(`API returned ${result.status}`)
     }
 
-    console.log('✅ Successfully loaded series from API:', result.length, 'items')
     return result
   }
 
@@ -618,7 +599,6 @@ class ApiService {
     const results = new Map<string, EventHistoryResponse>()
     
     if (!token) {
-      console.warn('⚠️ No valid authentication token for series history')
       return results
     }
 
@@ -667,7 +647,6 @@ class ApiService {
     const results = new Map<string, SeriesApiResponse>()
     
     if (!token) {
-      console.warn('⚠️ No valid authentication token for series')
       return results
     }
 
@@ -719,12 +698,8 @@ class ApiService {
     const token = this.getAuthToken()
 
     if (!token) {
-      console.warn('⚠️ No valid authentication token. Add a Dev Token for API access.')
       return []
     }
-
-    const env = getCurrentEnvironment()
-    console.log(`🔄 Fetching events from real API (${env} environment)...`)
 
     const result = await this.fetchAllPages<EventApiResponse>({
       service: 'esp',
@@ -738,7 +713,6 @@ class ApiService {
       throw new Error(`API returned ${result.status}`)
     }
 
-    console.log('✅ Successfully loaded events from API:', result.length, 'items')
     return result
   }
 
@@ -813,7 +787,6 @@ class ApiService {
 
     const token = this.getAuthToken()
     if (!token) {
-      console.warn('⚠️ No valid authentication token for getEventFull')
       return { status: 'No Token', error: 'No valid authentication token' }
     }
 
@@ -873,8 +846,8 @@ class ApiService {
                 // Merge event-level data (like ordinal) with series-level data
                 return { ...fullSpeaker, ...eventSpeaker, ...fullSpeaker }
               }
-            } catch (err) {
-              console.warn(`Failed to hydrate speaker ${speakerId}:`, err)
+            } catch (_err) {
+              // Hydration failed - use event-level data
             }
             return eventSpeaker
           })
@@ -900,8 +873,8 @@ class ApiService {
                 // Merge event-level data with series-level data
                 return { ...fullSponsor, ...eventSponsor, ...fullSponsor }
               }
-            } catch (err) {
-              console.warn(`Failed to hydrate sponsor ${sponsorId}:`, err)
+            } catch (_err) {
+              // Hydration failed - use event-level data
             }
             return eventSponsor
           })
@@ -1525,7 +1498,6 @@ class ApiService {
     const token = this.getAuthToken()
     
     if (!token) {
-      console.warn('⚠️ No valid authentication token for uploadImage')
       return { status: 'No Token', error: 'No valid authentication token' }
     }
 
@@ -2138,30 +2110,14 @@ if (typeof window !== 'undefined') {
   
   (window as any).clearApiCache = () => {
     apiCache.clear()
-    console.log('%c✅ API Cache Cleared', 'color: #4caf50; font-weight: bold;')
   }
   
   (window as any).getApiCacheStats = () => {
-    const stats = apiCache.getStats()
-    console.log('%c📊 API Cache Statistics', 'color: #2196f3; font-weight: bold;')
-    console.table({
-      'Cache Size': stats.size,
-      'Max Size': stats.maxSize,
-      'Pending Requests': stats.pendingSize,
-      'Cache Hits': stats.hits,
-      'Cache Misses': stats.misses,
-      'Evictions': stats.evictions,
-      'Hit Rate': `${stats.hitRate.toFixed(2)}%`
-    })
-    if (stats.keys.length > 0) {
-      console.log('%cCache Keys (first 10):', 'color: #9e9e9e;', stats.keys.slice(0, 10))
-    }
-    return stats
+    return apiCache.getStats()
   }
   
   (window as any).resetCacheStats = () => {
     apiCache.resetStats()
-    console.log('%c🔄 Cache Statistics Reset', 'color: #ff9800; font-weight: bold;')
   }
   
   // Dev mode cache inspector
@@ -2172,24 +2128,10 @@ if (typeof window !== 'undefined') {
       invalidate: (pattern: string) => apiCache.invalidate(pattern),
       inspect: (keyPattern: string) => {
         const stats = apiCache.getStats()
-        const matchingKeys = stats.keys.filter(k => k.includes(keyPattern))
-        console.log(`Found ${matchingKeys.length} matching keys:`, matchingKeys)
-        return matchingKeys
+        return stats.keys.filter(k => k.includes(keyPattern))
       }
     }
   }
-  
-  // Log availability on load
-  console.log(
-    '%c🛠️ API Debug Mode Available',
-    'color: #2196f3; font-weight: bold;',
-    '\n   enableDryRun()      - Log POST/PUT/DELETE calls without sending',
-    '\n   disableDryRun()     - Resume normal API operation',
-    '\n   clearApiCache()     - Clear all cached API responses',
-    '\n   getApiCacheStats()  - View cache statistics',
-    '\n   resetCacheStats()   - Reset hit/miss counters',
-    '\n   __CACHE_DEBUG__     - Advanced cache inspection (dev mode)'
-  )
 }
 
 /**
