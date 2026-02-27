@@ -17,6 +17,21 @@ import { formatTime, formatDate } from "../../../utils/shared";
 import { SessionDialog } from "./SessionDialog";
 import type { SessionFormData } from "./SessionDialog";
 
+/** Get display label from a CaaS tag ID: only the last path segment (e.g. caas:adobe-partners/spp → SPP, caas:adobe-partners/collections/event → Event). */
+function getCaasTagDisplayLabel(caasId: string): string {
+  const withoutPrefix = caasId.replace(/^caas:/, "").trim();
+  const segments = withoutPrefix.split("/").filter(Boolean);
+  const last = segments.length > 0 ? segments[segments.length - 1] : caasId;
+  const normalized = last.replace(/-/g, " ");
+  if (normalized.length <= 4 && /^[a-zA-Z]+$/.test(normalized)) {
+    return normalized.toUpperCase();
+  }
+  return normalized
+    .split(" ")
+    .map((w) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
+    .join(" ");
+}
+
 export interface SessionItemProps {
   session: Session;
   onDelete: (sessionId: string) => void;
@@ -66,7 +81,7 @@ export const SessionItem: React.FC<SessionItemProps> = ({
             </Text>
             <Flex gap="size-150" marginTop="size-100">
               {session.tags?.map((tag) => (
-                <Chip key={tag} text={tag} />
+                <Chip key={tag} text={getCaasTagDisplayLabel(tag)} />
               ))}
             </Flex>
           </Flex>
