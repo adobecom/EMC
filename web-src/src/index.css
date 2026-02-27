@@ -345,7 +345,6 @@ body {
 .nav-card:hover {
   transform: translateY(-2px);
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-  border-color: var(--spectrum-global-color-blue-400) !important;
 }
 
 .nav-card:active {

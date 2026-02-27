@@ -30,7 +30,6 @@ import { apiService, cachedApi } from '../../services/api'
 import RemoveCircle from '@spectrum-icons/workflow/RemoveCircle'
 import { useEventFormComponent } from '../../hooks/useEventFormComponent'
 import { uploadImage, UploadTracker } from '../../services/requestHelpers'
-import { tokenStorage } from '../../services/tokenStorage'
 import { getCurrentEnvironment, getApiHost } from '../../config/constants'
 
 // ============================================================================
@@ -618,7 +617,7 @@ export const SponsorsComponent: React.FC = () => {
     existingImageId?: string
   ): Promise<{ imageUrl: string; imageId: string } | null> => {
     try {
-      const token = tokenStorage.getValidToken()
+      const token = apiService.getAuthTokenForExternalUse()
       if (!token) {
         throw new Error('No authentication token available')
       }
@@ -642,8 +641,6 @@ export const SponsorsComponent: React.FC = () => {
       if (imageData.imageUrl && imageData.imageId) {
         return { imageUrl: imageData.imageUrl, imageId: imageData.imageId }
       }
-      
-      console.warn('Unexpected image upload response format:', result)
       return null
     } catch (err) {
       console.error('Failed to upload sponsor image:', err)

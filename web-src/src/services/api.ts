@@ -19,10 +19,10 @@ import {
   ApiResponse,
   ApiListResponse
 } from '../types/domain'
-import { getSeriesListMock, getEventsListMock } from '../mocks'
 import { tokenStorage } from './tokenStorage'
 import { constructRequestHeaders, safeFetch } from './requestHelpers'
 import { getCurrentEnvironment, getApiHost, SUPPORTED_CLOUDS } from '../config/constants'
+import { env } from '../config/env'
 import { apiCache } from './cacheUtils'
 import { deduplicateBy } from '../utils/deduplication'
 
@@ -100,9 +100,6 @@ class ApiService {
    */
   static enableDryRun(): void {
     ApiService.dryRunMode = true
-    console.log('%c🔒 DRY-RUN MODE ENABLED', 'background: #ff9800; color: black; padding: 4px 8px; border-radius: 4px; font-weight: bold;')
-    console.log('   POST, PUT, and DELETE calls will be logged but not sent to the backend.')
-    console.log('   To disable: apiService.disableDryRun() or window.disableDryRun()')
   }
   
   /**
@@ -110,8 +107,6 @@ class ApiService {
    */
   static disableDryRun(): void {
     ApiService.dryRunMode = false
-    console.log('%c🔓 DRY-RUN MODE DISABLED', 'background: #4caf50; color: white; padding: 4px 8px; border-radius: 4px; font-weight: bold;')
-    console.log('   API calls will now be sent to the backend normally.')
   }
   
   /**
@@ -132,20 +127,12 @@ class ApiService {
    * Log a dry-run call with formatted output
    */
   private logDryRunCall(
-    method: string,
-    url: string,
-    body?: any,
-    operationName?: string
+    _method: string,
+    _url: string,
+    _body?: any,
+    _operationName?: string
   ): void {
-    console.group(`%c🔒 DRY-RUN: ${operationName || `${method} ${url}`}`, 'background: #ff9800; color: black; padding: 2px 6px; border-radius: 3px;')
-    console.log('%cMethod:', 'font-weight: bold;', method)
-    console.log('%cURL:', 'font-weight: bold;', url)
-    if (body) {
-      console.log('%cPayload:', 'font-weight: bold;')
-      console.log(JSON.stringify(body, null, 2))
-      console.log('%cRaw payload object:', 'font-weight: bold; color: #666;', body)
-    }
-    console.groupEnd()
+    // Dry-run: no logging
   }
 
   /**
@@ -324,23 +311,30 @@ class ApiService {
   // ============================================================================
 
   /**
-   * Get the current auth token - checks both stored dev token and IMS token from context
-   * Priority: 1) tokenStorage (dev mode) 2) configured headers (ExC Shell IMS)
+   * Get the current auth token.
+   * When dev token mode is enabled (?devtokenmode=true on an allowed host): 1) tokenStorage 2) configured headers.
+   * Otherwise: only configured headers (IMS from shell/standalone).
    */
   private getAuthToken(): string | null {
-    // First check tokenStorage (dev mode)
-    const storedToken = tokenStorage.getValidToken()
-    if (storedToken) {
-      return storedToken
+    if (env.isDevTokenModeEnabled()) {
+      const storedToken = tokenStorage.getValidToken()
+      if (storedToken) return storedToken
     }
-    
-    // Fall back to IMS token set via setAuthHeaders (ExC Shell mode)
+
     const authHeader = this.config.headers?.authorization
     if (authHeader && authHeader.startsWith('Bearer ')) {
       return authHeader.substring(7) // Remove "Bearer " prefix
     }
-    
+
     return null
+  }
+
+  /**
+   * Get the auth token for use by components that make direct API calls (e.g. uploads, external APIs).
+   * Uses the same logic as getAuthToken (dev token only when ?devtokenmode=true).
+   */
+  getAuthTokenForExternalUse(): string | null {
+    return this.getAuthToken()
   }
 
   /**
@@ -364,7 +358,6 @@ class ApiService {
     const token = this.getAuthToken()
     
     if (!token) {
-      console.warn(`⚠️ No valid authentication token for ${operationName}`)
       return { status: 'No Token', error: 'No valid authentication token' }
     }
 
@@ -442,65 +435,95 @@ class ApiService {
     return this.callExternalApi<T>(service, endpoint, 'PUT', mergedBody, { operationName })
   }
 
+  /**
+   * Fetch all pages of a paginated list endpoint.
+   * Uses iterative loop (not recursion) to avoid stack overflow.
+   * Backend returns nextPageToken in response; pass it back as next-page-token (kebab-case) URL param.
+   */
+  private async fetchAllPages<T = any>(options: {
+    service: 'esp' | 'esl'
+    baseEndpoint: string
+    listKey: string
+    baseParams?: Record<string, string>
+    operationName?: string
+    maxPages?: number
+  }): Promise<T[] | ErrorResponse> {
+    const {
+      service,
+      baseEndpoint,
+      listKey,
+      baseParams = {},
+      operationName = `fetchAllPages(${baseEndpoint})`,
+      maxPages = 100
+    } = options
+
+    const items: T[] = []
+    let nextPageToken: string | null = null
+    let pageCount = 0
+
+    while (pageCount < maxPages) {
+      const params = new URLSearchParams(baseParams)
+      if (nextPageToken) {
+        params.set('next-page-token', nextPageToken)
+      }
+      const queryString = params.toString()
+      const endpoint = queryString ? `${baseEndpoint}?${queryString}` : baseEndpoint
+
+      const result = await this.callExternalApi<any>(service, endpoint, 'GET', undefined, {
+        operationName: `${operationName} (page ${pageCount + 1})`,
+        shouldReturnFullResponse: true
+      })
+
+      if ('error' in result) {
+        return result
+      }
+
+      const pageItems = result[listKey]
+      if (Array.isArray(pageItems)) {
+        items.push(...pageItems)
+      }
+
+      nextPageToken = result.nextPageToken || null
+      if (!nextPageToken) {
+        break
+      }
+      pageCount++
+    }
+
+    if (pageCount >= maxPages && nextPageToken) {
+      // Hit maxPages limit - some data may be truncated
+    }
+
+    return items
+  }
+
   // ============================================================================
   // SERIES EXTERNAL APIs
   // ============================================================================
 
   /**
-   * Get series list from ESP API with token authentication and mock fallback
+   * Get series list from ESP API with token authentication
    */
   async getSeriesList(): Promise<SeriesApiResponse[]> {
     const token = this.getAuthToken()
-    
+
     if (!token) {
-      console.warn('⚠️ No valid authentication token. Using mock data.')
-      console.log('💡 Click the "Dev Token" button to add a token for real API access')
-      
-      try {
-        const data = await getSeriesListMock()
-        console.log('📦 Using mock series data:', data.length, 'items')
-        return data
-      } catch (error) {
-        console.error('Error fetching mock series:', error)
-        return []
-      }
+      return []
     }
 
-    try {
-      const env = getCurrentEnvironment()
-      console.log(`🔄 Fetching series from real API (${env} environment)...`)
-      
-      const headers = constructRequestHeaders(token, 'GET')
-      const host = getApiHost('esp', env)
-      const url = `${host}/v1/series`
+    const result = await this.fetchAllPages<SeriesApiResponse>({
+      service: 'esp',
+      baseEndpoint: '/v1/series',
+      listKey: 'series',
+      operationName: 'getSeriesList'
+    })
 
-      const response = await safeFetch(url, {
-        method: 'GET',
-        headers: headers as any
-      })
-
-      const data = await response.json()
-
-      if (!response.ok) {
-        console.error(`❌ API Error: ${response.status}`, data)
-        throw new Error(`API returned ${response.status}`)
-      }
-
-      const series = data.series || []
-      console.log('✅ Successfully loaded series from API:', series.length, 'items')
-      
-      return series
-    } catch (error) {
-      console.error('❌ Error fetching series from API:', error)
-      console.log('📦 Falling back to mock data')
-      
-      try {
-        return await getSeriesListMock()
-      } catch (mockError) {
-        console.error('Error fetching mock series:', mockError)
-        return []
-      }
+    if ('error' in result) {
+      console.error(`❌ API Error:`, result)
+      throw new Error(`API returned ${result.status}`)
     }
+
+    return result
   }
 
   async createSeriesExternal(seriesData: any): Promise<any | ErrorResponse> {
@@ -576,7 +599,6 @@ class ApiService {
     const results = new Map<string, EventHistoryResponse>()
     
     if (!token) {
-      console.warn('⚠️ No valid authentication token for series history')
       return results
     }
 
@@ -625,7 +647,6 @@ class ApiService {
     const results = new Map<string, SeriesApiResponse>()
     
     if (!token) {
-      console.warn('⚠️ No valid authentication token for series')
       return results
     }
 
@@ -671,60 +692,28 @@ class ApiService {
   // ============================================================================
 
   /**
-   * Get events list from ESP API with token authentication and mock fallback
+   * Get events list from ESP API with token authentication
    */
   async getEventsList(): Promise<EventApiResponse[]> {
     const token = this.getAuthToken()
-    
+
     if (!token) {
-      console.warn('⚠️ No valid authentication token. Using mock data.')
-      console.log('💡 Click the "Dev Token" button to add a token for real API access')
-      
-      try {
-        const data = await getEventsListMock()
-        console.log('📦 Using mock events data:', data.length, 'items')
-        return data
-      } catch (error) {
-        console.error('Error fetching mock events:', error)
-        return []
-      }
+      return []
     }
 
-    try {
-      const env = getCurrentEnvironment()
-      console.log(`🔄 Fetching events from real API (${env} environment)...`)
-      
-      const headers = constructRequestHeaders(token, 'GET')
-      const host = getApiHost('esp', env)
-      const url = `${host}/v1/events`
+    const result = await this.fetchAllPages<EventApiResponse>({
+      service: 'esp',
+      baseEndpoint: '/v1/events',
+      listKey: 'events',
+      operationName: 'getEventsList'
+    })
 
-      const response = await safeFetch(url, {
-        method: 'GET',
-        headers: headers as any
-      })
-
-      const data = await response.json()
-
-      if (!response.ok) {
-        console.error(`❌ API Error: ${response.status}`, data)
-        throw new Error(`API returned ${response.status}`)
-      }
-
-      const events = data.events || []
-      console.log('✅ Successfully loaded events from API:', events.length, 'items')
-      
-      return events
-    } catch (error) {
-      console.error('❌ Error fetching events from API:', error)
-      console.log('📦 Falling back to mock data')
-      
-      try {
-        return await getEventsListMock()
-      } catch (mockError) {
-        console.error('Error fetching mock events:', mockError)
-        return []
-      }
+    if ('error' in result) {
+      console.error(`❌ API Error:`, result)
+      throw new Error(`API returned ${result.status}`)
     }
+
+    return result
   }
 
   async createEventExternal(payload: any, locale: string): Promise<any | ErrorResponse> {
@@ -798,7 +787,6 @@ class ApiService {
 
     const token = this.getAuthToken()
     if (!token) {
-      console.warn('⚠️ No valid authentication token for getEventFull')
       return { status: 'No Token', error: 'No valid authentication token' }
     }
 
@@ -858,8 +846,8 @@ class ApiService {
                 // Merge event-level data (like ordinal) with series-level data
                 return { ...fullSpeaker, ...eventSpeaker, ...fullSpeaker }
               }
-            } catch (err) {
-              console.warn(`Failed to hydrate speaker ${speakerId}:`, err)
+            } catch (_err) {
+              // Hydration failed - use event-level data
             }
             return eventSpeaker
           })
@@ -885,8 +873,8 @@ class ApiService {
                 // Merge event-level data with series-level data
                 return { ...fullSponsor, ...eventSponsor, ...fullSponsor }
               }
-            } catch (err) {
-              console.warn(`Failed to hydrate sponsor ${sponsorId}:`, err)
+            } catch (_err) {
+              // Hydration failed - use event-level data
             }
             return eventSponsor
           })
@@ -917,9 +905,14 @@ class ApiService {
 
   async getEventImages(eventId: string): Promise<any | ErrorResponse> {
     validateString(eventId, 'event ID')
-    return this.callExternalApi('esp', `/v1/events/${eventId}/images`, 'GET', undefined,
-      { operationName: 'getEventImages', shouldReturnFullResponse: true }
-    )
+    const result = await this.fetchAllPages<any>({
+      service: 'esp',
+      baseEndpoint: `/v1/events/${eventId}/images`,
+      listKey: 'images',
+      operationName: 'getEventImages'
+    })
+    if ('error' in result) return result
+    return { images: result }
   }
 
   async getEventHistory(eventId: string): Promise<any | ErrorResponse> {
@@ -1100,9 +1093,14 @@ class ApiService {
 
   async getSpeakers(seriesId: string): Promise<any | ErrorResponse> {
     validateString(seriesId, 'series ID')
-    return this.callExternalApi('esp', `/v1/series/${seriesId}/speakers`, 'GET', undefined,
-      { operationName: 'getSpeakers', shouldReturnFullResponse: true }
-    )
+    const result = await this.fetchAllPages<any>({
+      service: 'esp',
+      baseEndpoint: `/v1/series/${seriesId}/speakers`,
+      listKey: 'speakers',
+      operationName: 'getSpeakers'
+    })
+    if ('error' in result) return result
+    return { speakers: result }
   }
 
   async addSpeakerToEvent(speakerData: any, eventId: string): Promise<any | ErrorResponse> {
@@ -1115,9 +1113,14 @@ class ApiService {
 
   async getEventSpeakers(eventId: string): Promise<any | ErrorResponse> {
     validateString(eventId, 'event ID')
-    return this.callExternalApi('esp', `/v1/events/${eventId}/speakers`, 'GET', undefined,
-      { operationName: 'getEventSpeakers', shouldReturnFullResponse: true }
-    )
+    const result = await this.fetchAllPages<any>({
+      service: 'esp',
+      baseEndpoint: `/v1/events/${eventId}/speakers`,
+      listKey: 'speakers',
+      operationName: 'getEventSpeakers'
+    })
+    if ('error' in result) return result
+    return { speakers: result }
   }
 
   async getEventSpeaker(eventId: string, speakerId: string): Promise<any | ErrorResponse> {
@@ -1177,9 +1180,14 @@ class ApiService {
    */
   async getEventsBySpeakerId(speakerId: string): Promise<any | ErrorResponse> {
     validateString(speakerId, 'speaker ID')
-    return this.callExternalApi('esp', `/v1/speakers/${speakerId}/events`, 'GET', undefined,
-      { operationName: `getEventsBySpeakerId(${speakerId})`, shouldReturnFullResponse: true }
-    )
+    const result = await this.fetchAllPages<any>({
+      service: 'esp',
+      baseEndpoint: `/v1/speakers/${speakerId}/events`,
+      listKey: 'events',
+      operationName: `getEventsBySpeakerId(${speakerId})`
+    })
+    if ('error' in result) return result
+    return { events: result }
   }
 
   // ============================================================================
@@ -1215,9 +1223,14 @@ class ApiService {
 
   async getSponsors(seriesId: string): Promise<any | ErrorResponse> {
     validateString(seriesId, 'series ID')
-    return this.callExternalApi('esp', `/v1/series/${seriesId}/sponsors`, 'GET', undefined,
-      { operationName: 'getSponsors', shouldReturnFullResponse: true }
-    )
+    const result = await this.fetchAllPages<any>({
+      service: 'esp',
+      baseEndpoint: `/v1/series/${seriesId}/sponsors`,
+      listKey: 'sponsors',
+      operationName: 'getSponsors'
+    })
+    if ('error' in result) return result
+    return { sponsors: result }
   }
 
   async addSponsorToEvent(sponsorData: any, eventId: string): Promise<any | ErrorResponse> {
@@ -1230,9 +1243,14 @@ class ApiService {
 
   async getEventSponsors(eventId: string): Promise<any | ErrorResponse> {
     validateString(eventId, 'event ID')
-    return this.callExternalApi('esp', `/v1/events/${eventId}/sponsors`, 'GET', undefined,
-      { operationName: 'getEventSponsors', shouldReturnFullResponse: true }
-    )
+    const result = await this.fetchAllPages<any>({
+      service: 'esp',
+      baseEndpoint: `/v1/events/${eventId}/sponsors`,
+      listKey: 'sponsors',
+      operationName: 'getEventSponsors'
+    })
+    if ('error' in result) return result
+    return { sponsors: result }
   }
 
   async getEventSponsor(eventId: string, sponsorId: string): Promise<any | ErrorResponse> {
@@ -1332,9 +1350,14 @@ class ApiService {
 
   async getEventAttendees(eventId: string): Promise<any | ErrorResponse> {
     validateString(eventId, 'event ID')
-    return this.callExternalApi('esp', `/v1/events/${eventId}/attendees`, 'GET', undefined,
-      { operationName: 'getEventAttendees', shouldReturnFullResponse: true }
-    )
+    const result = await this.fetchAllPages<any>({
+      service: 'esp',
+      baseEndpoint: `/v1/events/${eventId}/attendees`,
+      listKey: 'attendees',
+      operationName: 'getEventAttendees'
+    })
+    if ('error' in result) return result
+    return { attendees: result }
   }
 
   async getAttendee(eventId: string, attendeeId: string): Promise<any | ErrorResponse> {
@@ -1356,42 +1379,28 @@ class ApiService {
   async getAllEventAttendees(eventId: string): Promise<any[] | ErrorResponse> {
     validateString(eventId, 'event ID')
 
-    const recurGetAttendees = async (
-      type: 'registered' | 'waitlisted',
-      fullAttendeeArr: any[] = [],
-      nextPageToken: string | null = null
-    ): Promise<any[] | ErrorResponse> => {
-      const params = new URLSearchParams({ type })
-      if (nextPageToken) params.set('nextPageToken', nextPageToken)
-
-      const endpoint = `/v1/events/${eventId}/attendees?${params.toString()}`
-
-      const result = await this.callExternalApi<any>('esp', endpoint, 'GET', undefined, {
-        operationName: `getAllEventAttendees (type=${type}, paginated)`,
-        shouldReturnFullResponse: true
+    const fetchByType = async (type: 'registered' | 'waitlisted'): Promise<any[] | ErrorResponse> => {
+      const result = await this.fetchAllPages<any>({
+        service: 'esp',
+        baseEndpoint: `/v1/events/${eventId}/attendees`,
+        listKey: 'attendees',
+        baseParams: { type },
+        operationName: `getAllEventAttendees (type=${type})`
       })
 
       if ('error' in result) {
         return result
       }
 
-      const hydratedAttendees = (result.attendees || []).map((attendee: any) => ({
+      return result.map((attendee: any) => ({
         ...attendee,
         registrationStatus: type
       }))
-
-      const accumulated = fullAttendeeArr.concat(hydratedAttendees)
-
-      if (result.nextPageToken) {
-        return recurGetAttendees(type, accumulated, result.nextPageToken)
-      }
-
-      return accumulated
     }
 
     const [registered, waitlisted] = await Promise.all([
-      recurGetAttendees('registered'),
-      recurGetAttendees('waitlisted')
+      fetchByType('registered'),
+      fetchByType('waitlisted')
     ])
 
     // If both errored, return the first error
@@ -1403,6 +1412,34 @@ class ApiService {
     const waitlistedList = 'error' in waitlisted ? [] : waitlisted
 
     return registeredList.concat(waitlistedList)
+  }
+
+  // ============================================================================
+  // HEALTH / PING
+  // ============================================================================
+
+  /**
+   * Ping ESP to verify API reachability and token validity.
+   * Used by the gate screen as the final step of the access check.
+   *
+   * TODO: Whitelist /v1/ping on CGW (Cluster Gateway) to fix CORS, then revert
+   * to using GET /v1/ping and checking for "pong" response instead of locales.
+   */
+  async pingEsp(): Promise<boolean> {
+    const token = this.getAuthToken()
+    if (!token) {
+      return false
+    }
+
+    try {
+      // Temporarily use locales as health check (ping has CORS issues)
+      const result = await this.callExternalApi('esp', '/v1/locales', 'GET', undefined,
+        { operationName: 'pingEsp (via locales)', shouldReturnFullResponse: true }
+      )
+      return !('error' in result)
+    } catch {
+      return false
+    }
   }
 
   // ============================================================================
@@ -1461,7 +1498,6 @@ class ApiService {
     const token = this.getAuthToken()
     
     if (!token) {
-      console.warn('⚠️ No valid authentication token for uploadImage')
       return { status: 'No Token', error: 'No valid authentication token' }
     }
 
@@ -1718,6 +1754,50 @@ class ApiService {
     validateString(profileId, 'profile ID')
     return this.callExternalApi('esp', `/v1/events/${eventId}/publishing-profiles`, 'POST', { profileId },
       { operationName: `assignPublishingProfileToEvent(${eventId}, ${profileId})`, shouldReturnFullResponse: true }
+    )
+  }
+
+  // --------------------------------------------------------------------------
+  // Campaigns
+  // --------------------------------------------------------------------------
+
+  async getEventCampaigns(eventId: string): Promise<any | ErrorResponse> {
+    validateString(eventId, 'event ID')
+    return this.callExternalApi('esp', `/v1/events/${eventId}/campaigns`, 'GET', undefined,
+      { operationName: 'getEventCampaigns', shouldReturnFullResponse: true }
+    )
+  }
+
+  async getCampaign(eventId: string, campaignId: string): Promise<any | ErrorResponse> {
+    validateString(eventId, 'event ID')
+    validateString(campaignId, 'campaign ID')
+    return this.callExternalApi('esp', `/v1/events/${eventId}/campaigns/${campaignId}`, 'GET', undefined,
+      { operationName: 'getCampaign', shouldReturnFullResponse: true }
+    )
+  }
+
+  async createCampaign(eventId: string, payload: Record<string, unknown>): Promise<any | ErrorResponse> {
+    validateString(eventId, 'event ID')
+    validateObject(payload, 'campaign payload')
+    return this.callExternalApi('esp', `/v1/events/${eventId}/campaigns`, 'POST', payload,
+      { operationName: 'createCampaign', shouldReturnFullResponse: true }
+    )
+  }
+
+  async updateCampaign(eventId: string, campaignId: string, payload: Record<string, unknown>): Promise<any | ErrorResponse> {
+    validateString(eventId, 'event ID')
+    validateString(campaignId, 'campaign ID')
+    validateObject(payload, 'campaign payload')
+    return this.callExternalApi('esp', `/v1/events/${eventId}/campaigns/${campaignId}`, 'PUT', payload,
+      { operationName: 'updateCampaign', shouldReturnFullResponse: true }
+    )
+  }
+
+  async deleteCampaign(eventId: string, campaignId: string): Promise<any | ErrorResponse> {
+    validateString(eventId, 'event ID')
+    validateString(campaignId, 'campaign ID')
+    return this.callExternalApi('esp', `/v1/events/${eventId}/campaigns/${campaignId}`, 'DELETE', undefined,
+      { operationName: 'deleteCampaign', shouldReturnFullResponse: true }
     )
   }
 }
@@ -2030,30 +2110,14 @@ if (typeof window !== 'undefined') {
   
   (window as any).clearApiCache = () => {
     apiCache.clear()
-    console.log('%c✅ API Cache Cleared', 'color: #4caf50; font-weight: bold;')
   }
   
   (window as any).getApiCacheStats = () => {
-    const stats = apiCache.getStats()
-    console.log('%c📊 API Cache Statistics', 'color: #2196f3; font-weight: bold;')
-    console.table({
-      'Cache Size': stats.size,
-      'Max Size': stats.maxSize,
-      'Pending Requests': stats.pendingSize,
-      'Cache Hits': stats.hits,
-      'Cache Misses': stats.misses,
-      'Evictions': stats.evictions,
-      'Hit Rate': `${stats.hitRate.toFixed(2)}%`
-    })
-    if (stats.keys.length > 0) {
-      console.log('%cCache Keys (first 10):', 'color: #9e9e9e;', stats.keys.slice(0, 10))
-    }
-    return stats
+    return apiCache.getStats()
   }
   
   (window as any).resetCacheStats = () => {
     apiCache.resetStats()
-    console.log('%c🔄 Cache Statistics Reset', 'color: #ff9800; font-weight: bold;')
   }
   
   // Dev mode cache inspector
@@ -2064,24 +2128,10 @@ if (typeof window !== 'undefined') {
       invalidate: (pattern: string) => apiCache.invalidate(pattern),
       inspect: (keyPattern: string) => {
         const stats = apiCache.getStats()
-        const matchingKeys = stats.keys.filter(k => k.includes(keyPattern))
-        console.log(`Found ${matchingKeys.length} matching keys:`, matchingKeys)
-        return matchingKeys
+        return stats.keys.filter(k => k.includes(keyPattern))
       }
     }
   }
-  
-  // Log availability on load
-  console.log(
-    '%c🛠️ API Debug Mode Available',
-    'color: #2196f3; font-weight: bold;',
-    '\n   enableDryRun()      - Log POST/PUT/DELETE calls without sending',
-    '\n   disableDryRun()     - Resume normal API operation',
-    '\n   clearApiCache()     - Clear all cached API responses',
-    '\n   getApiCacheStats()  - View cache statistics',
-    '\n   resetCacheStats()   - Reset hit/miss counters',
-    '\n   __CACHE_DEBUG__     - Advanced cache inspection (dev mode)'
-  )
 }
 
 /**

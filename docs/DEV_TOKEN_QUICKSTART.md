@@ -1,6 +1,8 @@
 # Dev Token Quick Start
 
-> **TL;DR**: Get a token from adobe.com, paste it in the app, start coding! 🚀
+> **TL;DR**: Add `?devtokenmode=true` to the URL, get a token from adobe.com, paste it in the app, start coding! 🚀
+
+**Important:** The dev token system is **only enabled** when the URL includes `?devtokenmode=true` and you're on an allowed host (localhost or an approved dev instance). Without that parameter, the Dev Token button is hidden and stored dev tokens are not used for API calls.
 
 ## 30-Second Setup
 
@@ -8,6 +10,7 @@
    ```bash
    npm run dev
    ```
+   Then open **`http://localhost:3000/?devtokenmode=true`** (include the query parameter).
 
 2. **Get a token**
    - Go to [adobe.com](https://adobe.com) and sign in
@@ -86,9 +89,9 @@ const response = await safeFetch('https://your-api.adobe.io/endpoint', {
 | "No valid token" error | Click Dev Token button and add one |
 | Token expired | Clear and add a fresh token |
 | API call fails | Check console for errors, verify token is valid |
-| Button not showing | Make sure you're on localhost (not Experience Cloud Shell) |
+| Button not showing | Use `?devtokenmode=true` in the URL and ensure you're on localhost or an approved dev instance (not Experience Cloud Shell) |
 
-> **Note**: The dev token system ONLY works on localhost. When running in Adobe Experience Cloud Shell, the real IMS token is automatically used and the dev token button never appears.
+> **Note**: The dev token system is enabled only when **both** (1) the URL has `?devtokenmode=true` and (2) you're on localhost or an approved dev instance (e.g., `14257-emc-dev.adobeio-static.net`). Without the query parameter, the button is hidden and stored dev tokens are not used. When running in Adobe Experience Cloud Shell, the real IMS token is automatically used and the dev token button never appears.
 
 ## Tips
 
@@ -96,6 +99,7 @@ const response = await safeFetch('https://your-api.adobe.io/endpoint', {
 - 💡 Check the badge tooltip to see time remaining
 - 💡 Use `?nonInvasiveTest=true` to test without writing data
 - 💡 The app auto-reloads when you save a token
+- 💡 Use `?devtokenmode=true` in the URL to enable the dev token UI and API usage (e.g. `http://localhost:3000/?devtokenmode=true`)
 
 ## Environment Setup
 

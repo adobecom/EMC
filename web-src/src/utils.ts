@@ -4,6 +4,8 @@
 
 /* global fetch */
 
+import { env } from './config/env'
+
 /**
  * Invokes a web action
  *
@@ -33,7 +35,8 @@ async function actionWebInvoke(
     headers: actionHeaders
   }
 
-  if (window.location.hostname === 'localhost') {
+  // Enable extra logging only on localhost (not on deployed dev instances)
+  if (env.isLocalhost()) {
     actionHeaders['x-ow-extra-logging'] = 'on'
   }
 

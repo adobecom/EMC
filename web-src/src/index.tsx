@@ -12,94 +12,72 @@ import Runtime, { init } from '@adobe/exc-app'
 import App from './components/App'
 import './index.css'
 import { Runtime as RuntimeType, IMS } from './types'
-import { tokenStorage } from './services/tokenStorage'
+import type { AuthMode } from './contexts/AuthContext'
 
 // @ts-ignore - React needs to be available globally for some Adobe packages
 window.React = React
 
-/* Here you can bootstrap your application and configure the integration with the Adobe Experience Cloud Shell */
+/*
+ * Bootstrap Logic
+ *
+ * The app can run in two modes:
+ *   1. ExC Shell mode:  Loaded inside the Adobe Experience Cloud Shell iframe.
+ *      - exc-runtime.js detects the shell environment and loads the Module Runtime.
+ *      - The shell provides IMS token, org, and profile via the 'ready' event.
+ *
+ *   2. Standalone mode: Loaded directly in a browser (localhost, CDN URL, etc.).
+ *      - exc-runtime.js throws because the app is not in an iframe.
+ *      - The app initializes Adobe's imslib.min.js (loaded via <script> in index.html)
+ *        to perform its own OAuth authentication.
+ */
 try {
-  // attempt to load the Experience Cloud Runtime
+  // Attempt to load the Experience Cloud Runtime (throws if not in the ExC Shell iframe)
   require('./exc-runtime')
-  // if there are no errors, bootstrap the app in the Experience Cloud Shell
+  // Success: bootstrap in ExC Shell mode
   init(bootstrapInExcShell)
 } catch (e) {
-  console.log('application not running in Adobe Experience Cloud Shell')
-  // fallback mode, run the application without the Experience Cloud Runtime
-  bootstrapRaw()
+  bootstrapStandalone()
 }
 
-function bootstrapRaw(): void {
-  /* **here you can mock the exc runtime and ims objects** */
-  const mockRuntime: RuntimeType = { 
+// ============================================================================
+// Standalone mode: direct IMS authentication via imslib.min.js
+// ============================================================================
+
+function bootstrapStandalone(): void {
+  const mockRuntime: RuntimeType = {
     on: () => {},
     done: () => {}
   }
-  
-  // Check for stored dev token
-  const storedToken = tokenStorage.getValidToken()
-  const tokenExpiration = tokenStorage.getTokenExpiration()
-  
-  const mockIms: IMS = {
-    token: storedToken || undefined
-  }
 
-  console.log('⚠️  Running in standalone mode without Adobe Experience Cloud Shell')
-  
-  if (storedToken) {
-    console.log('✅ Using stored development token')
-    if (tokenExpiration) {
-      console.log(`⏰ Token expires: ${tokenExpiration.expiresAt} (${tokenExpiration.timeRemaining} remaining)`)
-    }
-  } else {
-    console.log('🔐 No stored token found')
-    console.log('')
-    console.log('ℹ️  To enable API calls, you can:')
-    console.log('   1. Click the "Dev Token" button in the app to add a token')
-    console.log('   2. Get a token from adobe.com by running:')
-    console.log('      window.adobeIMS?.getAccessToken()')
-    console.log('   3. Deploy and access via ExC Shell with devMode:')
-    console.log('      aio app deploy')
-    console.log('      https://experience.adobe.com/?devMode=true#/@org/app-id')
-  }
-  console.log('')
-  console.log('📖 See: https://developer.adobe.com/app-builder/docs/getting_started/')
+  // Render the app immediately in an unauthenticated / loading state.
+  // AuthProvider (mounted inside App) will initialize the IMS library
+  // and update auth state once the token arrives.
+  const initialIms: IMS = {}
 
-  // render the actual react application and pass along the runtime object to make it available to the App
-  ReactDOM.render(
-    <App runtime={mockRuntime} ims={mockIms} />,
-    document.getElementById('root')
-  )
+  renderApp(mockRuntime, initialIms, 'standalone')
 }
 
+// ============================================================================
+// ExC Shell mode: IMS data comes from the Unified Shell runtime
+// ============================================================================
+
 function bootstrapInExcShell(): void {
-  // get the Experience Cloud Runtime object
   const runtime = Runtime() as unknown as RuntimeType
 
-  // use this to set a favicon
-  // runtime.favicon = 'url-to-favicon'
-
-  // use this to respond to clicks on the app-bar title
-  // runtime.heroClick = () => window.alert('Did I ever tell you you\'re my hero?')
-
-  // ready event brings in authentication/user info
+  // ready event brings in authentication/user info from the shell
   runtime.on('ready', ({ imsOrg, imsToken, imsProfile }) => {
-    // tell the exc-runtime object we are done
     runtime.done()
-    console.log('Ready! received imsProfile:', imsProfile)
+
     const ims: IMS = {
       profile: imsProfile,
       org: imsOrg,
       token: imsToken
     }
-    // render the actual react application and pass along the runtime and ims objects to make it available to the App
-    ReactDOM.render(
-      <App runtime={runtime} ims={ims} />,
-      document.getElementById('root')
-    )
+
+    renderApp(runtime, ims, 'shell')
   })
 
-  // set solution info, shortTitle is used when window is too small to display full title
+  // Set solution info for the shell app-bar
   runtime.solution = {
     icon: 'AdobeExperienceCloud',
     title: 'EMC',
@@ -108,3 +86,13 @@ function bootstrapInExcShell(): void {
   runtime.title = 'EMC'
 }
 
+// ============================================================================
+// Common render function
+// ============================================================================
+
+function renderApp(runtime: RuntimeType, initialIms: IMS, authMode: AuthMode): void {
+  ReactDOM.render(
+    <App runtime={runtime} ims={initialIms} authMode={authMode} />,
+    document.getElementById('root')
+  )
+}

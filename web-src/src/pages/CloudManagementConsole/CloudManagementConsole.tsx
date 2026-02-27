@@ -19,7 +19,7 @@ import Add from '@spectrum-icons/workflow/Add'
 import Checkmark from '@spectrum-icons/workflow/Checkmark'
 import { IMS } from '../../types'
 import { apiService, cachedApi } from '../../services/api'
-import { LoadingSpinner } from '../../components/shared'
+import { BlurredLoadingOverlay } from '../../components/shared'
 import {
   COLORS,
   TYPOGRAPHY,
@@ -340,10 +340,6 @@ export const CloudManagementConsole: React.FC<CloudManagementConsoleProps> = () 
   // MAIN RENDER
   // ============================================================================
 
-  if (isLoading) {
-    return <LoadingSpinner message="Loading Cloud Management Console..." />
-  }
-
   if (error && clouds.length === 0) {
     return (
       <View padding={FLEX_GAP.LARGE}>
@@ -358,8 +354,9 @@ export const CloudManagementConsole: React.FC<CloudManagementConsoleProps> = () 
   }
 
   return (
-    <View UNSAFE_style={createActionBarPadding()}>
-      <View UNSAFE_style={styles.container}>
+    <>
+      <View UNSAFE_style={createActionBarPadding()}>
+        <View UNSAFE_style={styles.container}>
         {/* Header */}
         <View UNSAFE_style={styles.header}>
           <h1 style={styles.headerTitle}>Manage Clouds</h1>
@@ -418,24 +415,24 @@ export const CloudManagementConsole: React.FC<CloudManagementConsoleProps> = () 
             <Text UNSAFE_style={{ color: COLORS.WHITE }}>{toastMessage}</Text>
           </View>
         )}
-      </View>
+        </View>
 
-      {/* Action Bar */}
-      <View UNSAFE_style={styles.actionBar}>
-        <Button
-          variant="secondary"
-          isDisabled={!pendingChanges || !currentCloud}
-          onPress={handleResetForm}
-          UNSAFE_style={ACTION_BAR_BUTTON_STYLES.SAVE}
-        >
-          Cancel
-        </Button>
-        <Button
-          variant="primary"
-          isDisabled={!pendingChanges || !currentCloud || isSaving}
-          onPress={handleSave}
-          UNSAFE_style={ACTION_BAR_BUTTON_STYLES.PRIMARY}
-        >
+        {/* Action Bar */}
+        <View UNSAFE_style={styles.actionBar}>
+          <Button
+            variant="secondary"
+            isDisabled={!pendingChanges || !currentCloud}
+            onPress={handleResetForm}
+            UNSAFE_style={ACTION_BAR_BUTTON_STYLES.SAVE}
+          >
+            Cancel
+          </Button>
+          <Button
+            variant="primary"
+            isDisabled={!pendingChanges || !currentCloud || isSaving}
+            onPress={handleSave}
+            UNSAFE_style={ACTION_BAR_BUTTON_STYLES.PRIMARY}
+          >
           {isSaving ? (
             <Flex alignItems="center" gap={FLEX_GAP.TIGHT}>
               <ProgressCircle size="S" isIndeterminate aria-label="Saving..." />
@@ -444,9 +441,16 @@ export const CloudManagementConsole: React.FC<CloudManagementConsoleProps> = () 
           ) : (
             'Save'
           )}
-        </Button>
+          </Button>
+        </View>
       </View>
-    </View>
+
+      <BlurredLoadingOverlay
+        visible={isLoading}
+        message="Loading Cloud Management Console..."
+        ariaLabel="Loading Cloud Management Console"
+      />
+    </>
   )
 }
 

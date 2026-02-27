@@ -3,14 +3,18 @@
 */
 
 /**
- * Attendee Dashboard
+ * Registrations Dashboard
  * 
  * Main component and modular sub-components that can be 
  * reused or tested independently.
  */
 
 // Main component
-export { AttendeeDashboard } from './AttendeeDashboard'
+export { Registrations } from './Registrations'
+
+// Tab components
+export { RegistrationsTab } from './RegistrationsTab'
+export { CampaignsTab } from './CampaignsTab'
 
 // Sub-components (page-specific, not shared)
 export { EventSelectorComponent } from './EventSelectorComponent'

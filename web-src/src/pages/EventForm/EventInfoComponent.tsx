@@ -16,13 +16,16 @@ import {
   TooltipTrigger,
   Tooltip,
   ActionButton,
-  ComboBox
+  ComboBox,
+  DialogTrigger,
+  AlertDialog
 } from '@adobe/react-spectrum'
 import { parseDateTime, CalendarDateTime } from '@internationalized/date'
 import { getTimeZones } from '@vvo/tzdb'
 import Info from '@spectrum-icons/workflow/Info'
 import { HeadingWithTooltip, RichTextEditor } from '../../components/shared'
 import { FLEX_GAP } from '../../styles/designSystem'
+import { LANGUAGE_TO_LOCALE, DEFAULT_LOCALE } from '../../config/localeMapping'
 import { useEventFormComponent } from '../../hooks/useEventFormComponent'
 
 /**
@@ -133,6 +136,8 @@ export const EventInfoComponent: React.FC = () => {
   const {
     formData,
     updateFormData,
+    setLocaleAndRemapFormData,
+    isDirty,
   } = useEventFormComponent({
     componentId: 'event-info',
   })
@@ -157,6 +162,7 @@ export const EventInfoComponent: React.FC = () => {
   // ============================================================================
   
   const [hasSecondaryLink, setHasSecondaryLink] = useState(false)
+  const [pendingLanguageKey, setPendingLanguageKey] = useState<string | null>(null)
 
   useEffect(() => {
     if (communityForumUrl) {
@@ -191,6 +197,26 @@ export const EventInfoComponent: React.FC = () => {
     setHasSecondaryLink(value)
     if (!value) {
       updateFormData({ communityForumUrl: '', secondaryLinkTitle: '' })
+    }
+  }
+
+  const handleLanguageChange = (key: React.Key | null) => {
+    if (key == null) return
+    const languageKey = String(key)
+    const locale = LANGUAGE_TO_LOCALE[languageKey] || DEFAULT_LOCALE
+
+    if (isDirty) {
+      setPendingLanguageKey(languageKey)
+    } else {
+      setLocaleAndRemapFormData(locale)
+    }
+  }
+
+  const handleConfirmLocaleSwitch = () => {
+    if (pendingLanguageKey) {
+      const locale = LANGUAGE_TO_LOCALE[pendingLanguageKey] || DEFAULT_LOCALE
+      setLocaleAndRemapFormData(locale)
+      setPendingLanguageKey(null)
     }
   }
 
@@ -238,12 +264,35 @@ export const EventInfoComponent: React.FC = () => {
         label="Language"
         isRequired
         selectedKey={language}
-        onSelectionChange={(key) => updateFormData({ language: String(key) })}
+        onSelectionChange={handleLanguageChange}
       >
         {LANGUAGE_OPTIONS.map((lang) => (
           <Item key={lang.key}>{lang.label}</Item>
         ))}
       </Picker>
+
+      {/* Locale switch confirmation when form has unsaved changes */}
+      <DialogTrigger
+        isOpen={!!pendingLanguageKey}
+        onOpenChange={(isOpen) => !isOpen && setPendingLanguageKey(null)}
+      >
+        <div style={{ display: 'none' }} />
+        {(close) => (
+          <AlertDialog
+            title="Switch language?"
+            variant="confirmation"
+            primaryActionLabel="Switch"
+            secondaryActionLabel="Cancel"
+            onPrimaryAction={() => {
+              handleConfirmLocaleSwitch()
+              close()
+            }}
+            onSecondaryAction={close}
+          >
+            You have unsaved changes. Switching language will load the content for the selected language. Continue?
+          </AlertDialog>
+        )}
+      </DialogTrigger>
 
       <TextField
         label="Event Title"

@@ -39,7 +39,7 @@ import Add from '@spectrum-icons/workflow/Add'
 import Link from '@spectrum-icons/workflow/Link'
 import User from '@spectrum-icons/workflow/User'
 import { TableColumn } from '../../components/shared/DataTable'
-import { ResourceDashboardLayout } from '../../components/shared'
+import { ResourceDashboardLayout, BlurredLoadingOverlay } from '../../components/shared'
 import { SeriesSpeaker, SeriesApiResponse, EventApiResponse } from '../../types/domain'
 import { apiService, cachedApi } from '../../services/api'
 import { IMS } from '../../types'
@@ -189,8 +189,7 @@ export const SpeakersDashboard: React.FC<SpeakersDashboardProps> = () => {
               return { speakerId, events: Array.isArray(events) ? events : [] }
             }
             return { speakerId, events: [] }
-          } catch (err) {
-            console.warn(`Failed to load events for speaker ${speakerId}:`, err)
+          } catch (_err) {
             return { speakerId, events: [] }
           }
         })
@@ -306,8 +305,8 @@ export const SpeakersDashboard: React.FC<SpeakersDashboardProps> = () => {
                   editingSpeaker.speakerId,
                   event.eventId
                 )
-              } catch (err) {
-                console.warn(`Failed to update speaker in event ${event.eventId}:`, err)
+              } catch (_err) {
+                // Update failed - continue
               }
             })
           )
@@ -350,8 +349,8 @@ export const SpeakersDashboard: React.FC<SpeakersDashboardProps> = () => {
           events.map(async (event) => {
             try {
               await apiService.removeSpeakerFromEvent(speakerToDelete.speakerId, event.eventId)
-            } catch (err) {
-              console.warn(`Failed to remove speaker from event ${event.eventId}:`, err)
+            } catch (_err) {
+              // Remove failed - continue
             }
           })
         )
@@ -409,7 +408,7 @@ export const SpeakersDashboard: React.FC<SpeakersDashboardProps> = () => {
         handleViewConnections(item)
         break
       default:
-        console.log('Unknown action:', action)
+        break
     }
   }, [handleEditSpeaker, handleDeleteSpeaker, handleViewConnections])
   
@@ -796,7 +795,6 @@ export const SpeakersDashboard: React.FC<SpeakersDashboardProps> = () => {
         <ResourceDashboardLayout
           title="Speakers"
           totalCount={enrichedSpeakers.length}
-          isLoading={isLoadingSpeakers}
           error={error}
           data={enrichedSpeakers}
           columns={columns}
@@ -806,7 +804,6 @@ export const SpeakersDashboard: React.FC<SpeakersDashboardProps> = () => {
           createButton={createButton}
           emptyStateTitle="No Speakers Found"
           emptyStateDescription="Get started by adding your first speaker to this series"
-          loadingMessage="Loading speakers..."
           searchPlaceholder="Search speakers..."
           searchKeys={['firstName', 'lastName', 'title']}
         />
@@ -908,44 +905,17 @@ export const SpeakersDashboard: React.FC<SpeakersDashboardProps> = () => {
         events={speakerForConnections ? eventConnections.get(speakerForConnections.speakerId) || [] : []}
       />
       
-      {/* Loading Overlay */}
-      {actionInProgress && (
-        <View
-          position="fixed"
-          top="size-0"
-          left="size-0"
-          right="size-0"
-          bottom="size-0"
-          UNSAFE_style={{
-            backgroundColor: 'rgba(0, 0, 0, 0.4)',
-            backdropFilter: 'blur(2px)',
-            zIndex: 9999,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            pointerEvents: 'all',
-            cursor: 'wait'
-          }}
-        >
-          <View
-            backgroundColor="gray-50"
-            padding="size-400"
-            borderRadius="medium"
-            UNSAFE_style={{
-              boxShadow: '0 8px 32px rgba(0, 0, 0, 0.2)',
-              display: 'flex',
-              flexDirection: 'column',
-              alignItems: 'center',
-              gap: '16px'
-            }}
-          >
-            <ProgressCircle size="L" isIndeterminate aria-label="Processing" />
-            <Text UNSAFE_style={{ fontSize: '16px', fontWeight: 500 }}>
-              Processing...
-            </Text>
-          </View>
-        </View>
-      )}
+      <BlurredLoadingOverlay
+        visible={isLoadingSeries || isLoadingSpeakers}
+        message={isLoadingSeries ? 'Loading series...' : 'Loading speakers...'}
+        ariaLabel={isLoadingSeries ? 'Loading series' : 'Loading speakers'}
+      />
+      <BlurredLoadingOverlay
+        visible={!!actionInProgress}
+        message="Processing..."
+        ariaLabel="Processing"
+        zIndex={9999}
+      />
     </View>
   )
 }

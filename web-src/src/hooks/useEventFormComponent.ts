@@ -60,6 +60,9 @@ export interface UseEventFormComponentReturn {
   
   // Update function (updates the central form state)
   updateFormData: (updates: Partial<EventFormData>) => void
+
+  /** Switch locale and re-map form data from eventDataResp for the new locale */
+  setLocaleAndRemapFormData: (locale: string) => void
   
   // Status flags
   isDirty: boolean
@@ -127,6 +130,7 @@ export function useEventFormComponent(
     saveStatus,
     isLoading,
     updateFormData,
+    setLocaleAndRemapFormData,
     registerComponent,
     unregisterComponent,
   } = context
@@ -196,6 +200,7 @@ export function useEventFormComponent(
     locale,
     isEditMode,
     updateFormData,
+    setLocaleAndRemapFormData,
     isDirty,
     isSaving: saveStatus === 'saving',
     isLoading,

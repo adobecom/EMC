@@ -3,7 +3,8 @@
 */
 
 import React, { useEffect, useMemo, useCallback } from 'react'
-import { Text, ActionButton, MenuTrigger, Menu, Item, Flex, Button, DialogTrigger, AlertDialog, ProgressCircle, View, Link } from '@adobe/react-spectrum'
+import { useNavigate } from 'react-router-dom'
+import { Text, ActionButton, MenuTrigger, Menu, Item, Flex, Button, DialogTrigger, AlertDialog, Link } from '@adobe/react-spectrum'
 import MoreSmallList from '@spectrum-icons/workflow/MoreSmallList'
 import PublishRemove from '@spectrum-icons/workflow/PublishRemove'
 import ViewDetail from '@spectrum-icons/workflow/ViewDetail'
@@ -15,7 +16,7 @@ import Globe from '@spectrum-icons/workflow/Globe'
 import Location from '@spectrum-icons/workflow/Location'
 import { getEventTypeOptions, EventType } from '../../config/eventTypeConfig'
 import { TableColumn } from '../../components/shared/DataTable'
-import { StatusBadge, ResourceDashboardLayout } from '../../components/shared'
+import { StatusBadge, ResourceDashboardLayout, BlurredLoadingOverlay } from '../../components/shared'
 import { EventDashboardItem } from '../../types/domain'
 import { apiService, cachedApi } from '../../services/api'
 import { thumbnailEnrichmentManager, venueEnrichmentManager, historyEnrichmentManager, EventThumbnail, EventVenueInfo, EventHistoryInfo } from '../../services/eventEnrichment'
@@ -24,6 +25,7 @@ import { IMS } from '../../types'
 import { useToast } from '../../contexts'
 import { filterEventData } from '../../utils/dataFilters'
 import { useSafeState } from '../../hooks'
+import { getEspEnvParam } from '../../config/constants'
 
 interface EventsDashboardProps {
   ims: IMS
@@ -31,6 +33,7 @@ interface EventsDashboardProps {
 
 export const EventsDashboard: React.FC<EventsDashboardProps> = () => {
   const toast = useToast()
+  const navigate = useNavigate()
   const [events, setEvents] = useSafeState<EventDashboardItem[]>([])
   const [isLoading, setIsLoading] = useSafeState(true)
   const [error, setError] = useSafeState<string | null>(null)
@@ -364,12 +367,14 @@ export const EventsDashboard: React.FC<EventsDashboardProps> = () => {
           ? localStartTimeMillis - 10 
           : localStartTimeMillis + 10
 
-        // Build the preview URL with parameters
-        const separator = item.detailPagePath.includes('?') ? '&' : '?'
-        const previewUrl = `${item.detailPagePath}${separator}previewMode=true&timing=${timing}`
+        const previewUrl = new URL(item.detailPagePath)
+        previewUrl.searchParams.set('timing', String(timing))
+        const espenv = getEspEnvParam()
+        if (espenv) {
+          previewUrl.searchParams.set('espenv', espenv)
+        }
 
-        // Open in new tab
-        window.open(previewUrl, '_blank')
+        window.open(previewUrl.toString(), '_blank')
         break
       }
 
@@ -465,7 +470,7 @@ export const EventsDashboard: React.FC<EventsDashboardProps> = () => {
         break
 
       default:
-        console.log('Unknown action:', action)
+        break
     }
   }, [actionInProgress, toast])
 
@@ -685,12 +690,13 @@ export const EventsDashboard: React.FC<EventsDashboardProps> = () => {
         return aCount - bCount
       },
       render: (item) => (
-        <Link href={`#/attendees/${item.eventId}`}>
-          <Text>
-            {item.attendeeCount !== undefined ? item.attendeeCount : 0} / {item.attendeeLimit !== undefined ? item.attendeeLimit : '-'}
-          </Text>
+        <Link
+          isQuiet
+          onPress={() => navigate(`/registrations/${item.eventId}`)}
+          UNSAFE_style={{ cursor: 'pointer' }}
+        >
+          <span>{item.attendeeCount !== undefined ? item.attendeeCount : 0} / {item.attendeeLimit !== undefined ? item.attendeeLimit : '-'}</span>
         </Link>
-
       )
     },
     {
@@ -894,7 +900,6 @@ export const EventsDashboard: React.FC<EventsDashboardProps> = () => {
       <ResourceDashboardLayout
         title="All Events"
         totalCount={events.length}
-        isLoading={isLoading}
         error={error}
         data={events}
         columns={columns}
@@ -904,49 +909,21 @@ export const EventsDashboard: React.FC<EventsDashboardProps> = () => {
         createButton={createEventButton}
         emptyStateTitle="No Events Found"
         emptyStateDescription="Get started by creating your first event"
-        loadingMessage="Loading events..."
         searchPlaceholder="Search events..."
         searchKeys={['eventName', 'eventType', 'cloudType', 'hostEmail', 'seriesId']}
       />
 
-      {/* Loading Overlay for Actions */}
-      {actionInProgress && (
-        <View
-          position="fixed"
-          top="size-0"
-          left="size-0"
-          right="size-0"
-          bottom="size-0"
-          UNSAFE_style={{
-            backgroundColor: 'rgba(0, 0, 0, 0.4)',
-            backdropFilter: 'blur(2px)',
-            zIndex: 9999,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            pointerEvents: 'all',
-            cursor: 'wait'
-          }}
-        >
-          <View
-            backgroundColor="gray-50"
-            padding="size-400"
-            borderRadius="medium"
-            UNSAFE_style={{
-              boxShadow: '0 8px 32px rgba(0, 0, 0, 0.2)',
-              display: 'flex',
-              flexDirection: 'column',
-              alignItems: 'center',
-              gap: '16px'
-            }}
-          >
-            <ProgressCircle size="L" isIndeterminate aria-label="Processing action" />
-            <Text UNSAFE_style={{ fontSize: '16px', fontWeight: 500 }}>
-              Processing...
-            </Text>
-          </View>
-        </View>
-      )}
+      <BlurredLoadingOverlay
+        visible={isLoading}
+        message="Loading events..."
+        ariaLabel="Loading events"
+      />
+      <BlurredLoadingOverlay
+        visible={!!actionInProgress}
+        message="Processing..."
+        ariaLabel="Processing action"
+        zIndex={9999}
+      />
 
       {/* Delete Confirmation Dialog */}
       <DialogTrigger

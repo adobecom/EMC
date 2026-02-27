@@ -8,7 +8,7 @@ import { useNavigate, useParams } from 'react-router-dom'
 import { SeriesApiResponse } from '../../types/domain'
 import { apiService, cachedApi } from '../../services/api'
 import { IMS } from '../../types'
-import { FormCard, LoadingSpinner, SingleStepFormLayout, HistoryTimeline } from '../../components/shared'
+import { FormCard, BlurredLoadingOverlay, SingleStepFormLayout, HistoryTimeline } from '../../components/shared'
 import { SeriesDetailsComponent } from './SeriesDetailsComponent'
 import { SeriesAdditionalInfoComponent } from './SeriesAdditionalInfoComponent'
 import { SeriesTemplateComponent } from './SeriesTemplateComponent'
@@ -288,7 +288,7 @@ const SeriesFormInner: React.FC<SeriesFormInnerProps> = ({ ims: _ims }) => {
   // ============================================================================
   
   if (isLoading) {
-    return <LoadingSpinner message="Loading series data..." />
+    return <BlurredLoadingOverlay visible={true} message="Loading series data..." ariaLabel="Loading series" />
   }
   
   // Side nav items
