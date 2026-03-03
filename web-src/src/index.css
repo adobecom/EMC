@@ -279,6 +279,15 @@ body {
   box-shadow: -2px 0 4px rgba(0, 0, 0, 0.05);
 }
 
+.custom-data-table th.sticky-right-3,
+.custom-data-table td.sticky-right-3 {
+  position: sticky;
+  right: calc(2 * (130px + 32px)); /* two column widths + padding */
+  background-color: var(--spectrum-global-color-gray-100);
+  z-index: 2;
+  box-shadow: -2px 0 4px rgba(0, 0, 0, 0.05);
+}
+
 /** Attendee Dashboard - Side Panel **/
 .attendee-side-panel {
   background-color: var(--spectrum-global-color-gray-100);
