@@ -52,31 +52,41 @@ export const CampaignsTab: React.FC<CampaignsTabProps> = ({
   const [isFormOpen, setIsFormOpen] = useState(false)
   const [editingCampaign, setEditingCampaign] = useState<Campaign | null>(null)
   const [campaignToDelete, setCampaignToDelete] = useState<Campaign | null>(null)
+  const [pendingArchiveSave, setPendingArchiveSave] = useState<{ campaign: Campaign; formData: CampaignFormData } | null>(null)
   const [isSaving, setIsSaving] = useState(false)
   const [copiedId, setCopiedId] = useState<string | null>(null)
 
   const stats = useMemo(() => calculateCampaignStats(campaigns), [campaigns])
 
-  const handleSaveCampaign = useCallback(async (formData: CampaignFormData) => {
+  const performSaveCampaign = useCallback(async (campaign: Campaign | null, formData: CampaignFormData) => {
     setIsSaving(true)
     try {
-      if (editingCampaign) {
+      if (campaign) {
         await onUpdateCampaign(
-          editingCampaign.campaignId,
+          campaign.campaignId,
           formData,
-          editingCampaign.modificationTime
+          campaign.modificationTime
         )
       } else {
         await onCreateCampaign(formData)
       }
       setIsFormOpen(false)
       setEditingCampaign(null)
+      setPendingArchiveSave(null)
     } catch (err) {
       console.error('Failed to save campaign:', err)
     } finally {
       setIsSaving(false)
     }
-  }, [editingCampaign, onCreateCampaign, onUpdateCampaign])
+  }, [onCreateCampaign, onUpdateCampaign])
+
+  const handleSaveCampaign = useCallback(async (formData: CampaignFormData) => {
+    if (editingCampaign && editingCampaign.status === 'Active' && formData.status === 'Archived') {
+      setPendingArchiveSave({ campaign: editingCampaign, formData })
+      return
+    }
+    await performSaveCampaign(editingCampaign, formData)
+  }, [editingCampaign, performSaveCampaign])
 
   const handleDeleteCampaign = useCallback(async () => {
     if (!campaignToDelete) return
@@ -127,17 +137,21 @@ export const CampaignsTab: React.FC<CampaignsTabProps> = ({
           <Text UNSAFE_style={{ fontFamily: 'monospace', fontSize: '13px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
             {campaign.url}
           </Text>
-          <ActionButton
-            isQuiet
-            onPress={() => handleCopyUrl(campaign)}
-            aria-label="Copy URL"
-          >
-            <Copy size="S" />
-          </ActionButton>
-          {copiedId === campaign.campaignId && (
-            <Text UNSAFE_style={{ fontSize: '11px', color: COLORS.STATUS_DRAFT }}>
-              Copied!
-            </Text>
+          {campaign.url && (
+            <>
+              <ActionButton
+                isQuiet
+                onPress={() => handleCopyUrl(campaign)}
+                aria-label="Copy URL"
+              >
+                <Copy size="S" />
+              </ActionButton>
+              {copiedId === campaign.campaignId && (
+                <Text UNSAFE_style={{ fontSize: '11px', color: COLORS.STATUS_DRAFT }}>
+                  Copied!
+                </Text>
+              )}
+            </>
           )}
         </Flex>
       )
@@ -195,13 +209,15 @@ export const CampaignsTab: React.FC<CampaignsTabProps> = ({
       isSticky: true,
       render: (campaign) => (
         <Flex gap="size-100" justifyContent="end">
-          <ActionButton
-            isQuiet
-            onPress={() => handleEditClick(campaign)}
-            aria-label="Edit campaign"
-          >
-            <Edit size="S" />
-          </ActionButton>
+          {campaign.status === 'Active' && (
+            <ActionButton
+              isQuiet
+              onPress={() => handleEditClick(campaign)}
+              aria-label="Edit campaign"
+            >
+              <Edit size="S" />
+            </ActionButton>
+          )}
           <ActionButton
             isQuiet
             isDisabled={campaign.attendeeCount > 0}
@@ -317,6 +333,45 @@ export const CampaignsTab: React.FC<CampaignsTabProps> = ({
           </AlertDialog>
         )}
       </DialogTrigger>
+
+      {/* Archive Campaign Confirmation Dialog */}
+      <DialogTrigger
+        isOpen={!!pendingArchiveSave}
+        onOpenChange={(isOpen) => !isOpen && setPendingArchiveSave(null)}
+      >
+        <div style={{ display: 'none' }} />
+        {(close) => (
+          <AlertDialog
+            title="Archive Campaign"
+            variant="warning"
+            primaryActionLabel="Archive campaign"
+            secondaryActionLabel="Cancel"
+            onPrimaryAction={() => {
+              if (pendingArchiveSave) {
+                performSaveCampaign(pendingArchiveSave.campaign, pendingArchiveSave.formData)
+              }
+              close()
+            }}
+            onSecondaryAction={close}
+          >
+            <Text>
+              You are about to archive the campaign &ldquo;{pendingArchiveSave?.campaign.name}&rdquo;.
+              This action is <strong>permanent and cannot be undone</strong>.
+            </Text>
+            <Text UNSAFE_style={{ marginTop: '12px', display: 'block' }}>
+              Once archived:
+            </Text>
+            <ul style={{ marginTop: '8px', paddingLeft: '20px' }}>
+              <li>The campaign cannot be reactivated</li>
+              <li>The campaign cannot be edited</li>
+              <li>Existing registrations will remain, but no new registrations will be accepted through this campaign</li>
+            </ul>
+            <Text UNSAFE_style={{ marginTop: '12px', display: 'block' }}>
+              Are you sure you want to archive this campaign?
+            </Text>
+          </AlertDialog>
+        )}
+      </DialogTrigger>
     </View>
   )
 }
@@ -408,7 +463,7 @@ const CampaignFormDialog: React.FC<CampaignFormDialogProps> = ({
     onSave({
       name: name.trim(),
       attendeeLimit: effectiveLimit,
-      status
+      status: campaign ? status : 'Active'
     })
   }
 
@@ -470,16 +525,18 @@ const CampaignFormDialog: React.FC<CampaignFormDialogProps> = ({
             </Flex>
           )}
 
-          {/* Status Picker */}
-          <Picker
-            label="Status"
-            selectedKey={status}
-            onSelectionChange={(key) => setStatus(key as CampaignStatus)}
-            width="100%"
-          >
-            <Item key="Active">Active</Item>
-            <Item key="Archived">Archived</Item>
-          </Picker>
+          {/* Status Picker (only when editing; create always uses Active) */}
+          {campaign && (
+            <Picker
+              label="Status"
+              selectedKey={status}
+              onSelectionChange={(key) => setStatus(key as CampaignStatus)}
+              width="100%"
+            >
+              <Item key="Active">Active</Item>
+              <Item key="Archived">Archived</Item>
+            </Picker>
+          )}
         </Flex>
       </Content>
       <ButtonGroup>

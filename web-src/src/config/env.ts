@@ -17,14 +17,14 @@ export type EnvironmentTier = 'dev' | 'stage' | 'prod'
  * Hostnames where dev token functionality is allowed (when ?devtokenmode=true is present)
  * Includes localhost and all dev/developer namespace workspaces
  */
-const DEV_TOKEN_ALLOWED_HOSTNAMES = [
+export const DEV_TOKEN_ALLOWED_HOSTNAMES = [
   'localhost',
   '127.0.0.1',
   // Main dev instance
   '14257-emc-dev.adobeio-static.net',
   // Developer namespace workspaces
   '14257-emc-qiyundai.adobeio-static.net',
-  '14257-emc-shameeb.adobeio-static.net',
+  '14257-emc-sharmeeb.adobeio-static.net',
   '14257-emc-rkhan.adobeio-static.net',
 ]
 
