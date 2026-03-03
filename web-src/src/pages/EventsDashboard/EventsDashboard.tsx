@@ -59,7 +59,7 @@ export const EventsDashboard: React.FC<EventsDashboardProps> = () => {
       // Transform API response to dashboard items
       const dashboardItems: EventDashboardItem[] = data.map(item => ({
         eventId: item.eventId,
-        eventName: item.enTitle || item.localizations?.['en-US']?.title || 'Untitled Event',
+        eventName: item.enTitle || item.localizations?.['en-US']?.title || item.title || 'Untitled Event',
         seriesId: item.seriesId,
         seriesName: item.seriesId, // TODO: Resolve series name from series ID
         cloudType: item.cloudType,
@@ -418,9 +418,10 @@ export const EventsDashboard: React.FC<EventsDashboardProps> = () => {
           // Get the locale for proper localization handling
           const locale = eventResponse.defaultLocale || 'en-US'
           
-          // Get the localized title from the response
-          const originalTitle = eventResponse.localizations?.[locale]?.title || 
-                               eventResponse.enTitle || 
+          // Get the localized title from the response (support legacy top-level title)
+          const originalTitle = eventResponse.localizations?.[locale]?.title ||
+                               eventResponse.enTitle ||
+                               eventResponse.title ||
                                'Untitled Event'
           
           // Prepare the cloned event data with "- copy" suffix

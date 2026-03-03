@@ -1,11 +1,12 @@
 /**
  * Environment and domain constants used across the application
- * 
- * Environment is determined at BUILD TIME via the ENVIRONMENT variable,
- * set by CI/CD pipelines or .env file. This replaces runtime hostname detection.
+ *
+ * Environment is determined by:
+ * 1. Runtime hostname detection (when deployed to Adobe hosts) — ensures stage URLs use stage ESP
+ * 2. Build-time ENVIRONMENT variable (CI/CD or .env) — fallback for localhost and when hostname is ambiguous
  */
 
-import { env, EnvironmentTier } from './env'
+import { env, EnvironmentTier, DEV_TOKEN_ALLOWED_HOSTNAMES } from './env'
 
 /**
  * Application environment tiers
@@ -28,10 +29,13 @@ export const IMS_ENVIRONMENTS = Object.freeze({
 } as const)
 
 /**
- * Map environment tier to IMS environment
+ * Map environment tier to IMS environment.
+ * Uses runtime hostname detection so the IMS environment always matches the URL
+ * being accessed — not just the build-time ENVIRONMENT variable.
+ * This prevents a stage URL from redirecting to prod IMS when the prod build is deployed.
  */
 export function getImsEnvironment(): typeof IMS_ENVIRONMENTS[keyof typeof IMS_ENVIRONMENTS] {
-  return env.ENVIRONMENT === 'prod' ? IMS_ENVIRONMENTS.PROD : IMS_ENVIRONMENTS.STAGE
+  return getCurrentEnvironment() === 'prod' ? IMS_ENVIRONMENTS.PROD : IMS_ENVIRONMENTS.STAGE
 }
 
 /**
@@ -137,23 +141,69 @@ export const DEFAULT_SAVE_POLICIES = {
 } as const
 
 /**
- * Get current environment tier
- * 
- * Returns the build-time ENVIRONMENT value ('dev', 'stage', or 'prod')
- * Set via CI/CD pipeline or .env file. Defaults to 'dev'.
+ * Detect environment from hostname when running in browser.
+ * Maps Adobe App Builder / ExC deployment URLs to the correct ESP/ESL tier.
+ * Returns null when hostname doesn't clearly indicate an environment (e.g. localhost).
+ */
+function getEnvironmentFromHostname(): Environment | null {
+  if (typeof window === 'undefined') return null
+  const h = window.location.hostname.toLowerCase()
+
+  // Stage: explicit stage hostnames (stage deployment, stage.adobe.com)
+  if (h.startsWith('stage--') || h.includes('stage.adobe') || h.includes('stage.adobeio-static.net')) {
+    return ENVIRONMENTS.STAGE
+  }
+
+  // Prod: adobe.com excluding stage (main-- can be stage or prod, use build-time)
+  if (h.endsWith('.adobe.com') && !h.includes('stage')) {
+    return ENVIRONMENTS.PROD
+  }
+
+  // Dev: localhost or dev-- prefix
+  if (h === 'localhost' || h === '127.0.0.1') {
+    return ENVIRONMENTS.DEV
+  }
+  if (h.startsWith('dev--')) {
+    return ENVIRONMENTS.DEV
+  }
+
+  // Adobeio-static.net workspace URLs — checked against the known hostname lists:
+  //   14257-emc.adobeio-static.net          → prod (no workspace suffix)
+  //   14257-emc-stage.adobeio-static.net    → stage (-stage suffix)
+  //   14257-emc-dev.adobeio-static.net      → dev (listed in DEV_TOKEN_ALLOWED_HOSTNAMES)
+  //   14257-emc-<username>.adobeio-static.net → dev (listed in DEV_TOKEN_ALLOWED_HOSTNAMES)
+  // DEV_TOKEN_ALLOWED_HOSTNAMES is the single source of truth for known dev workspaces.
+  if (h.endsWith('.adobeio-static.net')) {
+    if (DEV_TOKEN_ALLOWED_HOSTNAMES.includes(h)) return ENVIRONMENTS.DEV
+    if (h.includes('-stage.') || h.includes('-stage')) return ENVIRONMENTS.STAGE
+    return ENVIRONMENTS.PROD
+  }
+
+  return null
+}
+
+/**
+ * Get current environment tier.
+ *
+ * Uses runtime hostname detection when it clearly indicates stage/dev/prod.
+ * Falls back to build-time ENVIRONMENT (CI/CD or .env) for localhost and ambiguous hostnames.
  */
 export function getCurrentEnvironment(): Environment {
+  const hostnameEnv = getEnvironmentFromHostname()
+  if (hostnameEnv !== null) {
+    return hostnameEnv
+  }
   return env.ENVIRONMENT
 }
 
 /**
  * Get API host for a service
- * 
+ *
  * @param service - 'esp' or 'esl'
  * @param overrideEnv - Optional environment override (mainly for testing)
  */
 export function getApiHost(service: 'esp' | 'esl', overrideEnv?: Environment): string {
-  const currentEnv = overrideEnv || env.ENVIRONMENT
+  const currentEnv = overrideEnv ?? getCurrentEnvironment()
   return API_CONFIG[service][currentEnv].host
 }
 
@@ -162,7 +212,7 @@ export function getApiHost(service: 'esp' | 'esl', overrideEnv?: Environment): s
  * Prod uses cc-collab.adobe.io; dev/stage use cc-collab-stage.adobe.io
  */
 export function getProfileApiHost(overrideEnv?: Environment): string {
-  const currentEnv = overrideEnv || env.ENVIRONMENT
+  const currentEnv = overrideEnv ?? getCurrentEnvironment()
   return PROFILE_API_CONFIG[currentEnv].host
 }
 
