@@ -94,6 +94,7 @@ function getDefaultLabel(key: string): string {
   const labels: Record<string, string> = {
     registrationStatus: 'RSVP Status',
     checkedIn: 'Checked In',
+    campaignId: 'Campaign',
     email: 'Email',
     mobilePhone: 'Phone',
     companyName: 'Company',

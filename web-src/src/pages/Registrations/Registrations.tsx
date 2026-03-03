@@ -13,7 +13,7 @@ import {
 } from '@adobe/react-spectrum'
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom'
 import type { EventApiResponse } from '../../types/domain'
-import type { Attendee, AttendeeStats } from '../../types/attendee'
+import type { Attendee, AttendeeStats, AttendeeColumnConfig } from '../../types/attendee'
 import type { Campaign, CampaignFormData, CampaignCreatePayload, CampaignUpdatePayload, CampaignListResponse } from '../../types/campaign'
 import { calculateAttendeeStats } from '../../types/attendee'
 import { apiService } from '../../services/api'
@@ -56,6 +56,27 @@ export const Registrations: React.FC<RegistrationsProps> = ({ ims: _ims }) => {
   )
 
   const { columnConfig, isLoading: isLoadingConfig } = useRsvpConfig(selectedEvent?.cloudType)
+
+  const hasCampaigns = campaigns.length > 0
+
+  const effectiveColumnConfig = useMemo<AttendeeColumnConfig[]>(() => {
+    if (!hasCampaigns) return columnConfig
+
+    const nonSticky = columnConfig.filter(c => !c.isSticky)
+    const sticky = columnConfig.filter(c => c.isSticky)
+
+    const campaignColumn: AttendeeColumnConfig = {
+      key: 'campaignId',
+      label: 'Campaign',
+      type: 'text',
+      fallback: '-',
+      width: 130,
+      sortable: true,
+      isSticky: true
+    }
+
+    return [...nonSticky, campaignColumn, ...sticky]
+  }, [columnConfig, hasCampaigns])
 
   // ---- Data loading ----
 
@@ -128,6 +149,7 @@ export const Registrations: React.FC<RegistrationsProps> = ({ ims: _ims }) => {
     }
 
     setIsLoadingCampaigns(true)
+    setCampaigns([])
     try {
       const result = await apiService.getEventCampaigns(selectedEventId) as CampaignListResponse
       if ('error' in result) {
@@ -326,7 +348,7 @@ export const Registrations: React.FC<RegistrationsProps> = ({ ims: _ims }) => {
                 <RegistrationsTab
                   selectedEventId={selectedEventId}
                   attendees={attendees}
-                  columnConfig={columnConfig}
+                  columnConfig={effectiveColumnConfig}
                   onAttendeesRefresh={handleAttendeesRefresh}
                 />
               </View>
