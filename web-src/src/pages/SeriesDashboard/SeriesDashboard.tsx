@@ -21,6 +21,8 @@ import {
 import { createShimmerStyle } from '../../styles/designSystem'
 import { useSafeState } from '../../hooks'
 
+const SERIES_SEARCH_KEYS = ['seriesName', 'seriesDescription', 'cloudType', 'seriesStatus']
+
 interface SeriesDashboardProps {
   ims: IMS
 }
@@ -422,7 +424,12 @@ export const SeriesDashboard: React.FC<SeriesDashboardProps> = () => {
 
   // Callback to track visible series IDs for enrichment
   const handleVisibleIdsChange = useCallback((ids: string[]) => {
-    setVisibleSeriesIds(ids)
+    setVisibleSeriesIds(prev => {
+      if (prev.length === ids.length && prev.every((id, i) => id === ids[i])) {
+        return prev
+      }
+      return ids
+    })
   }, [])
 
   // Stable getItemKey function to prevent infinite loops
@@ -444,7 +451,7 @@ export const SeriesDashboard: React.FC<SeriesDashboardProps> = () => {
         emptyStateTitle="No Series Found"
         emptyStateDescription="Get started by creating your first series"
         searchPlaceholder="Search series..."
-        searchKeys={['seriesName', 'seriesDescription', 'cloudType', 'seriesStatus']}
+        searchKeys={SERIES_SEARCH_KEYS}
       />
       <BlurredLoadingOverlay
         visible={isLoading}
