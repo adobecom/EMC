@@ -57,6 +57,8 @@ export interface SpeakerDashboardItem extends SeriesSpeaker {
   seriesName?: string
 }
 
+const SPEAKERS_SEARCH_KEYS = ['firstName', 'lastName', 'title']
+
 interface SpeakersDashboardProps {
   ims: IMS
 }
@@ -805,7 +807,7 @@ export const SpeakersDashboard: React.FC<SpeakersDashboardProps> = () => {
           emptyStateTitle="No Speakers Found"
           emptyStateDescription="Get started by adding your first speaker to this series"
           searchPlaceholder="Search speakers..."
-          searchKeys={['firstName', 'lastName', 'title']}
+          searchKeys={SPEAKERS_SEARCH_KEYS}
         />
       )}
       
