@@ -27,6 +27,8 @@ import { filterEventData } from '../../utils/dataFilters'
 import { useSafeState } from '../../hooks'
 import { getEspEnvParam } from '../../config/constants'
 
+const EVENTS_SEARCH_KEYS = ['eventName', 'eventType', 'cloudType', 'hostEmail', 'seriesId']
+
 interface EventsDashboardProps {
   ims: IMS
 }
@@ -911,7 +913,7 @@ export const EventsDashboard: React.FC<EventsDashboardProps> = () => {
         emptyStateTitle="No Events Found"
         emptyStateDescription="Get started by creating your first event"
         searchPlaceholder="Search events..."
-        searchKeys={['eventName', 'eventType', 'cloudType', 'hostEmail', 'seriesId']}
+        searchKeys={EVENTS_SEARCH_KEYS}
       />
 
       <BlurredLoadingOverlay
