@@ -1,12 +1,11 @@
 /**
  * Environment and domain constants used across the application
  *
- * Environment is determined by:
- * 1. Runtime hostname detection (when deployed to Adobe hosts) — ensures stage URLs use stage ESP
- * 2. Build-time ENVIRONMENT variable (CI/CD or .env) — fallback for localhost and when hostname is ambiguous
+ * Environment is determined solely by the build-time ENVIRONMENT variable,
+ * set via the npm deploy scripts (deploy:dev, deploy:stage, deploy:prod) or .env file.
  */
 
-import { env, EnvironmentTier, DEV_TOKEN_ALLOWED_HOSTNAMES } from './env'
+import { env, EnvironmentTier } from './env'
 
 /**
  * Application environment tiers
@@ -141,58 +140,12 @@ export const DEFAULT_SAVE_POLICIES = {
 } as const
 
 /**
- * Detect environment from hostname when running in browser.
- * Maps Adobe App Builder / ExC deployment URLs to the correct ESP/ESL tier.
- * Returns null when hostname doesn't clearly indicate an environment (e.g. localhost).
- */
-function getEnvironmentFromHostname(): Environment | null {
-  if (typeof window === 'undefined') return null
-  const h = window.location.hostname.toLowerCase()
-
-  // Stage: explicit stage hostnames (stage deployment, stage.adobe.com)
-  if (h.startsWith('stage--') || h.includes('stage.adobe') || h.includes('stage.adobeio-static.net')) {
-    return ENVIRONMENTS.STAGE
-  }
-
-  // Prod: adobe.com excluding stage (main-- can be stage or prod, use build-time)
-  if (h.endsWith('.adobe.com') && !h.includes('stage')) {
-    return ENVIRONMENTS.PROD
-  }
-
-  // Dev: localhost or dev-- prefix
-  if (h === 'localhost' || h === '127.0.0.1') {
-    return ENVIRONMENTS.DEV
-  }
-  if (h.startsWith('dev--')) {
-    return ENVIRONMENTS.DEV
-  }
-
-  // Adobeio-static.net workspace URLs — checked against the known hostname lists:
-  //   14257-emc.adobeio-static.net          → prod (no workspace suffix)
-  //   14257-emc-stage.adobeio-static.net    → stage (-stage suffix)
-  //   14257-emc-dev.adobeio-static.net      → dev (listed in DEV_TOKEN_ALLOWED_HOSTNAMES)
-  //   14257-emc-<username>.adobeio-static.net → dev (listed in DEV_TOKEN_ALLOWED_HOSTNAMES)
-  // DEV_TOKEN_ALLOWED_HOSTNAMES is the single source of truth for known dev workspaces.
-  if (h.endsWith('.adobeio-static.net')) {
-    if (DEV_TOKEN_ALLOWED_HOSTNAMES.includes(h)) return ENVIRONMENTS.DEV
-    if (h.includes('-stage.') || h.includes('-stage')) return ENVIRONMENTS.STAGE
-    return ENVIRONMENTS.PROD
-  }
-
-  return null
-}
-
-/**
  * Get current environment tier.
  *
- * Uses runtime hostname detection when it clearly indicates stage/dev/prod.
- * Falls back to build-time ENVIRONMENT (CI/CD or .env) for localhost and ambiguous hostnames.
+ * Returns the build-time ENVIRONMENT variable baked in at deploy time
+ * via the npm deploy scripts (deploy:dev, deploy:stage, deploy:prod).
  */
 export function getCurrentEnvironment(): Environment {
-  const hostnameEnv = getEnvironmentFromHostname()
-  if (hostnameEnv !== null) {
-    return hostnameEnv
-  }
   return env.ENVIRONMENT
 }
 
