@@ -45,9 +45,11 @@ export function isDevTokenModeEnabled(): boolean {
  * Parcel automatically injects process.env variables at build time
  */
 export const env = {
-  // Client identity for API requests
-  // Loaded from .env file: CLIENT_IDENTITY=your-value
-  CLIENT_IDENTITY: process.env.CLIENT_IDENTITY || 'emc-console-dev',
+  // Per-environment client identities for x-client-identity API header
+  // Loaded from .env file: DEV_CLIENT_IDENTITY, STAGE_CLIENT_IDENTITY, PROD_CLIENT_IDENTITY
+  DEV_CLIENT_IDENTITY: process.env.DEV_CLIENT_IDENTITY || 'emc-console-dev',
+  STAGE_CLIENT_IDENTITY: process.env.STAGE_CLIENT_IDENTITY || '',
+  PROD_CLIENT_IDENTITY: process.env.PROD_CLIENT_IDENTITY || '',
   
   // API Key for external requests
   API_KEY: process.env.API_KEY || 'acom_event_service',
@@ -105,6 +107,16 @@ export const env = {
   isProduction: () => {
     return !env.isDevelopment()
   }
+}
+
+/**
+ * Get the client identity for the current environment tier.
+ * Mirrors the same per-env selection pattern used for Google Places API keys.
+ */
+export function getClientIdentity(): string {
+  if (env.ENVIRONMENT === 'prod') return env.PROD_CLIENT_IDENTITY
+  if (env.ENVIRONMENT === 'stage') return env.STAGE_CLIENT_IDENTITY
+  return env.DEV_CLIENT_IDENTITY
 }
 
 export default env
