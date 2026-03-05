@@ -255,6 +255,7 @@ export const VenueComponent: React.FC = () => {
   const venueNameInputRef = useRef<HTMLInputElement>(null)
   const [placesApiError, setPlacesApiError] = useState<string | null>(null)
   const [hasAttemptedSubmit, setHasAttemptedSubmit] = useState(false)
+  const [placeSelected, setPlaceSelected] = useState(() => Boolean(venue.placeId))
   
   // The Google Places autocomplete input value (tracks the Google name / search text)
   const [venueNameValue, setVenueNameValue] = useState(
@@ -343,6 +344,7 @@ export const VenueComponent: React.FC = () => {
           
           if (place.place_id) {
             setPlacesApiError(null)
+            setPlaceSelected(true)
             
             const updates: Partial<VenueData> = {
               venueName: place.name || '',
@@ -421,6 +423,11 @@ export const VenueComponent: React.FC = () => {
       setVenueNameValue(contextName)
     }
     
+    // Form reopened with saved venue: keep placeSelected in sync so step stays valid
+    if (venue.placeId) {
+      setPlaceSelected(true)
+    }
+    
     // On first load (edit mode), sync alternative name state too
     if (!isInitialSyncDone.current && venue.useAlternativeVenueName) {
       setShowAlternativeNameField(true)
@@ -428,7 +435,7 @@ export const VenueComponent: React.FC = () => {
       isInitialSyncDone.current = true
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [venue.venueName, venue.googlePlaceName, venue.useAlternativeVenueName])
+  }, [venue.venueName, venue.googlePlaceName, venue.useAlternativeVenueName, venue.placeId])
 
   // ============================================================================
   // EVENT HANDLERS
@@ -443,6 +450,7 @@ export const VenueComponent: React.FC = () => {
    */
   const handleVenueNameChange = (value: string) => {
     setVenueNameValue(value)
+    setPlaceSelected(false)
 
     // Clear place-specific data — the user is searching for a new venue.
     // Keep non-place fields (images, instructions, post-event toggles).
