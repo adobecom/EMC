@@ -808,6 +808,10 @@ export const SpeakersDashboard: React.FC<SpeakersDashboardProps> = () => {
           emptyStateDescription="Get started by adding your first speaker to this series"
           searchPlaceholder="Search speakers..."
           searchKeys={SPEAKERS_SEARCH_KEYS}
+          searchFilter={(speaker, query) => {
+            const fullName = `${speaker.firstName || ''} ${speaker.lastName || ''}`.toLowerCase()
+            return fullName.includes(query) || (speaker.title || '').toLowerCase().includes(query)
+          }}
         />
       )}
       

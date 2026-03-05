@@ -456,6 +456,7 @@ export const SpeakerPickerDialog: React.FC<SpeakerPickerDialogProps> = ({
             value={createForm.title}
             onChange={(v) => updateCreateField('title', v)}
             placeholder="e.g., Senior Product Designer"
+            width="100%"
           />
 
           <RichTextEditor

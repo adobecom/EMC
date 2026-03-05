@@ -41,22 +41,6 @@ const destinations: NavDestination[] = [
     color: '#0D66D0'
   },
   {
-    id: 'clouds',
-    path: '/clouds',
-    icon: <Cloud size="XL" />,
-    title: 'Clouds',
-    description: 'Manage cloud configurations and settings for Creative Cloud and Experience Cloud events.',
-    color: '#E68619'
-  },
-  {
-    id: 'series',
-    path: '/series',
-    icon: <Collection size="XL" />,
-    title: 'Series',
-    description: 'Create and manage event series to group related events together.',
-    color: '#2D9D92'
-  },
-  {
     id: 'events',
     path: '/events',
     icon: <Events size="XL" />,
@@ -79,6 +63,22 @@ const destinations: NavDestination[] = [
     title: 'Speakers',
     description: 'Manage speakers at the series level and assign them to events.',
     color: '#CD3ACE'
+  },
+  {
+    id: 'series',
+    path: '/series',
+    icon: <Collection size="XL" />,
+    title: 'Series',
+    description: 'Create and manage event series to group related events together.',
+    color: '#2D9D92'
+  },
+  {
+    id: 'clouds',
+    path: '/clouds',
+    icon: <Cloud size="XL" />,
+    title: 'Clouds',
+    description: 'Manage cloud configurations and settings for Creative Cloud and Experience Cloud events.',
+    color: '#E68619'
   },
   {
     id: 'about',

@@ -461,6 +461,8 @@ export const SpeakersComponent: React.FC = () => {
             backgroundColor: 'var(--spectrum-global-color-gray-200)',
             border: 'none',
             color: 'var(--spectrum-global-color-gray-800)',
+            justifyContent: 'flex-start',
+            paddingLeft: '16px',
           }}
         >
           <Add />
