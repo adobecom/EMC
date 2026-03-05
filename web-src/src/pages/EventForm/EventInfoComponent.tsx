@@ -140,6 +140,13 @@ export const EventInfoComponent: React.FC = () => {
     isDirty,
   } = useEventFormComponent({
     componentId: 'event-info',
+    validate: () => {
+      const url = formData.communityForumUrl
+      if (url && !url.startsWith('http://') && !url.startsWith('https://')) {
+        return 'Secondary Link URL must start with https://'
+      }
+      return true
+    },
   })
   
   // Destructure form data
@@ -163,6 +170,7 @@ export const EventInfoComponent: React.FC = () => {
   
   const [hasSecondaryLink, setHasSecondaryLink] = useState(false)
   const [pendingLanguageKey, setPendingLanguageKey] = useState<string | null>(null)
+  const [urlValidationError, setUrlValidationError] = useState<string | null>(null)
 
   useEffect(() => {
     if (communityForumUrl) {
@@ -381,6 +389,8 @@ export const EventInfoComponent: React.FC = () => {
           selectedKey={timezone || null}
           onSelectionChange={(key) => updateFormData({ timezone: key ? String(key) : '' })}
           description="Search and select a timezone"
+          width="size-6000"
+          menuWidth="size-6000"
         >
           {(item) => <Item key={item.id}>{item.name}</Item>}
         </ComboBox>
@@ -409,8 +419,17 @@ export const EventInfoComponent: React.FC = () => {
             label="Secondary Link URL"
             type="url"
             value={communityForumUrl || ''}
-            onChange={(value) => updateFormData({ communityForumUrl: value })}
-            description="URL for the secondary link"
+            onChange={(value) => {
+              updateFormData({ communityForumUrl: value })
+              if (value && !value.startsWith('http://') && !value.startsWith('https://')) {
+                setUrlValidationError('URL must start with https://')
+              } else {
+                setUrlValidationError(null)
+              }
+            }}
+            validationState={urlValidationError ? 'invalid' : undefined}
+            errorMessage={urlValidationError}
+            description={urlValidationError ? undefined : 'URL for the secondary link'}
             width="100%"
           />
         </>

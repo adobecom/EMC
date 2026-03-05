@@ -38,7 +38,8 @@ import {
   RegistrationConfigComponent, 
   PageMetadataComponent,
   PromotionalContentComponent,
-  MarketoIntegrationComponent
+  MarketoIntegrationComponent,
+  VideoContentComponent
 } from './index'
 import { mapApiResponseToFormData } from '../../utils/eventFormMappers'
 import { useEventFeatureFlags } from '../../hooks/useEventTypeFeatures'
@@ -699,6 +700,8 @@ const EventFormInner: React.FC<EventFormInnerProps> = ({ ims: _ims }) => {
   // ============================================================================
   // STEP 3: Additional Content
   // ============================================================================
+  const isWebinarEvent = formData.eventType === 'webinar'
+
   const step3Component = (
     <>
       <FormCard>
@@ -712,6 +715,12 @@ const EventFormInner: React.FC<EventFormInnerProps> = ({ ims: _ims }) => {
       <FormCard>
         <EventImagesComponent />
       </FormCard>
+
+      {isWebinarEvent && (
+        <FormCard>
+          <VideoContentComponent />
+        </FormCard>
+      )}
     </>
   )
   
