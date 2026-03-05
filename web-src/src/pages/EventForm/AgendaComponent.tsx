@@ -6,7 +6,6 @@ import React, { useState, useEffect } from 'react'
 import {
   View,
   TextField,
-  DatePicker,
   TimeField,
   Flex,
   Button,
@@ -25,7 +24,7 @@ import DragHandle from '@spectrum-icons/workflow/DragHandle'
 import ChevronDown from '@spectrum-icons/workflow/ChevronDown'
 // @ts-ignore - uuid types not installed
 import { v4 as uuidv4 } from 'uuid'
-import { HeadingWithTooltip, RichTextEditor } from '../../components/shared'
+import { HeadingWithTooltip, RichTextEditor, ConfirmableDatePicker } from '../../components/shared'
 import { AgendaItem } from '../../types/domain'
 import { useEventFormComponent } from '../../hooks/useEventFormComponent'
 
@@ -655,7 +654,7 @@ export const AgendaComponent: React.FC = () => {
                   </>
                 ) : (
                   <>
-                    <DatePicker
+                    <ConfirmableDatePicker
                       label="Start Date & Time"
                       isRequired
                       granularity="minute"
@@ -664,7 +663,7 @@ export const AgendaComponent: React.FC = () => {
                       minValue={minValue}
                       maxValue={maxValue}
                     />
-                    <DatePicker
+                    <ConfirmableDatePicker
                       label="End Date & Time"
                       isRequired
                       granularity="minute"
@@ -721,7 +720,9 @@ export const AgendaComponent: React.FC = () => {
           UNSAFE_style={{
             backgroundColor: 'var(--spectrum-global-color-gray-200)',
             border: 'none',
-            color: 'var(--spectrum-global-color-gray-800)'
+            color: 'var(--spectrum-global-color-gray-800)',
+            justifyContent: 'flex-start',
+            paddingLeft: '16px',
           }}
         >
           <Add />

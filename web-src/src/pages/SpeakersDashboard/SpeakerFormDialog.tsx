@@ -235,6 +235,7 @@ export const SpeakerFormDialog: React.FC<SpeakerFormDialogProps> = ({
                 value={formState.title}
                 onChange={(value) => updateField('title', value)}
                 placeholder="e.g., Senior Product Designer at Adobe"
+                width="100%"
               />
               
               {/* Bio */}

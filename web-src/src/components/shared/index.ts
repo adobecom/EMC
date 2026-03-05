@@ -22,4 +22,5 @@ export { SingleStepFormLayout } from './SingleStepFormLayout'
 export type { FormStatus } from './SingleStepFormLayout'
 export { HistoryTimeline } from './HistoryTimeline'
 export type { HistoryResourceType } from './HistoryTimeline'
+export { ConfirmableDatePicker } from './ConfirmableDatePicker'
 
