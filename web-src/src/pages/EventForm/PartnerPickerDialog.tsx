@@ -21,9 +21,10 @@ import ArrowLeft from '@spectrum-icons/workflow/ArrowLeft'
 import { SeriesSponsor, SponsorData } from '../../types/domain'
 import { ImageUploader } from '../../components/shared'
 import { TYPOGRAPHY, FLEX_GAP } from '../../styles/designSystem'
-import { apiService } from '../../services/api'
+import { apiService, cachedApi } from '../../services/api'
 import { uploadImage, UploadTracker } from '../../services/requestHelpers'
 import { getCurrentEnvironment, getApiHost } from '../../config/constants'
+import { useToast } from '../../contexts'
 
 interface PartnerPickerDialogProps {
   isOpen: boolean
@@ -33,6 +34,17 @@ interface PartnerPickerDialogProps {
   selectedSponsorIds: Set<string>
   seriesId: string
   onSponsorsRefresh: () => void
+}
+
+/** Fetch series sponsors - used when dialog opens to ensure data is loaded */
+async function fetchSeriesSponsors(seriesId: string): Promise<SeriesSponsor[]> {
+  if (!seriesId) return []
+  const response = await cachedApi.getSponsors(seriesId)
+  if (response && !('error' in response)) {
+    const list = response.sponsors || response || []
+    return Array.isArray(list) ? list : []
+  }
+  return []
 }
 
 interface CreateFormState {
@@ -62,6 +74,9 @@ export const PartnerPickerDialog: React.FC<PartnerPickerDialogProps> = ({
   const [createForm, setCreateForm] = useState<CreateFormState>(initialCreateFormState)
   const [pendingFile, setPendingFile] = useState<File | null>(null)
   const [isCreating, setIsCreating] = useState(false)
+  const [localSponsors, setLocalSponsors] = useState<SeriesSponsor[]>([])
+  const [isLoadingSponsors, setIsLoadingSponsors] = useState(false)
+  const toast = useToast()
 
   useEffect(() => {
     if (isOpen) {
@@ -74,9 +89,27 @@ export const PartnerPickerDialog: React.FC<PartnerPickerDialogProps> = ({
     }
   }, [isOpen])
 
+  // Fetch series sponsors when dialog opens (ensures network call happens when user opens picker)
+  useEffect(() => {
+    if (isOpen && seriesId) {
+      setIsLoadingSponsors(true)
+      fetchSeriesSponsors(seriesId)
+        .then((sponsors) => setLocalSponsors(sponsors))
+        .catch((err) => {
+          console.error('Failed to fetch series sponsors:', err)
+          setLocalSponsors([])
+        })
+        .finally(() => setIsLoadingSponsors(false))
+    } else {
+      setLocalSponsors([])
+    }
+  }, [isOpen, seriesId])
+
+  const sponsorsToShow = localSponsors.length > 0 ? localSponsors : seriesSponsors
+
   const availableSponsors = useMemo(() => {
-    return seriesSponsors.filter(s => !selectedSponsorIds.has(s.sponsorId))
-  }, [seriesSponsors, selectedSponsorIds])
+    return sponsorsToShow.filter(s => !selectedSponsorIds.has(s.sponsorId))
+  }, [sponsorsToShow, selectedSponsorIds])
 
   const filteredSponsors = useMemo(() => {
     if (!searchQuery.trim()) return availableSponsors
@@ -88,7 +121,7 @@ export const PartnerPickerDialog: React.FC<PartnerPickerDialogProps> = ({
 
   const handleSelectConfirm = useCallback(() => {
     if (!selectedSponsorId) return
-    const sponsor = seriesSponsors.find(s => s.sponsorId === selectedSponsorId)
+    const sponsor = sponsorsToShow.find(s => s.sponsorId === selectedSponsorId)
     if (sponsor) {
       const imageData = sponsor.image || sponsor.logo
       const partnerData: SponsorData = {
@@ -105,7 +138,7 @@ export const PartnerPickerDialog: React.FC<PartnerPickerDialogProps> = ({
       onSelect(partnerData)
       onClose()
     }
-  }, [selectedSponsorId, seriesSponsors, onSelect, onClose])
+  }, [selectedSponsorId, sponsorsToShow, onSelect, onClose])
 
   const updateCreateField = useCallback((field: keyof CreateFormState, value: any) => {
     setCreateForm(prev => ({ ...prev, [field]: value }))
@@ -114,7 +147,14 @@ export const PartnerPickerDialog: React.FC<PartnerPickerDialogProps> = ({
   const isCreateFormValid = createForm.name.trim() !== '' && createForm.website.trim() !== ''
 
   const handleCreatePartner = useCallback(async () => {
-    if (!isCreateFormValid || !seriesId) return
+    if (!isCreateFormValid) {
+      toast.error('Please enter partner name and website')
+      return
+    }
+    if (!seriesId) {
+      toast.error('Unable to add partner: no series selected')
+      return
+    }
     setIsCreating(true)
 
     try {
@@ -182,14 +222,18 @@ export const PartnerPickerDialog: React.FC<PartnerPickerDialogProps> = ({
         onSelect(newPartner)
         onClose()
       } else {
+        const errMsg = (response as { error?: string })?.error || 'Failed to create partner'
+        toast.error(errMsg)
         console.error('Failed to create partner:', response)
       }
     } catch (error) {
+      const errMsg = error instanceof Error ? error.message : 'Failed to create partner'
+      toast.error(errMsg)
       console.error('Failed to create partner:', error)
     } finally {
       setIsCreating(false)
     }
-  }, [createForm, pendingFile, seriesId, isCreateFormValid, onSelect, onClose, onSponsorsRefresh])
+  }, [createForm, pendingFile, seriesId, isCreateFormValid, onSelect, onClose, onSponsorsRefresh, toast])
 
   const handleSwitchToCreate = useCallback(() => {
     setView('create')
@@ -204,7 +248,12 @@ export const PartnerPickerDialog: React.FC<PartnerPickerDialogProps> = ({
   const renderSelectView = () => (
     <>
       <Flex justifyContent="space-between" alignItems="center" marginBottom="size-200">
-        <Text UNSAFE_style={TYPOGRAPHY.COMPONENT_HEADING}>Select Partner</Text>
+        <Flex alignItems="center" gap="size-100">
+          <Text UNSAFE_style={TYPOGRAPHY.COMPONENT_HEADING}>Select Partner</Text>
+          {isLoadingSponsors && (
+            <ProgressCircle size="S" isIndeterminate aria-label="Loading partners" />
+          )}
+        </Flex>
         <Flex gap="size-100" alignItems="center">
           <ActionButton onPress={handleSwitchToCreate} aria-label="Create new partner">
             <Add />
@@ -237,9 +286,19 @@ export const PartnerPickerDialog: React.FC<PartnerPickerDialogProps> = ({
             const imageData = sponsor.image || sponsor.logo
             const isSelected = selectedSponsorId === sponsor.sponsorId
             return (
-              <View
+              <div
                 key={sponsor.sponsorId}
-                UNSAFE_style={{
+                role="option"
+                aria-selected={isSelected}
+                tabIndex={0}
+                onClick={() => setSelectedSponsorId(sponsor.sponsorId)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault()
+                    setSelectedSponsorId(sponsor.sponsorId)
+                  }
+                }}
+                style={{
                   padding: '12px',
                   borderRadius: '8px',
                   border: isSelected
@@ -249,38 +308,38 @@ export const PartnerPickerDialog: React.FC<PartnerPickerDialogProps> = ({
                     ? 'var(--spectrum-global-color-blue-100)'
                     : 'var(--spectrum-global-color-gray-50)',
                   cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  outline: 'none',
                 }}
-                // @ts-expect-error onClick needed for card selection
-                onClick={() => setSelectedSponsorId(sponsor.sponsorId)}
               >
-                <Flex alignItems="center" gap="size-200">
-                  {imageData?.imageUrl && (
-                    <View
-                      UNSAFE_style={{
-                        width: '40px',
-                        height: '40px',
-                        borderRadius: '6px',
-                        overflow: 'hidden',
-                        flexShrink: 0,
-                      }}
-                    >
-                      <img
-                        src={imageData.imageUrl}
-                        alt={sponsor.name}
-                        style={{ width: '100%', height: '100%', objectFit: 'contain' }}
-                      />
-                    </View>
+                {imageData?.imageUrl && (
+                  <div
+                    style={{
+                      width: '40px',
+                      height: '40px',
+                      borderRadius: '6px',
+                      overflow: 'hidden',
+                      flexShrink: 0,
+                    }}
+                  >
+                    <img
+                      src={imageData.imageUrl}
+                      alt={sponsor.name}
+                      style={{ width: '100%', height: '100%', objectFit: 'contain' }}
+                    />
+                  </div>
+                )}
+                <div style={{ display: 'flex', flexDirection: 'column', minWidth: 0 }}>
+                  <span style={{ fontWeight: 600 }}>{sponsor.name}</span>
+                  {(sponsor.externalUrl || sponsor.link) && (
+                    <span style={{ fontSize: '12px', color: 'var(--spectrum-global-color-gray-600)' }}>
+                      {sponsor.externalUrl || sponsor.link}
+                    </span>
                   )}
-                  <Flex direction="column">
-                    <Text UNSAFE_style={{ fontWeight: 600 }}>{sponsor.name}</Text>
-                    {(sponsor.externalUrl || sponsor.link) && (
-                      <Text UNSAFE_style={{ fontSize: '12px', color: 'var(--spectrum-global-color-gray-600)' }}>
-                        {sponsor.externalUrl || sponsor.link}
-                      </Text>
-                    )}
-                  </Flex>
-                </Flex>
-              </View>
+                </div>
+              </div>
             )
           })}
         </Flex>
@@ -290,11 +349,13 @@ export const PartnerPickerDialog: React.FC<PartnerPickerDialogProps> = ({
 
   const renderCreateView = () => (
     <>
-      <Flex alignItems="center" gap="size-100" marginBottom="size-200">
-        <ActionButton onPress={handleBackToSelect} isQuiet aria-label="Back to search">
-          <ArrowLeft />
-        </ActionButton>
-        <Text UNSAFE_style={TYPOGRAPHY.COMPONENT_HEADING}>New Partner</Text>
+      <Flex justifyContent="space-between" alignItems="center" marginBottom="size-200">
+        <Flex alignItems="center" gap="size-100">
+          <ActionButton onPress={handleBackToSelect} isQuiet aria-label="Back to search">
+            <ArrowLeft />
+          </ActionButton>
+          <Text UNSAFE_style={TYPOGRAPHY.COMPONENT_HEADING}>New Partner</Text>
+        </Flex>
       </Flex>
 
       <Flex direction="column" gap={FLEX_GAP.FIELD}>
@@ -367,7 +428,7 @@ export const PartnerPickerDialog: React.FC<PartnerPickerDialogProps> = ({
   return (
     <DialogContainer onDismiss={onClose}>
       {isOpen && (
-        <Dialog size="L" UNSAFE_style={{ maxHeight: '80vh' }}>
+        <Dialog size="L" isDismissable UNSAFE_style={{ maxHeight: '80vh' }}>
           <Content UNSAFE_style={{ overflow: 'auto' }}>
             {view === 'select' ? renderSelectView() : renderCreateView()}
           </Content>

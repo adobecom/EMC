@@ -375,7 +375,7 @@ export const SponsorsComponent: React.FC = () => {
   const {
     formData,
     updateFormData,
-    seriesId,
+    seriesId: contextSeriesId,
   } = useEventFormComponent({
     componentId: 'sponsors',
     
@@ -491,6 +491,9 @@ export const SponsorsComponent: React.FC = () => {
       }
     }
   })
+
+  // Use formData.seriesId when context seriesId is empty (e.g. when editing a loaded event)
+  const seriesId = contextSeriesId || formData.seriesId || ''
   
   const sponsors = formData.sponsors || []
 
