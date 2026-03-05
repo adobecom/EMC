@@ -9,6 +9,7 @@ import {
   TextArea,
   Picker,
   Item,
+  DatePicker,
   Flex,
   Text,
   Switch,
@@ -22,7 +23,7 @@ import {
 import { parseDateTime, CalendarDateTime } from '@internationalized/date'
 import { getTimeZones } from '@vvo/tzdb'
 import Info from '@spectrum-icons/workflow/Info'
-import { HeadingWithTooltip, RichTextEditor, ConfirmableDatePicker } from '../../components/shared'
+import { HeadingWithTooltip, RichTextEditor } from '../../components/shared'
 import { FLEX_GAP } from '../../styles/designSystem'
 import { LANGUAGE_TO_LOCALE, DEFAULT_LOCALE } from '../../config/localeMapping'
 import { useEventFormComponent } from '../../hooks/useEventFormComponent'
@@ -364,7 +365,7 @@ export const EventInfoComponent: React.FC = () => {
       />
 
       <Flex direction="row" gap="size-200" wrap>
-        <ConfirmableDatePicker
+        <DatePicker
           label="Start Date & Time"
           isRequired
           granularity="minute"
@@ -372,7 +373,7 @@ export const EventInfoComponent: React.FC = () => {
           onChange={(date) => updateFormData({ startDateTime: date?.toString() || '' })}
         />
 
-        <ConfirmableDatePicker
+        <DatePicker
           label="End Date & Time"
           isRequired
           granularity="minute"
