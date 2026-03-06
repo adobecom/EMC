@@ -424,7 +424,7 @@ export const VenueComponent: React.FC = () => {
     }
     
     // Form reopened with saved venue: keep placeSelected in sync so step stays valid
-    if (venue.placeId) {
+    if (venue.placeId && !placeSelected) {
       setPlaceSelected(true)
     }
     
