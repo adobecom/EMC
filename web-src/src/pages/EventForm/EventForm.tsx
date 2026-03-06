@@ -648,7 +648,7 @@ const EventFormInner: React.FC<EventFormInnerProps> = ({ ims: _ims }) => {
     formData.startDateTime !== '' &&
     formData.endDateTime !== '' &&
     Boolean(formData.timezone && formData.timezone.trim() !== '') && // Timezone is required
-    (hasVenue ? formData.venue?.venueName?.trim() !== '' : true)
+    (hasVenue ? Boolean(formData.venue?.placeId) : true)
   
   const step1Component = (
     <Flex direction="column" gap="size-0">
