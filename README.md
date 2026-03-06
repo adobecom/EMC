@@ -30,49 +30,53 @@ By default the UI will be served locally but actions will be deployed and served
 ## Testing
 
 ```bash
-npm test                 # Run unit tests
-npm run e2e              # Run E2E tests
 npm run lint             # Check code style
 npm run type-check       # TypeScript validation
+npm run check            # Run both lint and type-check
 ```
 
 ## Deployment
 
 ### Environments
 
-| Environment | URL | Trigger |
+| Environment | URL | Command |
 |-------------|-----|---------|
-| **Dev** | `14257-emc-dev.adobeio-static.net` | Manual: `aio app deploy` |
-| **User Workspaces** | `14257-emc-{username}.adobeio-static.net` | Manual: `aio app deploy` |
-| **Stage** | `14257-emc-stage.adobeio-static.net` | Auto: Push to `main` branch |
-| **Production** | `14257-emc-production.adobeio-static.net` | Auto: Publish GitHub release |
+| **Dev** | `14257-emc-dev.adobeio-static.net` | `npm run deploy:dev` |
+| **User Workspaces** | `14257-emc-{username}.adobeio-static.net` | `npm run deploy:dev` |
+| **Stage** | `14257-emc-stage.adobeio-static.net` | `npm run deploy:stage` |
+| **Production** | `14257-emc-production.adobeio-static.net` | `npm run deploy:prod` |
 
-### CI/CD Workflows
+### Deploy Commands
 
-**Stage Deployment** - Triggered automatically when code is pushed/merged to `main`:
 ```bash
-git checkout main
-git merge your-feature-branch
-git push origin main
-# → Triggers .github/workflows/deploy_stage.yml
+npm run deploy:dev       # Build with dev APIs, deploy without publishing
+npm run deploy:stage     # Build with stage APIs, deploy without publishing
+npm run deploy:prod      # Build with prod APIs, deploy and publish
 ```
 
-**Production Deployment** - Triggered when a GitHub release is published:
-```bash
-# Option 1: GitHub CLI
-gh release create v1.0.0 --title "v1.0.0" --notes "Release notes"
+The `ENVIRONMENT` variable is baked into the bundle at build time, which controls which API tier (dev/stage/prod) the app calls at runtime.
 
-# Option 2: GitHub UI
-# Go to Releases → Draft a new release → Publish
-```
+### Deployment Workflow
 
-### Manual Deployment
+1. Select your target workspace:
+   ```bash
+   aio app use            # Follow prompts to select org, project, workspace
+   ```
 
-For dev workspaces (local development):
-```bash
-aio app deploy           # Deploy to your configured workspace
-aio app undeploy         # Remove deployment
-```
+2. (Optional) Run checks before deploying:
+   ```bash
+   npm run check
+   ```
+
+3. Deploy to your target environment:
+   ```bash
+   npm run deploy:stage   # or deploy:dev / deploy:prod
+   ```
+
+4. To remove a deployment:
+   ```bash
+   aio app undeploy
+   ```
 
 ## Configuration
 
@@ -124,10 +128,7 @@ The UI supports TypeScript out of the box. Use `.tsx` extension for React compon
 
 ```
 EMC/
-├── .github/workflows/     # CI/CD pipelines
-│   ├── deploy_stage.yml   # Auto-deploy on push to main
-│   ├── deploy_prod.yml    # Auto-deploy on release
-│   └── pr_test.yml        # PR validation
+├── .github/workflows/     # CI/CD pipelines (pr_test.yml for PR checks)
 ├── web-src/               # Frontend React app
 │   └── src/
 │       ├── components/    # React components
@@ -137,9 +138,6 @@ EMC/
 │       ├── hooks/         # Custom React hooks
 │       ├── contexts/      # React context providers
 │       └── types/         # TypeScript definitions
-├── actions/               # Backend actions (Adobe I/O Runtime)
 ├── docs/                  # Documentation
-├── test/                  # Unit tests
-├── e2e/                   # E2E tests
 └── app.config.yaml        # App configuration
 ```

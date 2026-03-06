@@ -4,7 +4,7 @@
 * Based on the previous app's external API controller
 */
 
-import { env } from '../config/env'
+import { getClientIdentity as getClientIdentityFromEnv } from '../config/env'
 import { ALLOWED_HOSTS } from '../config/constants'
 
 /**
@@ -20,11 +20,11 @@ export function generateUUID(): string {
 }
 
 /**
- * Get x-client-identity from environment
- * This should be loaded from your .env file
+ * Get x-client-identity for the current environment tier.
+ * Delegates to env.ts which selects DEV/STAGE/PROD_CLIENT_IDENTITY based on ENVIRONMENT.
  */
 export function getClientIdentity(): string {
-  return env.CLIENT_IDENTITY
+  return getClientIdentityFromEnv()
 }
 
 /**
