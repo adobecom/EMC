@@ -179,14 +179,18 @@ EMC/
 
 ---
 
-## Environments (code-validated from constants.ts)
+## Environments (code-validated from constants.ts + env.ts)
 
-| Environment | Detection Pattern                   | API Hosts              |
-| ----------- | ----------------------------------- | ---------------------- |
-| local       | `localhost`                         | Dev ESL/ESP endpoints  |
-| dev         | `dev--*` prefix or dev.adobe.com    | Dev ESL/ESP endpoints  |
-| stage       | `stage--*` or stage.adobe.com       | Stage ESL/ESP          |
-| prod        | `main--*` or *.adobe.com            | Prod ESL/ESP           |
+Environment is determined by the **build-time `ENVIRONMENT` variable** (set in CI/CD or `.env`).
+`getCurrentEnvironment()` simply returns `env.ENVIRONMENT` — there is no hostname-based detection.
+
+| Environment | ENVIRONMENT value | API Hosts              |
+| ----------- | ----------------- | ---------------------- |
+| local/dev   | `dev` (default)   | Dev ESL/ESP endpoints  |
+| stage       | `stage`           | Stage ESL/ESP          |
+| prod        | `prod`            | Prod ESL/ESP           |
+
+CI/CD sets this at build time: `ENVIRONMENT: stage` in `deploy_stage.yml`, `ENVIRONMENT: prod` in `deploy_prod.yml`.
 
 ---
 
@@ -244,7 +248,7 @@ Key discrepancies (validated against code):
 - All API calls go through `safeFetch()` with ALLOWED_HOSTS validation
 - Auth tokens handled via IMS (production) or tokenStorage (dev only)
 - Dev token features only visible on localhost
-- No hardcoded credentials — env vars via `.env` and `app.config.yaml`
+- No hardcoded credentials — env vars via `.env` and `app.config.yaml`; per-environment values (e.g. `DEV_CLIENT_IDENTITY`, `STAGE_CLIENT_IDENTITY`, `PROD_CLIENT_IDENTITY`) selected at runtime via `getClientIdentity()` in `config/env.ts`
 - `constructRequestHeaders()` adds auth headers consistently
 - Input validation before API mutations (`validateString`, `validateObject`)
 - See `.cursor/rules/security-global/` for detailed security rules

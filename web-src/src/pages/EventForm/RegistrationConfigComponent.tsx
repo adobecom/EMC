@@ -40,7 +40,6 @@ export const RegistrationConfigComponent: React.FC = () => {
   
   // Destructure form data
   const cloudType = formData.cloudType || 'CreativeCloud'
-  const venueName = formData.venue?.venueName
   const attendeeLimit = formData.attendeeLimit ?? 0
   const allowWaitlist = formData.allowWaitlist ?? false
   const allowGuestRegistration = formData.allowGuestRegistration ?? false
@@ -67,7 +66,7 @@ export const RegistrationConfigComponent: React.FC = () => {
   
   const isCreativeCloud = cloudType === 'CreativeCloud'
   const isExperienceCloud = cloudType === 'ExperienceCloud'
-  const isWebinar = venueName === 'Webinar'
+  const isWebinar = formData.eventType === 'webinar'
 
   // ============================================================================
   // EVENT HANDLERS
@@ -130,7 +129,7 @@ export const RegistrationConfigComponent: React.FC = () => {
             : 'DX events are waitlist only. Call-to-action buttons will only allow waitlisting.'
         }
       >
-        Registration Configuration
+        RSVP Configuration
       </HeadingWithTooltip>
 
       <Flex direction="row" gap="size-400" alignItems="start">

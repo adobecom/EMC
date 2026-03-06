@@ -80,18 +80,6 @@ const TopNav: React.FC<TopNavProps> = ({ ims }) => {
           </NavLink>
           <NavLink
             className={({ isActive }) => `nav-link ${isActive ? 'is-selected' : ''}`}
-            to="/clouds"
-          >
-            Clouds
-          </NavLink>
-          <NavLink
-            className={({ isActive }) => `nav-link ${isActive ? 'is-selected' : ''}`}
-            to="/series"
-          >
-            Series
-          </NavLink>
-          <NavLink
-            className={({ isActive }) => `nav-link ${isActive ? 'is-selected' : ''}`}
             to="/events"
           >
             Events
@@ -107,6 +95,18 @@ const TopNav: React.FC<TopNavProps> = ({ ims }) => {
             to="/speakers"
           >
             Speakers
+          </NavLink>
+          <NavLink
+            className={({ isActive }) => `nav-link ${isActive ? 'is-selected' : ''}`}
+            to="/series"
+          >
+            Series
+          </NavLink>
+          <NavLink
+            className={({ isActive }) => `nav-link ${isActive ? 'is-selected' : ''}`}
+            to="/clouds"
+          >
+            Clouds
           </NavLink>
           <NavLink
             className={({ isActive }) => `nav-link ${isActive ? 'is-selected' : ''}`}

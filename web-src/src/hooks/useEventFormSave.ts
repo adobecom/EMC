@@ -286,6 +286,11 @@ export function useEventFormSave() {
         type: 'Marketo',
         formData: mergedData.marketoFormUrl
       }
+    } else {
+      payload.registration = {
+        type: 'ESP',
+        formData: 'v1'
+      }
     }
     
     // RSVP form fields

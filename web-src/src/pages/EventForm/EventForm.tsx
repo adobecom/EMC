@@ -43,7 +43,8 @@ import {
   RegistrationConfigComponent, 
   PageMetadataComponent,
   PromotionalContentComponent,
-  MarketoIntegrationComponent
+  MarketoIntegrationComponent,
+  VideoContentComponent
 } from './index'
 import { mapApiResponseToFormData } from '../../utils/eventFormMappers'
 import { useEventFeatureFlags } from '../../hooks/useEventTypeFeatures'
@@ -736,7 +737,7 @@ const EventFormInner: React.FC<EventFormInnerProps> = ({ ims: _ims }) => {
     formData.startDateTime !== '' &&
     formData.endDateTime !== '' &&
     Boolean(formData.timezone && formData.timezone.trim() !== '') && // Timezone is required
-    (hasVenue ? formData.venue?.venueName?.trim() !== '' : true)
+    (hasVenue ? Boolean(formData.venue?.placeId) : true)
   
   const step1Component = (
     <Flex direction="column" gap="size-0">
@@ -788,6 +789,8 @@ const EventFormInner: React.FC<EventFormInnerProps> = ({ ims: _ims }) => {
   // ============================================================================
   // STEP 3: Additional Content
   // ============================================================================
+  const isWebinarEvent = formData.eventType === 'webinar'
+
   const step3Component = (
     <>
       <FormCard>
@@ -801,6 +804,12 @@ const EventFormInner: React.FC<EventFormInnerProps> = ({ ims: _ims }) => {
       <FormCard>
         <EventImagesComponent />
       </FormCard>
+
+      {isWebinarEvent && (
+        <FormCard>
+          <VideoContentComponent />
+        </FormCard>
+      )}
     </>
   )
   

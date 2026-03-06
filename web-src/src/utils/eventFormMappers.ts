@@ -137,7 +137,9 @@ export function mapApiResponseToFormData(event: EventApiResponse, locale: string
     registrationType: (event.registration?.type === 'ESP' || event.registration?.type === 'Marketo')
       ? event.registration.type
       : 'ESP',
-    marketoFormUrl: event.registration?.formData || '',
+    // Only populate marketoFormUrl from formData when type is Marketo.
+    // When type is ESP, formData is "v1" (placeholder token for rsvpFormFields) — do not show in Marketo input.
+    marketoFormUrl: event.registration?.type === 'Marketo' ? (event.registration.formData || '') : '',
     visibleRsvpFields: event.rsvpFormFields?.visible || [],
     requiredRsvpFields: event.rsvpFormFields?.required || [],
     images: event.images || [],
@@ -157,5 +159,6 @@ export function mapApiResponseToFormData(event: EventApiResponse, locale: string
         return item
       }),
     marketoIntegration: event.marketoIntegration,
+    video: event.video,
   }
 }

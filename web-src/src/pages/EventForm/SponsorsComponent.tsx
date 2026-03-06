@@ -2,7 +2,7 @@
 * <license header>
 */
 
-import React, { useState, useEffect, useCallback, useRef } from 'react'
+import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react'
 import {
   View,
   Flex,
@@ -19,7 +19,6 @@ import {
   Divider,
   Content,
   ButtonGroup,
-  ComboBox
 } from '@adobe/react-spectrum'
 import { SponsorData, SeriesSponsor, EventApiResponse, SponsorType } from '../../types/domain'
 import { ImageUploader } from '../../components/shared'
@@ -31,6 +30,7 @@ import RemoveCircle from '@spectrum-icons/workflow/RemoveCircle'
 import { useEventFormComponent } from '../../hooks/useEventFormComponent'
 import { uploadImage, UploadTracker } from '../../services/requestHelpers'
 import { getCurrentEnvironment, getApiHost } from '../../config/constants'
+import { PartnerPickerDialog } from './PartnerPickerDialog'
 
 // ============================================================================
 // TIER OPTIONS WITH COLORS
@@ -134,7 +134,7 @@ const PartnerDialog: React.FC<PartnerDialogProps> = ({
   return (
     <DialogContainer onDismiss={onClose}>
       {isOpen && (
-        <Dialog size="L" isDismissable>
+        <Dialog size="L">
           <Heading>{isNew ? 'Add new partner' : 'Edit partner'}</Heading>
           <Divider />
           <Content>
@@ -375,7 +375,7 @@ export const SponsorsComponent: React.FC = () => {
   const {
     formData,
     updateFormData,
-    seriesId,
+    seriesId: contextSeriesId,
   } = useEventFormComponent({
     componentId: 'sponsors',
     
@@ -491,6 +491,9 @@ export const SponsorsComponent: React.FC = () => {
       }
     }
   })
+
+  // Use formData.seriesId when context seriesId is empty (e.g. when editing a loaded event)
+  const seriesId = contextSeriesId || formData.seriesId || ''
   
   const sponsors = formData.sponsors || []
 
@@ -512,8 +515,8 @@ export const SponsorsComponent: React.FC = () => {
   const [editingPartner, setEditingPartner] = useState<SponsorData | undefined>()
   const [editingIndex, setEditingIndex] = useState<number | null>(null)
   
-  // Search state
-  const [searchQuery, setSearchQuery] = useState('')
+  // Picker state
+  const [pickerOpen, setPickerOpen] = useState(false)
 
   // ============================================================================
   // DATA LOADING
@@ -562,12 +565,6 @@ export const SponsorsComponent: React.FC = () => {
     updateFormData({ sponsors: sponsors.filter((_, i) => i !== index) })
   }, [sponsors, updateFormData])
 
-  const handleAddNewClick = () => {
-    setEditingPartner(undefined)
-    setEditingIndex(null)
-    setIsDialogOpen(true)
-  }
-
   const handleEditClick = (index: number) => {
     setEditingPartner(sponsors[index])
     setEditingIndex(index)
@@ -580,27 +577,21 @@ export const SponsorsComponent: React.FC = () => {
     setEditingIndex(null)
   }
 
-  const handleSelectFromSearch = (sponsorId: string | null) => {
-    if (!sponsorId) return
-    
-    const selectedSponsor = availableSponsors.find(s => s.sponsorId === sponsorId)
-    if (selectedSponsor) {
-      const imageData = selectedSponsor.image || selectedSponsor.logo
-      const newPartner: SponsorData = {
-        id: `partner-${Date.now()}`,
-        sponsorId: selectedSponsor.sponsorId,
-        partnerName: selectedSponsor.name,
-        partnerUrl: selectedSponsor.externalUrl || selectedSponsor.link || '',
-        imageUrl: imageData?.imageUrl,
-        imageId: imageData?.imageId,
-        isSaved: true,
-        isFromSeries: true,
-        modificationTime: selectedSponsor.modificationTime
+  const handlePickerSelect = useCallback((partner: SponsorData) => {
+    updateFormData({ sponsors: [...sponsors, partner] })
+  }, [sponsors, updateFormData])
+
+  const refreshSeriesSponsors = useCallback(async () => {
+    if (!seriesId) return
+    try {
+      const response = await cachedApi.getSponsors(seriesId)
+      if (response && !('error' in response)) {
+        setAvailableSponsors(response.sponsors || response || [])
       }
-      updateFormData({ sponsors: [...sponsors, newPartner] })
-      setSearchQuery('')
+    } catch (error) {
+      console.error('Failed to refresh series sponsors:', error)
     }
-  }
+  }, [seriesId])
 
   const handleTierChange = (index: number, tier: SponsorType) => {
     updateSponsor(index, { type: tier })
@@ -741,13 +732,9 @@ export const SponsorsComponent: React.FC = () => {
     }
   }
 
-  // Filter available sponsors for search (exclude already added)
-  const filteredAvailableSponsors = availableSponsors.filter(s => {
-    const alreadyAdded = sponsors.some(existing => existing.sponsorId === s.sponsorId)
-    if (alreadyAdded) return false
-    if (!searchQuery) return true
-    return s.name?.toLowerCase().includes(searchQuery.toLowerCase())
-  })
+  const selectedSponsorIds = useMemo(() => {
+    return new Set(sponsors.map(s => s.sponsorId).filter(Boolean) as string[])
+  }, [sponsors])
 
   // ============================================================================
   // RENDER
@@ -766,64 +753,27 @@ export const SponsorsComponent: React.FC = () => {
       </Flex>
 
       <Text UNSAFE_style={TYPOGRAPHY.SECTION_DESCRIPTION}>
-        Add partners to your event landing page.
+        Add partners to your event landing page. You can change each partner&apos;s tier for this event.
       </Text>
 
-      {/* Controls Bar */}
-      <Flex gap={FLEX_GAP.NONE} alignItems="stretch" marginTop={FLEX_GAP.TIGHT} width="100%">
-        {/* Search Partners Dropdown */}
-        <View flex={1}>
-          <ComboBox
-            label=""
-            aria-label="Search partners"
-            placeholder="Search partners"
-            inputValue={searchQuery}
-            onInputChange={setSearchQuery}
-            onSelectionChange={(key) => handleSelectFromSearch(key as string)}
-            items={filteredAvailableSponsors.map(s => ({ id: s.sponsorId, name: s.name }))}
-            width="100%"
-          >
-            {(item) => <Item key={item.id}>{item.name}</Item>}
-          </ComboBox>
-        </View>
-
-        {/* Vertical Divider - 40px spacing on each side (SPACING.XXL / size-500) */}
-        <Divider orientation="vertical" size="S" marginX="size-500" />
-
-        {/* Add New Partner Button */}
-        <View flex={1}>
-          <Button
-            variant="secondary"
-            onPress={handleAddNewClick}
-            width="100%"
-            UNSAFE_style={{
-              backgroundColor: COLORS.GRAY_200,
-              borderRadius: `${SPACING.LG}px`,
-              border: 'none',
-            }}
-          >
-            <Add size="S" />
-            <Text>Add new partner</Text>
-          </Button>
-        </View>
-      </Flex>
-
-      {/* Divider */}
-      <Divider size="S" marginTop={FLEX_GAP.TIGHT} />
-
-      {/* Partner List or Empty State */}
-      {sponsors.length === 0 ? (
+      {sponsors.length === 0 && (
         <View
           padding={FLEX_GAP.LARGE}
           backgroundColor="gray-100"
           borderRadius="medium"
           UNSAFE_style={{ textAlign: 'center' }}
         >
-          <Text UNSAFE_style={{ color: COLORS.GRAY_700 }}>
-            No partners have been added yet for this event
-          </Text>
+          <Flex direction="column" alignItems="center" gap="size-200">
+            <Text>Add partners to your event using the button below.</Text>
+            <Button variant="secondary" onPress={() => setPickerOpen(true)}>
+              <Add />
+              <Text>Add Partner</Text>
+            </Button>
+          </Flex>
         </View>
-      ) : (
+      )}
+
+      {sponsors.length > 0 && (
         <Flex direction="column" gap={FLEX_GAP.SMALL}>
           {sponsors.map((partner, index) => (
             <PartnerCard
@@ -837,7 +787,36 @@ export const SponsorsComponent: React.FC = () => {
         </Flex>
       )}
 
-      {/* Partner Dialog */}
+      {sponsors.length > 0 && (
+        <Button
+          variant="secondary"
+          onPress={() => setPickerOpen(true)}
+          width="100%"
+          UNSAFE_style={{
+            backgroundColor: COLORS.GRAY_200,
+            border: 'none',
+            color: 'var(--spectrum-global-color-gray-800)',
+            justifyContent: 'flex-start',
+            paddingLeft: '16px',
+          }}
+        >
+          <Add />
+          <Text>Add Partner</Text>
+        </Button>
+      )}
+
+      {/* Partner Picker Dialog (select existing or create new) */}
+      <PartnerPickerDialog
+        isOpen={pickerOpen}
+        onClose={() => setPickerOpen(false)}
+        onSelect={handlePickerSelect}
+        seriesSponsors={availableSponsors}
+        selectedSponsorIds={selectedSponsorIds}
+        seriesId={seriesId}
+        onSponsorsRefresh={refreshSeriesSponsors}
+      />
+
+      {/* Partner Edit Dialog */}
       <PartnerDialog
         isOpen={isDialogOpen}
         onClose={handleDialogClose}
