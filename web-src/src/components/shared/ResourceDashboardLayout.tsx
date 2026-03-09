@@ -24,7 +24,6 @@ interface ResourceDashboardLayoutProps<T> {
   totalCount: number
   
   // State
-  isLoading: boolean
   error: string | null
   data: T[]
   
@@ -46,18 +45,15 @@ interface ResourceDashboardLayoutProps<T> {
   emptyStateTitle?: string
   emptyStateDescription?: string
   
-  // Loading message
-  loadingMessage?: string
-  
   // Search configuration
   searchPlaceholder?: string
   searchKeys?: (keyof T)[] | string[]
+  searchFilter?: (item: T, query: string) => boolean
 }
 
 export function ResourceDashboardLayout<T extends Record<string, any>>({
   title,
   totalCount,
-  isLoading,
   error,
   data,
   columns,
@@ -72,9 +68,9 @@ export function ResourceDashboardLayout<T extends Record<string, any>>({
   onVisibleIdsChange,
   emptyStateTitle = 'No Items Found',
   emptyStateDescription = 'Get started by creating your first item',
-  loadingMessage = 'Loading...',
   searchPlaceholder = 'Search...',
-  searchKeys = []
+  searchKeys = [],
+  searchFilter,
 }: ResourceDashboardLayoutProps<T>): React.ReactElement {
   const [inputValue, setInputValue] = useState('')
   const [debouncedQuery, setDebouncedQuery] = useState('')
@@ -115,7 +111,10 @@ export function ResourceDashboardLayout<T extends Record<string, any>>({
     const query = debouncedQuery.toLowerCase()
     
     return data.filter(item => {
-      // If searchKeys are provided, search only those fields
+      if (searchFilter) {
+        return searchFilter(item, query)
+      }
+
       if (searchKeys.length > 0) {
         return searchKeys.some(key => {
           const value = item[key as keyof T]
@@ -124,7 +123,6 @@ export function ResourceDashboardLayout<T extends Record<string, any>>({
         })
       }
       
-      // Otherwise, search all string/number fields
       return Object.values(item).some(value => {
         if (value == null) return false
         if (typeof value === 'string' || typeof value === 'number') {
@@ -133,7 +131,7 @@ export function ResourceDashboardLayout<T extends Record<string, any>>({
         return false
       })
     })
-  }, [data, debouncedQuery, searchKeys])
+  }, [data, debouncedQuery, searchKeys, searchFilter])
   
   // Handle visible items change and extract IDs
   const handleVisibleItemsChange = useCallback((items: T[]) => {
@@ -207,14 +205,14 @@ export function ResourceDashboardLayout<T extends Record<string, any>>({
 
         {/* Table */}
         <View flex="1" borderRadius="medium">
-          {isLoading || isSearching ? (
+          {isSearching ? (
             <Flex 
               justifyContent="center" 
               alignItems="center" 
               height="100%"
               UNSAFE_className="fade-in"
             >
-              <LoadingSpinner message={isSearching ? 'Searching...' : loadingMessage} />
+              <LoadingSpinner message="Searching..." />
             </Flex>
           ) : (
             <div className="fade-in">

@@ -1,8 +1,8 @@
 /**
  * Environment and domain constants used across the application
- * 
- * Environment is determined at BUILD TIME via the ENVIRONMENT variable,
- * set by CI/CD pipelines or .env file. This replaces runtime hostname detection.
+ *
+ * Environment is determined solely by the build-time ENVIRONMENT variable,
+ * set via the npm deploy scripts (deploy:dev, deploy:stage, deploy:prod) or .env file.
  */
 
 import { env, EnvironmentTier } from './env'
@@ -28,10 +28,13 @@ export const IMS_ENVIRONMENTS = Object.freeze({
 } as const)
 
 /**
- * Map environment tier to IMS environment
+ * Map environment tier to IMS environment.
+ * Uses runtime hostname detection so the IMS environment always matches the URL
+ * being accessed — not just the build-time ENVIRONMENT variable.
+ * This prevents a stage URL from redirecting to prod IMS when the prod build is deployed.
  */
 export function getImsEnvironment(): typeof IMS_ENVIRONMENTS[keyof typeof IMS_ENVIRONMENTS] {
-  return env.ENVIRONMENT === 'prod' ? IMS_ENVIRONMENTS.PROD : IMS_ENVIRONMENTS.STAGE
+  return getCurrentEnvironment() === 'prod' ? IMS_ENVIRONMENTS.PROD : IMS_ENVIRONMENTS.STAGE
 }
 
 /**
@@ -63,18 +66,30 @@ export const API_CONFIG = {
 } as const
 
 /**
+ * Profile API (cc-collab) for IMS user avatar
+ * Production uses cc-collab.adobe.io; dev/stage use cc-collab-stage.adobe.io
+ */
+export const PROFILE_API_CONFIG = {
+  [ENVIRONMENTS.DEV]: { host: 'https://cc-collab-stage.adobe.io' },
+  [ENVIRONMENTS.STAGE]: { host: 'https://cc-collab-stage.adobe.io' },
+  [ENVIRONMENTS.PROD]: { host: 'https://cc-collab.adobe.io' },
+} as const
+
+/**
  * Derive allowed hosts from API_CONFIG and add core domains
  */
 export const ALLOWED_HOSTS: Record<string, boolean> = {
   [DOMAINS.ADOBE_COM]: true,
   [DOMAINS.STAGE_ADOBE_COM]: true,
   [DOMAINS.LOCALHOST]: true,
+  'cc-collab.adobe.io': true,
+  'cc-collab-stage.adobe.io': true,
   ...Object.values(API_CONFIG.esl).reduce((acc, envConfig) => {
     try {
       const url = new URL(envConfig.host)
       acc[url.hostname] = true
     } catch (e) {
-      console.warn('Invalid URL in API_CONFIG.esl:', envConfig.host)
+      // Invalid URL - skip this host
     }
     return acc
   }, {} as Record<string, boolean>),
@@ -83,7 +98,7 @@ export const ALLOWED_HOSTS: Record<string, boolean> = {
       const url = new URL(envConfig.host)
       acc[url.hostname] = true
     } catch (e) {
-      console.warn('Invalid URL in API_CONFIG.esp:', envConfig.host)
+      // Invalid URL - skip this host
     }
     return acc
   }, {} as Record<string, boolean>),
@@ -125,10 +140,10 @@ export const DEFAULT_SAVE_POLICIES = {
 } as const
 
 /**
- * Get current environment tier
- * 
- * Returns the build-time ENVIRONMENT value ('dev', 'stage', or 'prod')
- * Set via CI/CD pipeline or .env file. Defaults to 'dev'.
+ * Get current environment tier.
+ *
+ * Returns the build-time ENVIRONMENT variable baked in at deploy time
+ * via the npm deploy scripts (deploy:dev, deploy:stage, deploy:prod).
  */
 export function getCurrentEnvironment(): Environment {
   return env.ENVIRONMENT
@@ -136,13 +151,33 @@ export function getCurrentEnvironment(): Environment {
 
 /**
  * Get API host for a service
- * 
+ *
  * @param service - 'esp' or 'esl'
  * @param overrideEnv - Optional environment override (mainly for testing)
  */
 export function getApiHost(service: 'esp' | 'esl', overrideEnv?: Environment): string {
-  const currentEnv = overrideEnv || env.ENVIRONMENT
+  const currentEnv = overrideEnv ?? getCurrentEnvironment()
   return API_CONFIG[service][currentEnv].host
+}
+
+/**
+ * Get Profile API host for IMS avatar
+ * Prod uses cc-collab.adobe.io; dev/stage use cc-collab-stage.adobe.io
+ */
+export function getProfileApiHost(overrideEnv?: Environment): string {
+  const currentEnv = overrideEnv ?? getCurrentEnvironment()
+  return PROFILE_API_CONFIG[currentEnv].host
+}
+
+/**
+ * Get the `espenv` query parameter value to append to event preview URLs.
+ * This tells the event detail page which ESP backend to call.
+ * Returns null for production (parameter should be omitted entirely).
+ */
+export function getEspEnvParam(): string | null {
+  const currentEnv = getCurrentEnvironment()
+  if (currentEnv === ENVIRONMENTS.PROD) return null
+  return currentEnv
 }
 
 /**

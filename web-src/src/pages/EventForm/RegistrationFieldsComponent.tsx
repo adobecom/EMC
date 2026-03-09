@@ -490,19 +490,23 @@ export const RegistrationFieldsComponent: React.FC<RegistrationFieldsComponentPr
         level={3}
         tooltip="Configure which fields appear on the registration form and which are required."
       >
-        Registration fields
+        RSVP Form Fields
       </HeadingWithTooltip>
 
       {isWebinar && (
-        <RadioGroup
-          label="Form Type"
-          orientation="horizontal"
-          value={registrationType}
-          onChange={(value) => onRegistrationTypeChange(value as 'ESP' | 'Marketo')}
-        >
-          <Radio value="ESP">Basic form</Radio>
-          <Radio value="Marketo">Marketo</Radio>
-        </RadioGroup>
+        <Flex direction="column" gap="size-200">
+          <Text UNSAFE_style={{ fontWeight: 600 }}>Select format and additional fields</Text>
+          <RadioGroup
+            label=""
+            aria-label="Form Type"
+            orientation="horizontal"
+            value={registrationType}
+            onChange={(value) => onRegistrationTypeChange(value as 'ESP' | 'Marketo')}
+          >
+            <Radio value="ESP">Basic form</Radio>
+            <Radio value="Marketo">Marketo</Radio>
+          </RadioGroup>
+        </Flex>
       )}
 
       {registrationType === 'ESP' ? renderBasicFormTable() : renderMarketoForm()}

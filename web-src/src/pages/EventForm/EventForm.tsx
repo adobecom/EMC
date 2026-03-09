@@ -18,9 +18,6 @@ import { useNavigate, useParams } from 'react-router-dom'
 import ChevronRight from '@spectrum-icons/workflow/ChevronRight'
 import ChevronLeft from '@spectrum-icons/workflow/ChevronLeft'
 import {
-  EventFormData,
-  ProfileData,
-  SponsorData,
   EventApiResponse,
   SeriesApiResponse,
   SeriesTemplate
@@ -28,7 +25,7 @@ import {
 import { cachedApi } from '../../services/api'
 import { configService } from '../../services/configService'
 import { IMS } from '../../types'
-import { FormWizard, WizardStep, LoadingSpinner, FormCard, HistoryTimeline } from '../../components/shared'
+import { FormWizard, WizardStep, BlurredLoadingOverlay, FormCard, HistoryTimeline } from '../../components/shared'
 import { 
   EventFormatComponent, 
   EventTagsComponent, 
@@ -42,177 +39,15 @@ import {
   PageMetadataComponent,
   PromotionalContentComponent,
   MarketoIntegrationComponent,
-  SessionManagementComponent
+  SessionManagementComponent,
+  VideoContentComponent
 } from './index'
-import { fromApiSocialLink } from '../../utils/socialPlatformDetector'
+import { mapApiResponseToFormData } from '../../utils/eventFormMappers'
 import { useEventFeatureFlags } from '../../hooks/useEventTypeFeatures'
 import { EventFormProvider, useEventFormContext, useToast } from '../../contexts'
 import { useEventFormSave } from '../../hooks/useEventFormSave'
 import { COLORS, Z_INDEX, TYPOGRAPHY } from '../../styles/designSystem'
-
-// ============================================================================
-// HELPERS
-// ============================================================================
-
-/**
- * Get a localized value from an object, falling back to direct property
- */
-function getLocalizedValue(obj: any, fieldName: string, locale: string): any {
-  const localized = obj?.localizations?.[locale]?.[fieldName]
-  if (localized !== undefined && localized !== null && localized !== '') {
-    return localized
-  }
-  return obj?.[fieldName]
-}
-
-/**
- * Map API speaker data to ProfileData format
- */
-function mapSpeakersToProfiles(speakers: any[], locale: string = 'en-US'): ProfileData[] {
-  return speakers.map(speaker => ({
-    type: speaker.speakerType === 'host' ? 'host' : 'speaker',
-    speakerId: speaker.speakerId,
-    firstName: getLocalizedValue(speaker, 'firstName', locale) || speaker.firstName || '',
-    lastName: getLocalizedValue(speaker, 'lastName', locale) || speaker.lastName || '',
-    title: getLocalizedValue(speaker, 'title', locale) || speaker.title || '',
-    bio: getLocalizedValue(speaker, 'bio', locale) || speaker.bio || '',
-    imageUrl: speaker.photo?.imageUrl || speaker.imageUrl || '',
-    imageId: speaker.photo?.imageId || speaker.imageId || '',
-    // Convert API format (serviceName, link) to form format (url, platform)
-    socialLinks: (speaker.socialLinks || []).map((link: any) => fromApiSocialLink(link)),
-    isSaved: true,
-    isFromSeries: true
-  }))
-}
-
-/**
- * Map API sponsor data to SponsorData format
- */
-function mapSponsorsToFormData(sponsors: any[], locale: string = 'en-US'): SponsorData[] {
-  return sponsors.map((sponsor, index) => ({
-    id: sponsor.sponsorId || `sponsor-${index}`,
-    sponsorId: sponsor.sponsorId,
-    partnerName: getLocalizedValue(sponsor, 'name', locale) || sponsor.name || sponsor.partnerName || '',
-    partnerUrl: getLocalizedValue(sponsor, 'link', locale) || sponsor.link || sponsor.partnerUrl || '',
-    imageUrl: sponsor.image?.imageUrl || sponsor.imageUrl || '',
-    imageId: sponsor.image?.imageId || sponsor.imageId || '',
-    type: sponsor.sponsorType, // Map sponsorType from API to type in form
-    isSaved: true,
-    isFromSeries: true
-  }))
-}
-
-/**
- * Map API response to form data
- */
-function mapApiResponseToFormData(event: EventApiResponse, locale: string): Partial<EventFormData> {
-  const localized = event.localizations?.[locale] || {}
-  
-  const parsedTags = event.tags 
-    ? event.tags.split(',').map((tag: string) => ({
-        name: tag.split('/').pop() || tag,
-        caasId: tag.trim()
-      }))
-    : []
-  
-  const agendaItems = (localized.agenda || []).map((item: any, index: number) => ({
-    id: `agenda-${index}`,
-    title: item.title || '',
-    description: item.description || '',
-    startDateTime: item.startTime 
-      ? `${event.localStartDate}T${item.startTime}` 
-      : '',
-    endDateTime: item.endTime 
-      ? `${event.localStartDate}T${item.endTime}` 
-      : ''
-  }))
-  
-  const cta = localized.cta?.[0]
-  
-  // Map venue data — include ALL fields the PUT/POST API requires so they're
-  // available in onAfterSave without a second network round-trip.
-  // The GET response has both `formattedAddress` and the derived `address`
-  // convenience field; prefer `formattedAddress` since that's what the write
-  // API expects.
-  const venueLocalized = event.venue?.localizations?.[locale] || {}
-  const venueData = event.venue ? {
-    venueName: event.venue.venueName || '',
-    formattedAddress: event.venue.formattedAddress || event.venue.address || '',
-    placeId: event.venue.placeId,
-    coordinates: event.venue.coordinates,
-    gmtOffset: event.venue.gmtOffset ?? event.gmtOffset,
-    addressComponents: event.venue.addressComponents,
-    additionalInformation: venueLocalized.additionalInformation
-      ?? event.venue.additionalInformation
-      ?? event.venue.additionalInfo
-      ?? '',
-    venueImageUrl: event.venue.imageUrl,
-    venueImageId: event.venue.imageId,
-    showVenuePostEvent: event.showVenuePostEvent ?? true,
-    showAdditionalInfoPostEvent: event.showVenueAdditionalInfoPostEvent ?? true,
-    googlePlaceName: event.venue.venueName || '', // Populate for alternative-name feature
-  } : undefined
-  
-  const mappedEventType = event.eventType?.toLowerCase() === 'webinar' ? 'webinar' : 'in-person'
-  
-  return {
-    cloudType: (event.cloudType as 'CreativeCloud' | 'ExperienceCloud') || 'CreativeCloud',
-    eventType: mappedEventType as 'in-person' | 'webinar',
-    seriesId: event.seriesId || '',
-    name: localized.title || '',
-    enTitle: event.enTitle || '',
-    urlTitle: event.detailPagePath?.split('/').slice(-5, -4).join('/') || '',
-    description: localized.eventDetails || '',
-    shortDescription: localized.description || '',
-    language: locale.split('-')[0] || 'en',
-    defaultLocale: locale,
-    isPrivate: event.isPrivate || false,
-    tags: parsedTags,
-    // Use localStartDate + localStartTime (already in event's timezone) 
-    // instead of startDate/endDate (which are UTC and cause timezone shift)
-    startDateTime: event.localStartDate && event.localStartTime 
-      ? `${event.localStartDate}T${event.localStartTime.slice(0, 5)}` 
-      : '',
-    endDateTime: event.localEndDate && event.localEndTime 
-      ? `${event.localEndDate}T${event.localEndTime.slice(0, 5)}` 
-      : '',
-    timezone: event.timezone,
-    venue: venueData,
-    attendeeLimit: event.attendeeLimit,
-    status: event.published ? 'published' : 'draft',
-    registrationOpen: true,
-    allowWaitlist: event.allowWaitlisting || false,
-    allowGuestRegistration: event.allowGuestRegistration || false,
-    hostEmail: event.hostEmail || '',
-    rsvpDescription: localized.rsvpDescription || '',
-    registrationType: (event.registration?.type === 'ESP' || event.registration?.type === 'Marketo') 
-      ? event.registration.type 
-      : 'ESP',
-    marketoFormUrl: event.registration?.formData || '',
-    visibleRsvpFields: event.rsvpFormFields?.visible || [],
-    requiredRsvpFields: event.rsvpFormFields?.required || [],
-    images: event.images || [],
-    profiles: mapSpeakersToProfiles(event.speakers || [], locale),
-    communityForumUrl: cta?.url || '',
-    secondaryLinkTitle: cta?.label || '',
-    agendaItems: agendaItems,
-    showAgendaPostEvent: event.showAgendaPostEvent || false,
-    sponsors: mapSponsorsToFormData(event.sponsors || [], locale),
-    // Map promotional items from localized data
-    // API can return either string[] or PromotionalItem[] depending on context
-    promotionalItems: (localized.promotionalItems || [])
-      .filter((item: any) => {
-        if (typeof item === 'string') return item.trim() !== ''
-        return item && item.title
-      })
-      .map((item: any) => {
-        if (typeof item === 'string') return { title: item }
-        return item
-      }),
-    // Map Marketo integration data
-    marketoIntegration: event.marketoIntegration,
-  }
-}
+import { getEspEnvParam } from '../../config/constants'
 
 // ============================================================================
 // FORMAT SELECTION OVERLAY
@@ -574,6 +409,8 @@ const EventFormInner: React.FC<EventFormInnerProps> = ({ ims: _ims }) => {
     setEventId,
     setEditMode,
     setEventResponse,
+    setLocale,
+    populateFormDataFromResponse,
     setLoading,
     setLoadError,
     setPublished,
@@ -645,8 +482,9 @@ const EventFormInner: React.FC<EventFormInnerProps> = ({ ims: _ims }) => {
       setMaxStepReached(3) // 0-indexed, so 3 is the last step (RSVP)
       
       const eventLocale = response.defaultLocale || 'en-US'
+      setLocale(eventLocale)
       const mappedData = mapApiResponseToFormData(response as EventApiResponse, eventLocale)
-      updateFormData(mappedData)
+      populateFormDataFromResponse(mappedData)
       
     } catch (err) {
       console.error('Failed to load event:', err)
@@ -693,8 +531,7 @@ const EventFormInner: React.FC<EventFormInnerProps> = ({ ims: _ims }) => {
     
     // Then save to API
     const result = await saveDraft({
-      onSuccess: (savedEventId) => {
-        console.log('Event saved successfully:', savedEventId)
+      onSuccess: () => {
         toast.success(isEditMode ? 'Event updated successfully!' : 'Event saved successfully!')
       },
       onError: (error) => {
@@ -716,8 +553,7 @@ const EventFormInner: React.FC<EventFormInnerProps> = ({ ims: _ims }) => {
     
     // Then save to API
     const result = await saveDraft({
-      onSuccess: (savedEventId) => {
-        console.log('Event saved before advancing:', savedEventId)
+      onSuccess: () => {
         // Show a subtle success toast for auto-save during navigation
         toast.success('Progress saved', { duration: 2000 })
       },
@@ -782,7 +618,6 @@ const EventFormInner: React.FC<EventFormInnerProps> = ({ ims: _ims }) => {
     const eventResponse = state.eventDataResp
     
     if (!eventResponse?.detailPagePath) {
-      console.warn('Cannot preview - event has no detail page path')
       return
     }
     
@@ -792,12 +627,14 @@ const EventFormInner: React.FC<EventFormInnerProps> = ({ ims: _ims }) => {
       ? localStartTimeMillis - 10 
       : localStartTimeMillis + 10
     
-    // Build the preview URL with parameters
-    const detailPagePath = eventResponse.detailPagePath
-    const separator = detailPagePath.includes('?') ? '&' : '?'
-    const previewUrl = `${detailPagePath}${separator}previewMode=true&timing=${timing}`
+    const previewUrl = new URL(eventResponse.detailPagePath)
+    previewUrl.searchParams.set('timing', String(timing))
+    const espenv = getEspEnvParam()
+    if (espenv) {
+      previewUrl.searchParams.set('espenv', espenv)
+    }
     
-    window.open(previewUrl, '_blank')
+    window.open(previewUrl.toString(), '_blank')
   }, [state.eventDataResp])
 
   
@@ -813,7 +650,7 @@ const EventFormInner: React.FC<EventFormInnerProps> = ({ ims: _ims }) => {
     formData.startDateTime !== '' &&
     formData.endDateTime !== '' &&
     Boolean(formData.timezone && formData.timezone.trim() !== '') && // Timezone is required
-    (hasVenue ? formData.venue?.venueName?.trim() !== '' : true)
+    (hasVenue ? Boolean(formData.venue?.placeId) : true)
   
   const basicInfoComponent = (
     <Flex direction="column" gap="size-0">
@@ -865,6 +702,8 @@ const EventFormInner: React.FC<EventFormInnerProps> = ({ ims: _ims }) => {
   // ============================================================================
   // STEP 3: Additional Content
   // ============================================================================
+  const isWebinarEvent = formData.eventType === 'webinar'
+
   const additionalContentComponent = (
     <>
       <FormCard>
@@ -878,6 +717,12 @@ const EventFormInner: React.FC<EventFormInnerProps> = ({ ims: _ims }) => {
       <FormCard>
         <EventImagesComponent />
       </FormCard>
+
+      {isWebinarEvent && (
+        <FormCard>
+          <VideoContentComponent />
+        </FormCard>
+      )}
     </>
   )
   
@@ -939,7 +784,7 @@ const EventFormInner: React.FC<EventFormInnerProps> = ({ ims: _ims }) => {
   // ============================================================================
   
   if (isLoading) {
-    return <LoadingSpinner message="Loading event data..." />
+    return <BlurredLoadingOverlay visible={true} message="Loading event data..." ariaLabel="Loading event" />
   }
   
   // Determine event type label for display

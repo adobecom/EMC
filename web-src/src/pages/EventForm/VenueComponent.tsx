@@ -22,7 +22,6 @@ import { useEventFormComponent } from '../../hooks/useEventFormComponent'
 import { apiService } from '../../services/api'
 import { getVenuePayload } from '../../utils/dataFilters'
 import { uploadImage } from '../../services/requestHelpers'
-import { tokenStorage } from '../../services/tokenStorage'
 import { getCurrentEnvironment, getApiHost } from '../../config/constants'
 import '../../../src/types/google-places.d.ts'
 
@@ -90,7 +89,7 @@ export const VenueComponent: React.FC = () => {
       const pendingFile = pendingImageFileRef.current
       if (pendingFile) {
         try {
-          const token = tokenStorage.getValidToken()
+          const token = apiService.getAuthTokenForExternalUse()
           if (token) {
             const currentEnv = getCurrentEnvironment()
             const host = getApiHost('esp', currentEnv)
@@ -105,7 +104,6 @@ export const VenueComponent: React.FC = () => {
             const result = await uploadImage(pendingFile, config, token)
             
             if (result.imageUrl && result.imageId) {
-              console.log('Venue image uploaded successfully:', result)
               pendingImageFileRef.current = null
               updateFormData({
                 venue: {
@@ -154,7 +152,6 @@ export const VenueComponent: React.FC = () => {
         
         if (placeIdSame && venueNameSame && additionalInfoSame) {
           // Nothing relevant changed — skip the API call entirely
-          console.log('Venue unchanged — skipping venue API call')
           return
         }
       }
@@ -200,7 +197,6 @@ export const VenueComponent: React.FC = () => {
             console.error('Failed to create venue:', result)
             return
           }
-          console.log('Venue created successfully:', result)
         } else {
           // ---- UPDATE (PUT) — include venueId + timestamps as required by API ----
           const putPayload = {
@@ -220,7 +216,6 @@ export const VenueComponent: React.FC = () => {
             console.error('Failed to update venue:', result)
             return
           }
-          console.log('Venue updated successfully:', result)
         }
       } catch (error) {
         console.error('Error saving venue:', error)
@@ -260,6 +255,7 @@ export const VenueComponent: React.FC = () => {
   const venueNameInputRef = useRef<HTMLInputElement>(null)
   const [placesApiError, setPlacesApiError] = useState<string | null>(null)
   const [hasAttemptedSubmit, setHasAttemptedSubmit] = useState(false)
+  const [placeSelected, setPlaceSelected] = useState(() => Boolean(venue.placeId))
   
   // The Google Places autocomplete input value (tracks the Google name / search text)
   const [venueNameValue, setVenueNameValue] = useState(
@@ -341,7 +337,6 @@ export const VenueComponent: React.FC = () => {
           
           if (!place || place.name === undefined) {
             if (window.google?.maps?.places) {
-              console.warn('Google Places API error - possibly domain restriction')
               setPlacesApiError('Autocomplete unavailable. Please enter venue details manually.')
             }
             return
@@ -349,6 +344,7 @@ export const VenueComponent: React.FC = () => {
           
           if (place.place_id) {
             setPlacesApiError(null)
+            setPlaceSelected(true)
             
             const updates: Partial<VenueData> = {
               venueName: place.name || '',
@@ -427,6 +423,11 @@ export const VenueComponent: React.FC = () => {
       setVenueNameValue(contextName)
     }
     
+    // Form reopened with saved venue: keep placeSelected in sync so step stays valid
+    if (venue.placeId && !placeSelected) {
+      setPlaceSelected(true)
+    }
+    
     // On first load (edit mode), sync alternative name state too
     if (!isInitialSyncDone.current && venue.useAlternativeVenueName) {
       setShowAlternativeNameField(true)
@@ -434,7 +435,7 @@ export const VenueComponent: React.FC = () => {
       isInitialSyncDone.current = true
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [venue.venueName, venue.googlePlaceName, venue.useAlternativeVenueName])
+  }, [venue.venueName, venue.googlePlaceName, venue.useAlternativeVenueName, venue.placeId])
 
   // ============================================================================
   // EVENT HANDLERS
@@ -449,6 +450,7 @@ export const VenueComponent: React.FC = () => {
    */
   const handleVenueNameChange = (value: string) => {
     setVenueNameValue(value)
+    setPlaceSelected(false)
 
     // Clear place-specific data — the user is searching for a new venue.
     // Keep non-place fields (images, instructions, post-event toggles).

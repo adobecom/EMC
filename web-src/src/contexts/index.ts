@@ -3,6 +3,8 @@
 */
 
 export { ApiProvider, useApi } from './ApiContext'
+export { AuthProvider, useAuth } from './AuthContext'
+export type { AuthContextValue, AuthMode } from './AuthContext'
 export {
   EventFormProvider,
   useEventFormContext,

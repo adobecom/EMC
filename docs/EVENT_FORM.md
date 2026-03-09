@@ -2,7 +2,7 @@
 
 **Status:** ✅ Production Ready  
 **Implementation Date:** November 6, 2025  
-**Last Updated:** December 8, 2025
+**Last Updated:** February 26, 2026
 
 ## Table of Contents
 
@@ -24,6 +24,7 @@ The Event Form is a comprehensive, production-ready multi-step wizard for creati
 ### Key Features
 
 - ✅ **Multi-Step Wizard** - 4 main steps with progress tracking
+- ✅ **Content Localization** - Language picker switches locale; form data re-maps for edit mode
 - ✅ **Cloud-Native Architecture** - Pure React with full TypeScript
 - ✅ **Modular Components** - Reusable, testable components
 - ✅ **Smart Validation** - Step-level validation with real-time feedback
@@ -678,6 +679,33 @@ App.tsx Routes
 ✅ **Documentation** - This comprehensive guide  
 ✅ **Zero Errors** - All linting issues resolved  
 ✅ **Production Ready** - Ready for deployment  
+
+## Localization
+
+Events support **content localization** — event data (title, description, speakers, sponsors, venue, etc.) can be stored in multiple locales. The API uses IETF locale codes (e.g. `en-US`, `es-ES`).
+
+### Language Picker
+
+The **Language** picker in EventInfoComponent (Step 1) controls which locale is being edited:
+
+- **Create mode**: Selecting a language sets the event's default locale. Form fields are empty for the new locale.
+- **Edit mode**: Selecting a language loads that locale's content from the API. All form fields (event info, speakers, sponsors, venue, agenda, etc.) update to show the selected locale's data.
+- **Unsaved changes**: If the form has unsaved changes, a confirmation dialog appears before switching: "You have unsaved changes. Switching language will load the content for the selected language. Continue?"
+
+### Data Flow
+
+- **Read**: `mapApiResponseToFormData(event, locale)` in `utils/eventFormMappers.ts` maps API `localizations[locale]` to flat form data.
+- **Write**: `useEventFormSave` uses `context.locale` to put localizable fields into `payload.localizations[locale]` and sets `payload.defaultLocale`.
+- **Locale sync**: On event load, `setLocale(event.defaultLocale)` keeps context in sync. The Language picker calls `setLocaleAndRemapFormData(locale)` to switch and re-map form data.
+
+### Key Files
+
+| File | Role |
+|------|------|
+| `config/localeMapping.ts` | `LANGUAGE_TO_LOCALE` (en→en-US, es→es-ES, etc.) |
+| `utils/eventFormMappers.ts` | `mapApiResponseToFormData`, `getLocalizedValue` |
+| `utils/dataFilters.ts` | `getAttribute`, `setEventAttribute`, localizable field definitions |
+| `contexts/EventFormContext.tsx` | `locale`, `setLocaleAndRemapFormData` |
 
 ## Related Documentation
 

@@ -58,6 +58,9 @@ export interface Attendee {
   shareInfoWithPartners?: boolean
   ccSentiment?: string
 
+  // Campaign tracking (set via URL params, stored by the API)
+  campaignId?: string
+
   // Timestamps
   creationTime?: number
   modificationTime?: number

@@ -721,7 +721,9 @@ export const AgendaComponent: React.FC = () => {
           UNSAFE_style={{
             backgroundColor: 'var(--spectrum-global-color-gray-200)',
             border: 'none',
-            color: 'var(--spectrum-global-color-gray-800)'
+            color: 'var(--spectrum-global-color-gray-800)',
+            justifyContent: 'flex-start',
+            paddingLeft: '16px',
           }}
         >
           <Add />

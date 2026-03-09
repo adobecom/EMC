@@ -38,7 +38,11 @@
     "dev:local": "PORT=3000 aio app run --local",
     "lint": "eslint --ignore-pattern web-src --no-error-on-unmatched-pattern src",
     "lint:fix": "npm run lint -- --fix",
-    "type-check": "tsc --noEmit"
+    "type-check": "tsc --noEmit",
+    "check": "npm run lint && npm run type-check",
+    "deploy:dev": "ENVIRONMENT=dev aio app deploy --no-publish",
+    "deploy:stage": "ENVIRONMENT=stage aio app deploy --no-publish",
+    "deploy:prod": "ENVIRONMENT=prod aio app deploy"
   },
   "engines": {
     "node": ">=18"
