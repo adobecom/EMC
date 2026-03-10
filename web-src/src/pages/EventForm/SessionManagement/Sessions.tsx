@@ -6,17 +6,14 @@ import {
   Well,
   View,
   Button,
-  DialogTrigger,
 } from "@adobe/react-spectrum";
 import { Session } from "../../../types/sessions";
 import { AddIcon } from "../../../components/icons/add";
-import { SessionDialog } from "./SessionDialog";
-import type { SessionFormData } from "./SessionDialog";
 import { SessionsList } from "./SessionList";
+import type { SessionFormData } from "./SessionList";
 import { useEventFormContext } from "../../../contexts";
 import { apiService } from "../../../services/api";
 
-/** Map API session shape to UI Session (handles sessionId/enTitle vs id/name) */
 function mapApiSessionToSession(item: Record<string, unknown>): Session {
   return {
     id: String(item.id ?? item.sessionId ?? ""),
@@ -34,6 +31,7 @@ export const Sessions: React.FC = () => {
   const { eventId } = useEventFormContext();
   const [sessions, setSessions] = useState<Session[]>([]);
   const [loadError, setLoadError] = useState<string | null>(null);
+  const [isAddingNew, setIsAddingNew] = useState(false);
 
   const loadSessions = useCallback(async () => {
     if (!eventId) {
@@ -86,10 +84,10 @@ export const Sessions: React.FC = () => {
     const res = await apiService.createSession(eventId, payload);
     if ("error" in res) {
       const msg = res.error?.message || String(res.error);
-      setLoadError(msg);
       throw new Error(msg);
     }
     setSessions((prev) => [...prev, mapApiSessionToSession(res as any)]);
+    setIsAddingNew(false);
   };
 
   const handleUpdateSession = async (
@@ -110,11 +108,12 @@ export const Sessions: React.FC = () => {
     const res = await apiService.updateSession(sessionId, eventId, payload);
     if ("error" in res) {
       const msg = res.error?.message || String(res.error);
-      setLoadError(msg);
       throw new Error(msg);
     }
     setSessions((prev) =>
-      prev.map((s) => (s.id === sessionId ? mapApiSessionToSession(res as any) : s)),
+      prev.map((s) =>
+        s.id === sessionId ? mapApiSessionToSession(res as any) : s,
+      ),
     );
   };
 
@@ -126,23 +125,16 @@ export const Sessions: React.FC = () => {
           <Text>Breakdown your event into sessions and add details</Text>
         </Flex>
         <View>
-          <DialogTrigger>
-            <Button
-              variant="secondary"
-              style="fill"
-              aria-label="Add new session"
-            >
-              <AddIcon />
-              <Text>Add new session</Text>
-            </Button>
-            {(close) => (
-              <SessionDialog
-                close={close}
-                session={null}
-                onSave={handleAddSession}
-              />
-            )}
-          </DialogTrigger>
+          <Button
+            variant="secondary"
+            style="fill"
+            aria-label="Add new session"
+            onPress={() => setIsAddingNew(true)}
+            isDisabled={isAddingNew}
+          >
+            <AddIcon />
+            <Text>Add new session</Text>
+          </Button>
         </View>
       </Flex>
 
@@ -150,13 +142,16 @@ export const Sessions: React.FC = () => {
         <Well UNSAFE_style={{ textAlign: "center", marginTop: "28px" }}>
           <Text>{loadError}</Text>
         </Well>
-      ) : sessions.length === 0 ? (
+      ) : sessions.length === 0 && !isAddingNew ? (
         <Well UNSAFE_style={{ textAlign: "center", marginTop: "28px" }}>
           No sessions have been created yet for this event
         </Well>
       ) : (
         <SessionsList
           sessions={sessions}
+          isAddingNew={isAddingNew}
+          onCancelAdd={() => setIsAddingNew(false)}
+          onAdd={handleAddSession}
           onDelete={handleDeleteSession}
           onSave={handleUpdateSession}
         />

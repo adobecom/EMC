@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   Flex,
   Heading,
@@ -6,18 +6,112 @@ import {
   View,
   ActionButton,
   Button,
-  DialogTrigger,
+  TextField,
+  TextArea,
+  DatePicker,
+  TimeField,
+  ActionGroup,
+  Item,
+  Checkbox,
 } from "@adobe/react-spectrum";
+import ChevronRight from "@spectrum-icons/workflow/ChevronRight";
+import ChevronDown from "@spectrum-icons/workflow/ChevronDown";
+import {
+  parseDateTime,
+  CalendarDateTime,
+  CalendarDate,
+  Time,
+} from "@internationalized/date";
 import { Session } from "../../../types/sessions";
+import { EventTag } from "../../../types/domain";
 import Chip from "../../../components/shared/Chip";
 import { COLORS } from "../../../styles/designSystem";
-import { EditIcon } from "../../../components/icons/edit";
 import { DeleteIcon } from "../../../components/icons/delete";
 import { formatTime, formatDate } from "../../../utils/shared";
-import { SessionDialog } from "./SessionDialog";
-import type { SessionFormData } from "./SessionDialog";
+import { apiService } from "../../../services/api";
+import { useEventFormContext } from "../../../contexts";
+import { TagSelector, SpeakerSelector } from "../../../components/shared";
 
-/** Get display label from a CaaS tag ID: only the last path segment (e.g. caas:adobe-partners/spp → SPP, caas:adobe-partners/collections/event → Event). */
+export interface SessionFormData {
+  name: string;
+  description: string;
+  startDateTime: string;
+  endDateTime: string;
+  tags?: string[];
+  creationTime?: number;
+  modificationTime?: number;
+}
+
+// ============================================================================
+// DATE / TIME HELPERS
+// ============================================================================
+
+function safeParseDateTimeString(
+  dateString: string | undefined | null,
+): CalendarDateTime | null {
+  if (!dateString) return null;
+  try {
+    const cleaned = dateString
+      .replace(/\.\d{3}Z?$/, "")
+      .replace(/[+-]\d{2}:\d{2}$/, "")
+      .replace(/Z$/, "");
+    return parseDateTime(cleaned);
+  } catch {
+    return null;
+  }
+}
+
+function parseTimeFromDateTime(dateTimeStr: string | undefined): Time | null {
+  if (!dateTimeStr) return null;
+  const dt = safeParseDateTimeString(dateTimeStr);
+  if (!dt) return null;
+  return new Time(dt.hour, dt.minute, dt.second || 0);
+}
+
+function dateAndTimeToISO(date: CalendarDate, time: Time): string {
+  const dt = new CalendarDateTime(
+    date.year,
+    date.month,
+    date.day,
+    time.hour,
+    time.minute,
+    time.second || 0,
+  );
+  return `${dt.toString()}.000Z`;
+}
+
+function stringsToEventTags(tags: string[] | undefined): EventTag[] {
+  if (!tags?.length) return [];
+  return tags.map((t) => ({ name: t, caasId: t }));
+}
+
+function eventTagsToStrings(tags: EventTag[]): string[] {
+  return tags.map((t) => t.caasId ?? t.name);
+}
+
+function mapApiToSession(item: Record<string, unknown>): Session {
+  const loc = (
+    item.localizations as Record<
+      string,
+      { title?: string; description?: string }
+    >
+  )?.["en-US"];
+  return {
+    id: String(item.sessionId ?? item.id ?? ""),
+    name: String(item.enTitle ?? item.title ?? loc?.title ?? ""),
+    description:
+      item.description != null
+        ? String(item.description)
+        : loc?.description != null
+          ? String(loc.description)
+          : undefined,
+    startDateTime: String(item.startDateTime ?? ""),
+    endDateTime: String(item.endDateTime ?? ""),
+    capacity: item.capacity != null ? Number(item.capacity) : undefined,
+    tags: Array.isArray(item.tags) ? (item.tags as string[]) : [],
+  };
+}
+
 function getCaasTagDisplayLabel(caasId: string): string {
   const withoutPrefix = caasId.replace(/^caas:/, "").trim();
   const segments = withoutPrefix.split("/").filter(Boolean);
@@ -32,14 +126,296 @@ function getCaasTagDisplayLabel(caasId: string): string {
     .join(" ");
 }
 
+// ============================================================================
+// SESSION INLINE FORM
+// ============================================================================
+
+interface SessionInlineFormProps {
+  session: Session | null;
+  onSave: (data: SessionFormData) => Promise<void>;
+  onCancel: () => void;
+}
+
+const SessionInlineForm: React.FC<SessionInlineFormProps> = ({
+  session,
+  onSave,
+  onCancel,
+}) => {
+  const isEditMode = session !== null;
+  const { seriesId: contextSeriesId, formData } = useEventFormContext();
+  const seriesId = contextSeriesId || formData.seriesId || "";
+
+  const [loadingDetails, setLoadingDetails] = useState(
+    isEditMode && !!session?.id,
+  );
+  const [detailError, setDetailError] = useState<string | null>(null);
+  const [name, setName] = useState(session?.name ?? "");
+  const [description, setDescription] = useState(session?.description ?? "");
+  const [date, setDate] = useState<CalendarDate | null>(() => {
+    if (session?.startDateTime) {
+      const dt = safeParseDateTimeString(session.startDateTime);
+      return dt ? new CalendarDate(dt.year, dt.month, dt.day) : null;
+    }
+    return null;
+  });
+  const [startTime, setStartTime] = useState<Time | null>(() =>
+    parseTimeFromDateTime(session?.startDateTime ?? undefined),
+  );
+  const [endTime, setEndTime] = useState<Time | null>(() =>
+    parseTimeFromDateTime(session?.endDateTime ?? undefined),
+  );
+  const [selectedTags, setSelectedTags] = useState<EventTag[]>(() =>
+    stringsToEventTags(session?.tags),
+  );
+  const [registrationRequired, setRegistrationRequired] = useState(false);
+  const [capacityLimitEnabled, setCapacityLimitEnabled] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
+  const [sessionTimestamps, setSessionTimestamps] = useState<{
+    creationTime?: number;
+    modificationTime?: number;
+  }>({});
+
+  useEffect(() => {
+    if (!session?.id) {
+      setLoadingDetails(false);
+      return;
+    }
+    let cancelled = false;
+    setLoadingDetails(true);
+    setDetailError(null);
+    apiService.getSession(session.id).then((res) => {
+      if (cancelled) return;
+      setLoadingDetails(false);
+      if (res && "error" in res) {
+        setDetailError(res.error?.message || String(res.error));
+        return;
+      }
+      const raw = res as Record<string, unknown>;
+      const mapped = mapApiToSession(raw);
+      setName(mapped.name);
+      setDescription(mapped.description ?? "");
+      setSelectedTags(stringsToEventTags(mapped.tags));
+      const startDt = safeParseDateTimeString(mapped.startDateTime);
+      setDate(
+        startDt
+          ? new CalendarDate(startDt.year, startDt.month, startDt.day)
+          : null,
+      );
+      setStartTime(parseTimeFromDateTime(mapped.startDateTime));
+      setEndTime(parseTimeFromDateTime(mapped.endDateTime));
+      const ct = raw.creationTime as number | undefined;
+      const mt = raw.modificationTime as number | undefined;
+      setSessionTimestamps(
+        typeof ct === "number" || typeof mt === "number"
+          ? { creationTime: ct, modificationTime: mt }
+          : {},
+      );
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [session?.id]);
+
+  const handleSave = async () => {
+    if (!date || !startTime || !endTime || !name.trim()) return;
+    setSaveError(null);
+    setSaving(true);
+    const startDateTime = dateAndTimeToISO(date, startTime);
+    const endDateTime = dateAndTimeToISO(date, endTime);
+    try {
+      await onSave({
+        name: name.trim(),
+        description: description.trim(),
+        startDateTime,
+        endDateTime,
+        tags: eventTagsToStrings(selectedTags),
+        ...(isEditMode &&
+        (sessionTimestamps.creationTime != null ||
+          sessionTimestamps.modificationTime != null)
+          ? {
+              creationTime: sessionTimestamps.creationTime,
+              modificationTime: sessionTimestamps.modificationTime,
+            }
+          : {}),
+      });
+      onCancel();
+    } catch (err) {
+      setSaveError(err instanceof Error ? err.message : "Failed to save");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const canSave = Boolean(name.trim() && date && startTime && endTime);
+
+  if (loadingDetails) {
+    return (
+      <View padding="size-200">
+        <Text>Loading session details…</Text>
+      </View>
+    );
+  }
+
+  return (
+    <View
+      paddingTop="size-200"
+      paddingBottom="size-200"
+      paddingStart="size-200"
+      paddingEnd="size-200"
+      borderWidth="thin"
+      borderColor="gray-300"
+      borderRadius="medium"
+      marginTop="size-150"
+    >
+      <Flex
+        justifyContent="space-between"
+        alignItems="center"
+        marginBottom="size-200"
+      >
+        <Heading level={3} margin="size-0">
+          {isEditMode ? "Edit Session" : "Session Details"}
+        </Heading>
+        <Flex gap="size-100">
+          <Button variant="secondary" onPress={onCancel} isDisabled={saving}>
+            Cancel
+          </Button>
+          <Button
+            variant="accent"
+            onPress={handleSave}
+            isDisabled={!canSave || saving}
+          >
+            {saving ? "Saving…" : "Save"}
+          </Button>
+        </Flex>
+      </Flex>
+
+      {detailError && (
+        <Flex direction="column" gap="size-100" marginBottom="size-200">
+          <Text
+            UNSAFE_style={{ color: "var(--spectrum-global-color-red-600)" }}
+          >
+            {detailError}
+          </Text>
+          <Text>Showing cached data. You can still edit and save.</Text>
+        </Flex>
+      )}
+
+      <Flex direction="column" gap="size-200" width="100%">
+        <Flex direction="column" gap="size-100">
+          <Text>Title *</Text>
+          <TextField isRequired width="100%" value={name} onChange={setName} />
+        </Flex>
+
+        <Flex direction="column" gap="size-100">
+          <Text>Description</Text>
+          <TextArea
+            width="100%"
+            value={description}
+            onChange={setDescription}
+          />
+        </Flex>
+
+        <Flex direction="row" gap="size-100">
+          <Flex direction="column" gap="size-100">
+            <Text>Date</Text>
+            <DatePicker
+              isRequired
+              width="100%"
+              value={date ?? undefined}
+              onChange={(v) => setDate(v ?? null)}
+            />
+          </Flex>
+          <Flex direction="column" gap="size-100">
+            <Text>Start Time</Text>
+            <TimeField
+              isRequired
+              hourCycle={12}
+              width="100%"
+              value={startTime ?? undefined}
+              onChange={(v) => setStartTime(v ?? null)}
+            />
+          </Flex>
+          <Flex direction="column" gap="size-100">
+            <Text>End Time</Text>
+            <TimeField
+              isRequired
+              hourCycle={12}
+              width="100%"
+              value={endTime ?? undefined}
+              onChange={(v) => setEndTime(v ?? null)}
+            />
+          </Flex>
+        </Flex>
+
+        <Flex direction="column" gap="size-100">
+          <Text>Session registration</Text>
+          <ActionGroup
+            selectionMode="single"
+            selectedKeys={
+              registrationRequired ? ["registration"] : ["automatic"]
+            }
+            onAction={(key) =>
+              setRegistrationRequired(key === "registration")
+            }
+          >
+            <Item key="automatic">Automatic</Item>
+            <Item key="registration">Registration required</Item>
+          </ActionGroup>
+          <Flex direction="row" gap="size-100">
+            <Checkbox
+              isSelected={capacityLimitEnabled}
+              onChange={setCapacityLimitEnabled}
+              isDisabled={!registrationRequired}
+            >
+              Set capacity limit
+            </Checkbox>
+            <TextField
+              isRequired={capacityLimitEnabled}
+              isDisabled={!registrationRequired}
+              type="number"
+            />
+          </Flex>
+        </Flex>
+
+        <SpeakerSelector seriesId={seriesId} sessionId={session?.id} />
+
+        <Flex direction="column" gap="size-100">
+          <Text>Tags</Text>
+          <TagSelector selectedTags={selectedTags} onChange={setSelectedTags} />
+        </Flex>
+      </Flex>
+
+      {saveError && (
+        <Text
+          UNSAFE_style={{
+            color: "var(--spectrum-global-color-red-600)",
+            marginTop: "8px",
+          }}
+        >
+          {saveError}
+        </Text>
+      )}
+    </View>
+  );
+};
+
+// ============================================================================
+// SESSION ITEM (collapsible)
+// ============================================================================
+
 export interface SessionItemProps {
   session: Session;
+  isExpanded: boolean;
+  onToggle: (sessionId: string) => void;
   onDelete: (sessionId: string) => void;
-  onSave: (sessionId: string, data: SessionFormData) => void;
+  onSave: (sessionId: string, data: SessionFormData) => Promise<void>;
 }
 
 export const SessionItem: React.FC<SessionItemProps> = ({
   session,
+  isExpanded,
+  onToggle,
   onDelete,
   onSave,
 }) => {
@@ -67,7 +443,38 @@ export const SessionItem: React.FC<SessionItemProps> = ({
       UNSAFE_style={{ position: "relative" }}
     >
       <Flex justifyContent="space-between" alignItems="center">
-        <View>
+        <div
+          role="button"
+          tabIndex={0}
+          onClick={() => onToggle(session.id)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" || e.key === " ") {
+              e.preventDefault();
+              onToggle(session.id);
+            }
+          }}
+          style={{
+            cursor: "pointer",
+            display: "flex",
+            alignItems: "center",
+            gap: "8px",
+            flex: 1,
+            outline: "none",
+          }}
+        >
+          <View
+            UNSAFE_style={{
+              display: "flex",
+              alignItems: "center",
+              flexShrink: 0,
+            }}
+          >
+            {isExpanded ? (
+              <ChevronDown size="S" />
+            ) : (
+              <ChevronRight size="S" />
+            )}
+          </View>
           <Flex direction="column" gap="size-100">
             <Heading
               level={3}
@@ -79,37 +486,28 @@ export const SessionItem: React.FC<SessionItemProps> = ({
             <Text>
               {sessionDate} | {startTime} - {endTime}
             </Text>
-            <Flex gap="size-150" marginTop="size-100">
-              {session.tags?.map((tag) => (
-                <Chip key={tag} text={getCaasTagDisplayLabel(tag)} />
-              ))}
-            </Flex>
+            {session.tags && session.tags.length > 0 && (
+              <Flex gap="size-150" marginTop="size-100">
+                {session.tags.map((tag) => (
+                  <Chip key={tag} text={getCaasTagDisplayLabel(tag)} />
+                ))}
+              </Flex>
+            )}
           </Flex>
-        </View>
-        <View>
-          <Flex gap="size-100">
-            <DialogTrigger>
-              <ActionButton isQuiet aria-label="Edit">
-                <EditIcon />
-              </ActionButton>
-              {(close) => (
-                <SessionDialog
-                  close={close}
-                  session={session}
-                  onSave={(data) => onSave(session.id, data)}
-                />
-              )}
-            </DialogTrigger>
-            <ActionButton
-              isQuiet
-              aria-label="Delete"
-              onPress={handleDeleteClick}
-            >
-              <DeleteIcon />
-            </ActionButton>
-          </Flex>
-        </View>
+        </div>
+
+        <ActionButton isQuiet aria-label="Delete" onPress={handleDeleteClick}>
+          <DeleteIcon />
+        </ActionButton>
       </Flex>
+
+      {isExpanded && (
+        <SessionInlineForm
+          session={session}
+          onSave={(data) => onSave(session.id, data)}
+          onCancel={() => onToggle(session.id)}
+        />
+      )}
 
       {showDeleteConfirm && (
         <View
@@ -148,23 +546,48 @@ export const SessionItem: React.FC<SessionItemProps> = ({
   );
 };
 
+// ============================================================================
+// SESSIONS LIST
+// ============================================================================
+
 export interface SessionsListProps {
   sessions: Session[];
+  isAddingNew: boolean;
+  onCancelAdd: () => void;
+  onAdd: (data: SessionFormData) => Promise<void>;
   onDelete: (sessionId: string) => void;
-  onSave: (sessionId: string, data: SessionFormData) => void;
+  onSave: (sessionId: string, data: SessionFormData) => Promise<void>;
 }
 
 export const SessionsList: React.FC<SessionsListProps> = ({
   sessions,
+  isAddingNew,
+  onCancelAdd,
+  onAdd,
   onDelete,
   onSave,
 }) => {
+  const [expandedId, setExpandedId] = useState<string | null>(null);
+
+  const handleToggle = (sessionId: string) => {
+    setExpandedId((prev) => (prev === sessionId ? null : sessionId));
+  };
+
   return (
     <Flex direction="column" gap="size-150" marginTop="size-150">
+      {isAddingNew && (
+        <SessionInlineForm
+          session={null}
+          onSave={onAdd}
+          onCancel={onCancelAdd}
+        />
+      )}
       {sessions.map((session) => (
         <SessionItem
           key={session.id}
           session={session}
+          isExpanded={expandedId === session.id}
+          onToggle={handleToggle}
           onDelete={onDelete}
           onSave={onSave}
         />
