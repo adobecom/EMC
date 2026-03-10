@@ -19,7 +19,6 @@ import {
 } from "@adobe/react-spectrum";
 import ChevronRight from "@spectrum-icons/workflow/ChevronRight";
 import ChevronDown from "@spectrum-icons/workflow/ChevronDown";
-import Delete from "@spectrum-icons/workflow/Delete";
 import {
   parseDateTime,
   CalendarDateTime,
@@ -332,88 +331,6 @@ const SessionInlineForm: React.FC<SessionInlineFormProps> = ({
         )}
       </Flex>
 
-      {selectedSpeakers.length > 0 && (
-        <Flex direction="column" gap="size-100">
-          {selectedSpeakers.map((speaker) => {
-            const displayTitle =
-              speaker.localizations?.[locale]?.title ||
-              speaker.title ||
-              "";
-            return (
-              <Flex
-                key={speaker.speakerId}
-                alignItems="center"
-                gap="size-150"
-                UNSAFE_style={{
-                  padding: "8px 12px",
-                  border: "1px solid var(--spectrum-global-color-gray-300)",
-                  borderRadius: "6px",
-                  backgroundColor: "var(--spectrum-global-color-gray-50)",
-                }}
-              >
-                {speaker.photo?.imageUrl ? (
-                  <img
-                    src={speaker.photo.imageUrl}
-                    alt={`${speaker.firstName} ${speaker.lastName}`}
-                    style={{
-                      width: "32px",
-                      height: "32px",
-                      borderRadius: "50%",
-                      objectFit: "cover",
-                      flexShrink: 0,
-                    }}
-                  />
-                ) : (
-                  <div
-                    style={{
-                      width: "32px",
-                      height: "32px",
-                      borderRadius: "50%",
-                      backgroundColor: "var(--spectrum-global-color-gray-300)",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      color: "var(--spectrum-global-color-gray-600)",
-                      fontSize: "12px",
-                      fontWeight: "bold",
-                      flexShrink: 0,
-                    }}
-                  >
-                    {speaker.firstName?.[0] || ""}
-                    {speaker.lastName?.[0] || ""}
-                  </div>
-                )}
-                <Flex direction="column" flex={1} minWidth={0}>
-                  <Text UNSAFE_style={{ fontWeight: 600, fontSize: "13px" }}>
-                    {speaker.firstName} {speaker.lastName}
-                  </Text>
-                  {displayTitle && (
-                    <Text
-                      UNSAFE_style={{
-                        fontSize: "11px",
-                        color: "var(--spectrum-global-color-gray-600)",
-                        overflow: "hidden",
-                        textOverflow: "ellipsis",
-                        whiteSpace: "nowrap",
-                      }}
-                    >
-                      {displayTitle}
-                    </Text>
-                  )}
-                </Flex>
-                <ActionButton
-                  isQuiet
-                  aria-label="Remove speaker"
-                  onPress={() => handleRemoveSpeaker(speaker.speakerId)}
-                >
-                  <Delete size="S" />
-                </ActionButton>
-              </Flex>
-            );
-          })}
-        </Flex>
-      )}
-
       <div
         onClick={() => setPickerOpen(true)}
         onMouseDown={(e) => e.preventDefault()}
@@ -421,12 +338,84 @@ const SessionInlineForm: React.FC<SessionInlineFormProps> = ({
       >
         <SearchField
           labelPosition="side"
-          placeholder="Search speakers…"
+          placeholder="Search or select session speakers"
           width="100%"
           isReadOnly
           aria-label="Open speaker picker"
         />
       </div>
+
+      {selectedSpeakers.length > 0 && (
+        <Flex direction="row" gap="size-150" wrap>
+          {selectedSpeakers.map((speaker) => (
+            <div
+              key={speaker.speakerId}
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: "8px",
+                padding: "6px 12px 6px 6px",
+                borderRadius: "9px",
+                backgroundColor: "var(--spectrum-global-color-gray-200)",
+                fontSize: "14px",
+                fontWeight: 500,
+              }}
+            >
+              {speaker.photo?.imageUrl ? (
+                <img
+                  src={speaker.photo.imageUrl}
+                  alt={`${speaker.firstName} ${speaker.lastName}`}
+                  style={{
+                    width: "28px",
+                    height: "28px",
+                    borderRadius: "50%",
+                    objectFit: "cover",
+                  }}
+                />
+              ) : (
+                <div
+                  style={{
+                    width: "28px",
+                    height: "28px",
+                    borderRadius: "50%",
+                    backgroundColor: "var(--spectrum-global-color-gray-400)",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    color: "white",
+                    fontSize: "11px",
+                    fontWeight: "bold",
+                  }}
+                >
+                  {speaker.firstName?.[0] || ""}
+                  {speaker.lastName?.[0] || ""}
+                </div>
+              )}
+              <span>
+                {speaker.firstName} {speaker.lastName}
+              </span>
+              <button
+                type="button"
+                onClick={() => handleRemoveSpeaker(speaker.speakerId)}
+                aria-label={`Remove ${speaker.firstName} ${speaker.lastName}`}
+                style={{
+                  background: "none",
+                  border: "none",
+                  cursor: "pointer",
+                  padding: "0",
+                  display: "flex",
+                  alignItems: "center",
+                  color: "var(--spectrum-global-color-gray-700)",
+                  fontSize: "16px",
+                  lineHeight: 1,
+                }}
+              >
+                ✕
+              </button>
+            </div>
+          ))}
+        </Flex>
+      )}
 
       <SpeakerPickerDialog
         isOpen={pickerOpen}
@@ -500,7 +489,7 @@ const SessionInlineForm: React.FC<SessionInlineFormProps> = ({
         </Flex>
       )}
 
-      <Form>
+      <Form UNSAFE_style={{ display: "flex", flexDirection: "column", gap: "24px" }}>
         <TextField
           label="Title"
           isRequired
