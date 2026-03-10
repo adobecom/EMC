@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import {
   Flex,
   Heading,
@@ -13,9 +13,13 @@ import {
   ActionGroup,
   Item,
   Checkbox,
+  ProgressCircle,
+  SearchField,
+  Form,
 } from "@adobe/react-spectrum";
 import ChevronRight from "@spectrum-icons/workflow/ChevronRight";
 import ChevronDown from "@spectrum-icons/workflow/ChevronDown";
+import Delete from "@spectrum-icons/workflow/Delete";
 import {
   parseDateTime,
   CalendarDateTime,
@@ -23,14 +27,15 @@ import {
   Time,
 } from "@internationalized/date";
 import { Session } from "../../../types/sessions";
-import { EventTag } from "../../../types/domain";
+import { EventTag, SeriesSpeaker } from "../../../types/domain";
 import Chip from "../../../components/shared/Chip";
 import { COLORS } from "../../../styles/designSystem";
 import { DeleteIcon } from "../../../components/icons/delete";
 import { formatTime, formatDate } from "../../../utils/shared";
-import { apiService } from "../../../services/api";
+import { apiService, cachedApi } from "../../../services/api";
 import { useEventFormContext } from "../../../contexts";
-import { TagSelector, SpeakerSelector } from "../../../components/shared";
+import { TagSelector } from "../../../components/shared";
+import { SpeakerPickerDialog } from "../SpeakerPickerDialog";
 
 export interface SessionFormData {
   name: string;
@@ -142,7 +147,7 @@ const SessionInlineForm: React.FC<SessionInlineFormProps> = ({
   onCancel,
 }) => {
   const isEditMode = session !== null;
-  const { seriesId: contextSeriesId, formData } = useEventFormContext();
+  const { seriesId: contextSeriesId, formData, locale } = useEventFormContext();
   const seriesId = contextSeriesId || formData.seriesId || "";
 
   const [loadingDetails, setLoadingDetails] = useState(
@@ -175,6 +180,71 @@ const SessionInlineForm: React.FC<SessionInlineFormProps> = ({
     creationTime?: number;
     modificationTime?: number;
   }>({});
+
+  // Speaker picker state
+  const [seriesSpeakers, setSeriesSpeakers] = useState<SeriesSpeaker[]>([]);
+  const [selectedSpeakers, setSelectedSpeakers] = useState<SeriesSpeaker[]>([]);
+  const [isLoadingSpeakers, setIsLoadingSpeakers] = useState(false);
+  const [pickerOpen, setPickerOpen] = useState(false);
+
+  const selectedSpeakerIds = new Set(
+    selectedSpeakers.map((s) => s.speakerId),
+  );
+
+  const loadSeriesSpeakers = useCallback(async () => {
+    if (!seriesId) return;
+    setIsLoadingSpeakers(true);
+    try {
+      const response = await cachedApi.getSpeakers(seriesId);
+      if (response && !("error" in response)) {
+        const list = response.speakers || response || [];
+        setSeriesSpeakers(Array.isArray(list) ? list : []);
+      }
+    } catch (err) {
+      console.error("Failed to load series speakers:", err);
+    } finally {
+      setIsLoadingSpeakers(false);
+    }
+  }, [seriesId]);
+
+  useEffect(() => {
+    loadSeriesSpeakers();
+  }, [loadSeriesSpeakers]);
+
+  useEffect(() => {
+    if (!session?.id) return;
+    let cancelled = false;
+    apiService.getSessionSpeakers(session.id).then((res) => {
+      if (cancelled) return;
+      if (res && !("error" in res)) {
+        const list = (res as any)?.speakers ?? [];
+        if (Array.isArray(list) && list.length > 0) {
+          const ids = list.map((s: any) => String(s.speakerId));
+          setSelectedSpeakers((prev) => {
+            if (prev.length > 0) return prev;
+            return seriesSpeakers.filter((s) => ids.includes(s.speakerId));
+          });
+        }
+      }
+    });
+    return () => { cancelled = true; };
+  }, [session?.id, seriesSpeakers]);
+
+  const handlePickerSelect = useCallback((speaker: SeriesSpeaker) => {
+    setSelectedSpeakers((prev) => {
+      if (prev.some((s) => s.speakerId === speaker.speakerId)) return prev;
+      return [...prev, speaker];
+    });
+    setPickerOpen(false);
+  }, []);
+
+  const handleRemoveSpeaker = useCallback((speakerId: string) => {
+    setSelectedSpeakers((prev) => prev.filter((s) => s.speakerId !== speakerId));
+  }, []);
+
+  const refreshSeriesSpeakers = useCallback(async () => {
+    await loadSeriesSpeakers();
+  }, [loadSeriesSpeakers]);
 
   useEffect(() => {
     if (!session?.id) {
@@ -249,6 +319,135 @@ const SessionInlineForm: React.FC<SessionInlineFormProps> = ({
 
   const canSave = Boolean(name.trim() && date && startTime && endTime);
 
+  const renderSpeakers = () => (
+    <Flex direction="column" gap="size-100">
+      <Flex alignItems="center" gap="size-150">
+        <Text>Speakers</Text>
+        {isLoadingSpeakers && (
+          <ProgressCircle
+            size="S"
+            isIndeterminate
+            aria-label="Loading speakers"
+          />
+        )}
+      </Flex>
+
+      {selectedSpeakers.length > 0 && (
+        <Flex direction="column" gap="size-100">
+          {selectedSpeakers.map((speaker) => {
+            const displayTitle =
+              speaker.localizations?.[locale]?.title ||
+              speaker.title ||
+              "";
+            return (
+              <Flex
+                key={speaker.speakerId}
+                alignItems="center"
+                gap="size-150"
+                UNSAFE_style={{
+                  padding: "8px 12px",
+                  border: "1px solid var(--spectrum-global-color-gray-300)",
+                  borderRadius: "6px",
+                  backgroundColor: "var(--spectrum-global-color-gray-50)",
+                }}
+              >
+                {speaker.photo?.imageUrl ? (
+                  <img
+                    src={speaker.photo.imageUrl}
+                    alt={`${speaker.firstName} ${speaker.lastName}`}
+                    style={{
+                      width: "32px",
+                      height: "32px",
+                      borderRadius: "50%",
+                      objectFit: "cover",
+                      flexShrink: 0,
+                    }}
+                  />
+                ) : (
+                  <div
+                    style={{
+                      width: "32px",
+                      height: "32px",
+                      borderRadius: "50%",
+                      backgroundColor: "var(--spectrum-global-color-gray-300)",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      color: "var(--spectrum-global-color-gray-600)",
+                      fontSize: "12px",
+                      fontWeight: "bold",
+                      flexShrink: 0,
+                    }}
+                  >
+                    {speaker.firstName?.[0] || ""}
+                    {speaker.lastName?.[0] || ""}
+                  </div>
+                )}
+                <Flex direction="column" flex={1} minWidth={0}>
+                  <Text UNSAFE_style={{ fontWeight: 600, fontSize: "13px" }}>
+                    {speaker.firstName} {speaker.lastName}
+                  </Text>
+                  {displayTitle && (
+                    <Text
+                      UNSAFE_style={{
+                        fontSize: "11px",
+                        color: "var(--spectrum-global-color-gray-600)",
+                        overflow: "hidden",
+                        textOverflow: "ellipsis",
+                        whiteSpace: "nowrap",
+                      }}
+                    >
+                      {displayTitle}
+                    </Text>
+                  )}
+                </Flex>
+                <ActionButton
+                  isQuiet
+                  aria-label="Remove speaker"
+                  onPress={() => handleRemoveSpeaker(speaker.speakerId)}
+                >
+                  <Delete size="S" />
+                </ActionButton>
+              </Flex>
+            );
+          })}
+        </Flex>
+      )}
+
+      <div
+        onClick={() => setPickerOpen(true)}
+        onMouseDown={(e) => e.preventDefault()}
+        style={{ cursor: "pointer" }}
+      >
+        <SearchField
+          labelPosition="side"
+          placeholder="Search speakers…"
+          width="100%"
+          isReadOnly
+          aria-label="Open speaker picker"
+        />
+      </div>
+
+      <SpeakerPickerDialog
+        isOpen={pickerOpen}
+        onClose={() => setPickerOpen(false)}
+        onSelect={handlePickerSelect}
+        seriesSpeakers={seriesSpeakers}
+        selectedSpeakerIds={selectedSpeakerIds}
+        seriesId={seriesId}
+        locale={locale}
+        onSpeakersRefresh={refreshSeriesSpeakers}
+      />
+    </Flex>
+  );
+
+  const renderTags = () => (
+    <Flex direction="column" gap="size-100">
+      <Text>Tags</Text>
+      <TagSelector selectedTags={selectedTags} onChange={setSelectedTags} />
+    </Flex>
+  );
+
   if (loadingDetails) {
     return (
       <View padding="size-200">
@@ -301,68 +500,63 @@ const SessionInlineForm: React.FC<SessionInlineFormProps> = ({
         </Flex>
       )}
 
-      <Flex direction="column" gap="size-200" width="100%">
-        <Flex direction="column" gap="size-100">
-          <Text>Title *</Text>
-          <TextField isRequired width="100%" value={name} onChange={setName} />
-        </Flex>
+      <Form>
+        <TextField
+          label="Title"
+          isRequired
+          width="100%"
+          value={name}
+          onChange={setName}
+        />
 
-        <Flex direction="column" gap="size-100">
-          <Text>Description</Text>
-          <TextArea
+        <TextArea
+          label="Description"
+          width="100%"
+          value={description}
+          onChange={setDescription}
+        />
+
+        <Flex direction="row" gap="size-200">
+          <DatePicker
+            label="Date"
+            isRequired
             width="100%"
-            value={description}
-            onChange={setDescription}
+            value={date ?? undefined}
+            onChange={(v) => setDate(v ?? null)}
           />
-        </Flex>
-
-        <Flex direction="row" gap="size-100">
-          <Flex direction="column" gap="size-100">
-            <Text>Date</Text>
-            <DatePicker
-              isRequired
-              width="100%"
-              value={date ?? undefined}
-              onChange={(v) => setDate(v ?? null)}
-            />
-          </Flex>
-          <Flex direction="column" gap="size-100">
-            <Text>Start Time</Text>
-            <TimeField
-              isRequired
-              hourCycle={12}
-              width="100%"
-              value={startTime ?? undefined}
-              onChange={(v) => setStartTime(v ?? null)}
-            />
-          </Flex>
-          <Flex direction="column" gap="size-100">
-            <Text>End Time</Text>
-            <TimeField
-              isRequired
-              hourCycle={12}
-              width="100%"
-              value={endTime ?? undefined}
-              onChange={(v) => setEndTime(v ?? null)}
-            />
-          </Flex>
+          <TimeField
+            label="Start Time"
+            isRequired
+            hourCycle={12}
+            width="100%"
+            value={startTime ?? undefined}
+            onChange={(v) => setStartTime(v ?? null)}
+          />
+          <TimeField
+            label="End Time"
+            isRequired
+            hourCycle={12}
+            width="100%"
+            value={endTime ?? undefined}
+            onChange={(v) => setEndTime(v ?? null)}
+          />
         </Flex>
 
         <Flex direction="column" gap="size-100">
           <Text>Session registration</Text>
-          <ActionGroup
-            selectionMode="single"
-            selectedKeys={
-              registrationRequired ? ["registration"] : ["automatic"]
-            }
-            onAction={(key) =>
-              setRegistrationRequired(key === "registration")
-            }
-          >
-            <Item key="automatic">Automatic</Item>
-            <Item key="registration">Registration required</Item>
-          </ActionGroup>
-          <Flex direction="row" gap="size-100">
+          <Flex direction="row" gap="size-200" alignItems="center" wrap>
+            <ActionGroup
+              selectionMode="single"
+              selectedKeys={
+                registrationRequired ? ["registration"] : ["automatic"]
+              }
+              onAction={(key) =>
+                setRegistrationRequired(key === "registration")
+              }
+            >
+              <Item key="automatic">Automatic</Item>
+              <Item key="registration">Registration required</Item>
+            </ActionGroup>
             <Checkbox
               isSelected={capacityLimitEnabled}
               onChange={setCapacityLimitEnabled}
@@ -371,20 +565,18 @@ const SessionInlineForm: React.FC<SessionInlineFormProps> = ({
               Set capacity limit
             </Checkbox>
             <TextField
+              aria-label="Capacity"
               isRequired={capacityLimitEnabled}
-              isDisabled={!registrationRequired}
+              isDisabled={!registrationRequired || !capacityLimitEnabled}
               type="number"
+              width="size-1200"
             />
           </Flex>
         </Flex>
 
-        <SpeakerSelector seriesId={seriesId} sessionId={session?.id} />
-
-        <Flex direction="column" gap="size-100">
-          <Text>Tags</Text>
-          <TagSelector selectedTags={selectedTags} onChange={setSelectedTags} />
-        </Flex>
-      </Flex>
+        {renderSpeakers()}
+        {renderTags()}
+      </Form>
 
       {saveError && (
         <Text
