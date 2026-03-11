@@ -185,6 +185,7 @@ export const createDefaultFormData = (): EventFormData => ({
   language: 'en',
   defaultLocale: DEFAULT_LOCALE,
   isPrivate: false,
+  inviteOnly: false,
   tags: [],
   startDateTime: '',
   endDateTime: '',

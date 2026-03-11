@@ -24,7 +24,7 @@ import { parseDateTime, CalendarDateTime } from '@internationalized/date'
 import { getTimeZones } from '@vvo/tzdb'
 import Info from '@spectrum-icons/workflow/Info'
 import { HeadingWithTooltip, RichTextEditor } from '../../components/shared'
-import { FLEX_GAP } from '../../styles/designSystem'
+import { FLEX_GAP, SPACING } from '../../styles/designSystem'
 import { LANGUAGE_TO_LOCALE, DEFAULT_LOCALE } from '../../config/localeMapping'
 import { useEventFormComponent } from '../../hooks/useEventFormComponent'
 
@@ -162,6 +162,7 @@ export const EventInfoComponent: React.FC = () => {
     communityForumUrl = '',
     secondaryLinkTitle = '',
     isPrivate = false,
+    inviteOnly = false,
   } = formData
   
   // ============================================================================
@@ -243,28 +244,52 @@ export const EventInfoComponent: React.FC = () => {
           Event Information
         </HeadingWithTooltip>
         
-        <Flex direction="row" alignItems="center" gap="size-100">
-          <Switch
-            isSelected={isPrivate}
-            onChange={(value) => updateFormData({ isPrivate: value })}
-          >
-            Set as a private event
-          </Switch>
-          <TooltipTrigger delay={0}>
-            <ActionButton 
-              isQuiet
-              UNSAFE_style={{ 
-                minWidth: 'auto',
-                padding: 0,
-                width: '20px',
-                height: '20px'
-              }}
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: SPACING.XS }}>
+          <Flex direction="row" alignItems="center" gap="size-100">
+            <Switch
+              isSelected={isPrivate}
+              onChange={(value) => updateFormData({ isPrivate: value })}
             >
-              <Info size="S" />
-            </ActionButton>
-            <Tooltip variant="info">By setting this to private, your event won't be publicly found online or published to the events hub.</Tooltip>
-          </TooltipTrigger>
-        </Flex>
+              Set as a private event
+            </Switch>
+            <TooltipTrigger delay={0}>
+              <ActionButton 
+                isQuiet
+                UNSAFE_style={{ 
+                  minWidth: 'auto',
+                  padding: 0,
+                  width: '20px',
+                  height: '20px'
+                }}
+              >
+                <Info size="S" />
+              </ActionButton>
+              <Tooltip variant="info">By setting this to private, your event won't be publicly found online or published to the events hub.</Tooltip>
+            </TooltipTrigger>
+          </Flex>
+          <Flex direction="row" alignItems="center" gap="size-100">
+            <Switch
+              isSelected={inviteOnly}
+              onChange={(value) => updateFormData({ inviteOnly: value })}
+            >
+              Invite only
+            </Switch>
+            <TooltipTrigger delay={0}>
+              <ActionButton 
+                isQuiet
+                UNSAFE_style={{ 
+                  minWidth: 'auto',
+                  padding: 0,
+                  width: '20px',
+                  height: '20px'
+                }}
+              >
+                <Info size="S" />
+              </ActionButton>
+              <Tooltip variant="info">If set to true, users can only RSVP with a campaign link.</Tooltip>
+            </TooltipTrigger>
+          </Flex>
+        </div>
       </Flex>
 
       {/* Form Fields */}
