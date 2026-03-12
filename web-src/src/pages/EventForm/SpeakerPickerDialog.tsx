@@ -17,8 +17,6 @@ import {
   ProgressCircle,
   SearchField,
   Form,
-  TooltipTrigger,
-  Tooltip,
 } from '@adobe/react-spectrum'
 import Add from '@spectrum-icons/workflow/Add'
 import Alert from '@spectrum-icons/workflow/Alert'
@@ -401,31 +399,6 @@ export const SpeakerPickerDialog: React.FC<SpeakerPickerDialogProps> = ({
                   position: 'relative',
                 }}
               >
-                {missingLocalization && (
-                  <TooltipTrigger delay={0}>
-                    <span
-                      style={{
-                        position: 'absolute',
-                        top: '8px',
-                        right: '8px',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                      }}
-                      onClick={(e) => e.stopPropagation()}
-                    >
-                      <Alert
-                        size="S"
-                        UNSAFE_style={{ color: COLORS.ADOBE_RED }}
-                        aria-label={`Missing title for ${locale}`}
-                      />
-                    </span>
-                    <Tooltip variant="negative">
-                      This speaker is missing a localized title for {locale}. Add it in the
-                      Speakers dashboard or when adding the speaker to avoid display issues.
-                    </Tooltip>
-                  </TooltipTrigger>
-                )}
                 {speaker.photo?.imageUrl ? (
                   <img
                     src={speaker.photo.imageUrl}
@@ -460,7 +433,23 @@ export const SpeakerPickerDialog: React.FC<SpeakerPickerDialogProps> = ({
                   <div style={{ fontWeight: 600, fontSize: '13px', lineHeight: '18px' }}>
                     {speaker.firstName} {speaker.lastName}
                   </div>
-                  {title && (
+                  {missingLocalization ? (
+                    <div
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: '6px',
+                        marginTop: '2px',
+                        fontSize: '11px',
+                        color: COLORS.ADOBE_RED,
+                        lineHeight: '16px',
+                      }}
+                    >
+                      <Alert size="S" UNSAFE_style={{ color: COLORS.ADOBE_RED, flexShrink: 0 }} aria-hidden />
+                      <span>Missing title for {locale}</span>
+                    </div>
+                  ) : title ? (
                     <div
                       style={{
                         fontSize: '11px',
@@ -475,7 +464,7 @@ export const SpeakerPickerDialog: React.FC<SpeakerPickerDialogProps> = ({
                     >
                       {title}
                     </div>
-                  )}
+                  ) : null}
                 </div>
               </div>
             )
