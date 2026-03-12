@@ -19,14 +19,17 @@ import {
   Form,
 } from '@adobe/react-spectrum'
 import Add from '@spectrum-icons/workflow/Add'
+import Alert from '@spectrum-icons/workflow/Alert'
 import ArrowLeft from '@spectrum-icons/workflow/ArrowLeft'
 import Delete from '@spectrum-icons/workflow/Delete'
 import LinkOut from '@spectrum-icons/workflow/LinkOut'
 import { SeriesSpeaker, SocialLinkFormData } from '../../types/domain'
+import { speakerHasLocalization } from '../../utils/eventFormMappers'
 import { RichTextEditor, ImageUploader } from '../../components/shared'
 import { TYPOGRAPHY, FLEX_GAP } from '../../styles/designSystem'
 import { detectSocialPlatform, isValidUrl, toApiSocialLink } from '../../utils/socialPlatformDetector'
 import { cachedApi, apiService } from '../../services/api'
+import { getSpeakerPayload } from '../../services/payloadBuilders'
 import { uploadImage, UploadTracker } from '../../services/requestHelpers'
 import { getCurrentEnvironment, getApiHost } from '../../config/constants'
 
@@ -69,12 +72,15 @@ export const SpeakerPickerDialog: React.FC<SpeakerPickerDialogProps> = ({
   locale,
   onSpeakersRefresh,
 }) => {
-  const [view, setView] = useState<'select' | 'create'>('select')
+  const [view, setView] = useState<'select' | 'create' | 'localize'>('select')
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedSpeakerId, setSelectedSpeakerId] = useState<string | null>(null)
   const [createForm, setCreateForm] = useState<CreateFormState>(initialCreateFormState)
   const [pendingFile, setPendingFile] = useState<File | null>(null)
   const [isCreating, setIsCreating] = useState(false)
+  const [speakerToLocalize, setSpeakerToLocalize] = useState<SeriesSpeaker | null>(null)
+  const [localizeForm, setLocalizeForm] = useState({ title: '', bio: '' })
+  const [isSavingLocalization, setIsSavingLocalization] = useState(false)
 
   useEffect(() => {
     if (isOpen) {
@@ -84,6 +90,9 @@ export const SpeakerPickerDialog: React.FC<SpeakerPickerDialogProps> = ({
       setCreateForm(initialCreateFormState)
       setPendingFile(null)
       setIsCreating(false)
+      setSpeakerToLocalize(null)
+      setLocalizeForm({ title: '', bio: '' })
+      setIsSavingLocalization(false)
     }
   }, [isOpen])
 
@@ -104,11 +113,19 @@ export const SpeakerPickerDialog: React.FC<SpeakerPickerDialogProps> = ({
   const handleSelectConfirm = useCallback(() => {
     if (!selectedSpeakerId) return
     const speaker = seriesSpeakers.find(s => s.speakerId === selectedSpeakerId)
-    if (speaker) {
+    if (!speaker) return
+    if (!speakerHasLocalization(speaker, locale)) {
+      setSpeakerToLocalize(speaker)
+      setLocalizeForm({
+        title: speaker.title ?? speaker.localizations?.[locale]?.title ?? '',
+        bio: speaker.bio ?? speaker.localizations?.[locale]?.bio ?? '',
+      })
+      setView('localize')
+    } else {
       onSelect(speaker)
       onClose()
     }
-  }, [selectedSpeakerId, seriesSpeakers, onSelect, onClose])
+  }, [selectedSpeakerId, seriesSpeakers, locale, onSelect, onClose])
 
   const handleSwitchToCreate = useCallback(() => {
     setView('create')
@@ -119,6 +136,53 @@ export const SpeakerPickerDialog: React.FC<SpeakerPickerDialogProps> = ({
   const handleBackToSelect = useCallback(() => {
     setView('select')
   }, [])
+
+  const handleBackFromLocalize = useCallback(() => {
+    setView('select')
+    setSpeakerToLocalize(null)
+    setLocalizeForm({ title: '', bio: '' })
+  }, [])
+
+  const handleSaveAndAddLocalization = useCallback(async () => {
+    if (!speakerToLocalize) return
+    const title = localizeForm.title.trim()
+    if (!title) return
+    setIsSavingLocalization(true)
+    try {
+      const payload = await getSpeakerPayload(
+        {
+          speakerId: speakerToLocalize.speakerId,
+          firstName: speakerToLocalize.firstName,
+          lastName: speakerToLocalize.lastName,
+          title,
+          bio: localizeForm.bio.trim() || undefined,
+          socialLinks: speakerToLocalize.socialLinks,
+          modificationTime: speakerToLocalize.modificationTime,
+        },
+        locale,
+        seriesId
+      )
+      const result = await cachedApi.updateSpeaker(payload as any, seriesId)
+      if (result && !('error' in result)) {
+        const updated = result.speaker ?? result
+        const mergedSpeaker: SeriesSpeaker = {
+          ...speakerToLocalize,
+          localizations: {
+            ...speakerToLocalize.localizations,
+            [locale]: { title, bio: localizeForm.bio.trim() || undefined },
+          },
+          modificationTime: updated.modificationTime ?? speakerToLocalize.modificationTime,
+        }
+        onSpeakersRefresh()
+        onSelect(mergedSpeaker)
+        onClose()
+      }
+    } catch (err) {
+      console.error('Failed to save speaker localization:', err)
+    } finally {
+      setIsSavingLocalization(false)
+    }
+  }, [speakerToLocalize, localizeForm, locale, seriesId, onSpeakersRefresh, onSelect, onClose])
 
   const updateCreateField = useCallback(<K extends keyof CreateFormState>(field: K, value: CreateFormState[K]) => {
     setCreateForm(prev => ({ ...prev, [field]: value }))
@@ -299,6 +363,7 @@ export const SpeakerPickerDialog: React.FC<SpeakerPickerDialogProps> = ({
           {filteredSpeakers.map(speaker => {
             const isSelected = selectedSpeakerId === speaker.speakerId
             const title = getLocalizedTitle(speaker)
+            const missingLocalization = !speakerHasLocalization(speaker, locale)
 
             return (
               <div
@@ -306,6 +371,7 @@ export const SpeakerPickerDialog: React.FC<SpeakerPickerDialogProps> = ({
                 onClick={() => setSelectedSpeakerId(speaker.speakerId)}
                 role="option"
                 aria-selected={isSelected}
+                aria-label={missingLocalization ? `Missing title for ${locale}` : undefined}
                 tabIndex={0}
                 onKeyDown={(e) => {
                   if (e.key === 'Enter' || e.key === ' ') {
@@ -317,12 +383,16 @@ export const SpeakerPickerDialog: React.FC<SpeakerPickerDialogProps> = ({
                   padding: '16px 12px',
                   border: isSelected
                     ? '2px solid var(--spectrum-global-color-blue-500)'
-                    : '1px solid var(--spectrum-global-color-gray-300)',
+                    : missingLocalization
+                      ? '1px solid var(--spectrum-semantic-notice-color-border)'
+                      : '1px solid var(--spectrum-global-color-gray-300)',
                   borderRadius: '8px',
                   cursor: 'pointer',
                   backgroundColor: isSelected
                     ? 'var(--spectrum-global-color-blue-100)'
-                    : 'var(--spectrum-global-color-gray-50)',
+                    : missingLocalization
+                      ? 'var(--spectrum-semantic-notice-color-background)'
+                      : 'var(--spectrum-global-color-gray-50)',
                   display: 'flex',
                   flexDirection: 'column',
                   alignItems: 'center',
@@ -332,6 +402,14 @@ export const SpeakerPickerDialog: React.FC<SpeakerPickerDialogProps> = ({
                   outline: 'none',
                 }}
               >
+                {missingLocalization && (
+                  <Flex alignItems="center" gap="size-50" UNSAFE_style={{ color: 'var(--spectrum-semantic-notice-color-text)' }}>
+                    <Alert size="S" />
+                    <Text UNSAFE_style={{ fontSize: '11px', fontWeight: 600 }}>
+                      Missing title for {locale}
+                    </Text>
+                  </Flex>
+                )}
                 {speaker.photo?.imageUrl ? (
                   <img
                     src={speaker.photo.imageUrl}
@@ -390,6 +468,75 @@ export const SpeakerPickerDialog: React.FC<SpeakerPickerDialogProps> = ({
       )}
     </>
   )
+
+  const renderLocalizeView = () => {
+    if (!speakerToLocalize) return null
+    const displayName = `${speakerToLocalize.firstName} ${speakerToLocalize.lastName}`
+    return (
+      <>
+        <Flex alignItems="center" gap="size-100" marginBottom="size-200">
+          <ActionButton onPress={handleBackFromLocalize} isQuiet aria-label="Back to search">
+            <ArrowLeft />
+          </ActionButton>
+          <Heading level={3} UNSAFE_style={{ margin: 0, fontSize: '20px', fontWeight: 700 }}>
+            Add {locale} content for {displayName}
+          </Heading>
+        </Flex>
+        <View
+          padding="size-200"
+          marginBottom="size-200"
+          UNSAFE_style={{
+            backgroundColor: 'var(--spectrum-semantic-notice-color-background)',
+            borderRadius: '8px',
+            border: '1px solid var(--spectrum-semantic-notice-color-border)',
+          }}
+        >
+          <Text UNSAFE_style={{ fontSize: '12px', color: 'var(--spectrum-semantic-notice-color-text)' }}>
+            This speaker does not have a localized title for {locale}. Add a title below (required). Bio is optional.
+          </Text>
+        </View>
+        <Form>
+          <Flex direction="column" gap={FLEX_GAP.SECTION}>
+            <TextField
+              label="Title / Role"
+              value={localizeForm.title}
+              onChange={(v) => setLocalizeForm(prev => ({ ...prev, title: v }))}
+              placeholder="e.g., Senior Product Designer"
+              isRequired
+              width="100%"
+            />
+            <RichTextEditor
+              label="Bio (Optional)"
+              value={localizeForm.bio}
+              onChange={(v) => setLocalizeForm(prev => ({ ...prev, bio: v }))}
+              height="150px"
+            />
+            {!localizeForm.bio.trim() && (
+              <Text UNSAFE_style={{ fontSize: '12px', color: 'var(--spectrum-global-color-gray-600)', fontStyle: 'italic' }}>
+                No bio has been added for this locale.
+              </Text>
+            )}
+            <Flex gap="size-150" justifyContent="end" marginTop="size-200">
+              <Button
+                variant="accent"
+                onPress={handleSaveAndAddLocalization}
+                isDisabled={!localizeForm.title.trim() || isSavingLocalization}
+              >
+                {isSavingLocalization ? (
+                  <>
+                    <ProgressCircle size="S" isIndeterminate aria-label="Saving" />
+                    <Text>Saving...</Text>
+                  </>
+                ) : (
+                  <Text>Save &amp; Add Speaker</Text>
+                )}
+              </Button>
+            </Flex>
+          </Flex>
+        </Form>
+      </>
+    )
+  }
 
   const renderCreateView = () => (
     <>
@@ -551,7 +698,11 @@ export const SpeakerPickerDialog: React.FC<SpeakerPickerDialogProps> = ({
       {isOpen && (
         <Dialog size="L" isDismissable UNSAFE_style={{ maxHeight: '80vh' }}>
           <Content UNSAFE_style={{ overflow: 'auto' }}>
-            {view === 'select' ? renderSelectView() : renderCreateView()}
+            {view === 'select'
+              ? renderSelectView()
+              : view === 'localize'
+                ? renderLocalizeView()
+                : renderCreateView()}
           </Content>
         </Dialog>
       )}

@@ -7,9 +7,19 @@ import {
   EventFormData,
   ProfileData,
   SponsorData,
-  EventApiResponse
+  EventApiResponse,
+  SeriesSpeaker,
 } from '../types/domain'
 import { fromApiSocialLink } from './socialPlatformDetector'
+
+/**
+ * Check if a speaker has localized content (at least title) for the given locale.
+ * Requires explicit localizations[locale].title — no fallback to top-level title.
+ */
+export function speakerHasLocalization(speaker: SeriesSpeaker, locale: string): boolean {
+  const loc = speaker.localizations?.[locale]
+  return !!(loc?.title && String(loc.title).trim())
+}
 
 /**
  * Get a localized value from an object, falling back to direct property
