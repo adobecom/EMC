@@ -17,6 +17,8 @@ import {
   ProgressCircle,
   SearchField,
   Form,
+  TooltipTrigger,
+  Tooltip,
 } from '@adobe/react-spectrum'
 import Add from '@spectrum-icons/workflow/Add'
 import Alert from '@spectrum-icons/workflow/Alert'
@@ -26,7 +28,7 @@ import LinkOut from '@spectrum-icons/workflow/LinkOut'
 import { SeriesSpeaker, SocialLinkFormData } from '../../types/domain'
 import { speakerHasLocalization } from '../../utils/eventFormMappers'
 import { RichTextEditor, ImageUploader } from '../../components/shared'
-import { TYPOGRAPHY, FLEX_GAP } from '../../styles/designSystem'
+import { TYPOGRAPHY, FLEX_GAP, COLORS } from '../../styles/designSystem'
 import { detectSocialPlatform, isValidUrl, toApiSocialLink } from '../../utils/socialPlatformDetector'
 import { cachedApi, apiService } from '../../services/api'
 import { getSpeakerPayload } from '../../services/payloadBuilders'
@@ -383,16 +385,12 @@ export const SpeakerPickerDialog: React.FC<SpeakerPickerDialogProps> = ({
                   padding: '16px 12px',
                   border: isSelected
                     ? '2px solid var(--spectrum-global-color-blue-500)'
-                    : missingLocalization
-                      ? '1px solid var(--spectrum-semantic-notice-color-border)'
-                      : '1px solid var(--spectrum-global-color-gray-300)',
+                    : '1px solid var(--spectrum-global-color-gray-300)',
                   borderRadius: '8px',
                   cursor: 'pointer',
                   backgroundColor: isSelected
                     ? 'var(--spectrum-global-color-blue-100)'
-                    : missingLocalization
-                      ? 'var(--spectrum-semantic-notice-color-background)'
-                      : 'var(--spectrum-global-color-gray-50)',
+                    : 'var(--spectrum-global-color-gray-50)',
                   display: 'flex',
                   flexDirection: 'column',
                   alignItems: 'center',
@@ -400,15 +398,33 @@ export const SpeakerPickerDialog: React.FC<SpeakerPickerDialogProps> = ({
                   gap: '8px',
                   transition: 'border-color 0.15s, background-color 0.15s',
                   outline: 'none',
+                  position: 'relative',
                 }}
               >
                 {missingLocalization && (
-                  <Flex alignItems="center" gap="size-50" UNSAFE_style={{ color: 'var(--spectrum-semantic-notice-color-text)' }}>
-                    <Alert size="S" />
-                    <Text UNSAFE_style={{ fontSize: '11px', fontWeight: 600 }}>
-                      Missing title for {locale}
-                    </Text>
-                  </Flex>
+                  <TooltipTrigger delay={0}>
+                    <span
+                      style={{
+                        position: 'absolute',
+                        top: '8px',
+                        right: '8px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                      }}
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      <Alert
+                        size="S"
+                        UNSAFE_style={{ color: COLORS.ADOBE_RED }}
+                        aria-label={`Missing title for ${locale}`}
+                      />
+                    </span>
+                    <Tooltip variant="negative">
+                      This speaker is missing a localized title for {locale}. Add it in the
+                      Speakers dashboard or when adding the speaker to avoid display issues.
+                    </Tooltip>
+                  </TooltipTrigger>
                 )}
                 {speaker.photo?.imageUrl ? (
                   <img
@@ -482,19 +498,33 @@ export const SpeakerPickerDialog: React.FC<SpeakerPickerDialogProps> = ({
             Add {locale} content for {displayName}
           </Heading>
         </Flex>
-        <View
-          padding="size-200"
-          marginBottom="size-200"
-          UNSAFE_style={{
-            backgroundColor: 'var(--spectrum-semantic-notice-color-background)',
-            borderRadius: '8px',
-            border: '1px solid var(--spectrum-semantic-notice-color-border)',
-          }}
-        >
-          <Text UNSAFE_style={{ fontSize: '12px', color: 'var(--spectrum-semantic-notice-color-text)' }}>
-            This speaker does not have a localized title for {locale}. Add a title below (required). Bio is optional.
-          </Text>
-        </View>
+        {!localizeForm.title.trim() && (
+          <div
+            role="alert"
+            style={{
+              display: 'flex',
+              gap: '12px',
+              alignItems: 'flex-start',
+              background: 'var(--color-background-danger)',
+              border: '1px solid var(--color-border-danger)',
+              borderRadius: 'var(--border-radius-md)',
+              padding: '12px 14px',
+              marginBottom: '16px',
+            }}
+          >
+            <svg
+              style={{ width: 16, height: 16, flexShrink: 0, marginTop: 2, fill: 'var(--color-text-danger)' }}
+              viewBox="0 0 18 17"
+              xmlns="http://www.w3.org/2000/svg"
+              aria-hidden
+            >
+              <path d="M8.564 1.289L.2 16.256A.5.5 0 0 0 .636 17h16.728a.5.5 0 0 0 .436-.744L9.436 1.289a.5.5 0 0 0-.872 0zM10 14.75a.25.25 0 0 1-.25.25h-1.5a.25.25 0 0 1-.25-.25v-1.5a.25.25 0 0 1 .25-.25h1.5a.25.25 0 0 1 .25.25zm0-3a.25.25 0 0 1-.25.25h-1.5a.25.25 0 0 1-.25-.25v-6a.25.25 0 0 1 .25-.25h1.5a.25.25 0 0 1 .25.25z" />
+            </svg>
+            <span style={{ fontSize: 14, lineHeight: 1.5, color: 'var(--color-text-danger)' }}>
+              This speaker does not have a localized title for <strong style={{ fontWeight: 500 }}>{locale}</strong>. Add a title below (required). Bio is optional.
+            </span>
+          </div>
+        )}
         <Form>
           <Flex direction="column" gap={FLEX_GAP.SECTION}>
             <TextField

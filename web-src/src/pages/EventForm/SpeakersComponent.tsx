@@ -18,7 +18,7 @@ import {
 } from '@adobe/react-spectrum'
 import { ProfileData, SeriesSpeaker, SpeakerType, EventApiResponse } from '../../types/domain'
 import { SpeakerPickerDialog } from './SpeakerPickerDialog'
-import { TYPOGRAPHY, FLEX_GAP } from '../../styles/designSystem'
+import { TYPOGRAPHY, FLEX_GAP, COLORS } from '../../styles/designSystem'
 import { speakerHasLocalization } from '../../utils/eventFormMappers'
 import Add from '@spectrum-icons/workflow/Add'
 import Alert from '@spectrum-icons/workflow/Alert'
@@ -398,7 +398,8 @@ export const SpeakersComponent: React.FC = () => {
           !!profile.isFromSeries &&
           !!profile.speakerId &&
           !!seriesSpeaker &&
-          !speakerHasLocalization(seriesSpeaker, locale)
+          !speakerHasLocalization(seriesSpeaker, locale) &&
+          !(profile.title?.trim())
         const hasTitleNoBio =
           locale !== 'en-US' &&
           !!profile.isFromSeries &&
@@ -472,10 +473,10 @@ export const SpeakersComponent: React.FC = () => {
                       <ActionButton isQuiet aria-label={`Missing ${locale} content`}>
                         <Alert
                           size="S"
-                          UNSAFE_style={{ color: 'var(--spectrum-semantic-notice-color-text)' }}
+                          UNSAFE_style={{ color: COLORS.ADOBE_RED }}
                         />
                       </ActionButton>
-                      <Tooltip>
+                      <Tooltip variant="negative">
                         This speaker is missing a localized title for {locale}. Add it in the
                         Speakers dashboard or when adding the speaker to avoid display issues.
                       </Tooltip>
