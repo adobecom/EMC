@@ -10,12 +10,13 @@ import {
   Text,
   TextField,
   ActionButton,
-  Switch
+  Switch,
+  Button
 } from '@adobe/react-spectrum'
 import Add from '@spectrum-icons/workflow/Add'
 import Remove from '@spectrum-icons/workflow/Remove'
 import { ImageUploader, RichTextEditor } from '../../components/shared'
-import { TYPOGRAPHY, COLORS } from '../../styles/designSystem'
+import { TYPOGRAPHY, COLORS, FLEX_GAP } from '../../styles/designSystem'
 import { VenueData, EventApiResponse } from '../../types/domain'
 import { loadGooglePlacesAPI } from '../../utils/loadGooglePlaces'
 import { useEventFormComponent } from '../../hooks/useEventFormComponent'
@@ -718,6 +719,30 @@ export const VenueComponent: React.FC = () => {
           height="200px"
         />
       </View>
+
+      {/* Locations inside the venue */}
+      <View>
+        <Flex direction="column" gap={FLEX_GAP.SECTION}>
+          <Heading level={4} UNSAFE_style={TYPOGRAPHY.SUBSECTION_HEADING}>
+            Locations inside the venue
+          </Heading>
+          <View
+              padding="size-400"
+              backgroundColor="gray-100"
+              borderRadius="medium"
+              UNSAFE_style={{ textAlign: 'center' }}
+            >
+              <Flex direction="column" alignItems="center" gap="size-200">
+                <Text>Add locations to your selected venue using the button below.</Text>
+                <Button variant="secondary">
+                  <Add />
+                  <Text>Add Location</Text>
+                </Button>
+              </Flex>
+            </View>
+        </Flex>
+      </View>
+      
     </Flex>
   )
 }
