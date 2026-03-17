@@ -183,6 +183,7 @@ export interface EventHistoryResponse {
 // Agenda item from API
 export interface AgendaDataItem {
   startTime: string
+  endTime?: string
   description?: string
   title?: string
 }
