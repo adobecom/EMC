@@ -48,6 +48,10 @@ function safeParseDateTimeString(dateString: string | undefined | null): Calenda
   }
 }
 
+function stripHtml(html: string | undefined): string {
+  return (html || '').replace(/<[^>]*>/g, '').trim()
+}
+
 /**
  * Add minutes to a CalendarDateTime
  * Returns a new CalendarDateTime with the added minutes
@@ -146,6 +150,33 @@ function getMinEndTime(startDateTimeStr: string | undefined): Time | undefined {
   return new Time(hour, minute, 0)
 }
 
+function compareDateTimeStrings(a: string | undefined, b: string | undefined): number | null {
+  const left = safeParseDateTimeString(a)
+  const right = safeParseDateTimeString(b)
+
+  if (!left || !right) return null
+
+  const leftParts = [left.year, left.month, left.day, left.hour, left.minute, left.second || 0]
+  const rightParts = [right.year, right.month, right.day, right.hour, right.minute, right.second || 0]
+
+  for (let index = 0; index < leftParts.length; index += 1) {
+    if (leftParts[index] !== rightParts[index]) {
+      return leftParts[index] - rightParts[index]
+    }
+  }
+
+  return 0
+}
+
+function hasAgendaItemContent(item: AgendaItem): boolean {
+  return Boolean(
+    item.title.trim() ||
+    stripHtml(item.description) ||
+    item.startDateTime ||
+    item.endDateTime
+  )
+}
+
 /**
  * Convert Time to ISO datetime string using the event's base date
  */
@@ -181,6 +212,35 @@ export const AgendaComponent: React.FC = () => {
     updateFormData,
   } = useEventFormComponent({
     componentId: 'agenda',
+    validate: () => {
+      const items = formData.agendaItems || []
+
+      for (const [index, item] of items.entries()) {
+        if (!hasAgendaItemContent(item)) continue
+
+        const itemLabel = `Agenda item ${index + 1}`
+
+        if (!item.startDateTime) {
+          return `${itemLabel} must have a start time.`
+        }
+        if (!item.endDateTime) {
+          return `${itemLabel} must have an end time.`
+        }
+        if (!item.title.trim()) {
+          return `${itemLabel} must have a title.`
+        }
+
+        const comparison = compareDateTimeStrings(item.startDateTime, item.endDateTime)
+        if (comparison === null) {
+          return `${itemLabel} has an invalid start or end date/time.`
+        }
+        if (comparison >= 0) {
+          return `${itemLabel} end time must be after its start time.`
+        }
+      }
+
+      return true
+    },
   })
   
   const agendaItems = formData.agendaItems || []
@@ -427,7 +487,7 @@ export const AgendaComponent: React.FC = () => {
    * Check if an item has content (time or title filled in)
    */
   const isItemComplete = (item: AgendaItem): boolean => {
-    return !!(item.startDateTime && item.title)
+    return !!(item.startDateTime && item.endDateTime && item.title.trim())
   }
 
   // ============================================================================

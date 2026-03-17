@@ -5,12 +5,34 @@
 import { useCallback } from 'react'
 import { useEventFormContext } from '../contexts/EventFormContext'
 import { apiService, cachedApi } from '../services/api'
-import { EventFormData, EventApiResponse } from '../types/domain'
+import { AgendaItem, EventFormData, EventApiResponse } from '../types/domain'
 import {
   EVENT_DATA_FILTER,
   setEventAttribute,
   isValidAttribute,
 } from '../utils/dataFilters'
+
+function stripHtml(html: string | undefined): string {
+  return (html || '').replace(/<[^>]*>/g, '').trim()
+}
+
+function hasAgendaItemContent(item: AgendaItem): boolean {
+  return Boolean(
+    item.title.trim() ||
+    stripHtml(item.description) ||
+    item.startDateTime ||
+    item.endDateTime
+  )
+}
+
+function toApiTime(dateTime: string | undefined): string | undefined {
+  if (!dateTime) return undefined
+
+  const rawTime = dateTime.split('T')[1]?.slice(0, 5)
+  if (!rawTime) return undefined
+
+  return rawTime.length === 5 ? `${rawTime}:00` : rawTime
+}
 
 /**
  * Options for the save operation
@@ -182,26 +204,25 @@ export function useEventFormSave() {
     }
     
     // Agenda items transformation
-    // Per OpenAPI AgendaItem schema: startTime uses Time schema (HH:MM:SS format)
+    // Agenda times use the API Time schema (HH:MM:SS format).
     if (mergedData.agendaItems && mergedData.agendaItems.length > 0) {
-      const agendaForApi = mergedData.agendaItems.map(item => {
-        const rawTime = item.startDateTime?.split('T')[1]?.slice(0, 5) || '09:00'
-        // Ensure HH:MM:SS format
-        const startTime = rawTime.length === 5 ? `${rawTime}:00` : rawTime
+      const agendaForApi = mergedData.agendaItems
+        .filter(hasAgendaItemContent)
+        .map(item => {
+          const startTime = toApiTime(item.startDateTime)
+          const endTime = toApiTime(item.endDateTime)
 
-        const rawEndTime = item.endDateTime?.split('T')[1]?.slice(0, 5)
-        const endTime = rawEndTime
-          ? (rawEndTime.length === 5 ? `${rawEndTime}:00` : rawEndTime)
-          : undefined
+          return {
+            title: item.title,
+            description: item.description || '',
+            ...(startTime ? { startTime } : {}),
+            ...(endTime ? { endTime } : {}),
+          }
+        })
 
-        return {
-          title: item.title,
-          description: item.description || '',
-          startTime,
-          ...(endTime && { endTime }),
-        }
-      })
-      setEventAttribute(payload, 'agenda', agendaForApi, locale)
+      if (agendaForApi.length > 0) {
+        setEventAttribute(payload, 'agenda', agendaForApi, locale)
+      }
     }
     
     // CTA (secondary link) transformation
@@ -556,4 +577,3 @@ export function useEventFormSave() {
     saveError: context.state.saveError,
   }
 }
-

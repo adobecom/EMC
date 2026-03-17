@@ -39,6 +39,7 @@ export interface SplitFieldsResult {
 
 export const AGENDA_DATA_REF_FILTER: DataFilter = {
   startTime: { type: 'string', submittable: true },
+  endTime: { type: 'string', submittable: true },
   description: { type: 'string', submittable: true },
   title: { type: 'string', submittable: true },
 }
@@ -540,4 +541,3 @@ export function filterSubmittableFields(
     return acc
   }, {} as Record<string, any>)
 }
-

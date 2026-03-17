@@ -715,4 +715,3 @@ export interface PublishingProfileFormData {
   metadata?: Record<string, string>
   status?: string
 }
-

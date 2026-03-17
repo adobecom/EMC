@@ -256,6 +256,7 @@ interface EventInfoComponentProps {
 
 **Key Features:**
 - Repeatable fieldsets for agenda items
+- Start/end time validation with positive duration enforcement
 - Auto-sort by time (optional)
 - Clamp date pickers to event date range (optional)
 - Drag/reorder functionality
@@ -733,4 +734,3 @@ return (
 - `SponsorsComponent.tsx` - Entity management with images
 - `ImageUploader.tsx` (shared) - File upload with drag & drop pattern
 - `TagSelector.tsx` (shared) - Hierarchical tag selection pattern
-

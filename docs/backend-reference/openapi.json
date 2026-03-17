@@ -11891,6 +11891,9 @@
                     "startTime": {
                         "$ref": "#/components/schemas/Time"
                     },
+                    "endTime": {
+                        "$ref": "#/components/schemas/Time"
+                    },
                     "title": {
                         "type": "string"
                     },

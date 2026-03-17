@@ -8,6 +8,7 @@ import { getSpeaker, getSponsor } from './esp-controller.js';
 
 export const AGENDA_DATA_REF_FILTER = {
   startTime: { type: 'string', submittable: true },
+  endTime: { type: 'string', submittable: true },
   description: { type: 'string', submittable: true },
   title: { type: 'string', submittable: true },
 };
