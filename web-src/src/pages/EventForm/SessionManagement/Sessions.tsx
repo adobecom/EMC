@@ -10,7 +10,7 @@ import {
 import { Session } from "../../../types/sessions";
 import { AddIcon } from "../../../components/icons/add";
 import { SessionsList } from "./SessionList";
-import type { SessionFormData } from "./SessionList";
+import type { SessionFormData } from "./SessionForm";
 import { useEventFormContext } from "../../../contexts";
 import { apiService } from "../../../services/api";
 
