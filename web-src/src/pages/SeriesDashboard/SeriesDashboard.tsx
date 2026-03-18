@@ -19,7 +19,7 @@ import {
   SeriesHistoryInfo 
 } from '../../services/seriesEnrichment'
 import { createShimmerStyle } from '../../styles/designSystem'
-import { useSafeState } from '../../hooks'
+import { useSafeState, useRBACFilter } from '../../hooks'
 
 const SERIES_SEARCH_KEYS = ['seriesName', 'seriesDescription', 'cloudType', 'seriesStatus']
 
@@ -28,6 +28,7 @@ interface SeriesDashboardProps {
 }
 
 export const SeriesDashboard: React.FC<SeriesDashboardProps> = () => {
+  const { filterSeries } = useRBACFilter()
   const [series, setSeries] = useSafeState<SeriesDashboardItem[]>([])
   const [isLoading, setIsLoading] = useSafeState(true)
   const [error, setError] = useSafeState<string | null>(null)
@@ -74,7 +75,7 @@ export const SeriesDashboard: React.FC<SeriesDashboardProps> = () => {
         eventCount: undefined
       }))
       
-      setSeries(dashboardItems)
+      setSeries(filterSeries(dashboardItems))
     } catch (err) {
       console.error('❌ Error loading series:', err)
       setError('Failed to load series data')

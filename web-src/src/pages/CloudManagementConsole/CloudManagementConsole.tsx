@@ -32,7 +32,7 @@ import {
   createActionBarPadding,
   ACTION_BAR_BUTTON_STYLES,
 } from '../../styles/designSystem'
-import { useSafeState } from '../../hooks'
+import { useSafeState, useRBACFilter } from '../../hooks'
 
 // ============================================================================
 // TYPES
@@ -130,6 +130,7 @@ const styles = {
 // ============================================================================
 
 export const CloudManagementConsole: React.FC<CloudManagementConsoleProps> = () => {
+  const { filterClouds } = useRBACFilter()
 
   // Data states
   const [clouds, setClouds] = useSafeState<CloudData[]>([])
@@ -177,7 +178,7 @@ export const CloudManagementConsole: React.FC<CloudManagementConsoleProps> = () 
       if ('error' in cloudsResult) {
         throw new Error(`Failed to load clouds: ${cloudsResult.error}`)
       }
-      const cloudsData = cloudsResult as CloudData[]
+      const cloudsData = filterClouds(cloudsResult as CloudData[])
       setClouds(cloudsData)
 
       // Handle locales - API returns { localeNames: { "en-US": "English (US)", ... } }

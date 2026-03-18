@@ -6,9 +6,14 @@ import React, { useState, useCallback, useMemo } from 'react'
 import {
   SearchField,
   AlertDialog,
-  DialogTrigger
+  DialogTrigger,
+  ActionButton,
 } from '@adobe/react-spectrum'
+import Download from '@spectrum-icons/workflow/Download'
 import type { Attendee, AttendeeFilters, AttendeeColumnConfig } from '../../types/attendee'
+import type { Campaign } from '../../types/campaign'
+import { useRBAC } from '../../contexts/RBACContext'
+import { ExportDialog } from './ExportDialog'
 import { getAttendeeName } from '../../types/attendee'
 import { apiService } from '../../services/api'
 import {
@@ -21,6 +26,7 @@ interface RegistrationsTabProps {
   attendees: Attendee[]
   columnConfig: AttendeeColumnConfig[]
   onAttendeesRefresh: () => Promise<void>
+  campaigns?: Campaign[]
 }
 
 /**
@@ -35,8 +41,12 @@ interface RegistrationsTabProps {
 export const RegistrationsTab: React.FC<RegistrationsTabProps> = ({
   selectedEventId,
   attendees,
-  columnConfig
+  columnConfig,
+  campaigns = [],
 }) => {
+  const { isAdmin } = useRBAC()
+  const [isExportOpen, setIsExportOpen] = useState(false)
+
   // State
   const [filters, setFilters] = useState<AttendeeFilters>({})
   const [searchQuery, setSearchQuery] = useState('')
@@ -127,13 +137,21 @@ export const RegistrationsTab: React.FC<RegistrationsTabProps> = ({
 
         {/* Main Table Area */}
         <div style={{ minWidth: 0 }}>
-          {/* Search */}
+          {/* Search + Export */}
           {selectedEventId && (
-            <div style={{ 
+            <div style={{
               display: 'flex',
               justifyContent: 'flex-end',
+              gap: '12px',
+              alignItems: 'flex-end',
               marginBottom: '16px'
             }}>
+              {isAdmin && filteredAttendees.length > 0 && (
+                <ActionButton onPress={() => setIsExportOpen(true)}>
+                  <Download />
+                  Export CSV
+                </ActionButton>
+              )}
               <div style={{ width: '240px' }}>
                 <SearchField
                   label="Search attendees"
@@ -165,6 +183,17 @@ export const RegistrationsTab: React.FC<RegistrationsTabProps> = ({
           />
         </div>
       </div>
+
+      {/* Export Dialog */}
+      <DialogTrigger isOpen={isExportOpen} onOpenChange={setIsExportOpen}>
+        <div style={{ display: 'none' }} />
+        <ExportDialog
+          attendees={filteredAttendees}
+          columnConfig={columnConfig}
+          campaigns={campaigns}
+          onClose={() => setIsExportOpen(false)}
+        />
+      </DialogTrigger>
 
       {/* Delete Confirmation Dialog */}
       <DialogTrigger

@@ -11,6 +11,7 @@ import { UserPanel } from '../user'
 import { DevTokenButton } from '../dev'
 import { STICKY_GNAV_STYLES } from '../../styles/designSystem'
 import { useAuth } from '../../contexts/AuthContext'
+import { useRBAC } from '../../contexts/RBACContext'
 
 interface TopNavProps {
   ims: IMS
@@ -18,6 +19,7 @@ interface TopNavProps {
 
 const TopNav: React.FC<TopNavProps> = ({ ims }) => {
   const { isAuthenticated, isLoading, signIn, authMode } = useAuth()
+  const { isAdmin } = useRBAC()
 
   // Only show the standalone sign-in button when:
   //   - Running in standalone mode (not the ExC Shell)
@@ -108,6 +110,14 @@ const TopNav: React.FC<TopNavProps> = ({ ims }) => {
           >
             Clouds
           </NavLink>
+          {isAdmin && (
+            <NavLink
+              className={({ isActive }) => `nav-link ${isActive ? 'is-selected' : ''}`}
+              to="/users"
+            >
+              Users
+            </NavLink>
+          )}
           <NavLink
             className={({ isActive }) => `nav-link ${isActive ? 'is-selected' : ''}`}
             to="/about"

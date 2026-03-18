@@ -27,3 +27,6 @@ export { OverviewDashboard } from './OverviewDashboard'
 // Form pages
 export { EventForm } from './EventForm'
 export { SeriesForm } from './SeriesForm'
+
+// Admin pages
+export { UserManagement } from './UserManagement'

@@ -31,4 +31,5 @@ export type {
   SeriesFormContextValue,
   SeriesFormData,
 } from './SeriesFormContext'
+export { RBACProvider, useRBAC } from './RBACContext'
 

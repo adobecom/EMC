@@ -22,7 +22,7 @@ import { BlurredLoadingOverlay } from '../../components/shared'
 import { EventApiResponse, SeriesApiResponse } from '../../types/domain'
 import { COLORS, SPACING, TYPOGRAPHY } from '../../styles/designSystem'
 import { IMS } from '../../types'
-import { useSafeState } from '../../hooks'
+import { useSafeState, useRBACFilter } from '../../hooks'
 
 interface OverviewDashboardProps {
   ims: IMS
@@ -278,6 +278,7 @@ const TemplateBreakdown: React.FC<TemplateBreakdownProps> = ({ templateCounts })
  * Displays comprehensive statistics and metrics for events and series
  */
 export const OverviewDashboard: React.FC<OverviewDashboardProps> = () => {
+  const { filterEvents, filterSeries } = useRBACFilter()
   const [events, setEvents] = useSafeState<EventApiResponse[]>([])
   const [series, setSeries] = useSafeState<SeriesApiResponse[]>([])
   const [isLoading, setIsLoading] = useSafeState(true)
@@ -294,8 +295,8 @@ export const OverviewDashboard: React.FC<OverviewDashboardProps> = () => {
         cachedApi.getSeriesList()
       ])
       
-      setEvents(eventsData)
-      setSeries(seriesData)
+      setEvents(filterEvents(eventsData))
+      setSeries(filterSeries(seriesData))
       setLastUpdated(new Date())
     } catch (err) {
       console.error('Error loading overview data:', err)

@@ -14,4 +14,5 @@ export type { UseProfileAvatarResult } from './useProfileAvatar'
 export type { UseEventFormComponentOptions, UseEventFormComponentReturn } from './useEventFormComponent'
 export type { UseSeriesFormComponentOptions, UseSeriesFormComponentReturn } from './useSeriesFormComponent'
 export type { SaveOptions, SaveResult } from './useEventFormSave'
+export { useRBACFilter } from './useRBACFilter'
 
