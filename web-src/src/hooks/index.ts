@@ -15,4 +15,6 @@ export type { UseEventFormComponentOptions, UseEventFormComponentReturn } from '
 export type { UseSeriesFormComponentOptions, UseSeriesFormComponentReturn } from './useSeriesFormComponent'
 export type { SaveOptions, SaveResult } from './useEventFormSave'
 export { useRBACFilter } from './useRBACFilter'
+export { useCustomDetailPagePath } from './useCustomDetailPagePath'
+export type { DetailPagePathResult } from './useCustomDetailPagePath'
 
