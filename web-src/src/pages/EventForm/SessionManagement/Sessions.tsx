@@ -33,6 +33,34 @@ function sortSessionsByDate(sessions: Session[]): Session[] {
   );
 }
 
+async function syncSessionSpeakers(
+  sessionId: string,
+  selectedIds: string[],
+): Promise<void> {
+  const speakersRes = await apiService.getSessionSpeakers(sessionId);
+  const currentIds: string[] =
+    speakersRes && !("error" in speakersRes)
+      ? ((speakersRes as any)?.speakers ?? []).map((s: any) =>
+          String(s.speakerId),
+        )
+      : [];
+  const toRemove = currentIds.filter((id) => !selectedIds.includes(id));
+  const toAdd = selectedIds.filter((id) => !currentIds.includes(id));
+  await Promise.all(
+    toRemove.map((id) => apiService.deleteSessionSpeaker(sessionId, id)),
+  );
+  const baseOrdinal = currentIds.length - toRemove.length;
+  await Promise.all(
+    toAdd.map((id, index) =>
+      apiService.addSessionSpeaker(sessionId, {
+        speakerId: id,
+        speakerType: "Speaker",
+        ordinal: baseOrdinal + index + 1,
+      }),
+    ),
+  );
+}
+
 export const Sessions: React.FC = () => {
   const { eventId } = useEventFormContext();
   const [sessions, setSessions] = useState<Session[]>([]);
@@ -94,19 +122,20 @@ export const Sessions: React.FC = () => {
       throw new Error(msg);
     }
     const newSession = mapApiSessionToSession(res as any);
-    setSessions((prev) => sortSessionsByDate([...prev, newSession]));
-    setIsAddingNew(false);
 
     if (data.speakerIds && data.speakerIds.length > 0 && newSession.id) {
       const speakerPromises = data.speakerIds.map((speakerId, index) =>
         apiService.addSessionSpeaker(newSession.id, {
           speakerId,
           speakerType: "Speaker",
-          ordinal: index,
+          ordinal: index + 1,
         })
       );
       await Promise.allSettled(speakerPromises);
     }
+
+    setSessions((prev) => sortSessionsByDate([...prev, newSession]));
+    setIsAddingNew(false);
   };
 
   const handleUpdateSession = async (
@@ -131,6 +160,9 @@ export const Sessions: React.FC = () => {
       const msg = res.error?.message || String(res.error);
       throw new Error(msg);
     }
+
+    await syncSessionSpeakers(sessionId, data.speakerIds ?? []);
+
     setSessions((prev) => {
       const updated = prev.map((s) =>
         s.id === sessionId ? mapApiSessionToSession(res as any) : s,
