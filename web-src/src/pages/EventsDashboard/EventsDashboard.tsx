@@ -24,7 +24,7 @@ import { seriesEnrichmentManager, SeriesInfo } from '../../services/seriesEnrich
 import { IMS } from '../../types'
 import { useToast } from '../../contexts'
 import { filterEventData } from '../../utils/dataFilters'
-import { useSafeState } from '../../hooks'
+import { useSafeState, useRBACFilter } from '../../hooks'
 import { getEspEnvParam } from '../../config/constants'
 
 const EVENTS_SEARCH_KEYS = ['eventName', 'eventType', 'cloudType', 'hostEmail', 'seriesId']
@@ -36,6 +36,7 @@ interface EventsDashboardProps {
 export const EventsDashboard: React.FC<EventsDashboardProps> = () => {
   const toast = useToast()
   const navigate = useNavigate()
+  const { filterEvents } = useRBACFilter()
   const [events, setEvents] = useSafeState<EventDashboardItem[]>([])
   const [isLoading, setIsLoading] = useSafeState(true)
   const [error, setError] = useSafeState<string | null>(null)
@@ -89,7 +90,7 @@ export const EventsDashboard: React.FC<EventsDashboardProps> = () => {
         modifiedBy: undefined
       }))
       
-      setEvents(dashboardItems)
+      setEvents(filterEvents(dashboardItems))
     } catch (err) {
       console.error('Error loading events:', err)
       setError('Failed to load events data')

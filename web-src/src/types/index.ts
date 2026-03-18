@@ -23,3 +23,6 @@ export * from './attendee'
 
 // Campaign-related types
 export * from './campaign'
+
+// RBAC types
+export * from './rbac'

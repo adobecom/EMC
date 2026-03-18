@@ -45,7 +45,7 @@ import { apiService, cachedApi } from '../../services/api'
 import { IMS } from '../../types'
 import { useToast } from '../../contexts'
 import { createShimmerStyle, COLORS } from '../../styles/designSystem'
-import { useSafeState } from '../../hooks'
+import { useSafeState, useRBACFilter } from '../../hooks'
 import { SpeakerFormDialog } from './SpeakerFormDialog'
 import { CascadeConfirmDialog, CascadeAction } from './CascadeConfirmDialog'
 import { SpeakerEventConnectionsDialog } from './SpeakerEventConnectionsDialog'
@@ -65,6 +65,7 @@ interface SpeakersDashboardProps {
 
 export const SpeakersDashboard: React.FC<SpeakersDashboardProps> = () => {
   const toast = useToast()
+  const { filterSeries } = useRBACFilter()
   
   // ============================================================================
   // STATE
@@ -109,7 +110,7 @@ export const SpeakersDashboard: React.FC<SpeakersDashboardProps> = () => {
       try {
         const data = await cachedApi.getSeriesList()
         
-        setSeriesList(data)
+        setSeriesList(filterSeries(data))
         
         // Auto-select first series if available
         if (data.length > 0 && !selectedSeriesId) {

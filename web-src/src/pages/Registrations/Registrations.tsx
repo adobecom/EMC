@@ -18,6 +18,7 @@ import type { Campaign, CampaignFormData, CampaignCreatePayload, CampaignUpdateP
 import { calculateAttendeeStats } from '../../types/attendee'
 import { apiService } from '../../services/api'
 import { useRsvpConfig } from '../../hooks/useRsvpConfig'
+import { useRBACFilter } from '../../hooks'
 import { IMS } from '../../types'
 import { BlurredLoadingOverlay } from '../../components/shared'
 import { useToast as useToastContext } from '../../contexts'
@@ -35,6 +36,7 @@ export const Registrations: React.FC<RegistrationsProps> = ({ ims: _ims }) => {
   const [searchParams] = useSearchParams()
   const navigate = useNavigate()
   const toast = useToastContext()
+  const { filterEvents } = useRBACFilter()
 
   const initialEventId = paramEventId || searchParams.get('eventId') || ''
 
@@ -87,7 +89,7 @@ export const Registrations: React.FC<RegistrationsProps> = ({ ims: _ims }) => {
         const eventsData = await apiService.getEventsList()
 
         if (Array.isArray(eventsData)) {
-          setEvents(eventsData)
+          setEvents(filterEvents(eventsData))
 
           if (!selectedEventId && eventsData.length > 0) {
             setSelectedEventId(eventsData[0].eventId)
@@ -350,6 +352,7 @@ export const Registrations: React.FC<RegistrationsProps> = ({ ims: _ims }) => {
                   attendees={attendees}
                   columnConfig={effectiveColumnConfig}
                   onAttendeesRefresh={handleAttendeesRefresh}
+                  campaigns={campaigns}
                 />
               </View>
             </Item>
