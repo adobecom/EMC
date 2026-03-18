@@ -716,3 +716,20 @@ export interface PublishingProfileFormData {
   status?: string
 }
 
+// URL Pattern types (for custom detailPagePath construction)
+export interface UrlPatternEntry {
+  seriesId: string
+  pattern: string
+}
+
+export interface UrlPatternsSheetData {
+  total: number
+  offset: number
+  limit: number
+  data: UrlPatternEntry[]
+}
+
+export interface UrlPatternsConfig {
+  [sheetKey: string]: UrlPatternsSheetData | number | string[] | string
+}
+

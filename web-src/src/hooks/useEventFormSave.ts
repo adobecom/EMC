@@ -20,6 +20,8 @@ export interface SaveOptions {
   publish?: boolean
   /** Skip calling component onAfterSave callbacks */
   skipAfterSave?: boolean
+  /** Additional fields merged into the API payload after normal payload building */
+  extraPayload?: Record<string, any>
   /** Custom success callback */
   onSuccess?: (eventId: string, response: EventApiResponse) => void
   /** Custom error callback */
@@ -392,7 +394,7 @@ export function useEventFormSave() {
    * Main save function
    */
   const saveEvent = useCallback(async (options: SaveOptions = {}): Promise<SaveResult> => {
-    const { publish = false, skipAfterSave = false, onSuccess, onError } = options
+    const { publish = false, skipAfterSave = false, extraPayload, onSuccess, onError } = options
     
     try {
       // 1. Set saving status
@@ -413,6 +415,11 @@ export function useEventFormSave() {
       
       // 4. Build the API payload
       const payload = buildEventPayload(formData, additionalPayload)
+
+      // 4b. Merge caller-supplied extra fields (e.g. custom detailPagePath)
+      if (extraPayload) {
+        Object.assign(payload, extraPayload)
+      }
       
       // Add publish flag if requested
       if (publish) {
