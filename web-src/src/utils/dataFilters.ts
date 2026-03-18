@@ -139,6 +139,7 @@ export const EVENT_DATA_FILTER: DataFilter = {
   modificationTime: { type: 'string', localizable: false, cloneable: false, submittable: true },
   isPrivate: { type: 'boolean', localizable: false, cloneable: true, submittable: true },
   inviteOnly: { type: 'boolean', localizable: false, cloneable: true, submittable: true },
+  detailPagePath: { type: 'string', localizable: false, cloneable: false, submittable: true },
   useLegacyDetailPagePath: { type: 'boolean', localizable: false, cloneable: false, submittable: true },
   video: { type: 'object', localizable: false, cloneable: true, submittable: true, ref: VIDEO_DATA_REF_FILTER },
   registration: { type: 'object', localizable: false, cloneable: true, submittable: true, ref: REGISTRATION_DATA_REF_FILTER },

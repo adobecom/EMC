@@ -19,6 +19,7 @@ import {
   SeriesFormData 
 } from '../../contexts'
 import { filterSeriesData } from '../../utils/dataFilters'
+import { normalizeRelatedDomain, normalizeContentRoot } from '../../utils/seriesFormAutoCorrect'
 
 // ============================================================================
 // HELPERS
@@ -170,8 +171,14 @@ const SeriesFormInner: React.FC<SeriesFormInnerProps> = ({ ims: _ims }) => {
     setSaveError(null)
     
     try {
+      const corrected = {
+        ...formData,
+        relatedDomain: normalizeRelatedDomain(formData.relatedDomain),
+        contentRoot: normalizeContentRoot(formData.contentRoot),
+      }
+      updateFormData({ relatedDomain: corrected.relatedDomain, contentRoot: corrected.contentRoot })
       const modificationTime = state.seriesDataResp?.modificationTime
-      const payload = buildApiPayload(formData, modificationTime, isEditMode)
+      const payload = buildApiPayload(corrected, modificationTime, isEditMode)
       
       let result
       if (isEditMode && seriesId) {
@@ -203,7 +210,7 @@ const SeriesFormInner: React.FC<SeriesFormInnerProps> = ({ ims: _ims }) => {
       setSaveStatus('error')
       return false
     }
-  }, [formData, seriesId, isEditMode, state.seriesDataResp, setSaveStatus, setSaveError, toast])
+  }, [formData, seriesId, isEditMode, state.seriesDataResp, setSaveStatus, setSaveError, toast, updateFormData])
   
   /**
    * Handle Publish button click
@@ -213,12 +220,19 @@ const SeriesFormInner: React.FC<SeriesFormInnerProps> = ({ ims: _ims }) => {
     setSaveError(null)
     
     try {
+      const corrected = {
+        ...formData,
+        relatedDomain: normalizeRelatedDomain(formData.relatedDomain),
+        contentRoot: normalizeContentRoot(formData.contentRoot),
+      }
+      updateFormData({ relatedDomain: corrected.relatedDomain, contentRoot: corrected.contentRoot })
+
       let result
       
       // For new series: first create as draft, then publish
       if (!isEditMode || !seriesId) {
         // Step 1: Create the series first (as draft)
-        const createPayload = buildApiPayload(formData, undefined, false)
+        const createPayload = buildApiPayload(corrected, undefined, false)
         const createResult = await apiService.createSeriesExternal(createPayload)
         
         if ('error' in createResult) {
@@ -233,12 +247,12 @@ const SeriesFormInner: React.FC<SeriesFormInnerProps> = ({ ims: _ims }) => {
         setSeriesId(newSeriesId)
         
         // Step 2: Publish the newly created series
-        const publishPayload = buildApiPayload(formData, createResult.modificationTime, true)
+        const publishPayload = buildApiPayload(corrected, createResult.modificationTime, true)
         result = await apiService.publishSeries(newSeriesId, publishPayload)
       } else {
         // For existing series: use publishSeries directly
         const modificationTime = state.seriesDataResp?.modificationTime
-        const publishPayload = buildApiPayload(formData, modificationTime, true)
+        const publishPayload = buildApiPayload(corrected, modificationTime, true)
         result = await apiService.publishSeries(seriesId, publishPayload)
       }
       
@@ -271,7 +285,7 @@ const SeriesFormInner: React.FC<SeriesFormInnerProps> = ({ ims: _ims }) => {
       setSaveError(errorMessage)
       setSaveStatus('error')
     }
-  }, [formData, seriesId, isEditMode, isPublished, state.seriesDataResp, navigate, toast, setSeriesId, setSeriesResponse, setPublished, setSaveStatus, setSaveError])
+  }, [formData, seriesId, isEditMode, isPublished, state.seriesDataResp, navigate, toast, setSeriesId, setSeriesResponse, setPublished, setSaveStatus, setSaveError, updateFormData])
   
   // ============================================================================
   // VALIDATION

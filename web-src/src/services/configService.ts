@@ -9,7 +9,8 @@ import {
   type RsvpCloudType 
 } from '../config/externalConfigs'
 import type { RsvpConfigField } from '../types/attendee'
-import type { SeriesTemplatesConfig } from '../types/domain'
+import type { SeriesTemplatesConfig, UrlPatternEntry, UrlPatternsSheetData } from '../types/domain'
+import { env } from '../config/env'
 
 /**
  * Cache entry with data and timestamp
@@ -191,6 +192,31 @@ class ConfigService {
         return { total: 0, offset: 0, limit: 0, data: [] }
       }
       return rawData
+    })
+  }
+
+  /**
+   * Get URL pattern entries for the current environment.
+   * The JSON is multi-sheet: "data" (prod), "data-stage", "data-dev".
+   */
+  async getUrlPatterns(): Promise<UrlPatternEntry[]> {
+    const url = EXTERNAL_CONFIG_URLS.urlPatterns
+
+    return this.fetchDeduplicated<UrlPatternEntry[]>(url, (rawData) => {
+      const sheetKeyMap: Record<string, string> = {
+        prod: 'data',
+        stage: 'data-stage',
+        dev: 'data-dev',
+      }
+      const sheetKey = sheetKeyMap[env.ENVIRONMENT] || 'data-dev'
+      const sheet: UrlPatternsSheetData | undefined = rawData[sheetKey]
+
+      if (!sheet || !Array.isArray(sheet.data)) {
+        console.warn(`⚠️ No URL patterns found for sheet key "${sheetKey}":`, rawData)
+        return []
+      }
+
+      return sheet.data
     })
   }
 
