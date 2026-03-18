@@ -27,6 +27,12 @@ function mapApiSessionToSession(item: Record<string, unknown>): Session {
   };
 }
 
+function sortSessionsByDate(sessions: Session[]): Session[] {
+  return [...sessions].sort((a, b) =>
+    a.startDateTime.localeCompare(b.startDateTime),
+  );
+}
+
 export const Sessions: React.FC = () => {
   const { eventId } = useEventFormContext();
   const [sessions, setSessions] = useState<Session[]>([]);
@@ -48,9 +54,8 @@ export const Sessions: React.FC = () => {
       }
       const raw = response?.sessions ?? response?.data ?? [];
       const list = Array.isArray(raw) ? raw : [];
-      setSessions(
-        list.map((item: any) => mapApiSessionToSession(item)),
-      );
+      const mapped = list.map((item: any) => mapApiSessionToSession(item));
+      setSessions(sortSessionsByDate(mapped));
     } catch (err) {
       const message =
         err instanceof Error ? err.message : "Failed to load sessions";
@@ -89,7 +94,7 @@ export const Sessions: React.FC = () => {
       throw new Error(msg);
     }
     const newSession = mapApiSessionToSession(res as any);
-    setSessions((prev) => [...prev, newSession]);
+    setSessions((prev) => sortSessionsByDate([...prev, newSession]));
     setIsAddingNew(false);
 
     if (data.speakerIds && data.speakerIds.length > 0 && newSession.id) {
@@ -126,11 +131,12 @@ export const Sessions: React.FC = () => {
       const msg = res.error?.message || String(res.error);
       throw new Error(msg);
     }
-    setSessions((prev) =>
-      prev.map((s) =>
+    setSessions((prev) => {
+      const updated = prev.map((s) =>
         s.id === sessionId ? mapApiSessionToSession(res as any) : s,
-      ),
-    );
+      );
+      return sortSessionsByDate(updated);
+    });
   };
 
   return (
