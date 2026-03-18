@@ -65,8 +65,23 @@ export interface Attendee {
   creationTime?: number
   modificationTime?: number
 
+  // Biometric fields (POC)
+  biometricConsent?: boolean
+  biometricConsentTimestamp?: number
+  biometricEnrolled?: boolean
+  biometricPhotoUrl?: string
+
   // Allow dynamic fields from RSVP config
   [key: string]: any
+}
+
+export type BiometricMatchStatus = 'idle' | 'capturing' | 'processing' | 'matched' | 'no-match' | 'error'
+
+export interface BiometricMatchResult {
+  status: BiometricMatchStatus
+  matchedAttendee?: Attendee
+  confidence?: number
+  capturedImageDataUrl?: string
 }
 
 /**

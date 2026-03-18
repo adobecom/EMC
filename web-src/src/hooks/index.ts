@@ -14,4 +14,8 @@ export type { UseProfileAvatarResult } from './useProfileAvatar'
 export type { UseEventFormComponentOptions, UseEventFormComponentReturn } from './useEventFormComponent'
 export type { UseSeriesFormComponentOptions, UseSeriesFormComponentReturn } from './useSeriesFormComponent'
 export type { SaveOptions, SaveResult } from './useEventFormSave'
+export { useCamera } from './useCamera'
+export type { CameraPermission, UseCameraOptions, UseCameraReturn } from './useCamera'
+export { useFaceDetection } from './useFaceDetection'
+export type { FaceBox, UseFaceDetectionOptions, UseFaceDetectionReturn } from './useFaceDetection'
 

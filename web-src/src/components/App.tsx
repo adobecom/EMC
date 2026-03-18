@@ -26,7 +26,8 @@ import {
   EventForm,
   Registrations,
   SpeakersDashboard,
-  OverviewDashboard
+  OverviewDashboard,
+  BiometricCheckin
 } from '../pages'
 
 interface AppProps {
@@ -100,6 +101,7 @@ const AppContent: React.FC<{ runtime: Runtime }> = ({ runtime }) => {
                     <Route path='/registrations' element={<Registrations ims={ims} />} />
                     <Route path='/registrations/:eventId' element={<Registrations ims={ims} />} />
                     <Route path='/speakers' element={<SpeakersDashboard ims={ims} />} />
+                    <Route path='/checkin' element={<BiometricCheckin ims={ims} />} />
                     <Route path='/about' element={<About />}/>
                   </Routes>
                 </View>

@@ -15,6 +15,7 @@ import {
   AttendeeFiltersComponent,
   AttendeeTableComponent,
 } from './index'
+import { BiometricEnrollmentDialog } from './BiometricEnrollmentDialog'
 
 interface RegistrationsTabProps {
   selectedEventId: string
@@ -42,6 +43,8 @@ export const RegistrationsTab: React.FC<RegistrationsTabProps> = ({
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
   const [itemToDelete, setItemToDelete] = useState<Attendee | null>(null)
+  const [enrollmentTarget, setEnrollmentTarget] = useState<Attendee | null>(null)
+  const [, setEnrolledIds] = useState<Set<string>>(new Set())
 
   // Filter and search attendees
   const filteredAttendees = useMemo(() => {
@@ -91,11 +94,17 @@ export const RegistrationsTab: React.FC<RegistrationsTabProps> = ({
     }
   }, [])
 
-  // Handle attendee action (delete)
-  const handleAttendeeAction = useCallback((action: 'view' | 'edit' | 'delete', attendee: Attendee) => {
+  // Handle attendee action (delete or biometric enrollment)
+  const handleAttendeeAction = useCallback((action: 'view' | 'edit' | 'delete' | 'biometric', attendee: Attendee) => {
     if (action === 'delete') {
       setItemToDelete(attendee)
+    } else if (action === 'biometric') {
+      setEnrollmentTarget(attendee)
     }
+  }, [])
+
+  const handleBiometricEnrolled = useCallback((attendeeId: string) => {
+    setEnrolledIds(prev => new Set(prev).add(attendeeId))
   }, [])
 
   // Reset filters when event changes
@@ -165,6 +174,16 @@ export const RegistrationsTab: React.FC<RegistrationsTabProps> = ({
           />
         </div>
       </div>
+
+      {/* Biometric Enrollment Dialog */}
+      {enrollmentTarget && (
+        <BiometricEnrollmentDialog
+          attendee={enrollmentTarget}
+          isOpen={!!enrollmentTarget}
+          onClose={() => setEnrollmentTarget(null)}
+          onEnrolled={handleBiometricEnrolled}
+        />
+      )}
 
       {/* Delete Confirmation Dialog */}
       <DialogTrigger
