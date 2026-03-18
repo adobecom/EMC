@@ -149,7 +149,6 @@ export const RegistrationsTab: React.FC<RegistrationsTabProps> = ({
               {isAdmin && filteredAttendees.length > 0 && (
                 <ActionButton onPress={() => setIsExportOpen(true)}>
                   <Download />
-                  Export CSV
                 </ActionButton>
               )}
               <div style={{ width: '240px' }}>
