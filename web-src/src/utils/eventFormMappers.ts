@@ -128,6 +128,7 @@ export function mapApiResponseToFormData(event: EventApiResponse, locale: string
     language: locale.split('-')[0] || 'en',
     defaultLocale: locale,
     isPrivate: event.isPrivate || false,
+    inviteOnly: event.inviteOnly || false,
     tags: parsedTags,
     startDateTime: event.localStartDate && event.localStartTime
       ? `${event.localStartDate}T${event.localStartTime.slice(0, 5)}`

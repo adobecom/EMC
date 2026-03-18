@@ -249,6 +249,7 @@ export interface EventApiResponse {
   waitlistAttendeeCount?: number
   hostEmail?: string
   isPrivate?: boolean
+  inviteOnly?: boolean
   allowWaitlisting?: boolean
   allowGuestRegistration?: boolean
   tags?: string
@@ -570,7 +571,8 @@ export interface EventFormData {
   language: string
   defaultLocale?: string
   isPrivate: boolean
-  
+  inviteOnly: boolean
+
   // Step 2: Tags & Topics
   tags?: EventTag[]
   topics?: string[]
