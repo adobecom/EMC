@@ -10,7 +10,6 @@ import {
   View,
   Button,
   TextField,
-  TextArea,
   DatePicker,
   TimeField,
   ActionGroup,
@@ -30,7 +29,7 @@ import { Session } from "../../../types/sessions";
 import { EventTag, SeriesSpeaker } from "../../../types/domain";
 import { apiService, cachedApi } from "../../../services/api";
 import { useEventFormContext } from "../../../contexts";
-import { TagSelector } from "../../../components/shared";
+import { RichTextEditor, TagSelector } from "../../../components/shared";
 import { SpeakerPickerDialog } from "../SpeakerPickerDialog";
 
 // ============================================================================
@@ -512,11 +511,11 @@ export const SessionForm: React.FC<SessionFormProps> = ({
           onChange={setName}
         />
 
-        <TextArea
+        <RichTextEditor
           label="Description"
-          width="100%"
           value={description}
           onChange={setDescription}
+          height="280px"
         />
 
         <Flex direction="row" gap="size-200">
