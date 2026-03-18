@@ -80,14 +80,28 @@ export const Sessions: React.FC = () => {
       startDateTime: data.startDateTime,
       endDateTime: data.endDateTime,
       tags: data.tags,
+      isAutoRegistered: data.isAutoRegistered,
+      capacityLimit: data.capacityLimit,
     };
     const res = await apiService.createSession(eventId, payload);
     if ("error" in res) {
       const msg = res.error?.message || String(res.error);
       throw new Error(msg);
     }
-    setSessions((prev) => [...prev, mapApiSessionToSession(res as any)]);
+    const newSession = mapApiSessionToSession(res as any);
+    setSessions((prev) => [...prev, newSession]);
     setIsAddingNew(false);
+
+    if (data.speakerIds && data.speakerIds.length > 0 && newSession.id) {
+      const speakerPromises = data.speakerIds.map((speakerId, index) =>
+        apiService.addSessionSpeaker(newSession.id, {
+          speakerId,
+          speakerType: "Speaker",
+          ordinal: index,
+        })
+      );
+      await Promise.allSettled(speakerPromises);
+    }
   };
 
   const handleUpdateSession = async (
@@ -101,6 +115,8 @@ export const Sessions: React.FC = () => {
       startDateTime: data.startDateTime,
       endDateTime: data.endDateTime,
       tags: data.tags,
+      isAutoRegistered: data.isAutoRegistered,
+      capacityLimit: data.capacityLimit,
     };
     if (data.creationTime != null) payload.creationTime = data.creationTime;
     if (data.modificationTime != null)

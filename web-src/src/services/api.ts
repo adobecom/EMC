@@ -355,6 +355,33 @@ class ApiService {
     })
   }
 
+  /** PUT /v1/sessions/{sessionId}/speakers/{speakerId} - body: { speakerId, speakerType, ordinal, modificationTime } */
+  async updateSessionSpeaker(
+    sessionId: string,
+    speakerId: string,
+    body: { speakerId: string; speakerType: string; ordinal: number; modificationTime: number }
+  ): Promise<any | ErrorResponse> {
+    validateString(sessionId, 'session ID')
+    validateString(speakerId, 'speaker ID')
+    validateObject(body, 'speaker data')
+    return this.callExternalApi('esp', `/v1/sessions/${encodeURIComponent(sessionId)}/speakers/${encodeURIComponent(speakerId)}`, 'PUT', body, {
+      operationName: 'updateSessionSpeaker',
+      shouldReturnFullResponse: true,
+    })
+  }
+
+  /** DELETE /v1/sessions/{sessionId}/speakers/{speakerId} */
+  async deleteSessionSpeaker(
+    sessionId: string,
+    speakerId: string
+  ): Promise<SuccessResponse | ErrorResponse> {
+    validateString(sessionId, 'session ID')
+    validateString(speakerId, 'speaker ID')
+    return this.callExternalApi('esp', `/v1/sessions/${encodeURIComponent(sessionId)}/speakers/${encodeURIComponent(speakerId)}`, 'DELETE', undefined, {
+      operationName: 'deleteSessionSpeaker',
+    })
+  }
+
   // Registration APIs
   async getRegistrations(eventId: string): Promise<ApiListResponse<Registration>> {
     return this.callAction<ApiListResponse<Registration>>('getRegistrations', { eventId })

@@ -45,6 +45,12 @@ export interface SessionFormData {
   tags?: string[];
   creationTime?: number;
   modificationTime?: number;
+  /** Speaker IDs to add after session creation (for add mode only) */
+  speakerIds?: string[];
+  /** When true, attendees are auto-registered; when false, registration is required */
+  isAutoRegistered?: boolean;
+  /** Maximum attendee capacity when registration is required */
+  capacityLimit?: number;
 }
 
 // ============================================================================
@@ -161,6 +167,7 @@ export const SessionForm: React.FC<SessionFormProps> = ({
   );
   const [registrationRequired, setRegistrationRequired] = useState(false);
   const [capacityLimitEnabled, setCapacityLimitEnabled] = useState(false);
+  const [capacityLimit, setCapacityLimit] = useState<string>("");
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [sessionTimestamps, setSessionTimestamps] = useState<{
@@ -173,6 +180,8 @@ export const SessionForm: React.FC<SessionFormProps> = ({
   const [selectedSpeakers, setSelectedSpeakers] = useState<SeriesSpeaker[]>([]);
   const [isLoadingSpeakers, setIsLoadingSpeakers] = useState(false);
   const [pickerOpen, setPickerOpen] = useState(false);
+  const [speakerError, setSpeakerError] = useState<string | null>(null);
+  const [speakerActionInProgress, setSpeakerActionInProgress] = useState(false);
 
   const selectedSpeakerIds = new Set(
     selectedSpeakers.map((s) => s.speakerId),
@@ -217,17 +226,59 @@ export const SessionForm: React.FC<SessionFormProps> = ({
     return () => { cancelled = true; };
   }, [session?.id, seriesSpeakers]);
 
-  const handlePickerSelect = useCallback((speaker: SeriesSpeaker) => {
-    setSelectedSpeakers((prev) => {
-      if (prev.some((s) => s.speakerId === speaker.speakerId)) return prev;
-      return [...prev, speaker];
-    });
-    setPickerOpen(false);
-  }, []);
+  const handlePickerSelect = useCallback(async (speaker: SeriesSpeaker) => {
+    if (selectedSpeakers.some((s) => s.speakerId === speaker.speakerId)) {
+      setPickerOpen(false);
+      return;
+    }
 
-  const handleRemoveSpeaker = useCallback((speakerId: string) => {
-    setSelectedSpeakers((prev) => prev.filter((s) => s.speakerId !== speakerId));
-  }, []);
+    if (isEditMode && session?.id) {
+      setSpeakerError(null);
+      setSpeakerActionInProgress(true);
+      try {
+        const ordinal = selectedSpeakers.length + 1;
+        const speakerType = (speaker as any).speakerType || "Speaker";
+        const res = await apiService.addSessionSpeaker(session.id, {
+          speakerId: speaker.speakerId,
+          speakerType,
+          ordinal,
+        });
+        if (res && "error" in res) {
+          setSpeakerError(res.error?.message || String(res.error));
+        } else {
+          setSelectedSpeakers((prev) => [...prev, speaker]);
+        }
+      } catch (err) {
+        setSpeakerError(err instanceof Error ? err.message : "Failed to add speaker");
+      } finally {
+        setSpeakerActionInProgress(false);
+      }
+    } else {
+      setSelectedSpeakers((prev) => [...prev, speaker]);
+    }
+    setPickerOpen(false);
+  }, [isEditMode, session?.id, selectedSpeakers]);
+
+  const handleRemoveSpeaker = useCallback(async (speakerId: string) => {
+    if (isEditMode && session?.id) {
+      setSpeakerError(null);
+      setSpeakerActionInProgress(true);
+      try {
+        const res = await apiService.deleteSessionSpeaker(session.id, speakerId);
+        if (res && "error" in res) {
+          setSpeakerError(res.error?.message || String(res.error));
+        } else {
+          setSelectedSpeakers((prev) => prev.filter((s) => s.speakerId !== speakerId));
+        }
+      } catch (err) {
+        setSpeakerError(err instanceof Error ? err.message : "Failed to remove speaker");
+      } finally {
+        setSpeakerActionInProgress(false);
+      }
+    } else {
+      setSelectedSpeakers((prev) => prev.filter((s) => s.speakerId !== speakerId));
+    }
+  }, [isEditMode, session?.id]);
 
   const refreshSeriesSpeakers = useCallback(async () => {
     await loadSeriesSpeakers();
@@ -253,6 +304,16 @@ export const SessionForm: React.FC<SessionFormProps> = ({
       setName(mapped.name);
       setDescription(mapped.description ?? "");
       setSelectedTags(stringsToEventTags(mapped.tags));
+      const autoReg = raw.isAutoRegistered;
+      setRegistrationRequired(autoReg === false);
+      const cap = raw.capacityLimit ?? raw.capacity;
+      if (cap != null && Number(cap) > 0) {
+        setCapacityLimitEnabled(true);
+        setCapacityLimit(String(cap));
+      } else {
+        setCapacityLimitEnabled(false);
+        setCapacityLimit("");
+      }
       const startDt = safeParseDateTimeString(mapped.startDateTime);
       setDate(
         startDt
@@ -287,6 +348,14 @@ export const SessionForm: React.FC<SessionFormProps> = ({
         startDateTime,
         endDateTime,
         tags: eventTagsToStrings(selectedTags),
+        isAutoRegistered: !registrationRequired,
+        capacityLimit:
+          capacityLimitEnabled && capacityLimit
+            ? (() => {
+                const n = parseInt(capacityLimit, 10);
+                return !Number.isNaN(n) ? n : undefined;
+              })()
+            : undefined,
         ...(isEditMode &&
         (sessionTimestamps.creationTime != null ||
           sessionTimestamps.modificationTime != null)
@@ -294,6 +363,9 @@ export const SessionForm: React.FC<SessionFormProps> = ({
               creationTime: sessionTimestamps.creationTime,
               modificationTime: sessionTimestamps.modificationTime,
             }
+          : {}),
+        ...(!isEditMode && selectedSpeakers.length > 0
+          ? { speakerIds: selectedSpeakers.map((s) => s.speakerId) }
           : {}),
       });
       onCancel();
@@ -310,7 +382,7 @@ export const SessionForm: React.FC<SessionFormProps> = ({
     <Flex direction="column" gap="size-100">
       <Flex alignItems="center" gap="size-150">
         <Text>Speakers</Text>
-        {isLoadingSpeakers && (
+        {(isLoadingSpeakers || speakerActionInProgress) && (
           <ProgressCircle
             size="S"
             isIndeterminate
@@ -319,16 +391,25 @@ export const SessionForm: React.FC<SessionFormProps> = ({
         )}
       </Flex>
 
+      {speakerError && (
+        <Text
+          UNSAFE_style={{ color: "var(--spectrum-global-color-red-600)" }}
+        >
+          {speakerError}
+        </Text>
+      )}
+
       <div
-        onClick={() => setPickerOpen(true)}
+        onClick={() => !speakerActionInProgress && setPickerOpen(true)}
         onMouseDown={(e) => e.preventDefault()}
-        style={{ cursor: "pointer" }}
+        style={{ cursor: speakerActionInProgress ? "not-allowed" : "pointer", opacity: speakerActionInProgress ? 0.6 : 1 }}
       >
         <SearchField
           labelPosition="side"
           placeholder="Search or select session speakers"
           width="100%"
           isReadOnly
+          isDisabled={speakerActionInProgress}
           aria-label="Open speaker picker"
         />
       </div>
@@ -347,6 +428,7 @@ export const SessionForm: React.FC<SessionFormProps> = ({
                 backgroundColor: "var(--spectrum-global-color-gray-200)",
                 fontSize: "14px",
                 fontWeight: 500,
+                opacity: speakerActionInProgress ? 0.6 : 1,
               }}
             >
               {speaker.photo?.imageUrl ? (
@@ -384,12 +466,13 @@ export const SessionForm: React.FC<SessionFormProps> = ({
               </span>
               <button
                 type="button"
-                onClick={() => handleRemoveSpeaker(speaker.speakerId)}
+                onClick={() => !speakerActionInProgress && handleRemoveSpeaker(speaker.speakerId)}
+                disabled={speakerActionInProgress}
                 aria-label={`Remove ${speaker.firstName} ${speaker.lastName}`}
                 style={{
                   background: "none",
                   border: "none",
-                  cursor: "pointer",
+                  cursor: speakerActionInProgress ? "not-allowed" : "pointer",
                   padding: "0",
                   display: "flex",
                   alignItems: "center",
@@ -547,6 +630,8 @@ export const SessionForm: React.FC<SessionFormProps> = ({
               isDisabled={!registrationRequired || !capacityLimitEnabled}
               type="number"
               width="size-1200"
+              value={capacityLimit}
+              onChange={setCapacityLimit}
             />
           </Flex>
         </Flex>
