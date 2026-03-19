@@ -333,6 +333,57 @@ class ApiService {
     })
   }
 
+  // Session Time APIs
+
+  async getSessionTimes(sessionId?: string): Promise<any | ErrorResponse> {
+    const endpoint = sessionId
+      ? `/v1/session-times?sessionId=${encodeURIComponent(sessionId)}`
+      : '/v1/session-times'
+    return this.callExternalApi('esp', endpoint, 'GET', undefined, {
+      operationName: 'getSessionTimes',
+      shouldReturnFullResponse: true,
+    })
+  }
+
+  async getSessionTime(id: string): Promise<any | ErrorResponse> {
+    validateString(id, 'session time ID')
+    return this.callExternalApi('esp', `/v1/session-times/${encodeURIComponent(id)}`, 'GET', undefined, {
+      operationName: 'getSessionTime',
+      shouldReturnFullResponse: true,
+    })
+  }
+
+  async createSessionTime(data: Record<string, unknown>): Promise<any | ErrorResponse> {
+    validateObject(data, 'session time data')
+    return this.callExternalApi('esp', '/v1/session-times', 'POST', data, {
+      operationName: 'createSessionTime',
+      shouldReturnFullResponse: true,
+    })
+  }
+
+  async updateSessionTime(id: string, data: Record<string, unknown>): Promise<any | ErrorResponse> {
+    validateString(id, 'session time ID')
+    validateObject(data, 'session time data')
+    const now = Date.now()
+    const body = {
+      ...data,
+      sessionTimeId: id,
+      creationTime: (data.creationTime as number) ?? now,
+      modificationTime: (data.modificationTime as number) ?? now,
+    }
+    return this.callExternalApi('esp', `/v1/session-times/${encodeURIComponent(id)}`, 'PUT', body, {
+      operationName: 'updateSessionTime',
+      shouldReturnFullResponse: true,
+    })
+  }
+
+  async deleteSessionTime(id: string): Promise<SuccessResponse | ErrorResponse> {
+    validateString(id, 'session time ID')
+    return this.callExternalApi('esp', `/v1/session-times/${encodeURIComponent(id)}`, 'DELETE', undefined, {
+      operationName: 'deleteSessionTime',
+    })
+  }
+
   /** GET /v1/sessions/{sessionId}/speakers */
   async getSessionSpeakers(sessionId: string): Promise<any | ErrorResponse> {
     validateString(sessionId, 'session ID')

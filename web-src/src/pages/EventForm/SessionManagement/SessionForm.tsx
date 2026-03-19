@@ -50,9 +50,28 @@ export interface SessionFormData {
   /** Speaker IDs; applied after session create/update on save */
   speakerIds?: string[];
   /** When true, attendees are auto-registered; when false, registration is required */
-  isAutoRegistered?: boolean;
+  isAutoRegistrationEnabled?: boolean;
   /** Maximum attendee capacity when registration is required */
-  capacityLimit?: number;
+  attendeeLimit?: number;
+  /** Existing session-time id for edit flows */
+  sessionTimeId?: string;
+  /** Existing session-time creation timestamp for optimistic updates */
+  sessionTimeCreationTime?: number;
+  /** Existing session-time modification timestamp for optimistic updates */
+  sessionTimeModificationTime?: number;
+}
+
+type SessionTimeRegistrationFields = {
+  isAutoRegistrationEnabled?: boolean;
+};
+
+function getIsAutoRegistrationEnabled(
+  primaryTime: SessionTimeRegistrationFields | null,
+): boolean {
+  if (primaryTime?.isAutoRegistrationEnabled !== undefined) {
+    return primaryTime.isAutoRegistrationEnabled;
+  }
+  return false;
 }
 
 function stringsToEventTags(tags: string[] | undefined): EventTag[] {
@@ -129,12 +148,17 @@ export const SessionForm: React.FC<SessionFormProps> = ({
   const [selectedTags, setSelectedTags] = useState<EventTag[]>(() =>
     stringsToEventTags(session?.tags),
   );
-  const [registrationRequired, setRegistrationRequired] = useState(false);
-  const [capacityLimitEnabled, setCapacityLimitEnabled] = useState(false);
-  const [capacityLimit, setCapacityLimit] = useState<string>("");
+  const [isAutoRegistrationEnabled, setIsAutoRegistrationEnabled] = useState(false);
+  const [attendeeLimitEnabled, setAttendeeLimitEnabled] = useState(false);
+  const [attendeeLimit, setAttendeeLimit] = useState<string>("");
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [sessionTimestamps, setSessionTimestamps] = useState<{
+    creationTime?: number;
+    modificationTime?: number;
+  }>({});
+  const [sessionTimeMeta, setSessionTimeMeta] = useState<{
+    sessionTimeId?: string;
     creationTime?: number;
     modificationTime?: number;
   }>({});
@@ -207,12 +231,16 @@ export const SessionForm: React.FC<SessionFormProps> = ({
   useEffect(() => {
     if (!session?.id) {
       setLoadingDetails(false);
+      setSessionTimeMeta({});
       return;
     }
     let cancelled = false;
     setLoadingDetails(true);
     setDetailError(null);
-    apiService.getSession(session.id).then((res) => {
+    Promise.all([
+      apiService.getSession(session.id),
+      apiService.getSessionTimes(session.id),
+    ]).then(([res, timesRes]) => {
       if (cancelled) return;
       setLoadingDetails(false);
       if (res && "error" in res) {
@@ -221,27 +249,48 @@ export const SessionForm: React.FC<SessionFormProps> = ({
       }
       const raw = res as Record<string, unknown>;
       const mapped = mapApiToSession(raw);
+      const timesRaw =
+        timesRes && !("error" in timesRes)
+          ? ((timesRes as any)?.sessionTimes ?? [])
+          : [];
+      const sessionTimes = Array.isArray(timesRaw) ? timesRaw : [];
+      // Current UI supports exactly one session-time per session, so we use the first item.
+      const sessionTime = sessionTimes[0] ?? null;
+
       setName(mapped.name);
       setDescription(mapped.description ?? "");
       setSelectedTags(stringsToEventTags(mapped.tags));
-      const autoReg = raw.isAutoRegistered;
-      setRegistrationRequired(autoReg === false);
-      const cap = raw.capacityLimit ?? raw.capacity;
-      if (cap != null && Number(cap) > 0) {
-        setCapacityLimitEnabled(true);
-        setCapacityLimit(String(cap));
+      const resolvedIsAutoRegistrationEnabled = getIsAutoRegistrationEnabled(
+        sessionTime,
+      );
+      setIsAutoRegistrationEnabled(resolvedIsAutoRegistrationEnabled);
+      const cap = !resolvedIsAutoRegistrationEnabled
+        ? (sessionTime?.attendeeLimit ?? raw.attendeeLimit ?? raw.capacity)
+        : undefined;
+      if (!resolvedIsAutoRegistrationEnabled && cap != null && Number(cap) > 0) {
+        setAttendeeLimitEnabled(true);
+        setAttendeeLimit(String(cap));
       } else {
-        setCapacityLimitEnabled(false);
-        setCapacityLimit("");
+        setAttendeeLimitEnabled(false);
+        setAttendeeLimit("");
       }
-      const startDt = safeParseDateTimeString(mapped.startDateTime);
+      const primaryStart =
+        sessionTime?.startTimeMillis != null
+          ? new Date(Number(sessionTime.startTimeMillis)).toISOString()
+          : mapped.startDateTime;
+      const primaryEnd =
+        sessionTime?.endTimeMillis != null
+          ? new Date(Number(sessionTime.endTimeMillis)).toISOString()
+          : mapped.endDateTime;
+
+      const startDt = safeParseDateTimeString(primaryStart);
       setDate(
         startDt
           ? new CalendarDate(startDt.year, startDt.month, startDt.day)
           : null,
       );
-      setStartTime(parseTimeFromDateTime(mapped.startDateTime));
-      setEndTime(parseTimeFromDateTime(mapped.endDateTime));
+      setStartTime(parseTimeFromDateTime(primaryStart));
+      setEndTime(parseTimeFromDateTime(primaryEnd));
       const ct = raw.creationTime as number | undefined;
       const mt = raw.modificationTime as number | undefined;
       setSessionTimestamps(
@@ -249,6 +298,11 @@ export const SessionForm: React.FC<SessionFormProps> = ({
           ? { creationTime: ct, modificationTime: mt }
           : {},
       );
+      setSessionTimeMeta({
+        sessionTimeId: String(sessionTime?.sessionTimeId ?? "") || undefined,
+        creationTime: sessionTime?.creationTime,
+        modificationTime: sessionTime?.modificationTime,
+      });
     });
     return () => {
       cancelled = true;
@@ -268,11 +322,11 @@ export const SessionForm: React.FC<SessionFormProps> = ({
         startDateTime,
         endDateTime,
         tags: eventTagsToStrings(selectedTags),
-        isAutoRegistered: !registrationRequired,
-        capacityLimit:
-          capacityLimitEnabled && capacityLimit
+        isAutoRegistrationEnabled,
+        attendeeLimit:
+          attendeeLimitEnabled && attendeeLimit
             ? (() => {
-                const n = parseInt(capacityLimit, 10);
+                const n = parseInt(attendeeLimit, 10);
                 return !Number.isNaN(n) ? n : undefined;
               })()
             : undefined,
@@ -282,6 +336,13 @@ export const SessionForm: React.FC<SessionFormProps> = ({
           ? {
               creationTime: sessionTimestamps.creationTime,
               modificationTime: sessionTimestamps.modificationTime,
+            }
+          : {}),
+        ...(isEditMode && sessionTimeMeta.sessionTimeId
+          ? {
+              sessionTimeId: sessionTimeMeta.sessionTimeId,
+              sessionTimeCreationTime: sessionTimeMeta.creationTime,
+              sessionTimeModificationTime: sessionTimeMeta.modificationTime,
             }
           : {}),
         speakerIds: selectedSpeakers.map((s) => s.speakerId),
@@ -515,30 +576,30 @@ export const SessionForm: React.FC<SessionFormProps> = ({
             <ActionGroup
               selectionMode="single"
               selectedKeys={
-                registrationRequired ? ["registration"] : ["automatic"]
+                isAutoRegistrationEnabled ? ["automatic"] : ["registration"]
               }
               onAction={(key) =>
-                setRegistrationRequired(key === "registration")
+                setIsAutoRegistrationEnabled(key !== "registration")
               }
             >
               <Item key="automatic">Automatic</Item>
               <Item key="registration">Registration required</Item>
             </ActionGroup>
             <Checkbox
-              isSelected={capacityLimitEnabled}
-              onChange={setCapacityLimitEnabled}
-              isDisabled={!registrationRequired}
+              isSelected={attendeeLimitEnabled}
+              onChange={setAttendeeLimitEnabled}
+              isDisabled={isAutoRegistrationEnabled}
             >
               Set capacity limit
             </Checkbox>
             <TextField
               aria-label="Capacity"
-              isRequired={capacityLimitEnabled}
-              isDisabled={!registrationRequired || !capacityLimitEnabled}
+              isRequired={attendeeLimitEnabled}
+              isDisabled={isAutoRegistrationEnabled || !attendeeLimitEnabled}
               type="number"
               width="size-1200"
-              value={capacityLimit}
-              onChange={setCapacityLimit}
+              value={attendeeLimit}
+              onChange={setAttendeeLimit}
             />
           </Flex>
         </Flex>

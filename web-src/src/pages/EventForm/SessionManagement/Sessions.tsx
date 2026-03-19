@@ -14,6 +14,16 @@ import type { SessionFormData } from "./SessionForm";
 import { useEventFormContext } from "../../../contexts";
 import { apiService } from "../../../services/api";
 
+interface SessionTimeData {
+  sessionTimeId?: string;
+  startTimeMillis?: number;
+  endTimeMillis?: number;
+  attendeeLimit?: number;
+  isAutoRegistrationEnabled?: boolean;
+  creationTime?: number;
+  modificationTime?: number;
+}
+
 function mapApiSessionToSession(item: Record<string, unknown>): Session {
   return {
     id: String(item.id ?? item.sessionId ?? ""),
@@ -31,6 +41,116 @@ function sortSessionsByDate(sessions: Session[]): Session[] {
   return [...sessions].sort((a, b) =>
     a.startDateTime.localeCompare(b.startDateTime),
   );
+}
+
+async function hydrateSessionWithTime(session: Session): Promise<Session> {
+  const timesRes = await apiService.getSessionTimes(session.id);
+  if (timesRes && "error" in timesRes) return session;
+
+  const times = Array.isArray((timesRes as any)?.sessionTimes)
+    ? ((timesRes as any).sessionTimes as SessionTimeData[])
+    : [];
+
+  // Current UI supports exactly one session-time per session, so we use the first item.
+  const sessionTime = times[0];
+  if (!sessionTime) return session;
+
+  const startDateTime =
+    sessionTime.startTimeMillis != null
+      ? new Date(Number(sessionTime.startTimeMillis)).toISOString()
+      : session.startDateTime;
+  const endDateTime =
+    sessionTime.endTimeMillis != null
+      ? new Date(Number(sessionTime.endTimeMillis)).toISOString()
+      : session.endDateTime;
+
+  return {
+    ...session,
+    startDateTime,
+    endDateTime,
+    capacity:
+      sessionTime.isAutoRegistrationEnabled === false &&
+      sessionTime.attendeeLimit != null
+        ? Number(sessionTime.attendeeLimit)
+        : session.capacity,
+  };
+}
+
+async function createSessionTimeForSession(
+  eventId: string,
+  sessionId: string,
+  data: SessionFormData,
+): Promise<void> {
+  const startTimeMillis = new Date(data.startDateTime).getTime();
+  const endTimeMillis = new Date(data.endDateTime).getTime();
+  const sessionTimeRes = await apiService.createSessionTime({
+    eventId,
+    sessionId,
+    startTimeMillis,
+    endTimeMillis,
+    isAutoRegistrationEnabled: data.isAutoRegistrationEnabled !== false,
+    ...(data.isAutoRegistrationEnabled === false && data.attendeeLimit != null
+      ? { attendeeLimit: data.attendeeLimit }
+      : {}),
+  });
+
+  if ("error" in sessionTimeRes) {
+    throw new Error(
+      sessionTimeRes.error?.message || String(sessionTimeRes.error),
+    );
+  }
+}
+
+async function upsertSessionTimeForSession(
+  eventId: string,
+  sessionId: string,
+  data: SessionFormData,
+): Promise<void> {
+  const startTimeMillis = new Date(data.startDateTime).getTime();
+  const endTimeMillis = new Date(data.endDateTime).getTime();
+  if (!data.sessionTimeId) {
+    await createSessionTimeForSession(eventId, sessionId, data);
+    return;
+  }
+
+  const existingTimeRes = await apiService.getSessionTime(data.sessionTimeId);
+  if ("error" in existingTimeRes) {
+    throw new Error(
+      existingTimeRes.error?.message || String(existingTimeRes.error),
+    );
+  }
+
+  const existingTime = existingTimeRes as SessionTimeData;
+  const updateTimeRes = await apiService.updateSessionTime(
+    data.sessionTimeId,
+    {
+      sessionId,
+      eventId,
+      startTimeMillis,
+      endTimeMillis,
+      isAutoRegistrationEnabled: data.isAutoRegistrationEnabled !== false,
+      ...(data.isAutoRegistrationEnabled === false
+        ? (data.attendeeLimit != null
+            ? { attendeeLimit: data.attendeeLimit }
+            : (existingTime.attendeeLimit != null
+                ? { attendeeLimit: existingTime.attendeeLimit }
+                : {}))
+        : {}),
+      allowWaitlisting: (existingTime as any).allowWaitlisting ?? false,
+      waitlistAttendeeLimit:
+        (existingTime as any).waitlistAttendeeLimit ?? 100,
+      creationTime:
+        data.sessionTimeCreationTime ?? existingTime.creationTime,
+      modificationTime:
+        data.sessionTimeModificationTime ?? existingTime.modificationTime,
+    },
+  );
+
+  if ("error" in updateTimeRes) {
+    throw new Error(
+      updateTimeRes.error?.message || String(updateTimeRes.error),
+    );
+  }
 }
 
 async function syncSessionSpeakers(
@@ -83,7 +203,10 @@ export const Sessions: React.FC = () => {
       const raw = response?.sessions ?? response?.data ?? [];
       const list = Array.isArray(raw) ? raw : [];
       const mapped = list.map((item: any) => mapApiSessionToSession(item));
-      setSessions(sortSessionsByDate(mapped));
+      // Session list UI reads date/time/capacity from Session objects, so hydrate
+      // each session with its single session-time data before storing state.
+      const withTimes = await Promise.all(mapped.map(hydrateSessionWithTime));
+      setSessions(sortSessionsByDate(withTimes));
     } catch (err) {
       const message =
         err instanceof Error ? err.message : "Failed to load sessions";
@@ -110,11 +233,7 @@ export const Sessions: React.FC = () => {
     const payload = {
       name: data.name,
       description: data.description,
-      startDateTime: data.startDateTime,
-      endDateTime: data.endDateTime,
       tags: data.tags,
-      isAutoRegistered: data.isAutoRegistered,
-      capacityLimit: data.capacityLimit,
     };
     const res = await apiService.createSession(eventId, payload);
     if ("error" in res) {
@@ -134,7 +253,22 @@ export const Sessions: React.FC = () => {
       await Promise.allSettled(speakerPromises);
     }
 
-    setSessions((prev) => sortSessionsByDate([...prev, newSession]));
+    try {
+      await createSessionTimeForSession(eventId, newSession.id, data);
+    } catch (err) {
+      await apiService.deleteSession(newSession.id);
+      throw err;
+    }
+
+    const sessionWithTime: Session = {
+      ...newSession,
+      startDateTime: data.startDateTime,
+      endDateTime: data.endDateTime,
+      ...(data.isAutoRegistrationEnabled === false && data.attendeeLimit != null
+        ? { capacity: data.attendeeLimit }
+        : {}),
+    };
+    setSessions((prev) => sortSessionsByDate([...prev, sessionWithTime]));
     setIsAddingNew(false);
   };
 
@@ -146,11 +280,7 @@ export const Sessions: React.FC = () => {
     const payload: Record<string, unknown> = {
       name: data.name,
       description: data.description,
-      startDateTime: data.startDateTime,
-      endDateTime: data.endDateTime,
       tags: data.tags,
-      isAutoRegistered: data.isAutoRegistered,
-      capacityLimit: data.capacityLimit,
     };
     if (data.creationTime != null) payload.creationTime = data.creationTime;
     if (data.modificationTime != null)
@@ -161,11 +291,22 @@ export const Sessions: React.FC = () => {
       throw new Error(msg);
     }
 
+    await upsertSessionTimeForSession(eventId, sessionId, data);
+
     await syncSessionSpeakers(sessionId, data.speakerIds ?? []);
 
     setSessions((prev) => {
       const updated = prev.map((s) =>
-        s.id === sessionId ? mapApiSessionToSession(res as any) : s,
+        s.id === sessionId
+          ? {
+              ...mapApiSessionToSession(res as any),
+              startDateTime: data.startDateTime,
+              endDateTime: data.endDateTime,
+              ...(data.isAutoRegistrationEnabled === false && data.attendeeLimit != null
+                ? { capacity: data.attendeeLimit }
+                : {}),
+            }
+          : s,
       );
       return sortSessionsByDate(updated);
     });
