@@ -239,11 +239,10 @@ export const SessionForm: React.FC<SessionFormProps> = ({
     let cancelled = false;
     setLoadingDetails(true);
     setDetailError(null);
-    // TODO: Re-enable getSessionTimes once session-time APIs are stable.
     Promise.all([
       apiService.getSession(session.id),
-      // apiService.getSessionTimes(session.id),
-    ]).then(([res]) => {
+      apiService.getSessionTimes(session.id),
+    ]).then(([res, timesRes]) => {
       if (cancelled) return;
       setLoadingDetails(false);
       if (res && "error" in res) {
@@ -252,14 +251,13 @@ export const SessionForm: React.FC<SessionFormProps> = ({
       }
       const raw = res as Record<string, unknown>;
       const mapped = mapApiToSession(raw);
-      // const timesRaw =
-      //   timesRes && !("error" in timesRes)
-      //     ? ((timesRes as any)?.sessionTimes ?? [])
-      //     : [];
-      // const sessionTimes = Array.isArray(timesRaw) ? timesRaw : [];
+      const timesRaw =
+        timesRes && !("error" in timesRes)
+          ? ((timesRes as any)?.sessionTimes ?? [])
+          : [];
+      const sessionTimes = Array.isArray(timesRaw) ? timesRaw : [];
       // Current UI supports exactly one session-time per session, so we use the first item.
-      // const sessionTime = sessionTimes[0] ?? null;
-      const sessionTime = null;
+      const sessionTime = sessionTimes[0] ?? null;
 
       setName(mapped.name);
       setDescription(mapped.description ?? "");
@@ -352,10 +350,9 @@ export const SessionForm: React.FC<SessionFormProps> = ({
         speakerIds: selectedSpeakers.map((s) => s.speakerId),
         timezone: formData.timezone || undefined,
       });
-      onCancel();
+      onCancel(); // unmounts this component — no state updates after this
     } catch (err) {
       setSaveError(err instanceof Error ? err.message : "Failed to save");
-    } finally {
       setSaving(false);
     }
   };
