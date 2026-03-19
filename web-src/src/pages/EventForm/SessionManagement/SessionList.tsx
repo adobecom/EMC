@@ -13,7 +13,7 @@ import { Session } from "../../../types/sessions";
 import Chip from "../../../components/shared/Chip";
 import { COLORS } from "../../../styles/designSystem";
 import { DeleteIcon } from "../../../components/icons/delete";
-import { formatTime, formatDate } from "../../../utils/shared";
+import { formatTime, formatDate } from "../../../utils/dateTime";
 import { SessionForm } from "./SessionForm";
 import type { SessionFormData } from "./SessionForm";
 

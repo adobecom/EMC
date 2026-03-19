@@ -20,8 +20,6 @@ import {
   Form,
 } from "@adobe/react-spectrum";
 import {
-  parseDateTime,
-  CalendarDateTime,
   CalendarDate,
   Time,
 } from "@internationalized/date";
@@ -30,6 +28,11 @@ import { EventTag, SeriesSpeaker } from "../../../types/domain";
 import { apiService, cachedApi } from "../../../services/api";
 import { useEventFormContext } from "../../../contexts";
 import { RichTextEditor, TagSelector } from "../../../components/shared";
+import {
+  dateAndTimeToISO,
+  parseTimeFromDateTime,
+  safeParseDateTimeString,
+} from "../../../utils/dateTime";
 import { SpeakerPickerDialog } from "../SpeakerPickerDialog";
 
 // ============================================================================
@@ -50,44 +53,6 @@ export interface SessionFormData {
   isAutoRegistered?: boolean;
   /** Maximum attendee capacity when registration is required */
   capacityLimit?: number;
-}
-
-// ============================================================================
-// DATE / TIME HELPERS
-// ============================================================================
-
-export function safeParseDateTimeString(
-  dateString: string | undefined | null,
-): CalendarDateTime | null {
-  if (!dateString) return null;
-  try {
-    const cleaned = dateString
-      .replace(/\.\d{3}Z?$/, "")
-      .replace(/[+-]\d{2}:\d{2}$/, "")
-      .replace(/Z$/, "");
-    return parseDateTime(cleaned);
-  } catch {
-    return null;
-  }
-}
-
-function parseTimeFromDateTime(dateTimeStr: string | undefined): Time | null {
-  if (!dateTimeStr) return null;
-  const dt = safeParseDateTimeString(dateTimeStr);
-  if (!dt) return null;
-  return new Time(dt.hour, dt.minute, dt.second || 0);
-}
-
-function dateAndTimeToISO(date: CalendarDate, time: Time): string {
-  const dt = new CalendarDateTime(
-    date.year,
-    date.month,
-    date.day,
-    time.hour,
-    time.minute,
-    time.second || 0,
-  );
-  return `${dt.toString()}.000Z`;
 }
 
 function stringsToEventTags(tags: string[] | undefined): EventTag[] {
