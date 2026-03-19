@@ -17,6 +17,7 @@ import { CheckinSuccessCard } from './CheckinResultCard'
 import { useToast as useToastContext } from '../../contexts'
 import { parseCheckinToken } from '../../utils/checkinToken'
 import { COLORS } from '../../styles/designSystem'
+import { BIOMETRIC_FACE_DETECTION_ENABLED } from '../../config/constants'
 
 type CheckinState =
   | 'loading'
@@ -276,8 +277,8 @@ export const BiometricCheckin: React.FC<BiometricCheckinProps> = ({ ims: _ims })
             facingMode="user"
             width={520}
             height={390}
-            enableFaceDetection
-            requireFaceForCapture
+            enableFaceDetection={BIOMETRIC_FACE_DETECTION_ENABLED}
+            requireFaceForCapture={BIOMETRIC_FACE_DETECTION_ENABLED}
           />
         </Flex>
       )}

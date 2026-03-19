@@ -107,6 +107,12 @@ export const ALLOWED_HOSTS: Record<string, boolean> = {
 export const LINK_REGEX = '^https:\\/\\/[a-z0-9]+([\\-\\.]{1}[a-z0-9]+)*\\.[a-z]{2,63}(:[0-9]{1,5})?(\\/.*)?$'
 export const ALLOWED_ACCOUNT_TYPES = ['type3', 'type2e']
 
+/**
+ * Biometric capture: when true, face detection runs and capture requires a detected face.
+ * When false, capture works without face detection (MediaPipe model not loaded).
+ */
+export const BIOMETRIC_FACE_DETECTION_ENABLED = false
+
 export const SUPPORTED_CLOUDS = [
   { id: 'CreativeCloud', name: 'Creative Cloud' },
   { id: 'ExperienceCloud', name: 'Experience Cloud' }
