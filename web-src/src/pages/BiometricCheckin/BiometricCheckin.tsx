@@ -45,6 +45,20 @@ const formatDate = (dateStr: string): string => {
   return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
 }
 
+/** EventAttendeeBody schema keys - PUT requires firstName, lastName, email; additionalProperties: false */
+const EVENT_ATTENDEE_BODY_KEYS = [
+  'attendeeId',
+  'externalAttendeeId',
+  'firstName',
+  'lastName',
+  'email',
+  'registrationStatus',
+  'checkedIn',
+  'invitedBy',
+  'shareInfoWithPartners',
+  'ccSentiment'
+] as const
+
 interface BiometricCheckinProps {
   ims: IMS
 }
@@ -140,10 +154,15 @@ export const BiometricCheckin: React.FC<BiometricCheckinProps> = ({ ims: _ims })
 
     setState('checking-in')
     try {
+      const payload = Object.fromEntries(
+        EVENT_ATTENDEE_BODY_KEYS.filter(
+          k => k === 'checkedIn' || attendee[k] !== undefined
+        ).map(k => [k, k === 'checkedIn' ? true : attendee[k]])
+      )
       await apiService.updateAttendee(
         attendee.eventId,
         attendee.attendeeId,
-        { checkedIn: true }
+        payload
       )
       setAttendee(prev => prev ? { ...prev, checkedIn: true } : prev)
       setState('success')
