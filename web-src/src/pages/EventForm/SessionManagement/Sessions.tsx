@@ -13,7 +13,6 @@ import { SessionsList } from "./SessionList";
 import type { SessionFormData } from "./SessionForm";
 import { useEventFormContext } from "../../../contexts";
 import { apiService } from "../../../services/api";
-import { wallClockToEpochMillis } from "../../../utils/dateTime";
 
 interface SessionTimeData {
   sessionTimeId?: string;
@@ -82,9 +81,8 @@ async function createSessionTimeForSession(
   sessionId: string,
   data: SessionFormData,
 ): Promise<void> {
-  const tz = data.timezone || 'UTC';
-  const startTimeMillis = wallClockToEpochMillis(data.startDateTime, tz);
-  const endTimeMillis = wallClockToEpochMillis(data.endDateTime, tz);
+  const startTimeMillis = new Date(data.startDateTime + 'Z').getTime();
+  const endTimeMillis = new Date(data.endDateTime + 'Z').getTime();
   const sessionTimeRes = await apiService.createSessionTime({
     eventId,
     sessionId,
@@ -108,9 +106,8 @@ async function upsertSessionTimeForSession(
   sessionId: string,
   data: SessionFormData,
 ): Promise<void> {
-  const tz = data.timezone || 'UTC';
-  const startTimeMillis = wallClockToEpochMillis(data.startDateTime, tz);
-  const endTimeMillis = wallClockToEpochMillis(data.endDateTime, tz);
+  const startTimeMillis = new Date(data.startDateTime + 'Z').getTime();
+  const endTimeMillis = new Date(data.endDateTime + 'Z').getTime();
   if (!data.sessionTimeId) {
     await createSessionTimeForSession(eventId, sessionId, data);
     return;

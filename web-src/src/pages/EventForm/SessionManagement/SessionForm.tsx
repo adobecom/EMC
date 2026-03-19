@@ -357,7 +357,49 @@ export const SessionForm: React.FC<SessionFormProps> = ({
     }
   };
 
-  const canSave = Boolean(name.trim() && date && startTime && endTime);
+  const eventStartDate = safeParseDateTimeString(formData.startDateTime ?? undefined);
+  const eventEndDate = safeParseDateTimeString(formData.endDateTime ?? undefined);
+  const minDate = eventStartDate
+    ? new CalendarDate(eventStartDate.year, eventStartDate.month, eventStartDate.day)
+    : undefined;
+  const maxDate = eventEndDate
+    ? new CalendarDate(eventEndDate.year, eventEndDate.month, eventEndDate.day)
+    : undefined;
+
+  const isDateOutOfRange = Boolean(
+    date && ((minDate && date.compare(minDate) < 0) || (maxDate && date.compare(maxDate) > 0)),
+  );
+
+  // On the event's start date, session start time must not be before the event start time.
+  const isOnEventStartDate = Boolean(date && minDate && date.compare(minDate) === 0);
+  const isStartTimeBeforeEventStart = Boolean(
+    isOnEventStartDate && startTime && eventStartDate &&
+    (startTime.hour < eventStartDate.hour ||
+      (startTime.hour === eventStartDate.hour && startTime.minute < eventStartDate.minute)),
+  );
+
+  // On the event's end date, session end time must not be after the event end time.
+  const isOnEventEndDate = Boolean(date && maxDate && date.compare(maxDate) === 0);
+  const isEndTimeAfterEventEnd = Boolean(
+    isOnEventEndDate && endTime && eventEndDate &&
+    (endTime.hour > eventEndDate.hour ||
+      (endTime.hour === eventEndDate.hour && endTime.minute > eventEndDate.minute)),
+  );
+
+  const dateErrorMessage = isDateOutOfRange
+    ? `Session date must be within the event dates (${minDate?.toString() ?? ""} to ${maxDate?.toString() ?? ""})`
+    : undefined;
+
+  const isEndTimeInvalid = Boolean(
+    startTime && endTime && (endTime.hour < startTime.hour ||
+      (endTime.hour === startTime.hour && endTime.minute <= startTime.minute)),
+  );
+
+  const canSave = Boolean(
+    name.trim() && date && startTime && endTime &&
+    !isDateOutOfRange && !isEndTimeInvalid &&
+    !isStartTimeBeforeEventStart && !isEndTimeAfterEventEnd,
+  );
 
   const renderSpeakers = () => (
     <Flex direction="column" gap="size-100">
@@ -546,30 +588,61 @@ export const SessionForm: React.FC<SessionFormProps> = ({
           height="280px"
         />
 
-        <Flex direction="row" gap="size-200">
-          <DatePicker
-            label="Date"
-            isRequired
-            width="100%"
-            value={date ?? undefined}
-            onChange={(v) => setDate(v ?? null)}
-          />
-          <TimeField
-            label="Start Time"
-            isRequired
-            hourCycle={12}
-            width="100%"
-            value={startTime ?? undefined}
-            onChange={(v) => setStartTime(v ?? null)}
-          />
-          <TimeField
-            label="End Time"
-            isRequired
-            hourCycle={12}
-            width="100%"
-            value={endTime ?? undefined}
-            onChange={(v) => setEndTime(v ?? null)}
-          />
+        <Flex direction="row" gap="size-200" alignItems="start">
+          <Flex direction="column" flex={1} gap="size-50">
+            <DatePicker
+              label="Date"
+              isRequired
+              width="100%"
+              value={date ?? undefined}
+              onChange={(v) => setDate(v ?? null)}
+              minValue={minDate}
+              maxValue={maxDate}
+              validationState={isDateOutOfRange ? "invalid" : undefined}
+            />
+            {isDateOutOfRange && (
+              <Text UNSAFE_style={{ color: "var(--spectrum-global-color-red-600)", fontSize: "12px" }}>
+                {dateErrorMessage}
+              </Text>
+            )}
+          </Flex>
+          <Flex direction="column" flex={1} gap="size-50">
+            <TimeField
+              label="Start Time"
+              isRequired
+              hourCycle={12}
+              width="100%"
+              value={startTime ?? undefined}
+              onChange={(v) => setStartTime(v ?? null)}
+              validationState={isStartTimeBeforeEventStart ? "invalid" : undefined}
+            />
+            {isStartTimeBeforeEventStart && (
+              <Text UNSAFE_style={{ color: "var(--spectrum-global-color-red-600)", fontSize: "12px" }}>
+                Start time cannot be before the event start time
+              </Text>
+            )}
+          </Flex>
+          <Flex direction="column" flex={1} gap="size-50">
+            <TimeField
+              label="End Time"
+              isRequired
+              hourCycle={12}
+              width="100%"
+              value={endTime ?? undefined}
+              onChange={(v) => setEndTime(v ?? null)}
+              validationState={isEndTimeInvalid || isEndTimeAfterEventEnd ? "invalid" : undefined}
+            />
+            {isEndTimeInvalid && (
+              <Text UNSAFE_style={{ color: "var(--spectrum-global-color-red-600)", fontSize: "12px" }}>
+                End time must be after start time
+              </Text>
+            )}
+            {!isEndTimeInvalid && isEndTimeAfterEventEnd && (
+              <Text UNSAFE_style={{ color: "var(--spectrum-global-color-red-600)", fontSize: "12px" }}>
+                End time cannot be after the event end time
+              </Text>
+            )}
+          </Flex>
         </Flex>
 
         <Flex direction="column" gap="size-100">
