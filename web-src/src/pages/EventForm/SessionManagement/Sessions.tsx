@@ -13,6 +13,7 @@ import { SessionsList } from "./SessionList";
 import type { SessionFormData } from "./SessionForm";
 import { useEventFormContext } from "../../../contexts";
 import { apiService } from "../../../services/api";
+import { wallClockToEpochMillis } from "../../../utils/dateTime";
 
 interface SessionTimeData {
   sessionTimeId?: string;
@@ -81,8 +82,9 @@ async function createSessionTimeForSession(
   sessionId: string,
   data: SessionFormData,
 ): Promise<void> {
-  const startTimeMillis = new Date(data.startDateTime).getTime();
-  const endTimeMillis = new Date(data.endDateTime).getTime();
+  const tz = data.timezone || 'UTC';
+  const startTimeMillis = wallClockToEpochMillis(data.startDateTime, tz);
+  const endTimeMillis = wallClockToEpochMillis(data.endDateTime, tz);
   const sessionTimeRes = await apiService.createSessionTime({
     eventId,
     sessionId,
@@ -106,8 +108,9 @@ async function upsertSessionTimeForSession(
   sessionId: string,
   data: SessionFormData,
 ): Promise<void> {
-  const startTimeMillis = new Date(data.startDateTime).getTime();
-  const endTimeMillis = new Date(data.endDateTime).getTime();
+  const tz = data.timezone || 'UTC';
+  const startTimeMillis = wallClockToEpochMillis(data.startDateTime, tz);
+  const endTimeMillis = wallClockToEpochMillis(data.endDateTime, tz);
   if (!data.sessionTimeId) {
     await createSessionTimeForSession(eventId, sessionId, data);
     return;
@@ -236,6 +239,7 @@ export const Sessions: React.FC = () => {
       name: data.name,
       description: data.description,
       tags: data.tags,
+      ...(data.timezone ? { timezone: data.timezone } : {}),
     };
     const res = await apiService.createSession(eventId, payload);
     if ("error" in res) {
@@ -284,6 +288,7 @@ export const Sessions: React.FC = () => {
       name: data.name,
       description: data.description,
       tags: data.tags,
+      ...(data.timezone ? { timezone: data.timezone } : {}),
     };
     if (data.creationTime != null) payload.creationTime = data.creationTime;
     if (data.modificationTime != null)

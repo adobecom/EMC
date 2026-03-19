@@ -59,6 +59,8 @@ export interface SessionFormData {
   sessionTimeCreationTime?: number;
   /** Existing session-time modification timestamp for optimistic updates */
   sessionTimeModificationTime?: number;
+  /** IANA timezone inherited from the event (e.g. "America/Los_Angeles") */
+  timezone?: string;
 }
 
 type SessionTimeRegistrationFields = {
@@ -348,6 +350,7 @@ export const SessionForm: React.FC<SessionFormProps> = ({
             }
           : {}),
         speakerIds: selectedSpeakers.map((s) => s.speakerId),
+        timezone: formData.timezone || undefined,
       });
       onCancel();
     } catch (err) {

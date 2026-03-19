@@ -77,7 +77,37 @@ export function dateAndTimeToISO(date: CalendarDate, time: Time): string {
     time.minute,
     time.second || 0,
   );
-  return `${dt.toString()}.000Z`;
+  return dt.toString();
+}
+
+/**
+ * Converts a wall-clock datetime string and an IANA timezone into epoch milliseconds.
+ *
+ * @param wallClock Datetime string with no timezone suffix (e.g. `"2026-03-19T10:30:00"`)
+ * @param timezone IANA timezone name (e.g. `"America/Los_Angeles"`)
+ * @returns Epoch milliseconds representing the correct UTC instant.
+ *
+ * @example
+ * wallClockToEpochMillis("2026-03-19T10:30:00", "America/Los_Angeles")
+ * // => millis for 2026-03-19T17:30:00Z  (LA is UTC-7 during PDT)
+ */
+export function wallClockToEpochMillis(wallClock: string, timezone: string): number {
+  const dt = parseDateTime(wallClock);
+  // Treat wall-clock values as UTC to get a reference Date
+  const utcMs = Date.UTC(dt.year, dt.month - 1, dt.day, dt.hour, dt.minute, dt.second || 0);
+  // Determine what that UTC instant looks like in the target timezone
+  const parts = new Intl.DateTimeFormat('en-US', {
+    timeZone: timezone,
+    year: 'numeric', month: 'numeric', day: 'numeric',
+    hour: 'numeric', minute: 'numeric', second: 'numeric',
+    hour12: false,
+  }).formatToParts(new Date(utcMs));
+  const get = (type: string) =>
+    parseInt(parts.find((p) => p.type === type)?.value ?? '0');
+  const tzMs = Date.UTC(get('year'), get('month') - 1, get('day'), get('hour') % 24, get('minute'), get('second'));
+  // offset = how far UTC is ahead of the timezone's local representation
+  const offsetMs = utcMs - tzMs;
+  return utcMs + offsetMs;
 }
 
 /**
