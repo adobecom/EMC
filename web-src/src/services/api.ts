@@ -1369,6 +1369,17 @@ class ApiService {
   }
 
   /**
+   * Get Attendee (BaseAttendee + attendeeId) by attendeeId.
+   * Returns firstName, lastName, email etc. EventAttendee from getAttendee does not include these.
+   */
+  async getAttendeeBase(attendeeId: string): Promise<any | ErrorResponse> {
+    validateString(attendeeId, 'attendee ID')
+    return this.callExternalApi('esp', `/v1/attendees/${attendeeId}`, 'GET', undefined,
+      { operationName: 'getAttendeeBase', shouldReturnFullResponse: true }
+    )
+  }
+
+  /**
    * Get all event attendees with pagination.
    *
    * The GET attendees endpoint does not return registrationStatus on each

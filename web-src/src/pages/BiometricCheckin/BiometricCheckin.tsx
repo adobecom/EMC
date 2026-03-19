@@ -122,7 +122,16 @@ export const BiometricCheckin: React.FC<BiometricCheckinProps> = ({ ims: _ims })
           })
         }
 
-        const attendeeData = attendeeResult as Attendee
+        let attendeeData = attendeeResult as Attendee
+        // EventAttendee from getAttendee lacks BaseAttendee fields (firstName, lastName, email).
+        // EventAttendeeBody requires them. Fetch from getAttendeeBase when missing.
+        const needsBaseAttendee = !attendeeData.firstName || !attendeeData.lastName || !attendeeData.email
+        if (needsBaseAttendee) {
+          const baseResult = await apiService.getAttendeeBase(attendeeId)
+          if (!('error' in baseResult) && baseResult) {
+            attendeeData = { ...attendeeData, ...baseResult }
+          }
+        }
         setAttendee({ ...attendeeData, eventId })
 
         if (attendeeData.checkedIn) {
@@ -152,6 +161,12 @@ export const BiometricCheckin: React.FC<BiometricCheckinProps> = ({ ims: _ims })
 
   const handleConfirmCheckin = useCallback(async () => {
     if (!attendee || !attendee.eventId) return
+
+    // EventAttendeeBody requires firstName, lastName, email
+    if (!attendee.firstName || !attendee.lastName || !attendee.email) {
+      toast.error('Missing required attendee data. Please refresh and try again.')
+      return
+    }
 
     setState('checking-in')
     try {
