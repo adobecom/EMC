@@ -13,14 +13,19 @@ import {
   Text,
   ActionButton,
   ProgressCircle,
+  TooltipTrigger,
+  Tooltip,
 } from '@adobe/react-spectrum'
 import { ProfileData, SeriesSpeaker, SpeakerType, EventApiResponse } from '../../types/domain'
 import { SpeakerPickerDialog } from './SpeakerPickerDialog'
-import { TYPOGRAPHY, FLEX_GAP } from '../../styles/designSystem'
+import { TYPOGRAPHY, FLEX_GAP, COLORS } from '../../styles/designSystem'
+import { speakerHasLocalization } from '../../utils/eventFormMappers'
 import Add from '@spectrum-icons/workflow/Add'
+import Alert from '@spectrum-icons/workflow/Alert'
 import Delete from '@spectrum-icons/workflow/Delete'
 import DragHandle from '@spectrum-icons/workflow/DragHandle'
 import { apiService, cachedApi } from '../../services/api'
+import { useToast } from '../../contexts'
 import { useEventFormComponent } from '../../hooks/useEventFormComponent'
 
 const SPEAKER_TYPE_OPTIONS: { key: SpeakerType; label: string }[] = [
@@ -92,6 +97,7 @@ function seriesSpeakerToProfileData(speaker: SeriesSpeaker, locale: string): Pro
  */
 export const SpeakersComponent: React.FC = () => {
   const profilesRef = useRef<ProfileData[]>([])
+  const toast = useToast()
 
   const {
     formData,
@@ -101,8 +107,23 @@ export const SpeakersComponent: React.FC = () => {
   } = useEventFormComponent({
     componentId: 'speakers',
 
+    validate: () => {
+      const profiles = formData.profiles || []
+      const missing = profiles.filter(p => {
+        if (!p.isFromSeries || !p.speakerId) return false
+        const speaker = seriesSpeakers.find(s => s.speakerId === p.speakerId)
+        return !speaker || !speakerHasLocalization(speaker, locale)
+      })
+      if (missing.length > 0) {
+        const names = missing.map(p => `${p.firstName} ${p.lastName}`).join(', ')
+        return `The following speakers are missing a localized title for ${locale}: ${names}. Please update their title.`
+      }
+      return true
+    },
+
     onAfterSave: async (savedEventId: string, _eventResponse: EventApiResponse) => {
       const profiles = profilesRef.current
+      const failedSpeakerIds = new Set<string>()
 
       let savedSpeakers: any[] = []
       try {
@@ -115,6 +136,8 @@ export const SpeakersComponent: React.FC = () => {
         }
       } catch (err) {
         console.error('Failed to fetch event speakers:', err)
+        toast.error('Failed to load event speakers.')
+        return
       }
 
       const currentSpeakers = profiles
@@ -131,54 +154,57 @@ export const SpeakersComponent: React.FC = () => {
             const result = await apiService.removeSpeakerFromEvent(speaker.speakerId, savedEventId)
             if ('error' in result) {
               console.error(`Failed to remove speaker ${speaker.speakerId} from event:`, result)
+              failedSpeakerIds.add(speaker.speakerId)
             }
           })
         )
-        return
-      }
+      } else {
+        await Promise.all(
+          currentSpeakers.map(async (eventSpeaker) => {
+            if (!eventSpeaker.speakerId) return
 
-      await Promise.all(
-        currentSpeakers.map(async (eventSpeaker) => {
-          if (!eventSpeaker.speakerId) return
-
-          if (savedSpeakers.length === 0) {
-            const result = await apiService.addSpeakerToEvent(eventSpeaker, savedEventId)
-            if ('error' in result) {
-              console.error(`Failed to add speaker ${eventSpeaker.speakerId} to event:`, result)
-            }
-          } else {
-            const existingSpeaker = savedSpeakers.find((saved: any) => {
-              return (
-                saved.speakerId === eventSpeaker.speakerId &&
-                saved.speakerType === eventSpeaker.speakerType &&
-                saved.ordinal === eventSpeaker.ordinal
-              )
-            })
-
-            if (!existingSpeaker) {
-              const speakerToUpdate = savedSpeakers.find((saved: any) =>
-                saved.speakerId === eventSpeaker.speakerId
-              )
-
-              if (speakerToUpdate) {
-                const result = await apiService.updateSpeakerInEvent(
-                  eventSpeaker,
-                  eventSpeaker.speakerId,
-                  savedEventId
+            if (savedSpeakers.length === 0) {
+              const result = await apiService.addSpeakerToEvent(eventSpeaker, savedEventId)
+              if ('error' in result) {
+                console.error(`Failed to add speaker ${eventSpeaker.speakerId} to event:`, result)
+                failedSpeakerIds.add(eventSpeaker.speakerId)
+              }
+            } else {
+              const existingSpeaker = savedSpeakers.find((saved: any) => {
+                return (
+                  saved.speakerId === eventSpeaker.speakerId &&
+                  saved.speakerType === eventSpeaker.speakerType &&
+                  saved.ordinal === eventSpeaker.ordinal
                 )
-                if ('error' in result) {
-                  console.error(`Failed to update speaker ${eventSpeaker.speakerId} in event:`, result)
-                }
-              } else {
-                const result = await apiService.addSpeakerToEvent(eventSpeaker, savedEventId)
-                if ('error' in result) {
-                  console.error(`Failed to add speaker ${eventSpeaker.speakerId} to event:`, result)
+              })
+
+              if (!existingSpeaker) {
+                const speakerToUpdate = savedSpeakers.find((saved: any) =>
+                  saved.speakerId === eventSpeaker.speakerId
+                )
+
+                if (speakerToUpdate) {
+                  const result = await apiService.updateSpeakerInEvent(
+                    eventSpeaker,
+                    eventSpeaker.speakerId,
+                    savedEventId
+                  )
+                  if ('error' in result) {
+                    console.error(`Failed to update speaker ${eventSpeaker.speakerId} in event:`, result)
+                    failedSpeakerIds.add(eventSpeaker.speakerId)
+                  }
+                } else {
+                  const result = await apiService.addSpeakerToEvent(eventSpeaker, savedEventId)
+                  if ('error' in result) {
+                    console.error(`Failed to add speaker ${eventSpeaker.speakerId} to event:`, result)
+                    failedSpeakerIds.add(eventSpeaker.speakerId)
+                  }
                 }
               }
             }
-          }
-        })
-      )
+          })
+        )
+      }
 
       if (savedSpeakers.length > 0) {
         await Promise.all(
@@ -188,10 +214,19 @@ export const SpeakersComponent: React.FC = () => {
               const result = await apiService.removeSpeakerFromEvent(savedSpeaker.speakerId, savedEventId)
               if ('error' in result) {
                 console.error(`Failed to remove speaker ${savedSpeaker.speakerId} from event:`, result)
+                failedSpeakerIds.add(savedSpeaker.speakerId)
               }
             }
           })
         )
+      }
+
+      if (failedSpeakerIds.size > 0) {
+        const names = profiles
+          .filter(p => p.speakerId && failedSpeakerIds.has(p.speakerId))
+          .map(p => `${p.firstName} ${p.lastName}`.trim() || p.speakerId)
+        const nameList = names.length > 0 ? names.join(', ') : Array.from(failedSpeakerIds).join(', ')
+        toast.error(`Failed to update speakers for this event: ${nameList}. Please try again.`)
       }
     },
   })
@@ -356,6 +391,21 @@ export const SpeakersComponent: React.FC = () => {
             : `Speaker ${index + 1}`
         const isDragging = draggedIndex === index
         const isDragOver = dragOverIndex === index
+        const seriesSpeaker = profile.speakerId
+          ? seriesSpeakers.find(s => s.speakerId === profile.speakerId)
+          : undefined
+        const missingLocalization =
+          !!profile.isFromSeries &&
+          !!profile.speakerId &&
+          !!seriesSpeaker &&
+          !speakerHasLocalization(seriesSpeaker, locale) &&
+          !(profile.title?.trim())
+        const hasTitleNoBio =
+          locale !== 'en-US' &&
+          !!profile.isFromSeries &&
+          !!seriesSpeaker &&
+          speakerHasLocalization(seriesSpeaker, locale) &&
+          !(seriesSpeaker.localizations?.[locale]?.bio ?? seriesSpeaker.bio ?? '').trim()
 
         return (
           <div
@@ -416,7 +466,23 @@ export const SpeakersComponent: React.FC = () => {
               )}
 
               <Flex direction="column" flex={1} minWidth={0}>
-                <Text UNSAFE_style={{ fontWeight: 600, fontSize: '14px' }}>{displayName}</Text>
+                <Flex alignItems="center" gap="size-100">
+                  <Text UNSAFE_style={{ fontWeight: 600, fontSize: '14px' }}>{displayName}</Text>
+                  {missingLocalization && (
+                    <TooltipTrigger delay={0}>
+                      <ActionButton isQuiet aria-label={`Missing ${locale} content`}>
+                        <Alert
+                          size="S"
+                          UNSAFE_style={{ color: COLORS.ADOBE_RED }}
+                        />
+                      </ActionButton>
+                      <Tooltip variant="negative">
+                        This speaker is missing a localized title for {locale}. Add it in the
+                        Speakers dashboard or when adding the speaker to avoid display issues.
+                      </Tooltip>
+                    </TooltipTrigger>
+                  )}
+                </Flex>
                 {profile.title && (
                   <Text
                     UNSAFE_style={{
@@ -428,6 +494,11 @@ export const SpeakersComponent: React.FC = () => {
                     }}
                   >
                     {profile.title}
+                  </Text>
+                )}
+                {hasTitleNoBio && (
+                  <Text UNSAFE_style={{ fontSize: '11px', color: 'var(--spectrum-global-color-gray-500)', fontStyle: 'italic' }}>
+                    No bio for this locale
                   </Text>
                 )}
               </Flex>

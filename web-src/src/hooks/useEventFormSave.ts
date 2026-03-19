@@ -188,10 +188,17 @@ export function useEventFormSave() {
         const rawTime = item.startDateTime?.split('T')[1]?.slice(0, 5) || '09:00'
         // Ensure HH:MM:SS format
         const startTime = rawTime.length === 5 ? `${rawTime}:00` : rawTime
+
+        const rawEndTime = item.endDateTime?.split('T')[1]?.slice(0, 5)
+        const endTime = rawEndTime
+          ? (rawEndTime.length === 5 ? `${rawEndTime}:00` : rawEndTime)
+          : undefined
+
         return {
           title: item.title,
           description: item.description || '',
           startTime,
+          ...(endTime && { endTime }),
         }
       })
       setEventAttribute(payload, 'agenda', agendaForApi, locale)
