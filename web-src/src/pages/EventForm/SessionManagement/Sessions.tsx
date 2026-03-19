@@ -203,10 +203,12 @@ export const Sessions: React.FC = () => {
       const raw = response?.sessions ?? response?.data ?? [];
       const list = Array.isArray(raw) ? raw : [];
       const mapped = list.map((item: any) => mapApiSessionToSession(item));
+      // TODO: Re-enable once session-time APIs are stable.
       // Session list UI reads date/time/capacity from Session objects, so hydrate
       // each session with its single session-time data before storing state.
-      const withTimes = await Promise.all(mapped.map(hydrateSessionWithTime));
-      setSessions(sortSessionsByDate(withTimes));
+      // const withTimes = await Promise.all(mapped.map(hydrateSessionWithTime));
+      // setSessions(sortSessionsByDate(withTimes));
+      setSessions(sortSessionsByDate(mapped));
     } catch (err) {
       const message =
         err instanceof Error ? err.message : "Failed to load sessions";
@@ -253,14 +255,13 @@ export const Sessions: React.FC = () => {
       await Promise.allSettled(speakerPromises);
     }
 
-    try {
-      await createSessionTimeForSession(eventId, newSession.id, data);
-    } catch (err) {
-      // TODO: Rollback by deleting the session if session-time creation fails.
-      // Disabled temporarily — evaluate whether rollback is the desired behavior.
-      // await apiService.deleteSession(newSession.id);
-      throw err;
-    }
+    // TODO: Re-enable once session-time APIs are stable.
+    // try {
+    //   await createSessionTimeForSession(eventId, newSession.id, data);
+    // } catch (err) {
+    //   // await apiService.deleteSession(newSession.id);
+    //   throw err;
+    // }
 
     const sessionWithTime: Session = {
       ...newSession,
@@ -293,7 +294,8 @@ export const Sessions: React.FC = () => {
       throw new Error(msg);
     }
 
-    await upsertSessionTimeForSession(eventId, sessionId, data);
+    // TODO: Re-enable once session-time APIs are stable.
+    // await upsertSessionTimeForSession(eventId, sessionId, data);
 
     await syncSessionSpeakers(sessionId, data.speakerIds ?? []);
 
