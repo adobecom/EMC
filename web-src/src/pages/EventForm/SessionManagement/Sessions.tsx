@@ -256,7 +256,9 @@ export const Sessions: React.FC = () => {
     try {
       await createSessionTimeForSession(eventId, newSession.id, data);
     } catch (err) {
-      await apiService.deleteSession(newSession.id);
+      // TODO: Rollback by deleting the session if session-time creation fails.
+      // Disabled temporarily — evaluate whether rollback is the desired behavior.
+      // await apiService.deleteSession(newSession.id);
       throw err;
     }
 

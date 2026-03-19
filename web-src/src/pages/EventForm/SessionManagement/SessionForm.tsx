@@ -79,7 +79,7 @@ function stringsToEventTags(tags: string[] | undefined): EventTag[] {
   return tags.map((t) => ({ name: t, caasId: t }));
 }
 
-function eventTagsToStrings(tags: EventTag[]): string[] {
+function tagsToString(tags: EventTag[]): string[] {
   return tags.map((t) => t.caasId ?? t.name);
 }
 
@@ -321,7 +321,7 @@ export const SessionForm: React.FC<SessionFormProps> = ({
         description: description.trim(),
         startDateTime,
         endDateTime,
-        tags: eventTagsToStrings(selectedTags),
+        tags: tagsToString(selectedTags),
         isAutoRegistrationEnabled,
         attendeeLimit:
           attendeeLimitEnabled && attendeeLimit
