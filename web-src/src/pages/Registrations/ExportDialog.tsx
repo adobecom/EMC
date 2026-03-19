@@ -21,6 +21,7 @@ import {
 import type { Attendee, AttendeeColumnConfig } from '../../types/attendee'
 import type { Campaign } from '../../types/campaign'
 import { generateCsv, downloadCsv, CsvColumn } from '../../utils/csvExport'
+import { getAttendeeName } from '../../types/attendee'
 
 interface ExportDialogProps {
   attendees: Attendee[]
@@ -74,9 +75,10 @@ export const ExportDialog: React.FC<ExportDialogProps> = ({
       .filter(c => selectedColumns.has(c.key))
       .map(c => ({ key: c.key, label: c.label }))
 
-    // Map data, replacing campaignId with campaign name
+    // Map data: name from firstName+lastName, campaignId → campaign name
     const data = attendees.map(a => {
       const row: Record<string, unknown> = { ...a }
+      row.name = getAttendeeName(a)
       if (row.campaignId && campaignLookup.has(String(row.campaignId))) {
         row.campaignId = campaignLookup.get(String(row.campaignId))
       }
