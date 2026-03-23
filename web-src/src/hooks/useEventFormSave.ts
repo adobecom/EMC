@@ -170,7 +170,14 @@ export function useEventFormSave() {
     // Title mapping
     if (mergedData.name) {
       setEventAttribute(payload, 'title', mergedData.name, locale)
-      payload.enTitle = mergedData.name // English title for URL generation
+    }
+    // English title for URL generation — prefer the dedicated enTitle field
+    // so that saving in a non-English locale doesn't overwrite enTitle with
+    // the localized name.
+    if (mergedData.enTitle) {
+      payload.enTitle = mergedData.enTitle
+    } else if (mergedData.name) {
+      payload.enTitle = mergedData.name
     }
     
     // Description mapping (shortDescription -> description in API)

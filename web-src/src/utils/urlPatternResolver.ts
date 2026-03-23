@@ -49,7 +49,7 @@ export function buildTokenContext(
     : formData.localStartDate || ''
 
   return {
-    enTitle: formData.name || '',
+    enTitle: formData.enTitle || formData.name || '',
     seriesName: seriesData.seriesName || '',
     localStartDate,
     cloudType: formData.cloudType || '',
