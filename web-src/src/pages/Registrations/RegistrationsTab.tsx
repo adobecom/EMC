@@ -12,7 +12,7 @@ import {
 import Download from '@spectrum-icons/workflow/Download'
 import type { Attendee, AttendeeFilters, AttendeeColumnConfig } from '../../types/attendee'
 import type { Campaign } from '../../types/campaign'
-import { useRBAC } from '../../contexts/RBACContext'
+import { useHasPermission } from '../../hooks/useHasPermission'
 import { ExportDialog } from './ExportDialog'
 import { getAttendeeName } from '../../types/attendee'
 import { apiService } from '../../services/api'
@@ -44,7 +44,7 @@ export const RegistrationsTab: React.FC<RegistrationsTabProps> = ({
   columnConfig,
   campaigns = [],
 }) => {
-  const { isAdmin } = useRBAC()
+  const isAdmin = useHasPermission('user', 'read')
   const [isExportOpen, setIsExportOpen] = useState(false)
 
   // State

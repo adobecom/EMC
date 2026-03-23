@@ -19,6 +19,7 @@ import { calculateAttendeeStats } from '../../types/attendee'
 import { apiService } from '../../services/api'
 import { useRsvpConfig } from '../../hooks/useRsvpConfig'
 import { useRBACFilter } from '../../hooks'
+import { useGroup } from '../../contexts/GroupContext'
 import { IMS } from '../../types'
 import { BlurredLoadingOverlay } from '../../components/shared'
 import { useToast as useToastContext } from '../../contexts'
@@ -36,6 +37,7 @@ export const Registrations: React.FC<RegistrationsProps> = ({ ims: _ims }) => {
   const [searchParams] = useSearchParams()
   const navigate = useNavigate()
   const toast = useToastContext()
+  const { groupVersion } = useGroup()
   const { filterEvents } = useRBACFilter()
 
   const initialEventId = paramEventId || searchParams.get('eventId') || ''
@@ -104,7 +106,7 @@ export const Registrations: React.FC<RegistrationsProps> = ({ ims: _ims }) => {
     }
 
     loadEvents()
-  }, [])
+  }, [groupVersion]) // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     if (!selectedEventId) {

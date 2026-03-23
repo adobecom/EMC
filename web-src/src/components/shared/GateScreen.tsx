@@ -64,6 +64,10 @@ const BrowserLockIcon: React.FC = () => (
 interface GateScreenProps {
   onRequestAccess: () => void
   isLoading?: boolean
+  /** Message shown when access is denied. Defaults to sign-in prompt. */
+  message?: string
+  /** Label for the action button. Defaults to "Sign In". */
+  actionLabel?: string
 }
 
 /**
@@ -72,7 +76,9 @@ interface GateScreenProps {
  */
 export const GateScreen: React.FC<GateScreenProps> = ({
   onRequestAccess,
-  isLoading = false
+  isLoading = false,
+  message = 'Please sign in with an authorized account to continue.',
+  actionLabel = 'Sign In'
 }) => {
   const [backgroundImage] = useState(() => {
     if (GATE_BACKGROUND_IMAGES.length === 0) return null
@@ -150,13 +156,14 @@ export const GateScreen: React.FC<GateScreenProps> = ({
                 maxWidth: 420
               }}
             >
-              Please sign in with an authorized account to continue.
+              {message}
             </Text>
 
-            <Button 
-            variant="accent"
-            onPress={onRequestAccess}>
-              Sign In
+            <Button
+              variant="accent"
+              onPress={onRequestAccess}
+            >
+              {actionLabel}
             </Button>
           </>
         )}

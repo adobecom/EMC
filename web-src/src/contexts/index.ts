@@ -32,4 +32,6 @@ export type {
   SeriesFormData,
 } from './SeriesFormContext'
 export { RBACProvider, useRBAC } from './RBACContext'
+export { GroupProvider, useGroup } from './GroupContext'
+export type { GroupContextValue } from './GroupContext'
 

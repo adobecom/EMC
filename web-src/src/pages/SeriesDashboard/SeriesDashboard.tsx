@@ -20,6 +20,7 @@ import {
 } from '../../services/seriesEnrichment'
 import { createShimmerStyle } from '../../styles/designSystem'
 import { useSafeState, useRBACFilter } from '../../hooks'
+import { useGroup } from '../../contexts/GroupContext'
 
 const SERIES_SEARCH_KEYS = ['seriesName', 'seriesDescription', 'cloudType', 'seriesStatus']
 
@@ -84,9 +85,10 @@ export const SeriesDashboard: React.FC<SeriesDashboardProps> = () => {
     }
   }
 
+  const { groupVersion } = useGroup()
   useEffect(() => {
     loadSeriesData()
-  }, [])
+  }, [groupVersion]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Fetch history info (creator/modifier) for visible series IDs
   useEffect(() => {

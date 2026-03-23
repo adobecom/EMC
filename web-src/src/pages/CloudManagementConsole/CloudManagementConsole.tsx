@@ -8,15 +8,16 @@ import {
   View,
   Text,
   Button,
+  Heading,
   Picker,
   Item,
   ActionButton,
   ProgressCircle,
   StatusLight,
-  Well,
 } from '@adobe/react-spectrum'
 import Add from '@spectrum-icons/workflow/Add'
 import Checkmark from '@spectrum-icons/workflow/Checkmark'
+import Refresh from '@spectrum-icons/workflow/Refresh'
 import { IMS } from '../../types'
 import { apiService, cachedApi } from '../../services/api'
 import { BlurredLoadingOverlay } from '../../components/shared'
@@ -33,6 +34,8 @@ import {
   ACTION_BAR_BUTTON_STYLES,
 } from '../../styles/designSystem'
 import { useSafeState, useRBACFilter } from '../../hooks'
+import { useGroup } from '../../contexts/GroupContext'
+import { useToast } from '../../contexts'
 
 // ============================================================================
 // TYPES
@@ -113,16 +116,6 @@ const styles = {
     zIndex: Z_INDEX.ACTION_BAR,
   },
   
-  // Toast notification
-  toast: {
-    transform: 'translateX(-50%)',
-    backgroundColor: '#2C8E2C',
-    color: COLORS.WHITE,
-    padding: `${SPACING.SM}px ${FORM_SPACING.SECTION_GAP}px`,
-    borderRadius: `${SPACING.XS}px`,
-    boxShadow: '0 4px 12px rgba(0, 0, 0, 0.2)',
-    zIndex: Z_INDEX.NOTIFICATION,
-  },
 }
 
 // ============================================================================
@@ -131,6 +124,8 @@ const styles = {
 
 export const CloudManagementConsole: React.FC<CloudManagementConsoleProps> = () => {
   const { filterClouds } = useRBACFilter()
+  const { groupVersion } = useGroup()
+  const toast = useToast()
 
   // Data states
   const [clouds, setClouds] = useSafeState<CloudData[]>([])
@@ -147,7 +142,6 @@ export const CloudManagementConsole: React.FC<CloudManagementConsoleProps> = () 
   const [isLoading, setIsLoading] = useSafeState(true)
   const [isSaving, setIsSaving] = useSafeState(false)
   const [error, setError] = useSafeState<string | null>(null)
-  const [toastMessage, setToastMessage] = useSafeState<string | null>(null)
 
   // Check if there are pending changes
   const pendingChanges = useMemo(() => {
@@ -176,7 +170,7 @@ export const CloudManagementConsole: React.FC<CloudManagementConsoleProps> = () 
 
       // Handle clouds
       if ('error' in cloudsResult) {
-        throw new Error(`Failed to load clouds: ${cloudsResult.error}`)
+        throw new Error('Failed to load clouds data')
       }
       const cloudsData = filterClouds(cloudsResult as CloudData[])
       setClouds(cloudsData)
@@ -223,7 +217,7 @@ export const CloudManagementConsole: React.FC<CloudManagementConsoleProps> = () 
 
   useEffect(() => {
     loadInitialData()
-  }, [])
+  }, [groupVersion]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // ============================================================================
   // EVENT HANDLERS
@@ -285,14 +279,10 @@ export const CloudManagementConsole: React.FC<CloudManagementConsoleProps> = () 
       // Update pre-computed saved states
       setSavedLocales(prev => ({ ...prev, [currentCloud]: Array.from(selectedLocales) }))
 
-      // Show success toast
-      setToastMessage('Changes saved successfully!')
-      setTimeout(() => {
-        setToastMessage(null)
-      }, 3000)
+      toast.success('Changes saved successfully!')
     } catch (err) {
       console.error('Error saving cloud:', err)
-      setError(err instanceof Error ? err.message : 'Failed to save changes')
+      toast.error(err instanceof Error ? err.message : 'Failed to save changes')
     } finally {
       setIsSaving(false)
     }
@@ -341,15 +331,17 @@ export const CloudManagementConsole: React.FC<CloudManagementConsoleProps> = () 
   // MAIN RENDER
   // ============================================================================
 
-  if (error && clouds.length === 0) {
+  if (error) {
     return (
-      <View padding={FLEX_GAP.LARGE}>
-        <Well>
-          <Text UNSAFE_style={{ color: 'red' }}>Error: {error}</Text>
-          <Button variant="primary" onPress={loadInitialData} marginTop={FLEX_GAP.FIELD}>
-            Retry
-          </Button>
-        </Well>
+      <View padding="size-400">
+        <Flex direction="column" gap="size-200" alignItems="center" justifyContent="center" minHeight="size-6000">
+          <Heading level={3}>Error Loading Cloud Management</Heading>
+          <Text>{error}</Text>
+          <ActionButton onPress={loadInitialData}>
+            <Refresh />
+            <Text>Retry</Text>
+          </ActionButton>
+        </Flex>
       </View>
     )
   }
@@ -405,17 +397,6 @@ export const CloudManagementConsole: React.FC<CloudManagementConsoleProps> = () 
           </>
         )}
 
-        {/* Toast Message */}
-        {toastMessage && (
-          <View
-            position="fixed"
-            bottom="size-1000"
-            left="50%"
-            UNSAFE_style={styles.toast}
-          >
-            <Text UNSAFE_style={{ color: COLORS.WHITE }}>{toastMessage}</Text>
-          </View>
-        )}
         </View>
 
         {/* Action Bar */}

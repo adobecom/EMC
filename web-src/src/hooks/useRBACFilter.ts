@@ -1,38 +1,41 @@
 /**
  * useRBACFilter — provides filter functions that scope dashboard data
- * based on the current user's RBAC permissions.
+ * based on the active group's RBAC permissions.
  *
- * Admins see everything; non-admins see only items they have access to.
+ * Legacy ESP routes do not yet enforce RBAC server-side, so client-side
+ * filtering is still needed. Filtering is at the resource-type level:
+ * if the user has event:read, they see all events; if not, they see none.
  */
 
 import { useCallback } from 'react'
-import { useRBAC } from '../contexts/RBACContext'
+import { useGroup } from '../contexts/GroupContext'
+import { checkPermission } from './useHasPermission'
 
 export function useRBACFilter() {
-  const { isAdmin, canAccessEvent, canAccessSeries, canAccessCloud } = useRBAC()
+  const { permissions } = useGroup()
 
   const filterEvents = useCallback(
-    <T extends { eventId?: string; seriesId?: string; cloudType?: string }>(events: T[]): T[] => {
-      if (isAdmin) return events
-      return events.filter(e => canAccessEvent(e))
+    <T>(events: T[]): T[] => {
+      if (checkPermission(permissions, 'event', 'read')) return events
+      return []
     },
-    [isAdmin, canAccessEvent]
+    [permissions]
   )
 
   const filterSeries = useCallback(
-    <T extends { seriesId?: string; cloudType?: string }>(series: T[]): T[] => {
-      if (isAdmin) return series
-      return series.filter(s => canAccessSeries(s))
+    <T>(series: T[]): T[] => {
+      if (checkPermission(permissions, 'series', 'read')) return series
+      return []
     },
-    [isAdmin, canAccessSeries]
+    [permissions]
   )
 
   const filterClouds = useCallback(
-    <T extends { cloudType?: string }>(clouds: T[]): T[] => {
-      if (isAdmin) return clouds
-      return clouds.filter(c => canAccessCloud(c))
+    <T>(clouds: T[]): T[] => {
+      if (checkPermission(permissions, 'cloud', 'read')) return clouds
+      return []
     },
-    [isAdmin, canAccessCloud]
+    [permissions]
   )
 
   return { filterEvents, filterSeries, filterClouds }

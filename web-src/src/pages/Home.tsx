@@ -18,6 +18,8 @@ import Stage from '@spectrum-icons/workflow/Stage'
 import Info from '@spectrum-icons/workflow/Info'
 import GraphBarVertical from '@spectrum-icons/workflow/GraphBarVertical'
 import { SPACING, COLORS } from '../styles/designSystem'
+import { checkPermission } from '../hooks/useHasPermission'
+import { useGroup } from '../contexts/GroupContext'
 
 /**
  * Navigation destination configuration
@@ -29,6 +31,7 @@ interface NavDestination {
   title: string
   description: string
   color?: string
+  permission?: { resource: string, access: string }
 }
 
 const destinations: NavDestination[] = [
@@ -46,7 +49,8 @@ const destinations: NavDestination[] = [
     icon: <Events size="XL" />,
     title: 'Events',
     description: 'Create, edit, and publish events with full configuration options.',
-    color: COLORS.ADOBE_RED
+    color: COLORS.ADOBE_RED,
+    permission: { resource: 'event', access: 'read' }
   },
   {
     id: 'registrations',
@@ -54,7 +58,8 @@ const destinations: NavDestination[] = [
     icon: <UserGroup size="XL" />,
     title: 'Registrations',
     description: 'View and manage event registrations, campaigns, and track RSVPs.',
-    color: '#268E6C'
+    color: '#268E6C',
+    permission: { resource: 'event', access: 'read' }
   },
   {
     id: 'speakers',
@@ -62,7 +67,8 @@ const destinations: NavDestination[] = [
     icon: <Stage size="XL" />,
     title: 'Speakers',
     description: 'Manage speakers at the series level and assign them to events.',
-    color: '#CD3ACE'
+    color: '#CD3ACE',
+    permission: { resource: 'event', access: 'read' }
   },
   {
     id: 'series',
@@ -70,7 +76,8 @@ const destinations: NavDestination[] = [
     icon: <Collection size="XL" />,
     title: 'Series',
     description: 'Create and manage event series to group related events together.',
-    color: '#2D9D92'
+    color: '#2D9D92',
+    permission: { resource: 'series', access: 'read' }
   },
   {
     id: 'clouds',
@@ -78,7 +85,8 @@ const destinations: NavDestination[] = [
     icon: <Cloud size="XL" />,
     title: 'Clouds',
     description: 'Manage cloud configurations and settings for Creative Cloud and Experience Cloud events.',
-    color: '#E68619'
+    color: '#E68619',
+    permission: { resource: 'cloud', access: 'read' }
   },
   {
     id: 'about',
@@ -163,6 +171,11 @@ const NavCard: React.FC<NavCardProps> = ({ destination, onClick }) => {
  */
 export const Home: React.FC = () => {
   const navigate = useNavigate()
+  const { permissions } = useGroup()
+
+  const visibleDestinations = destinations.filter(dest =>
+    !dest.permission || checkPermission(permissions, dest.permission.resource, dest.permission.access)
+  )
 
   return (
     <View padding="size-400" maxWidth="1400px" marginX="auto">
@@ -188,7 +201,7 @@ export const Home: React.FC = () => {
             gap: `${SPACING.MD}px`
           }}
         >
-          {destinations.map(dest => (
+          {visibleDestinations.map(dest => (
             <NavCard
               key={dest.id}
               destination={dest}
