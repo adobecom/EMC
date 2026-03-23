@@ -88,6 +88,26 @@ export const GroupProvider: React.FC<GroupProviderProps> = ({ children }) => {
     if (!roleId) return null
     const result = await apiService.getRoleById(roleId)
     if ('error' in result) {
+      // 403 means the user lacks role:read — they can't see their own role details.
+      // Fall back to unrestricted client-side permissions; the API still enforces
+      // permissions server-side on every request via resolveGroupRole middleware.
+      if (result.status === 403) {
+        console.warn('Cannot read role (no role:read permission) — skipping client-side permission gating')
+        return {
+          roleId,
+          name: 'unknown',
+          permissions: [
+            'event:*',
+            'series:*',
+            'session:*',
+            'cloud:*',
+            'config:*',
+            'integration:*',
+          ] as RBACPermission[],
+          creationTime: 0,
+          modificationTime: 0,
+        }
+      }
       console.error('Failed to fetch role:', result)
       return null
     }
