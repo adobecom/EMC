@@ -18,6 +18,7 @@ import {
   ProgressCircle,
   SearchField,
   Form,
+  Picker,
 } from "@adobe/react-spectrum";
 import {
   CalendarDate,
@@ -34,6 +35,7 @@ import {
   safeParseDateTimeString,
 } from "../../../utils/dateTime";
 import { SpeakerPickerDialog } from "../SpeakerPickerDialog";
+import { VenueLocation } from "../LocationPickerDialog";
 
 // ============================================================================
 // SHARED TYPES
@@ -61,6 +63,8 @@ export interface SessionFormData {
   sessionTimeModificationTime?: number;
   /** IANA timezone inherited from the event (e.g. "America/Los_Angeles") */
   timezone?: string;
+  /** Selected venue location ID for this session */
+  locationId?: string;
 }
 
 type SessionTimeRegistrationFields = {
@@ -125,7 +129,7 @@ export const SessionForm: React.FC<SessionFormProps> = ({
   onCancel,
 }) => {
   const isEditMode = session !== null;
-  const { seriesId: contextSeriesId, formData, locale } = useEventFormContext();
+  const { seriesId: contextSeriesId, formData, locale, eventId } = useEventFormContext();
   const seriesId = contextSeriesId || formData.seriesId || "";
 
   const [loadingDetails, setLoadingDetails] = useState(
@@ -170,6 +174,27 @@ export const SessionForm: React.FC<SessionFormProps> = ({
   const [selectedSpeakers, setSelectedSpeakers] = useState<SeriesSpeaker[]>([]);
   const [isLoadingSpeakers, setIsLoadingSpeakers] = useState(false);
   const [pickerOpen, setPickerOpen] = useState(false);
+
+  // Location state
+  const [venueLocations, setVenueLocations] = useState<VenueLocation[]>([]);
+  const [selectedLocationId, setSelectedLocationId] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!eventId) return;
+    // TODO: Re-enable once location APIs are ready.
+    // apiService.getEventVenue(eventId).then((venueRes) => {
+    //   if (venueRes && !('error' in venueRes) && venueRes?.venueId) {
+    //     apiService.listVenueLocations(venueRes.venueId).then((locRes) => {
+    //       if (locRes && !('error' in locRes)) {
+    //         const list = (locRes as any)?.locations ?? [];
+    //         setVenueLocations(Array.isArray(list) ? list : []);
+    //       }
+    //     });
+    //   }
+    // });
+    setVenueLocations([]);
+  }, [eventId]);
+
   const selectedSpeakerIds = new Set(
     selectedSpeakers.map((s) => s.speakerId),
   );
@@ -349,6 +374,7 @@ export const SessionForm: React.FC<SessionFormProps> = ({
           : {}),
         speakerIds: selectedSpeakers.map((s) => s.speakerId),
         timezone: formData.timezone || undefined,
+        locationId: selectedLocationId ?? undefined,
       });
       onCancel(); // unmounts this component — no state updates after this
     } catch (err) {
@@ -510,6 +536,29 @@ export const SessionForm: React.FC<SessionFormProps> = ({
         locale={locale}
         onSpeakersRefresh={refreshSeriesSpeakers}
       />
+    </Flex>
+  );
+
+  const renderLocations = () => (
+    <Flex direction="column" gap="size-100">
+      <Text>Location</Text>
+      <Picker
+        aria-label="Session Location"
+        placeholder="Select session location"
+        width="100%"
+        selectedKey={selectedLocationId ?? undefined}
+        onSelectionChange={(key) => setSelectedLocationId(key ? String(key) : null)}
+        isDisabled={venueLocations.length === 0}
+      >
+        {venueLocations.map((loc) => (
+          <Item key={loc.locationId}>{loc.name}</Item>
+        ))}
+      </Picker>
+      {venueLocations.length === 0 && (
+        <Text UNSAFE_style={{ fontSize: "12px", color: "var(--spectrum-global-color-gray-600)" }}>
+          No locations available for the selected venue.
+        </Text>
+      )}
     </Flex>
   );
 
@@ -680,6 +729,7 @@ export const SessionForm: React.FC<SessionFormProps> = ({
         </Flex>
 
         {renderSpeakers()}
+        {renderLocations()}
         {renderTags()}
       </Form>
 
