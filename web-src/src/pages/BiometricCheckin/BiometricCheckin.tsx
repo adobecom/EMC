@@ -46,7 +46,7 @@ const formatDate = (dateStr: string): string => {
   return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
 }
 
-/** EventAttendeeBody schema keys - PUT requires firstName, lastName, email; additionalProperties: false */
+/** EventAttendeeBody schema keys - PUT requires firstName, lastName, email, modificationTime; additionalProperties: false */
 const EVENT_ATTENDEE_BODY_KEYS = [
   'attendeeId',
   'externalAttendeeId',
@@ -57,7 +57,8 @@ const EVENT_ATTENDEE_BODY_KEYS = [
   'checkedIn',
   'invitedBy',
   'shareInfoWithPartners',
-  'ccSentiment'
+  'ccSentiment',
+  'modificationTime'
 ] as const
 
 interface BiometricCheckinProps {
@@ -125,11 +126,12 @@ export const BiometricCheckin: React.FC<BiometricCheckinProps> = ({ ims: _ims })
         let attendeeData = attendeeResult as Attendee
         // EventAttendee from getAttendee lacks BaseAttendee fields (firstName, lastName, email).
         // EventAttendeeBody requires them. Fetch from getAttendeeBase when missing.
+        // Merge base first so EventAttendee fields (modificationTime, registrationStatus, checkedIn) are preserved.
         const needsBaseAttendee = !attendeeData.firstName || !attendeeData.lastName || !attendeeData.email
         if (needsBaseAttendee) {
           const baseResult = await apiService.getAttendeeBase(attendeeId)
           if (!('error' in baseResult) && baseResult) {
-            attendeeData = { ...attendeeData, ...baseResult }
+            attendeeData = { ...baseResult, ...attendeeData }
           }
         }
         setAttendee({ ...attendeeData, eventId })
@@ -162,9 +164,13 @@ export const BiometricCheckin: React.FC<BiometricCheckinProps> = ({ ims: _ims })
   const handleConfirmCheckin = useCallback(async () => {
     if (!attendee || !attendee.eventId) return
 
-    // EventAttendeeBody requires firstName, lastName, email
+    // EventAttendeeBody requires firstName, lastName, email, modificationTime
     if (!attendee.firstName || !attendee.lastName || !attendee.email) {
       toast.error('Missing required attendee data. Please refresh and try again.')
+      return
+    }
+    if (attendee.modificationTime == null || attendee.modificationTime === undefined) {
+      toast.error('Missing modificationTime. Please refresh and try again.')
       return
     }
 
