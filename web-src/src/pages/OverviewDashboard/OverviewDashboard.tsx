@@ -57,7 +57,13 @@ const StatCard: React.FC<StatCardProps> = ({ icon, title, value, subtitle, color
     }}
     UNSAFE_className="stat-card"
   >
-    <div onClick={onClick} style={{ height: '100%' }}>
+    <div
+      onClick={onClick}
+      onKeyDown={onClick ? (e) => { if (e.key === 'Enter' || e.key === ' ') onClick() } : undefined}
+      role={onClick ? 'button' : undefined}
+      tabIndex={onClick ? 0 : undefined}
+      style={{ height: '100%' }}
+    >
       {/* Accent bar on top */}
       <div
         style={{

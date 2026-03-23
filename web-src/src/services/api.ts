@@ -423,7 +423,8 @@ class ApiService {
     }
 
     try {
-      const headers: Record<string, string> = constructRequestHeaders(token, method) as any
+      // RequestHeaders interface is narrower than Record<string,string>; widen for dynamic header injection below
+      const headers: Record<string, string> = constructRequestHeaders(token, method) as unknown as Record<string, string>
 
       // Inject RBAC group header for ESP requests
       if (this.activeGroupId && !options?.skipGroupHeader) {

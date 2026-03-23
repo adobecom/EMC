@@ -184,7 +184,7 @@ export const RoleManagement: React.FC<RoleManagementProps> = () => {
     try {
       const result = await apiService.deleteRole(role.roleId)
       if ('error' in result) {
-        const errorMsg = (result as any).error?.message || 'Failed to delete role'
+        const errorMsg = (result as { error: { message?: string } }).error?.message || 'Failed to delete role'
         toast.error(errorMsg.includes('409') || errorMsg.includes('conflict')
           ? 'Cannot delete role — it is assigned to one or more groups'
           : 'Failed to delete role')

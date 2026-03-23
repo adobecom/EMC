@@ -45,6 +45,7 @@ const GroupSelectionScreen: React.FC = () => {
     ]
   })
 
+  // UNSAFE_style needed: fixed fullscreen overlay with background-image is not expressible via Spectrum props
   const outerStyle: React.CSSProperties = {
     position: 'fixed',
     top: 0,
@@ -63,19 +64,19 @@ const GroupSelectionScreen: React.FC = () => {
 
   return (
     <View UNSAFE_style={outerStyle}>
-      <View
-        padding="size-800"
-        borderRadius="medium"
+      <Flex
+        direction="column"
+        alignItems="center"
+        gap="size-200"
         UNSAFE_style={{
+          // UNSAFE_style needed: backdrop blur, rgba background, and box-shadow not available via Spectrum props
           background: 'rgba(255, 255, 255, 0.90)',
           backdropFilter: 'blur(10px)',
           boxShadow: '0 8px 32px rgba(0, 0, 0, 0.8)',
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          gap: '16px',
-          minWidth: 400,
-          maxWidth: 520
+          minWidth: `${SPACING.HUGE * 3}px`,
+          maxWidth: '520px',
+          padding: `${SPACING.HUGE}px`,
+          borderRadius: `${SPACING.XS}px`,
         }}
       >
         <Text
@@ -123,7 +124,7 @@ const GroupSelectionScreen: React.FC = () => {
             Continue
           </Button>
         </Flex>
-      </View>
+      </Flex>
     </View>
   )
 }
