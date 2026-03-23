@@ -30,6 +30,7 @@ import Edit from '@spectrum-icons/workflow/Edit'
 import Key from '@spectrum-icons/workflow/Key'
 import { useNavigate } from 'react-router-dom'
 import { useRBAC } from '../../contexts/RBACContext'
+import { useHasPermission } from '../../hooks/useHasPermission'
 import { useToast } from '../../contexts'
 import { IMS } from '../../types'
 import type { RBACUser, UserRole } from '../../types/rbac'
@@ -52,7 +53,8 @@ const SEARCH_KEYS = ['email', 'role']
 
 export const UserManagement: React.FC<UserManagementProps> = () => {
   const navigate = useNavigate()
-  const { isAdmin, allUsers, refreshUsers } = useRBAC()
+  const { allUsers, refreshUsers } = useRBAC()
+  const isAdmin = useHasPermission('user', 'write')
   const toast = useToast()
 
   // Redirect non-admins

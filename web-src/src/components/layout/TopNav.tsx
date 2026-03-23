@@ -11,7 +11,7 @@ import { UserPanel } from '../user'
 import { DevTokenButton } from '../dev'
 import { STICKY_GNAV_STYLES } from '../../styles/designSystem'
 import { useAuth } from '../../contexts/AuthContext'
-import { useRBAC } from '../../contexts/RBACContext'
+import { useHasPermission } from '../../hooks'
 
 interface TopNavProps {
   ims: IMS
@@ -19,7 +19,9 @@ interface TopNavProps {
 
 const TopNav: React.FC<TopNavProps> = ({ ims }) => {
   const { isAuthenticated, isLoading, signIn, authMode } = useAuth()
-  const { isAdmin } = useRBAC()
+  const canReadEvents = useHasPermission('event', 'read')
+  const canReadSeries = useHasPermission('series', 'read')
+  const canReadClouds = useHasPermission('cloud', 'read')
 
   // Only show the standalone sign-in button when:
   //   - Running in standalone mode (not the ExC Shell)
@@ -80,42 +82,44 @@ const TopNav: React.FC<TopNavProps> = ({ ims }) => {
           >
             Overview
           </NavLink>
-          <NavLink
-            className={({ isActive }) => `nav-link ${isActive ? 'is-selected' : ''}`}
-            to="/events"
-          >
-            Events
-          </NavLink>
-          <NavLink
-            className={({ isActive }) => `nav-link ${isActive ? 'is-selected' : ''}`}
-            to="/registrations"
-          >
-            Registrations
-          </NavLink>
-          <NavLink
-            className={({ isActive }) => `nav-link ${isActive ? 'is-selected' : ''}`}
-            to="/speakers"
-          >
-            Speakers
-          </NavLink>
-          <NavLink
-            className={({ isActive }) => `nav-link ${isActive ? 'is-selected' : ''}`}
-            to="/series"
-          >
-            Series
-          </NavLink>
-          <NavLink
-            className={({ isActive }) => `nav-link ${isActive ? 'is-selected' : ''}`}
-            to="/clouds"
-          >
-            Clouds
-          </NavLink>
-          {isAdmin && (
+          {canReadEvents && (
             <NavLink
               className={({ isActive }) => `nav-link ${isActive ? 'is-selected' : ''}`}
-              to="/users"
+              to="/events"
             >
-              Users
+              Events
+            </NavLink>
+          )}
+          {canReadEvents && (
+            <NavLink
+              className={({ isActive }) => `nav-link ${isActive ? 'is-selected' : ''}`}
+              to="/registrations"
+            >
+              Registrations
+            </NavLink>
+          )}
+          {canReadEvents && (
+            <NavLink
+              className={({ isActive }) => `nav-link ${isActive ? 'is-selected' : ''}`}
+              to="/speakers"
+            >
+              Speakers
+            </NavLink>
+          )}
+          {canReadSeries && (
+            <NavLink
+              className={({ isActive }) => `nav-link ${isActive ? 'is-selected' : ''}`}
+              to="/series"
+            >
+              Series
+            </NavLink>
+          )}
+          {canReadClouds && (
+            <NavLink
+              className={({ isActive }) => `nav-link ${isActive ? 'is-selected' : ''}`}
+              to="/clouds"
+            >
+              Clouds
             </NavLink>
           )}
           <NavLink

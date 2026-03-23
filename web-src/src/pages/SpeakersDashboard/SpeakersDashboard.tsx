@@ -43,7 +43,7 @@ import { ResourceDashboardLayout, BlurredLoadingOverlay } from '../../components
 import { SeriesSpeaker, SeriesApiResponse, EventApiResponse } from '../../types/domain'
 import { apiService, cachedApi } from '../../services/api'
 import { IMS } from '../../types'
-import { useToast } from '../../contexts'
+import { useToast, useGroup } from '../../contexts'
 import { createShimmerStyle, COLORS } from '../../styles/designSystem'
 import { useSafeState, useRBACFilter } from '../../hooks'
 import { SpeakerFormDialog } from './SpeakerFormDialog'
@@ -65,6 +65,7 @@ interface SpeakersDashboardProps {
 
 export const SpeakersDashboard: React.FC<SpeakersDashboardProps> = () => {
   const toast = useToast()
+  const { groupVersion } = useGroup()
   const { filterSeries } = useRBACFilter()
   
   // ============================================================================
@@ -125,8 +126,8 @@ export const SpeakersDashboard: React.FC<SpeakersDashboardProps> = () => {
     }
 
     loadSeriesList()
-  }, [])
-  
+  }, [groupVersion]) // eslint-disable-line react-hooks/exhaustive-deps
+
   // Load speakers when series changes
   const loadSpeakers = useCallback(async () => {
     if (!selectedSeriesId) {

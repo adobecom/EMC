@@ -22,7 +22,7 @@ import { apiService, cachedApi } from '../../services/api'
 import { thumbnailEnrichmentManager, venueEnrichmentManager, historyEnrichmentManager, EventThumbnail, EventVenueInfo, EventHistoryInfo } from '../../services/eventEnrichment'
 import { seriesEnrichmentManager, SeriesInfo } from '../../services/seriesEnrichment'
 import { IMS } from '../../types'
-import { useToast } from '../../contexts'
+import { useToast, useGroup } from '../../contexts'
 import { filterEventData } from '../../utils/dataFilters'
 import { useSafeState, useRBACFilter } from '../../hooks'
 import { getEspEnvParam } from '../../config/constants'
@@ -99,9 +99,10 @@ export const EventsDashboard: React.FC<EventsDashboardProps> = () => {
     }
   }
 
+  const { groupVersion } = useGroup()
   useEffect(() => {
     loadEventsData()
-  }, [])
+  }, [groupVersion]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Fetch thumbnails only for visible event IDs (triggered by pagination)
   useEffect(() => {

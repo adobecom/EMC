@@ -20,11 +20,27 @@ import {
   ApiListResponse
 } from '../types/domain'
 import { tokenStorage } from './tokenStorage'
-import { constructRequestHeaders, safeFetch } from './requestHelpers'
+import { constructRequestHeaders, safeFetch, setUploadGroupId } from './requestHelpers'
 import { getCurrentEnvironment, getApiHost, SUPPORTED_CLOUDS } from '../config/constants'
 import { env } from '../config/env'
 import { apiCache } from './cacheUtils'
 import { deduplicateBy } from '../utils/deduplication'
+import type {
+  RBACApiScope,
+  RBACApiGroup,
+  RBACApiRole,
+  RBACPermission,
+  ScopeUser,
+  ScopeCreateBody,
+  GroupCreateBody,
+  GroupUpdateBody,
+  ScopeUserCreateBody,
+  ScopeUserUpdateBody,
+  RoleCreateBody,
+  ScopeChildListResponse,
+  ScopeParentRef,
+  PermissionsListResponse,
+} from '../types/rbacApi'
 
 // ============================================================================
 // TYPES
@@ -83,7 +99,10 @@ function validateObject(value: any, name: string): void {
 class ApiService {
   private config: ApiServiceConfig
   private actionUrls: Record<string, string>
-  
+  private activeGroupId: string | null = null
+  private onStaleGroup: (() => void) | null = null
+  private staleGroupCooldown = false
+
   /**
    * Dry-run mode: when enabled, POST/PUT/DELETE calls are logged but not executed
    * Enable via console: apiService.enableDryRun() or window.enableDryRun()
@@ -151,6 +170,28 @@ class ApiService {
       ...(token && { authorization: `Bearer ${token}` }),
       ...(org && { 'x-gw-ims-org-id': org })
     }
+  }
+
+  /**
+   * Set the active RBAC group ID. When set, all ESP requests
+   * include the x-adobe-esp-group-id header (unless skipGroupHeader is used).
+   */
+  setGroupId(groupId: string | null): void {
+    this.activeGroupId = groupId
+    // Keep requestHelpers in sync for XHR-based uploads
+    setUploadGroupId(groupId)
+  }
+
+  getGroupId(): string | null {
+    return this.activeGroupId
+  }
+
+  /**
+   * Register a callback for stale-group 403 recovery.
+   * GroupContext uses this to auto-refresh groups on permission errors.
+   */
+  setOnStaleGroup(callback: (() => void) | null): void {
+    this.onStaleGroup = callback
   }
 
   // ============================================================================
@@ -352,6 +393,7 @@ class ApiService {
       operationName?: string
       transformResponse?: (data: any) => T
       shouldReturnFullResponse?: boolean
+      skipGroupHeader?: boolean
     }
   ): Promise<T | ErrorResponse> {
     const operationName = options?.operationName || `${method} ${endpoint}`
@@ -381,7 +423,12 @@ class ApiService {
     }
 
     try {
-      const headers = constructRequestHeaders(token, method)
+      const headers: Record<string, string> = constructRequestHeaders(token, method) as any
+
+      // Inject RBAC group header for ESP requests
+      if (this.activeGroupId && !options?.skipGroupHeader) {
+        headers['x-adobe-esp-group-id'] = this.activeGroupId
+      }
 
       const response = await safeFetch(url, {
         method,
@@ -398,6 +445,15 @@ class ApiService {
 
       if (!response.ok) {
         console.error(`❌ ${operationName} failed. Status: ${response.status}`, data)
+
+        // Stale-group recovery: 403 likely means the user's group membership changed.
+        // Cooldown prevents infinite loops (e.g. if getRoleById also returns 403).
+        if (response.status === 403 && this.onStaleGroup && !this.staleGroupCooldown) {
+          this.staleGroupCooldown = true
+          setTimeout(() => { this.staleGroupCooldown = false }, 5000)
+          this.onStaleGroup()
+        }
+
         return { status: response.status, error: data }
       }
 
@@ -447,6 +503,7 @@ class ApiService {
     baseParams?: Record<string, string>
     operationName?: string
     maxPages?: number
+    skipGroupHeader?: boolean
   }): Promise<T[] | ErrorResponse> {
     const {
       service,
@@ -454,7 +511,8 @@ class ApiService {
       listKey,
       baseParams = {},
       operationName = `fetchAllPages(${baseEndpoint})`,
-      maxPages = 100
+      maxPages = 100,
+      skipGroupHeader
     } = options
 
     const items: T[] = []
@@ -471,7 +529,8 @@ class ApiService {
 
       const result = await this.callExternalApi<any>(service, endpoint, 'GET', undefined, {
         operationName: `${operationName} (page ${pageCount + 1})`,
-        shouldReturnFullResponse: true
+        shouldReturnFullResponse: true,
+        skipGroupHeader
       })
 
       if ('error' in result) {
@@ -1533,6 +1592,9 @@ class ApiService {
       xhr.setRequestHeader('x-api-key', 'acom_event_service')
       xhr.setRequestHeader('Authorization', `Bearer ${token}`)
       xhr.setRequestHeader('x-request-id', `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`)
+      if (this.activeGroupId) {
+        xhr.setRequestHeader('x-adobe-esp-group-id', this.activeGroupId)
+      }
 
       if (tracker) {
         xhr.upload.onprogress = (event) => {
@@ -1799,6 +1861,239 @@ class ApiService {
     return this.callExternalApi('esp', `/v1/events/${eventId}/campaigns/${campaignId}`, 'DELETE', undefined,
       { operationName: 'deleteCampaign', shouldReturnFullResponse: true }
     )
+  }
+
+  // ============================================================================
+  // RBAC EXTERNAL APIs (Scopes, Groups, Roles, Permissions)
+  // ============================================================================
+
+  /**
+   * Get the current user's group memberships.
+   * This endpoint does NOT require x-adobe-esp-group-id.
+   */
+  async getMyGroups(): Promise<RBACApiGroup[] | ErrorResponse> {
+    return this.fetchAllPages<RBACApiGroup>({
+      service: 'esp',
+      baseEndpoint: '/v1/users/me/groups',
+      listKey: 'groups',
+      operationName: 'getMyGroups',
+      skipGroupHeader: true
+    })
+  }
+
+  // --- Scopes ---
+
+  async getScopes(type?: string): Promise<RBACApiScope[] | ErrorResponse> {
+    const baseParams: Record<string, string> = {}
+    if (type) baseParams.type = type
+    return this.fetchAllPages<RBACApiScope>({
+      service: 'esp',
+      baseEndpoint: '/v1/scopes',
+      listKey: 'scopes',
+      baseParams,
+      operationName: 'getScopes'
+    })
+  }
+
+  async getScopeById(scopeId: string): Promise<RBACApiScope | ErrorResponse> {
+    validateString(scopeId, 'scope ID')
+    return this.callExternalApi<RBACApiScope>('esp', `/v1/scopes/${scopeId}`, 'GET', undefined, {
+      operationName: 'getScopeById',
+      shouldReturnFullResponse: true
+    })
+  }
+
+  async createScope(data: ScopeCreateBody): Promise<RBACApiScope | ErrorResponse> {
+    validateObject(data, 'scope create body')
+    return this.callExternalApi<RBACApiScope>('esp', '/v1/scopes', 'POST', data, {
+      operationName: 'createScope',
+      shouldReturnFullResponse: true
+    })
+  }
+
+  async updateScope(scopeId: string, data: RBACApiScope): Promise<RBACApiScope | ErrorResponse> {
+    validateString(scopeId, 'scope ID')
+    validateObject(data, 'scope update body')
+    return this.callExternalApi<RBACApiScope>('esp', `/v1/scopes/${scopeId}`, 'PUT', data, {
+      operationName: 'updateScope',
+      shouldReturnFullResponse: true
+    })
+  }
+
+  async deleteScope(scopeId: string): Promise<SuccessResponse | ErrorResponse> {
+    validateString(scopeId, 'scope ID')
+    return this.callExternalApi('esp', `/v1/scopes/${scopeId}`, 'DELETE', undefined, {
+      operationName: 'deleteScope'
+    })
+  }
+
+  async getScopeChildren(scopeId: string): Promise<ScopeChildListResponse | ErrorResponse> {
+    validateString(scopeId, 'scope ID')
+    return this.callExternalApi<ScopeChildListResponse>('esp', `/v1/scopes/${scopeId}/children`, 'GET', undefined, {
+      operationName: 'getScopeChildren',
+      shouldReturnFullResponse: true
+    })
+  }
+
+  async getScopeParent(scopeId: string): Promise<ScopeParentRef | ErrorResponse> {
+    validateString(scopeId, 'scope ID')
+    return this.callExternalApi<ScopeParentRef>('esp', `/v1/scopes/${scopeId}/parent`, 'GET', undefined, {
+      operationName: 'getScopeParent',
+      shouldReturnFullResponse: true
+    })
+  }
+
+  // --- Groups within a Scope ---
+
+  async getGroupsForScope(scopeId: string): Promise<RBACApiGroup[] | ErrorResponse> {
+    validateString(scopeId, 'scope ID')
+    return this.fetchAllPages<RBACApiGroup>({
+      service: 'esp',
+      baseEndpoint: `/v1/scopes/${scopeId}/groups`,
+      listKey: 'groups',
+      operationName: 'getGroupsForScope'
+    })
+  }
+
+  async getGroupById(scopeId: string, groupId: string): Promise<RBACApiGroup | ErrorResponse> {
+    validateString(scopeId, 'scope ID')
+    validateString(groupId, 'group ID')
+    return this.callExternalApi<RBACApiGroup>('esp', `/v1/scopes/${scopeId}/groups/${groupId}`, 'GET', undefined, {
+      operationName: 'getGroupById',
+      shouldReturnFullResponse: true
+    })
+  }
+
+  async createGroup(scopeId: string, data: GroupCreateBody): Promise<RBACApiGroup | ErrorResponse> {
+    validateString(scopeId, 'scope ID')
+    validateObject(data, 'group create body')
+    return this.callExternalApi<RBACApiGroup>('esp', `/v1/scopes/${scopeId}/groups`, 'POST', data, {
+      operationName: 'createGroup',
+      shouldReturnFullResponse: true
+    })
+  }
+
+  async updateGroup(scopeId: string, groupId: string, data: GroupUpdateBody): Promise<RBACApiGroup | ErrorResponse> {
+    validateString(scopeId, 'scope ID')
+    validateString(groupId, 'group ID')
+    validateObject(data, 'group update body')
+    return this.callExternalApi<RBACApiGroup>('esp', `/v1/scopes/${scopeId}/groups/${groupId}`, 'PUT', data, {
+      operationName: 'updateGroup',
+      shouldReturnFullResponse: true
+    })
+  }
+
+  async deleteGroup(scopeId: string, groupId: string): Promise<SuccessResponse | ErrorResponse> {
+    validateString(scopeId, 'scope ID')
+    validateString(groupId, 'group ID')
+    return this.callExternalApi('esp', `/v1/scopes/${scopeId}/groups/${groupId}`, 'DELETE', undefined, {
+      operationName: 'deleteGroup'
+    })
+  }
+
+  // --- Users within a Group ---
+
+  async getGroupUsers(scopeId: string, groupId: string): Promise<ScopeUser[] | ErrorResponse> {
+    validateString(scopeId, 'scope ID')
+    validateString(groupId, 'group ID')
+    return this.fetchAllPages<ScopeUser>({
+      service: 'esp',
+      baseEndpoint: `/v1/scopes/${scopeId}/groups/${groupId}/users`,
+      listKey: 'users',
+      operationName: 'getGroupUsers'
+    })
+  }
+
+  async addGroupUser(scopeId: string, groupId: string, data: ScopeUserCreateBody): Promise<ScopeUser | ErrorResponse> {
+    validateString(scopeId, 'scope ID')
+    validateString(groupId, 'group ID')
+    validateObject(data, 'user create body')
+    return this.callExternalApi<ScopeUser>('esp', `/v1/scopes/${scopeId}/groups/${groupId}/users`, 'POST', data, {
+      operationName: 'addGroupUser',
+      shouldReturnFullResponse: true
+    })
+  }
+
+  async updateGroupUser(scopeId: string, groupId: string, email: string, data: ScopeUserUpdateBody): Promise<ScopeUser | ErrorResponse> {
+    validateString(scopeId, 'scope ID')
+    validateString(groupId, 'group ID')
+    validateString(email, 'email')
+    validateObject(data, 'user update body')
+    return this.callExternalApi<ScopeUser>('esp', `/v1/scopes/${scopeId}/groups/${groupId}/users/${encodeURIComponent(email)}`, 'PUT', data, {
+      operationName: 'updateGroupUser',
+      shouldReturnFullResponse: true
+    })
+  }
+
+  async removeGroupUser(scopeId: string, groupId: string, email: string): Promise<SuccessResponse | ErrorResponse> {
+    validateString(scopeId, 'scope ID')
+    validateString(groupId, 'group ID')
+    validateString(email, 'email')
+    return this.callExternalApi('esp', `/v1/scopes/${scopeId}/groups/${groupId}/users/${encodeURIComponent(email)}`, 'DELETE', undefined, {
+      operationName: 'removeGroupUser'
+    })
+  }
+
+  // --- Roles ---
+
+  async getRoles(): Promise<RBACApiRole[] | ErrorResponse> {
+    return this.fetchAllPages<RBACApiRole>({
+      service: 'esp',
+      baseEndpoint: '/v1/roles',
+      listKey: 'roles',
+      operationName: 'getRoles'
+    })
+  }
+
+  async getRoleById(roleId: string): Promise<RBACApiRole | ErrorResponse> {
+    validateString(roleId, 'role ID')
+    return this.callExternalApi<RBACApiRole>('esp', `/v1/roles/${roleId}`, 'GET', undefined, {
+      operationName: 'getRoleById',
+      shouldReturnFullResponse: true
+    })
+  }
+
+  async createRole(data: RoleCreateBody): Promise<RBACApiRole | ErrorResponse> {
+    validateObject(data, 'role create body')
+    return this.callExternalApi<RBACApiRole>('esp', '/v1/roles', 'POST', data, {
+      operationName: 'createRole',
+      shouldReturnFullResponse: true
+    })
+  }
+
+  async updateRole(roleId: string, data: RBACApiRole): Promise<RBACApiRole | ErrorResponse> {
+    validateString(roleId, 'role ID')
+    validateObject(data, 'role update body')
+    return this.callExternalApi<RBACApiRole>('esp', `/v1/roles/${roleId}`, 'PUT', data, {
+      operationName: 'updateRole',
+      shouldReturnFullResponse: true
+    })
+  }
+
+  async deleteRole(roleId: string): Promise<SuccessResponse | ErrorResponse> {
+    validateString(roleId, 'role ID')
+    return this.callExternalApi('esp', `/v1/roles/${roleId}`, 'DELETE', undefined, {
+      operationName: 'deleteRole'
+    })
+  }
+
+  async getRoleGroups(roleId: string): Promise<RBACApiGroup[] | ErrorResponse> {
+    validateString(roleId, 'role ID')
+    return this.fetchAllPages<RBACApiGroup>({
+      service: 'esp',
+      baseEndpoint: `/v1/roles/${roleId}/groups`,
+      listKey: 'groups',
+      operationName: 'getRoleGroups'
+    })
+  }
+
+  async getPermissionsList(): Promise<RBACPermission[] | ErrorResponse> {
+    const result = await this.callExternalApi<PermissionsListResponse>('esp', '/v1/roles/permissions', 'GET', undefined, {
+      operationName: 'getPermissionsList',
+      shouldReturnFullResponse: true
+    })
+    if ('error' in result) return result
+    return result.permissions
   }
 }
 

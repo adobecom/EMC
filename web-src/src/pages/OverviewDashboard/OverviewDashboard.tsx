@@ -22,7 +22,8 @@ import { BlurredLoadingOverlay } from '../../components/shared'
 import { EventApiResponse, SeriesApiResponse } from '../../types/domain'
 import { COLORS, SPACING, TYPOGRAPHY } from '../../styles/designSystem'
 import { IMS } from '../../types'
-import { useSafeState, useRBACFilter } from '../../hooks'
+import { useSafeState, useRBACFilter, useHasPermission } from '../../hooks'
+import { useGroup } from '../../contexts/GroupContext'
 
 interface OverviewDashboardProps {
   ims: IMS
@@ -279,6 +280,9 @@ const TemplateBreakdown: React.FC<TemplateBreakdownProps> = ({ templateCounts })
  */
 export const OverviewDashboard: React.FC<OverviewDashboardProps> = () => {
   const { filterEvents, filterSeries } = useRBACFilter()
+  const { groupVersion } = useGroup()
+  const canReadEvents = useHasPermission('event', 'read')
+  const canReadSeries = useHasPermission('series', 'read')
   const [events, setEvents] = useSafeState<EventApiResponse[]>([])
   const [series, setSeries] = useSafeState<SeriesApiResponse[]>([])
   const [isLoading, setIsLoading] = useSafeState(true)
@@ -291,10 +295,10 @@ export const OverviewDashboard: React.FC<OverviewDashboardProps> = () => {
     
     try {
       const [eventsData, seriesData] = await Promise.all([
-        cachedApi.getEventsList(),
-        cachedApi.getSeriesList()
+        canReadEvents ? cachedApi.getEventsList() : Promise.resolve([]),
+        canReadSeries ? cachedApi.getSeriesList() : Promise.resolve([])
       ])
-      
+
       setEvents(filterEvents(eventsData))
       setSeries(filterSeries(seriesData))
       setLastUpdated(new Date())
@@ -308,7 +312,7 @@ export const OverviewDashboard: React.FC<OverviewDashboardProps> = () => {
 
   useEffect(() => {
     loadData()
-  }, [])
+  }, [groupVersion]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Calculate statistics
   const stats = useMemo(() => {
@@ -457,48 +461,58 @@ export const OverviewDashboard: React.FC<OverviewDashboardProps> = () => {
                 gap: `${SPACING.MD}px`
               }}
             >
-              <StatCard
-                icon={<Events size="S" />}
-                title="Total Events"
-                value={stats.totalEvents}
-                subtitle={`${stats.upcomingEvents} upcoming, ${stats.pastEvents} past`}
-                color={COLORS.ADOBE_RED}
-                onClick={() => window.location.hash = '#/events'}
-              />
-              
-              <StatCard
-                icon={<Collection size="S" />}
-                title="Total Series"
-                value={stats.totalSeries}
-                subtitle={`${stats.publishedSeries} published`}
-                color="#0D66D0"
-                onClick={() => window.location.hash = '#/series'}
-              />
-              
-              <StatCard
-                icon={<UserGroup size="S" />}
-                title="Total Attendees"
-                value={stats.totalAttendees.toLocaleString()}
-                subtitle={stats.totalCapacity > 0 ? `of ${stats.totalCapacity.toLocaleString()} capacity` : 'registered'}
-                color="#268E6C"
-                onClick={() => window.location.hash = '#/registrations'}
-              />
-              
-              <StatCard
-                icon={<Events size="S" />}
-                title="Published Events"
-                value={stats.publishedEvents}
-                subtitle={`${stats.draftEvents} drafts`}
-                color={COLORS.STATUS_PUBLISHED}
-              />
+              {canReadEvents && (
+                <StatCard
+                  icon={<Events size="S" />}
+                  title="Total Events"
+                  value={stats.totalEvents}
+                  subtitle={`${stats.upcomingEvents} upcoming, ${stats.pastEvents} past`}
+                  color={COLORS.ADOBE_RED}
+                  onClick={() => window.location.hash = '#/events'}
+                />
+              )}
+
+              {canReadSeries && (
+                <StatCard
+                  icon={<Collection size="S" />}
+                  title="Total Series"
+                  value={stats.totalSeries}
+                  subtitle={`${stats.publishedSeries} published`}
+                  color="#0D66D0"
+                  onClick={() => window.location.hash = '#/series'}
+                />
+              )}
+
+              {canReadEvents && (
+                <StatCard
+                  icon={<UserGroup size="S" />}
+                  title="Total Attendees"
+                  value={stats.totalAttendees.toLocaleString()}
+                  subtitle={stats.totalCapacity > 0 ? `of ${stats.totalCapacity.toLocaleString()} capacity` : 'registered'}
+                  color="#268E6C"
+                  onClick={() => window.location.hash = '#/registrations'}
+                />
+              )}
+
+              {canReadEvents && (
+                <StatCard
+                  icon={<Events size="S" />}
+                  title="Published Events"
+                  value={stats.publishedEvents}
+                  subtitle={`${stats.draftEvents} drafts`}
+                  color={COLORS.STATUS_PUBLISHED}
+                />
+              )}
             </View>
 
             {/* Secondary Stats - Two Column Layout */}
+            {(canReadEvents || canReadSeries) && (
             <Flex direction="row" gap="size-300" wrap="wrap">
-              {/* Left Column - Event Distributions */}
+              {/* Left Column - Event & Series Distributions */}
               <View flex="1" minWidth="size-4600">
                 <Flex direction="column" gap="size-300">
                   {/* Event Type Distribution */}
+                  {canReadEvents && (
                   <View
                     backgroundColor="gray-50"
                     borderWidth="thin"
@@ -510,7 +524,7 @@ export const OverviewDashboard: React.FC<OverviewDashboardProps> = () => {
                       <Location size="S" />
                       <Heading level={4} margin="size-0">Events by Type</Heading>
                     </Flex>
-                    
+
                     <Flex direction="row" gap="size-400" marginTop="size-200">
                       <Flex direction="column" alignItems="center" gap="size-50">
                         <Text UNSAFE_style={{ fontSize: '32px', fontWeight: 700, color: '#0D66D0' }}>
@@ -523,7 +537,7 @@ export const OverviewDashboard: React.FC<OverviewDashboardProps> = () => {
                           </Text>
                         </Flex>
                       </Flex>
-                      
+
                       <Flex direction="column" alignItems="center" gap="size-50">
                         <Text UNSAFE_style={{ fontSize: '32px', fontWeight: 700, color: '#2D9D92' }}>
                           {stats.webinarEvents}
@@ -535,7 +549,7 @@ export const OverviewDashboard: React.FC<OverviewDashboardProps> = () => {
                           </Text>
                         </Flex>
                       </Flex>
-                      
+
                       {stats.otherEvents > 0 && (
                         <Flex direction="column" alignItems="center" gap="size-50">
                           <Text UNSAFE_style={{ fontSize: '32px', fontWeight: 700, color: '#6E6E6E' }}>
@@ -547,7 +561,7 @@ export const OverviewDashboard: React.FC<OverviewDashboardProps> = () => {
                         </Flex>
                       )}
                     </Flex>
-                    
+
                     <DistributionBar
                       items={[
                         { label: 'In-Person', value: stats.inPersonEvents, color: '#0D66D0' },
@@ -557,8 +571,10 @@ export const OverviewDashboard: React.FC<OverviewDashboardProps> = () => {
                       total={stats.totalEvents}
                     />
                   </View>
+                  )}
 
                   {/* Cloud Type Distribution */}
+                  {canReadEvents && (
                   <View
                     backgroundColor="gray-50"
                     borderWidth="thin"
@@ -567,7 +583,7 @@ export const OverviewDashboard: React.FC<OverviewDashboardProps> = () => {
                     padding="size-300"
                   >
                     <Heading level={4} margin="size-0" marginBottom="size-200">Events by Cloud</Heading>
-                    
+
                     <Flex direction="row" gap="size-400">
                       <Flex direction="column" gap="size-50">
                         <Text UNSAFE_style={{ fontSize: '28px', fontWeight: 700, color: '#E68619' }}>
@@ -577,7 +593,7 @@ export const OverviewDashboard: React.FC<OverviewDashboardProps> = () => {
                           Creative Cloud
                         </Text>
                       </Flex>
-                      
+
                       <Flex direction="column" gap="size-50">
                         <Text UNSAFE_style={{ fontSize: '28px', fontWeight: 700, color: '#EB1000' }}>
                           {stats.experienceCloudEvents}
@@ -587,7 +603,7 @@ export const OverviewDashboard: React.FC<OverviewDashboardProps> = () => {
                         </Text>
                       </Flex>
                     </Flex>
-                    
+
                     <DistributionBar
                       items={[
                         { label: 'Creative Cloud', value: stats.creativeCloudEvents, color: '#E68619' },
@@ -596,8 +612,10 @@ export const OverviewDashboard: React.FC<OverviewDashboardProps> = () => {
                       total={stats.totalEvents}
                     />
                   </View>
+                  )}
 
                   {/* Series Status Distribution */}
+                  {canReadSeries && (
                   <View
                     backgroundColor="gray-50"
                     borderWidth="thin"
@@ -606,7 +624,7 @@ export const OverviewDashboard: React.FC<OverviewDashboardProps> = () => {
                     padding="size-300"
                   >
                     <Heading level={4} margin="size-0" marginBottom="size-200">Series by Status</Heading>
-                    
+
                     <Flex direction="row" gap="size-300">
                       <Flex direction="column" gap="size-50">
                         <Text UNSAFE_style={{ fontSize: '28px', fontWeight: 700, color: COLORS.STATUS_PUBLISHED }}>
@@ -616,7 +634,7 @@ export const OverviewDashboard: React.FC<OverviewDashboardProps> = () => {
                           Published
                         </Text>
                       </Flex>
-                      
+
                       <Flex direction="column" gap="size-50">
                         <Text UNSAFE_style={{ fontSize: '28px', fontWeight: 700, color: COLORS.STATUS_DRAFT }}>
                           {stats.draftSeries}
@@ -625,7 +643,7 @@ export const OverviewDashboard: React.FC<OverviewDashboardProps> = () => {
                           Draft
                         </Text>
                       </Flex>
-                      
+
                       <Flex direction="column" gap="size-50">
                         <Text UNSAFE_style={{ fontSize: '28px', fontWeight: 700, color: COLORS.STATUS_ARCHIVED }}>
                           {stats.archivedSeries}
@@ -635,7 +653,7 @@ export const OverviewDashboard: React.FC<OverviewDashboardProps> = () => {
                         </Text>
                       </Flex>
                     </Flex>
-                    
+
                     <DistributionBar
                       items={[
                         { label: 'Published', value: stats.publishedSeries, color: COLORS.STATUS_PUBLISHED },
@@ -645,16 +663,21 @@ export const OverviewDashboard: React.FC<OverviewDashboardProps> = () => {
                       total={stats.totalSeries}
                     />
                   </View>
+                  )}
                 </Flex>
               </View>
 
               {/* Right Column - Template Breakdown */}
+              {canReadEvents && (
               <View flex="1" minWidth="size-4600">
                 <TemplateBreakdown templateCounts={stats.templateCounts} />
               </View>
+              )}
             </Flex>
+            )}
 
             {/* Quick Actions */}
+            {(canReadEvents || canReadSeries) && (
             <View
               backgroundColor="gray-100"
               borderRadius="medium"
@@ -663,24 +686,33 @@ export const OverviewDashboard: React.FC<OverviewDashboardProps> = () => {
             >
               <Heading level={4} margin="size-0" marginBottom="size-200">Quick Actions</Heading>
               <Flex direction="row" gap="size-200" wrap="wrap">
-                <ActionButton onPress={() => window.location.hash = '#/events/new/in-person'}>
-                  <Location />
-                  <Text>Create In-Person Event</Text>
-                </ActionButton>
-                <ActionButton onPress={() => window.location.hash = '#/events/new/webinar'}>
-                  <Globe />
-                  <Text>Create Webinar</Text>
-                </ActionButton>
-                <ActionButton onPress={() => window.location.hash = '#/series/new'}>
-                  <Collection />
-                  <Text>Create Series</Text>
-                </ActionButton>
-                <ActionButton onPress={() => window.location.hash = '#/events'}>
-                  <Events />
-                  <Text>View All Events</Text>
-                </ActionButton>
+                {canReadEvents && (
+                  <ActionButton onPress={() => window.location.hash = '#/events/new/in-person'}>
+                    <Location />
+                    <Text>Create In-Person Event</Text>
+                  </ActionButton>
+                )}
+                {canReadEvents && (
+                  <ActionButton onPress={() => window.location.hash = '#/events/new/webinar'}>
+                    <Globe />
+                    <Text>Create Webinar</Text>
+                  </ActionButton>
+                )}
+                {canReadSeries && (
+                  <ActionButton onPress={() => window.location.hash = '#/series/new'}>
+                    <Collection />
+                    <Text>Create Series</Text>
+                  </ActionButton>
+                )}
+                {canReadEvents && (
+                  <ActionButton onPress={() => window.location.hash = '#/events'}>
+                    <Events />
+                    <Text>View All Events</Text>
+                  </ActionButton>
+                )}
               </Flex>
             </View>
+            )}
         </>
       </Flex>
 

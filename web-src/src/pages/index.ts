@@ -30,3 +30,5 @@ export { SeriesForm } from './SeriesForm'
 
 // Admin pages
 export { UserManagement } from './UserManagement'
+export { ScopeGroupManagement } from './ScopeGroupManagement'
+export { RoleManagement } from './RoleManagement'

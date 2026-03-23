@@ -18,9 +18,14 @@ import {
 import UserIcon from '@spectrum-icons/workflow/User'
 import InfoIcon from '@spectrum-icons/workflow/Info'
 import LogOut from '@spectrum-icons/workflow/LogOut'
+import UserGroup from '@spectrum-icons/workflow/UserGroup'
+import LockClosed from '@spectrum-icons/workflow/LockClosed'
+import Checkmark from '@spectrum-icons/workflow/Checkmark'
 import { IMS } from '../../types'
 import { useAuth } from '../../contexts/AuthContext'
 import { useProfileAvatar } from '../../hooks/useProfileAvatar'
+import { useHasAnyPermission } from '../../hooks/useHasPermission'
+import { useGroup } from '../../contexts/GroupContext'
 
 interface UserPanelProps {
   ims: IMS
@@ -32,10 +37,17 @@ export const UserPanel: React.FC<UserPanelProps> = ({ ims, compact = false }) =>
   const { signOut, authMode } = useAuth()
   const { avatarUrl } = useProfileAvatar(ims)
 
+  // RBAC group switching
+  const { groups, activeGroup, setActiveGroup } = useGroup()
+
+  // RBAC admin checks
+  const canManageAccess = useHasAnyPermission([['scope', 'read'], ['group', 'read']])
+  const canManageRoles = useHasAnyPermission([['role', 'read']])
+  const showAdminSection = canManageAccess || canManageRoles
+
   // Extract user info from IMS
   const userName = ims.profile?.name || 'Guest User'
   const userEmail = ims.profile?.email || ''
-  const userId = ims.profile?.userId || ''
 
   // Get initials for avatar
   const getInitials = (name: string): string => {
@@ -55,6 +67,12 @@ export const UserPanel: React.FC<UserPanelProps> = ({ ims, compact = false }) =>
       handleViewProfile()
     } else if (key === 'signout') {
       signOut()
+    } else if (key === 'access') {
+      navigate('/access')
+    } else if (key === 'roles') {
+      navigate('/roles')
+    } else if (typeof key === 'string' && key.startsWith('group_')) {
+      setActiveGroup(key.replace('group_', ''))
     }
   }
 
@@ -138,11 +156,37 @@ export const UserPanel: React.FC<UserPanelProps> = ({ ims, compact = false }) =>
               <UserIcon />
               <Text>View Profile</Text>
             </Item>
-            <Item key="info" textValue="User Info">
-              <InfoIcon />
-              <Text>User ID: {userId.substring(0, 12)}...</Text>
-            </Item>
           </Section>
+          {groups.length > 0 ? (
+            <Section title="Group">
+              {groups.map(group => (
+                <Item
+                  key={`group_${group.groupId}`}
+                  textValue={group.name}
+                >
+                  {activeGroup?.groupId === group.groupId ? <Checkmark /> : <UserGroup />}
+                  <Text>{group.name}</Text>
+                  {group.scopeName && <Text slot="description">{group.scopeName}</Text>}
+                </Item>
+              ))}
+            </Section>
+          ) : null}
+          {showAdminSection ? (
+            <Section title="Administration">
+              {canManageAccess ? (
+                <Item key="access" textValue="Access Management">
+                  <UserGroup />
+                  <Text>Access Management</Text>
+                </Item>
+              ) : null}
+              {canManageRoles ? (
+                <Item key="roles" textValue="Roles">
+                  <LockClosed />
+                  <Text>Roles</Text>
+                </Item>
+              ) : null}
+            </Section>
+          ) : null}
           {/* Sign Out is only meaningful in standalone mode; in ExC Shell the shell handles it */}
           {authMode === 'standalone' ? (
             <Section>
