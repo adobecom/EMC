@@ -384,6 +384,22 @@ class ApiService {
     })
   }
 
+  /** POST /v1/sessions-times/{timeId}/locations - body: { locationId, sessionTimeId } */
+  async createSessionTimeLocation(
+    timeId: string,
+    locationId: string,
+  ): Promise<any | ErrorResponse> {
+    validateString(timeId, 'session time ID')
+    validateString(locationId, 'location ID')
+    return this.callExternalApi('esl', `/v1/sessions-times/${encodeURIComponent(timeId)}/locations`, 'POST', {
+      locationId,
+      sessionTimeId: timeId,
+    }, {
+      operationName: 'createSessionTimeLocation',
+      shouldReturnFullResponse: true,
+    })
+  }
+
   /** GET /v1/sessions/{sessionId}/speakers */
   async getSessionSpeakers(sessionId: string): Promise<any | ErrorResponse> {
     validateString(sessionId, 'session ID')
