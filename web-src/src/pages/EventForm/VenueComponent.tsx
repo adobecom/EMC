@@ -5,13 +5,11 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react'
 import {
   View,
-  Flex,
   Heading,
-  Text,
   ActionButton,
   Switch
 } from '@adobe/react-spectrum'
-import { TextField } from '@react-spectrum/s2'
+import { TextField, Text } from '@react-spectrum/s2'
 import { style } from "@react-spectrum/s2/style" with { type: "macro" }
 import Add from '@spectrum-icons/workflow/Add'
 import Remove from '@spectrum-icons/workflow/Remove'
@@ -556,7 +554,7 @@ export const VenueComponent: React.FC = () => {
   // ============================================================================
 
   return (
-    <Flex direction="column" gap="size-300">
+    <div className={style({display: 'flex', flexDirection: 'column', gap: 24})}>
       {/* Section Heading */}
       <Heading level={3} UNSAFE_style={TYPOGRAPHY.COMPONENT_HEADING}>
         Venue information<span style={{ color: COLORS.ADOBE_RED }}>*</span>
@@ -575,7 +573,7 @@ export const VenueComponent: React.FC = () => {
 
       {/* Venue Name Field */}
       <View width="100%">
-        <Flex justifyContent="space-between" alignItems="center" marginBottom="size-50">
+        <div className={style({display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4})}>
           <Text UNSAFE_style={{ 
             fontSize: '14px',
             color: COLORS.GRAY_700
@@ -588,8 +586,8 @@ export const VenueComponent: React.FC = () => {
           }}>
             {VENUE_NAME_MAX_LENGTH} characters max
           </Text>
-        </Flex>
-        
+        </div>
+
         <input
           id="venue-name-input"
           ref={venueNameInputRef}
@@ -719,6 +717,6 @@ export const VenueComponent: React.FC = () => {
           height="200px"
         />
       </View>
-    </Flex>
+    </div>
   )
 }

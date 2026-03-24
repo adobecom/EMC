@@ -7,13 +7,11 @@ import {
   View,
   DatePicker,
   TimeField,
-  Flex,
   Switch,
   ActionButton,
   Heading,
-  Text
 } from '@adobe/react-spectrum'
-import { Button, Text as S2Text, TextField } from '@react-spectrum/s2'
+import { Button, Text, TextField } from '@react-spectrum/s2'
 import { style } from '@react-spectrum/s2/style' with { type: 'macro' }
 import { Time } from '@internationalized/date'
 import { parseDateTime, CalendarDateTime } from '@internationalized/date'
@@ -435,9 +433,9 @@ export const AgendaComponent: React.FC = () => {
   // ============================================================================
 
   return (
-    <Flex direction="column" gap="size-200">
+    <div className={style({display: 'flex', flexDirection: 'column', gap: 16})}>
       {/* Header with toggles */}
-      <Flex direction="row" justifyContent="space-between" alignItems="start">
+      <div className={style({display: 'flex', justifyContent: 'space-between', alignItems: 'start'})}>
         <HeadingWithTooltip 
           level={3}
           tooltip="What is happening at your event and when? You can also specify whether the agenda should be shown post-event."
@@ -445,7 +443,7 @@ export const AgendaComponent: React.FC = () => {
           Agenda
         </HeadingWithTooltip>
         
-        <Flex direction="column" gap="size-100" alignItems="end">
+        <div className={style({display: 'flex', flexDirection: 'column', gap: 8, alignItems: 'end'})}>
           <View UNSAFE_style={{ display: 'inline-block' }}>
             <Switch
               isSelected={orderByTime}
@@ -464,8 +462,8 @@ export const AgendaComponent: React.FC = () => {
               Allow dates outside event window
             </Switch>
           </View>
-        </Flex>
-      </Flex>
+        </div>
+      </div>
 
       {/* Agenda Items - Empty State */}
       {agendaItems.length === 0 && (
@@ -475,16 +473,16 @@ export const AgendaComponent: React.FC = () => {
           borderRadius="medium"
           UNSAFE_style={{ textAlign: 'center' }}
         >
-          <Flex direction="column" alignItems="center" gap="size-200">
+          <div className={style({display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 16})}>
             <Text>Create a new time slot to add to your agenda</Text>
-            <Button 
-              variant="secondary" 
+            <Button
+              variant="secondary"
               onPress={addAgendaItem}
             >
               <Add />
-              <S2Text>Add slot</S2Text>
+              <Text>Add slot</Text>
             </Button>
-          </Flex>
+          </div>
         </View>
       )}
 
@@ -520,7 +518,7 @@ export const AgendaComponent: React.FC = () => {
                 transition: 'border-color 0.2s, background-color 0.2s'
               }}
             >
-              <Flex gap="size-200">
+              <div className={style({display: 'flex', gap: 16})}>
                 {/* Content area */}
                 <div 
                   style={{ 
@@ -561,7 +559,7 @@ export const AgendaComponent: React.FC = () => {
                 </div>
 
                 {/* Action buttons */}
-                <Flex gap="size-100" alignItems="center" UNSAFE_style={{ flexShrink: 0 }}>
+                <div className={style({display: 'flex', gap: 8, alignItems: 'center'})} style={{ flexShrink: 0 }}>
                   <ActionButton 
                     onPress={() => removeAgendaItem(index)} 
                     isQuiet 
@@ -580,8 +578,8 @@ export const AgendaComponent: React.FC = () => {
                   {!orderByTime && (
                     <DragHandle />
                   )}
-                </Flex>
-              </Flex>
+                </div>
+              </div>
             </div>
           )
         }
@@ -603,8 +601,8 @@ export const AgendaComponent: React.FC = () => {
             }}
           >
             {/* Header with collapse toggle and delete */}
-            <Flex justifyContent="space-between" alignItems="center" marginBottom="size-200">
-              <Flex alignItems="center" gap="size-100">
+            <div className={style({display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16})}>
+              <div className={style({display: 'flex', alignItems: 'center', gap: 8})}>
                 {isItemComplete(item) && (
                   <ActionButton 
                     onPress={() => handleToggleCollapse(index)} 
@@ -618,19 +616,19 @@ export const AgendaComponent: React.FC = () => {
                 <Heading level={4} UNSAFE_style={{ margin: 0 }}>
                   {item.title || `Agenda Item ${index + 1}`}
                 </Heading>
-              </Flex>
-              <ActionButton 
+              </div>
+              <ActionButton
                 isQuiet
                 onPress={() => removeAgendaItem(index)}
                 aria-label="Delete"
               >
                 <Delete />
               </ActionButton>
-            </Flex>
+            </div>
 
-            <Flex direction="column" gap="size-200">
+            <div className={style({display: 'flex', flexDirection: 'column', gap: 16})}>
               {/* Date/Time Row - shows TimeField only for same-day events when clamped */}
-              <Flex direction="row" gap="size-200" wrap>
+              <div className={style({display: 'flex', gap: 16, flexWrap: 'wrap'})}>
                 {showTimeOnly ? (
                   <>
                     <TimeField
@@ -675,7 +673,7 @@ export const AgendaComponent: React.FC = () => {
                     />
                   </>
                 )}
-              </Flex>
+              </div>
 
               {/* Title */}
               <TextField
@@ -698,16 +696,16 @@ export const AgendaComponent: React.FC = () => {
 
               {/* Done button - collapse when complete */}
               {isItemComplete(item) && (
-                <Flex justifyContent="end">
-                  <Button 
-                    variant="secondary" 
+                <div className={style({display: 'flex', justifyContent: 'end'})}>
+                  <Button
+                    variant="secondary"
                     onPress={() => handleToggleCollapse(index)}
                   >
                     Done
                   </Button>
-                </Flex>
+                </div>
               )}
-            </Flex>
+            </div>
           </div>
         )
       })}
@@ -727,7 +725,7 @@ export const AgendaComponent: React.FC = () => {
           }}
         >
           <Add />
-          <S2Text>Add another time slot</S2Text>
+          <Text>Add another time slot</Text>
         </Button>
       )}
 
@@ -740,6 +738,6 @@ export const AgendaComponent: React.FC = () => {
           Show agenda post-event
         </Switch>
       </View>
-    </Flex>
+    </div>
   )
 }

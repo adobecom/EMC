@@ -5,12 +5,10 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react'
 import {
   View,
-  Flex,
-  Text,
   ActionButton,
   ProgressCircle,
 } from '@adobe/react-spectrum'
-import { Button, Text as S2Text, Picker, PickerItem } from '@react-spectrum/s2'
+import { Button, Text, Picker, PickerItem } from '@react-spectrum/s2'
 import { style } from '@react-spectrum/s2/style' with { type: 'macro' }
 import Remove from '@spectrum-icons/workflow/Remove'
 import Add from "@react-spectrum/s2/icons/Add"
@@ -223,8 +221,8 @@ export const PromotionalContentComponent: React.FC = () => {
   // ============================================================================
   
   return (
-    <Flex direction="column" gap="size-200">
-      <Flex alignItems="center" gap="size-150">
+    <div className={style({display: 'flex', flexDirection: 'column', gap: 16})}>
+      <div className={style({display: 'flex', alignItems: 'center', gap: 12})}>
         <HeadingWithTooltip 
           level={3}
           tooltip="Select promotional content to feature on your event page. These items help highlight relevant Adobe products and resources."
@@ -234,8 +232,8 @@ export const PromotionalContentComponent: React.FC = () => {
         {isLoading && (
           <ProgressCircle size="S" isIndeterminate aria-label="Loading promotional content" />
         )}
-      </Flex>
-      
+      </div>
+
       {loadError && (
         <View 
           padding="size-200" 
@@ -257,17 +255,17 @@ export const PromotionalContentComponent: React.FC = () => {
           borderRadius="medium"
           UNSAFE_style={{ textAlign: 'center' }}
         >
-          <Flex direction="column" alignItems="center" gap="size-200">
+          <div className={style({display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 16})}>
             <Text>Add promotional content to feature on your event page</Text>
-            <Button 
-              variant="secondary" 
+            <Button
+              variant="secondary"
               onPress={addPromotionalItem}
               isDisabled={isLoading || availablePromotions.length === 0}
             >
               <Add />
-              <S2Text>Add promotional item</S2Text>
+              <Text>Add promotional item</Text>
             </Button>
-          </Flex>
+          </div>
         </View>
       )}
 
@@ -277,13 +275,10 @@ export const PromotionalContentComponent: React.FC = () => {
         const availableOptions = getAvailableOptions(item.name)
         
         return (
-          <Flex 
-            key={item.id} 
-            alignItems="center" 
-            gap="size-200"
-            UNSAFE_style={{
-              padding: '12px 0',
-            }}
+          <div
+            key={item.id}
+            className={style({display: 'flex', alignItems: 'center', gap: 16})}
+            style={{padding: '12px 0'}}
           >
             {/* Promotion Icon/Image */}
             <View
@@ -343,10 +338,10 @@ export const PromotionalContentComponent: React.FC = () => {
             >
               <Remove size="S" />
             </ActionButton>
-          </Flex>
+          </div>
         )
       })}
-      
+
       {/* Add Promotional Item Button - only show when items exist */}
       {selectedItems.length > 0 && (
         <Button
@@ -361,10 +356,10 @@ export const PromotionalContentComponent: React.FC = () => {
           }}
         >
           <Add />
-          <S2Text>Add promotional item</S2Text>
+          <Text>Add promotional item</Text>
         </Button>
       )}
-    </Flex>
+    </div>
   )
 }
 

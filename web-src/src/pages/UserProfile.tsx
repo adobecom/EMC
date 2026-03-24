@@ -7,12 +7,12 @@ import {
   View,
   Heading,
   Flex,
-  Text,
   Content,
   IllustratedMessage,
   Divider,
   Well
 } from '@adobe/react-spectrum'
+import { Text } from '@react-spectrum/s2'
 import User from '@spectrum-icons/workflow/User'
 import Building from '@spectrum-icons/workflow/Building'
 import Key from '@spectrum-icons/workflow/Key'

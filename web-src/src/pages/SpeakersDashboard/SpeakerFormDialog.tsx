@@ -16,13 +16,11 @@ import React, { useState, useCallback, useEffect } from 'react'
 import {
   Form,
   View,
-  Flex,
-  Text,
   ActionButton,
   ProgressCircle,
   Checkbox
 } from '@adobe/react-spectrum'
-import { Button, ButtonGroup, TextField, Dialog, DialogTrigger, Content, Heading } from '@react-spectrum/s2'
+import { Text, Button, ButtonGroup, TextField, Dialog, DialogTrigger, Content, Heading } from '@react-spectrum/s2'
 import { style } from '@react-spectrum/s2/style' with { type: 'macro' }
 import Add from '@spectrum-icons/workflow/Add'
 import Delete from '@spectrum-icons/workflow/Delete'
@@ -31,7 +29,7 @@ import { SpeakerDashboardItem } from './SpeakersDashboard'
 import { SocialLinkFormData } from '../../types/domain'
 import { RichTextEditor, ImageUploader } from '../../components/shared'
 import { detectSocialPlatform, isValidUrl, toApiSocialLink, fromApiSocialLink } from '../../utils/socialPlatformDetector'
-import { TYPOGRAPHY, FLEX_GAP } from '../../styles/designSystem'
+import { TYPOGRAPHY } from '../../styles/designSystem'
 
 interface SpeakerFormDialogProps {
   isOpen: boolean
@@ -182,9 +180,9 @@ export const SpeakerFormDialog: React.FC<SpeakerFormDialogProps> = ({
             <Heading slot="title">{isEditing ? 'Edit Speaker' : 'Add Speaker'}</Heading>
             <Content>
               <Form>
-                <Flex direction="column" gap={FLEX_GAP.SECTION}>
+                <div className={style({display: 'flex', flexDirection: 'column', gap: 24})}>
                   {/* Name Fields */}
-                  <Flex direction="row" gap={FLEX_GAP.FIELD}>
+                  <div className={style({display: 'flex', gap: 16})}>
                     <TextField
                       label="First Name"
                       value={formState.firstName}
@@ -199,7 +197,7 @@ export const SpeakerFormDialog: React.FC<SpeakerFormDialogProps> = ({
                       isRequired
                       styles={style({ width: '[100%]' })}
                     />
-                  </Flex>
+                  </div>
 
                   {/* Profile Image */}
                   <View width="100%" UNSAFE_style={{ maxWidth: '300px' }}>
@@ -243,26 +241,26 @@ export const SpeakerFormDialog: React.FC<SpeakerFormDialogProps> = ({
 
                   {/* Social Links */}
                   <View>
-                    <Flex justifyContent="space-between" alignItems="center" marginBottom="size-100">
+                    <div className={style({display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8})}>
                       <Text UNSAFE_style={TYPOGRAPHY.FIELD_LABEL}>Social Media Links</Text>
                       <ActionButton onPress={handleAddSocialLink} isQuiet>
                         <Add />
                         <Text>Add Link</Text>
                       </ActionButton>
-                    </Flex>
+                    </div>
 
                     {formState.socialLinks.length === 0 ? (
                       <Text UNSAFE_style={{ fontSize: '14px', color: 'var(--spectrum-global-color-gray-600)', fontStyle: 'italic' }}>
                         No social media links added yet.
                       </Text>
                     ) : (
-                      <Flex direction="column" gap="size-100">
+                      <div className={style({display: 'flex', flexDirection: 'column', gap: 8})}>
                         {formState.socialLinks.map((socialLink, index) => {
                           const detectedPlatform = detectSocialPlatform(socialLink.url)
                           const valid = isValidUrl(socialLink.url)
 
                           return (
-                            <Flex key={index} gap="size-100" alignItems="center">
+                            <div key={index} className={style({display: 'flex', gap: 8, alignItems: 'center'})}>
                               <View
                                 UNSAFE_style={{
                                   minWidth: '40px',
@@ -293,10 +291,10 @@ export const SpeakerFormDialog: React.FC<SpeakerFormDialogProps> = ({
                               <ActionButton onPress={() => handleRemoveSocialLink(index)} isQuiet>
                                 <Delete />
                               </ActionButton>
-                            </Flex>
+                            </div>
                           )
                         })}
-                      </Flex>
+                      </div>
                     )}
                   </View>
 
@@ -320,7 +318,7 @@ export const SpeakerFormDialog: React.FC<SpeakerFormDialogProps> = ({
                       </Text>
                     </View>
                   )}
-                </Flex>
+                </div>
               </Form>
             </Content>
             <ButtonGroup>

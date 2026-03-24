@@ -5,18 +5,16 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react'
 import {
   View,
-  Flex,
-  Text,
   ActionButton,
   ProgressCircle,
   TooltipTrigger,
   Tooltip,
 } from '@adobe/react-spectrum'
-import { Button, Heading, Text as S2Text, Picker, PickerItem } from '@react-spectrum/s2'
+import { Button, Heading, Text, Picker, PickerItem } from '@react-spectrum/s2'
 import { style } from '@react-spectrum/s2/style' with { type: 'macro' }
 import { ProfileData, SeriesSpeaker, SpeakerType, EventApiResponse } from '../../types/domain'
 import { SpeakerPickerDialog } from './SpeakerPickerDialog'
-import { TYPOGRAPHY, FLEX_GAP, COLORS } from '../../styles/designSystem'
+import { TYPOGRAPHY, COLORS } from '../../styles/designSystem'
 import { speakerHasLocalization } from '../../utils/eventFormMappers'
 import Add from '@spectrum-icons/workflow/Add'
 import Alert from '@spectrum-icons/workflow/Alert'
@@ -351,15 +349,15 @@ export const SpeakersComponent: React.FC = () => {
   }
 
   return (
-    <Flex direction="column" gap={FLEX_GAP.SECTION}>
-      <Flex alignItems="center" gap="size-150">
+    <div className={style({display: 'flex', flexDirection: 'column', gap: 24})}>
+      <div className={style({display: 'flex', alignItems: 'center', gap: 12})}>
         <Heading level={3} UNSAFE_style={TYPOGRAPHY.COMPONENT_HEADING}>
           Speakers & Hosts
         </Heading>
         {isLoadingSpeakers && (
           <ProgressCircle size="S" isIndeterminate aria-label="Loading speakers" />
         )}
-      </Flex>
+      </div>
 
       <Text>
         Add speaker and event host details. Drag to reorder. You can change each speaker&apos;s role for this event.
@@ -372,13 +370,13 @@ export const SpeakersComponent: React.FC = () => {
           borderRadius="medium"
           UNSAFE_style={{ textAlign: 'center' }}
         >
-          <Flex direction="column" alignItems="center" gap="size-200">
+          <div className={style({display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 16})}>
             <Text>Add speakers to your event using the button below.</Text>
             <Button variant="secondary" onPress={() => setPickerOpen(true)}>
               <Add />
-              <S2Text>Add Speaker</S2Text>
+              <Text>Add Speaker</Text>
             </Button>
-          </Flex>
+          </div>
         </View>
       )}
 
@@ -427,7 +425,7 @@ export const SpeakersComponent: React.FC = () => {
               transition: 'border-color 0.2s, background-color 0.2s',
             }}
           >
-            <Flex alignItems="center" gap="size-200">
+            <div className={style({display: 'flex', alignItems: 'center', gap: 16})}>
               <DragHandle UNSAFE_style={{ flexShrink: 0, cursor: 'grab' }} />
 
               {profile.imageUrl ? (
@@ -463,8 +461,8 @@ export const SpeakersComponent: React.FC = () => {
                 </View>
               )}
 
-              <Flex direction="column" flex={1} minWidth={0}>
-                <Flex alignItems="center" gap="size-100">
+              <div className={style({display: 'flex', flexDirection: 'column', flexGrow: 1})} style={{minWidth: 0}}>
+                <div className={style({display: 'flex', alignItems: 'center', gap: 8})}>
                   <Text UNSAFE_style={{ fontWeight: 600, fontSize: '14px' }}>{displayName}</Text>
                   {missingLocalization && (
                     <TooltipTrigger delay={0}>
@@ -480,7 +478,7 @@ export const SpeakersComponent: React.FC = () => {
                       </Tooltip>
                     </TooltipTrigger>
                   )}
-                </Flex>
+                </div>
                 {profile.title && (
                   <Text
                     UNSAFE_style={{
@@ -499,7 +497,7 @@ export const SpeakersComponent: React.FC = () => {
                     No bio for this locale
                   </Text>
                 )}
-              </Flex>
+              </div>
 
               <Picker
                 label="Role"
@@ -516,7 +514,7 @@ export const SpeakersComponent: React.FC = () => {
               <ActionButton onPress={() => removeProfile(index)} isQuiet aria-label="Remove speaker">
                 <Delete size="S" />
               </ActionButton>
-            </Flex>
+            </div>
           </div>
         )
       })}
@@ -535,7 +533,7 @@ export const SpeakersComponent: React.FC = () => {
           }}
         >
           <Add />
-          <S2Text>Add Speaker</S2Text>
+          <Text>Add Speaker</Text>
         </Button>
       )}
 
@@ -549,6 +547,6 @@ export const SpeakersComponent: React.FC = () => {
         locale={locale}
         onSpeakersRefresh={refreshSeriesSpeakers}
       />
-    </Flex>
+    </div>
   )
 }

@@ -5,19 +5,16 @@
 import React, { useState, useMemo, useCallback, useEffect } from 'react'
 import {
   View,
-  Flex,
-  Text,
   ActionButton,
   ProgressCircle,
-  SearchField,
 } from '@adobe/react-spectrum'
-import { Button, Dialog, DialogContainer, TextField } from '@react-spectrum/s2'
+import { Button, Dialog, DialogContainer, TextField, Text, SearchField } from '@react-spectrum/s2'
 import { style } from '@react-spectrum/s2/style' with { type: 'macro' }
 import Add from '@spectrum-icons/workflow/Add'
 import ArrowLeft from '@spectrum-icons/workflow/ArrowLeft'
 import { SeriesSponsor, SponsorData } from '../../types/domain'
 import { ImageUploader } from '../../components/shared'
-import { TYPOGRAPHY, FLEX_GAP } from '../../styles/designSystem'
+import { TYPOGRAPHY } from '../../styles/designSystem'
 import { apiService, cachedApi } from '../../services/api'
 import { uploadImage, UploadTracker } from '../../services/requestHelpers'
 import { getCurrentEnvironment, getApiHost } from '../../config/constants'
@@ -244,14 +241,14 @@ export const PartnerPickerDialog: React.FC<PartnerPickerDialogProps> = ({
 
   const renderSelectView = () => (
     <>
-      <Flex justifyContent="space-between" alignItems="center" marginBottom="size-200">
-        <Flex alignItems="center" gap="size-100">
+      <div className={style({display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16})}>
+        <div className={style({display: 'flex', alignItems: 'center', gap: 8})}>
           <Text UNSAFE_style={TYPOGRAPHY.COMPONENT_HEADING}>Select Partner</Text>
           {isLoadingSponsors && (
             <ProgressCircle size="S" isIndeterminate aria-label="Loading partners" />
           )}
-        </Flex>
-        <Flex gap="size-100" alignItems="center">
+        </div>
+        <div className={style({display: 'flex', gap: 8, alignItems: 'center'})}>
           <ActionButton onPress={handleSwitchToCreate} aria-label="Create new partner">
             <Add />
           </ActionButton>
@@ -262,15 +259,14 @@ export const PartnerPickerDialog: React.FC<PartnerPickerDialogProps> = ({
           >
             <Text>Select</Text>
           </Button>
-        </Flex>
-      </Flex>
+        </div>
+      </div>
 
       <SearchField
         label="Search partners"
         value={searchQuery}
         onChange={setSearchQuery}
-        width="100%"
-        marginBottom="size-300"
+        styles={style({ width: '[100%]', marginBottom: 24 })}
       />
 
       {filteredSponsors.length === 0 ? (
@@ -278,7 +274,7 @@ export const PartnerPickerDialog: React.FC<PartnerPickerDialogProps> = ({
           <Text>No partners available. Create a new one using the + button above.</Text>
         </View>
       ) : (
-        <Flex direction="column" gap="size-100">
+        <div className={style({display: 'flex', flexDirection: 'column', gap: 8})}>
           {filteredSponsors.map((sponsor) => {
             const imageData = sponsor.image || sponsor.logo
             const isSelected = selectedSponsorId === sponsor.sponsorId
@@ -339,24 +335,24 @@ export const PartnerPickerDialog: React.FC<PartnerPickerDialogProps> = ({
               </div>
             )
           })}
-        </Flex>
+        </div>
       )}
     </>
   )
 
   const renderCreateView = () => (
     <>
-      <Flex justifyContent="space-between" alignItems="center" marginBottom="size-200">
-        <Flex alignItems="center" gap="size-100">
+      <div className={style({display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16})}>
+        <div className={style({display: 'flex', alignItems: 'center', gap: 8})}>
           <ActionButton onPress={handleBackToSelect} isQuiet aria-label="Back to search">
             <ArrowLeft />
           </ActionButton>
           <Text UNSAFE_style={TYPOGRAPHY.COMPONENT_HEADING}>New Partner</Text>
-        </Flex>
-      </Flex>
+        </div>
+      </div>
 
-      <Flex direction="column" gap={FLEX_GAP.FIELD}>
-        <Flex gap={FLEX_GAP.LARGE} alignItems="start">
+      <div className={style({display: 'flex', flexDirection: 'column', gap: 16})}>
+        <div className={style({display: 'flex', gap: 32, alignItems: 'start'})}>
           <View UNSAFE_style={{ textAlign: 'center' }}>
             <ImageUploader
               label=""
@@ -383,7 +379,7 @@ export const PartnerPickerDialog: React.FC<PartnerPickerDialogProps> = ({
             />
           </View>
 
-          <Flex direction="column" gap={FLEX_GAP.FIELD} flex={1}>
+          <div className={style({display: 'flex', flexDirection: 'column', gap: 16, flexGrow: 1})}>
             <TextField
               label="Partner Name"
               value={createForm.name}
@@ -399,10 +395,10 @@ export const PartnerPickerDialog: React.FC<PartnerPickerDialogProps> = ({
               isRequired
               styles={style({ width: '[100%]' })}
             />
-          </Flex>
-        </Flex>
+          </div>
+        </div>
 
-        <Flex justifyContent="end" marginTop="size-200">
+        <div className={style({display: 'flex', justifyContent: 'end', marginTop: 16})}>
           <Button
             variant="accent"
             onPress={handleCreatePartner}
@@ -417,8 +413,8 @@ export const PartnerPickerDialog: React.FC<PartnerPickerDialogProps> = ({
               <Text>Add Partner</Text>
             )}
           </Button>
-        </Flex>
-      </Flex>
+        </div>
+      </div>
     </>
   )
 

@@ -1,5 +1,5 @@
 import React from 'react'
-import { Flex, Heading, TooltipTrigger, Tooltip } from '@adobe/react-spectrum'
+import { Heading, TooltipTrigger, Tooltip } from '@adobe/react-spectrum'
 import { ActionButton } from "@react-spectrum/s2"
 import { style } from "@react-spectrum/s2/style" with { type: "macro" }
 import InfoCircle from "@react-spectrum/s2/icons/InfoCircle"
@@ -10,23 +10,23 @@ interface HeadingWithTooltipProps {
    * The heading text to display
    */
   children: React.ReactNode
-  
+
   /**
    * The tooltip content to show on hover
    */
   tooltip?: string | React.ReactNode
-  
+
   /**
    * The heading level (1-6)
    * Level 3 is styled as a step heading (red, 24px, bold)
    */
   level?: 1 | 2 | 3 | 4 | 5 | 6
-  
+
   /**
    * Optional margin bottom
    */
   marginBottom?: 'size-0' | 'size-50' | 'size-100' | 'size-150' | 'size-200' | 'size-300' | 'size-400'
-  
+
   /**
    * Optional additional styles
    */
@@ -50,12 +50,12 @@ export const HeadingWithTooltip: React.FC<HeadingWithTooltipProps> = ({
   UNSAFE_style
 }) => {
   const headingStyles = getHeadingStyles(level, UNSAFE_style)
-  
+
   // If no tooltip provided, just render the heading
   if (!tooltip) {
     return (
-      <Heading 
-        level={level} 
+      <Heading
+        level={level}
         marginBottom={marginBottom}
         UNSAFE_style={headingStyles}
       >
@@ -65,19 +65,17 @@ export const HeadingWithTooltip: React.FC<HeadingWithTooltipProps> = ({
   }
 
   return (
-    <Flex 
-      direction="row" 
-      gap="size-100" 
-      alignItems="center"
-      marginBottom={marginBottom}
+    <div
+      className={style({ display: 'flex', gap: 8, alignItems: 'center' })}
+      style={{ marginBottom: marginBottom ? undefined : undefined }}
     >
-      <Heading 
+      <Heading
         level={level}
         UNSAFE_style={headingStyles}
       >
         {children}
       </Heading>
-      
+
       <TooltipTrigger delay={0}>
         <ActionButton
           isQuiet
@@ -87,7 +85,6 @@ export const HeadingWithTooltip: React.FC<HeadingWithTooltipProps> = ({
         </ActionButton>
         <Tooltip variant="info">{tooltip}</Tooltip>
       </TooltipTrigger>
-    </Flex>
+    </div>
   )
 }
-

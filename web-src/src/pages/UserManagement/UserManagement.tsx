@@ -8,15 +8,12 @@
 import React, { useState, useCallback, useMemo, useEffect } from 'react'
 import {
   View,
-  Text,
-  Flex,
   DialogTrigger as V3DialogTrigger,
   AlertDialog,
   ActionButton,
-  Badge,
   Well,
 } from '@adobe/react-spectrum'
-import { Button, ButtonGroup, Text as S2Text, TextField, Picker, PickerItem, DialogTrigger, Dialog, Content, Heading } from '@react-spectrum/s2'
+import { Badge, Button, ButtonGroup, Text, TextField, Picker, PickerItem, DialogTrigger, Dialog, Content, Heading } from '@react-spectrum/s2'
 import { style } from "@react-spectrum/s2/style" with { type: "macro" }
 import Delete from '@spectrum-icons/workflow/Delete'
 import Edit from '@spectrum-icons/workflow/Edit'
@@ -280,14 +277,14 @@ export const UserManagement: React.FC<UserManagementProps> = () => {
       width: 120,
       sortable: false,
       render: (item) => (
-        <Flex gap="size-100">
+        <div className={style({display: 'flex', gap: 8})}>
           <ActionButton isQuiet aria-label="Edit user" onPress={() => openEditDialog(item)}>
             <Edit size="S" />
           </ActionButton>
           <ActionButton isQuiet aria-label="Delete user" onPress={() => setUserToDelete(item)}>
             <Delete size="S" />
           </ActionButton>
-        </Flex>
+        </div>
       ),
     },
   ], [openEditDialog])
@@ -296,11 +293,11 @@ export const UserManagement: React.FC<UserManagementProps> = () => {
 
   return (
     <View padding="size-400" maxWidth="1400px" marginX="auto">
-      <Flex direction="column" gap="size-400">
+      <div className={style({display: 'flex', flexDirection: 'column', gap: 32})}>
         {/* Header */}
-        <Flex justifyContent="space-between" alignItems="center">
+        <div className={style({display: 'flex', justifyContent: 'space-between', alignItems: 'center'})}>
           <Heading level={1}>User Management</Heading>
-          <Flex gap="size-200" alignItems="center">
+          <div className={style({display: 'flex', gap: 16, alignItems: 'center'})}>
             {isConnected ? (
               <>
                 <Badge variant="positive">GitHub Connected</Badge>
@@ -312,14 +309,14 @@ export const UserManagement: React.FC<UserManagementProps> = () => {
               <DialogTrigger>
                 <Button variant="secondary">
                   <Key />
-                  <S2Text>Connect GitHub</S2Text>
+                  <Text>Connect GitHub</Text>
                 </Button>
                 <Dialog>
                   {({close}) => (
                     <>
                       <Heading slot="title">GitHub Personal Access Token</Heading>
                       <Content>
-                        <Flex direction="column" gap="size-200">
+                        <div className={style({display: 'flex', flexDirection: 'column', gap: 16})}>
                           <Text>
                             A GitHub Personal Access Token (classic) with <strong>repo</strong> scope
                             is required to create pull requests against adobecom/emc.
@@ -345,7 +342,7 @@ export const UserManagement: React.FC<UserManagementProps> = () => {
                             styles={style({ width: '[100%]' })}
                             autoFocus
                           />
-                        </Flex>
+                        </div>
                       </Content>
                       <ButtonGroup>
                         <Button variant="secondary" onPress={close}>Cancel</Button>
@@ -362,8 +359,8 @@ export const UserManagement: React.FC<UserManagementProps> = () => {
                 </Dialog>
               </DialogTrigger>
             )}
-          </Flex>
-        </Flex>
+          </div>
+        </div>
 
         {!isConnected && (
           <Well>
@@ -387,7 +384,7 @@ export const UserManagement: React.FC<UserManagementProps> = () => {
           searchPlaceholder="Search users..."
           searchKeys={SEARCH_KEYS}
         />
-      </Flex>
+      </div>
 
       {/* Add/Edit User Dialog */}
       <DialogTrigger isOpen={isFormOpen} onOpenChange={setIsFormOpen}>
@@ -397,7 +394,7 @@ export const UserManagement: React.FC<UserManagementProps> = () => {
             <>
               <Heading slot="title">{editingUser ? 'Edit User' : 'Add User'}</Heading>
               <Content>
-                <Flex direction="column" gap="size-200">
+                <div className={style({display: 'flex', flexDirection: 'column', gap: 16})}>
                   <TextField
                     label="Email"
                     value={formEmail}
@@ -434,7 +431,7 @@ export const UserManagement: React.FC<UserManagementProps> = () => {
                     onChange={setFormEvents}
                     styles={style({ width: '[100%]' })}
                   />
-                </Flex>
+                </div>
               </Content>
               <ButtonGroup>
                 <Button variant="secondary" onPress={close}>Cancel</Button>

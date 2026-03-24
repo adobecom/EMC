@@ -4,12 +4,11 @@
 
 import React, { useState, useEffect, useRef, useCallback } from 'react'
 import {
-  Flex,
   Heading,
-  Text,
 } from '@adobe/react-spectrum'
-import { Picker, PickerItem } from '@react-spectrum/s2'
-import { TYPOGRAPHY, FLEX_GAP } from '../../styles/designSystem'
+import { Picker, PickerItem, Text } from '@react-spectrum/s2'
+import { style } from '@react-spectrum/s2/style' with { type: 'macro' }
+import { TYPOGRAPHY } from '../../styles/designSystem'
 import { useEventFormComponent } from '../../hooks/useEventFormComponent'
 import { apiService, cachedApi } from '../../services/api'
 import { PublishingProfile } from '../../types/domain'
@@ -239,33 +238,33 @@ export const PageMetadataComponent: React.FC = () => {
 
   if (isLoading) {
     return (
-      <Flex direction="column" gap={FLEX_GAP.FIELD}>
+      <div className={style({display: 'flex', flexDirection: 'column', gap: 16})}>
         <Heading level={3} UNSAFE_style={TYPOGRAPHY.COMPONENT_HEADING}>
           Page metadata management
         </Heading>
         <Text>Loading metadata options...</Text>
-      </Flex>
+      </div>
     )
   }
 
   if (error) {
     return (
-      <Flex direction="column" gap={FLEX_GAP.FIELD}>
+      <div className={style({display: 'flex', flexDirection: 'column', gap: 16})}>
         <Heading level={3} UNSAFE_style={TYPOGRAPHY.COMPONENT_HEADING}>
           Page metadata management
         </Heading>
         <Text UNSAFE_style={{ color: 'var(--spectrum-global-color-red-600)' }}>
           {error}
         </Text>
-      </Flex>
+      </div>
     )
   }
 
   const fields = catalogue?.data?.data || []
 
   return (
-    <Flex direction="column" gap={FLEX_GAP.SECTION}>
-      <Flex direction="column" gap={FLEX_GAP.TIGHT}>
+    <div className={style({display: 'flex', flexDirection: 'column', gap: 24})}>
+      <div className={style({display: 'flex', flexDirection: 'column', gap: 8})}>
         <Heading level={3} UNSAFE_style={TYPOGRAPHY.COMPONENT_HEADING}>
           Page metadata management
         </Heading>
@@ -273,7 +272,7 @@ export const PageMetadataComponent: React.FC = () => {
           Configure tracking and metadata settings for your event. Set your primary product name 
           to ensure accurate analytics tracking and reporting for your webinar event page.
         </Text>
-      </Flex>
+      </div>
 
       {fields.map((field: MetadataField) => {
         const fieldOptions: MetadataOption[] = catalogue?.[field.key]?.data || []
@@ -298,6 +297,6 @@ export const PageMetadataComponent: React.FC = () => {
           </Picker>
         )
       })}
-    </Flex>
+    </div>
   )
 }

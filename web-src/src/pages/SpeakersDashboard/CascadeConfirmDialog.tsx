@@ -14,10 +14,10 @@
 import React, { useMemo } from 'react'
 import {
   View,
-  Flex,
   Text
 } from '@adobe/react-spectrum'
 import { Button, ButtonGroup, Dialog, DialogTrigger, Content, Heading } from '@react-spectrum/s2'
+import { style } from '@react-spectrum/s2/style' with { type: 'macro' }
 import Alert from '@spectrum-icons/workflow/Alert'
 import Link from '@spectrum-icons/workflow/Link'
 import { SpeakerDashboardItem } from './SpeakersDashboard'
@@ -86,7 +86,7 @@ export const CascadeConfirmDialog: React.FC<CascadeConfirmDialogProps> = ({
           <>
             <Heading slot="title">{actionText.title}</Heading>
             <Content>
-              <Flex direction="column" gap="size-300">
+              <div className={style({display: 'flex', flexDirection: 'column', gap: 24})}>
                 {/* Warning Header */}
                 <View
                   padding="size-200"
@@ -96,13 +96,13 @@ export const CascadeConfirmDialog: React.FC<CascadeConfirmDialogProps> = ({
                     border: '1px solid var(--spectrum-global-color-yellow-400)'
                   }}
                 >
-                  <Flex alignItems="center" gap="size-150">
+                  <div className={style({display: 'flex', alignItems: 'center', gap: 12})}>
                     <Alert size="S" UNSAFE_style={{ color: 'var(--spectrum-global-color-yellow-600)' }} />
                     <Text>
                       <strong>{speakerName}</strong> is currently linked to{' '}
                       <strong>{eventCount} {eventCount === 1 ? 'event' : 'events'}</strong>.
                     </Text>
-                  </Flex>
+                  </div>
                 </View>
 
                 <Text>{actionText.description}</Text>
@@ -118,14 +118,14 @@ export const CascadeConfirmDialog: React.FC<CascadeConfirmDialogProps> = ({
                     maxHeight="size-2000"
                     UNSAFE_style={{ overflowY: 'auto' }}
                   >
-                    <Flex direction="column" gap="size-100">
-                      <Flex alignItems="center" gap="size-100">
+                    <div className={style({display: 'flex', flexDirection: 'column', gap: 8})}>
+                      <div className={style({display: 'flex', alignItems: 'center', gap: 8})}>
                         <Link size="S" />
                         <Text UNSAFE_style={{ fontWeight: 'bold', fontSize: '14px' }}>
                           Linked Events:
                         </Text>
-                      </Flex>
-                      <Flex direction="column" gap="size-50" marginStart="size-300">
+                      </div>
+                      <div className={style({display: 'flex', flexDirection: 'column', gap: 4})} style={{ marginInlineStart: '24px' }}>
                         {events.slice(0, 5).map(event => (
                           <Text key={event.eventId} UNSAFE_style={{ fontSize: '13px' }}>
                             • {event.enTitle || event.title || event.eventId}
@@ -136,13 +136,13 @@ export const CascadeConfirmDialog: React.FC<CascadeConfirmDialogProps> = ({
                             ... and {eventCount - 5} more
                           </Text>
                         )}
-                      </Flex>
-                    </Flex>
+                      </div>
+                    </div>
                   </View>
                 )}
 
                 {/* Action Options */}
-                <Flex direction="column" gap="size-200">
+                <div className={style({display: 'flex', flexDirection: 'column', gap: 16})}>
                   {/* Cascade Option */}
                   <div
                     role="button"
@@ -159,14 +159,14 @@ export const CascadeConfirmDialog: React.FC<CascadeConfirmDialogProps> = ({
                     onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--spectrum-global-color-gray-100)'}
                     onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
                   >
-                    <Flex direction="column" gap="size-50">
+                    <div className={style({display: 'flex', flexDirection: 'column', gap: 4})}>
                       <Text UNSAFE_style={{ fontWeight: 'bold', color: action === 'delete' ? COLORS.RED_600 : 'inherit' }}>
                         {actionText.cascadeLabel}
                       </Text>
                       <Text UNSAFE_style={{ fontSize: '13px', color: 'var(--spectrum-global-color-gray-600)' }}>
                         {actionText.cascadeDescription}
                       </Text>
-                    </Flex>
+                    </div>
                   </div>
 
                   {/* Local Only Option */}
@@ -185,17 +185,17 @@ export const CascadeConfirmDialog: React.FC<CascadeConfirmDialogProps> = ({
                     onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--spectrum-global-color-gray-100)'}
                     onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
                   >
-                    <Flex direction="column" gap="size-50">
+                    <div className={style({display: 'flex', flexDirection: 'column', gap: 4})}>
                       <Text UNSAFE_style={{ fontWeight: 'bold' }}>
                         {actionText.localLabel}
                       </Text>
                       <Text UNSAFE_style={{ fontSize: '13px', color: 'var(--spectrum-global-color-gray-600)' }}>
                         {actionText.localDescription}
                       </Text>
-                    </Flex>
+                    </div>
                   </div>
-                </Flex>
-              </Flex>
+                </div>
+              </div>
             </Content>
             <ButtonGroup>
               <Button variant="secondary" onPress={() => { onClose(); close() }}>

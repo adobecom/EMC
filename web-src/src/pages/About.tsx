@@ -7,12 +7,12 @@ import {
   View,
   Flex,
   Heading,
-  Text,
   Well,
   Divider,
   ActionButton,
   Link
 } from '@adobe/react-spectrum'
+import { Text } from '@react-spectrum/s2'
 import ChevronDown from '@spectrum-icons/workflow/ChevronDown'
 import ChevronRight from '@spectrum-icons/workflow/ChevronRight'
 import Code from '@spectrum-icons/workflow/Code'

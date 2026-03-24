@@ -3,14 +3,10 @@
 */
 
 import React from 'react'
-import {
-  Flex,
-  Text,
-} from '@adobe/react-spectrum'
-import { TextField, Picker, PickerItem } from '@react-spectrum/s2'
+import { TextField, Picker, PickerItem, Text } from '@react-spectrum/s2'
 import { style } from '@react-spectrum/s2/style' with { type: 'macro' }
 import { HeadingWithTooltip } from '../../components/shared'
-import { TYPOGRAPHY, FLEX_GAP } from '../../styles/designSystem'
+import { TYPOGRAPHY } from '../../styles/designSystem'
 import { useEventFormComponent } from '../../hooks/useEventFormComponent'
 import { MarketoIntegrationData } from '../../types/domain'
 
@@ -147,9 +143,9 @@ export const MarketoIntegrationComponent: React.FC = () => {
   // ============================================================================
 
   return (
-    <Flex direction="column" gap={FLEX_GAP.SECTION}>
+    <div className={style({display: 'flex', flexDirection: 'column', gap: 24})}>
       {/* Header */}
-      <Flex direction="column" gap={FLEX_GAP.TIGHT}>
+      <div className={style({display: 'flex', flexDirection: 'column', gap: 8})}>
         <HeadingWithTooltip
           level={3}
           tooltip="Configure Marketo integration for lead tracking and marketing automation. Select your region and provide campaign details."
@@ -160,7 +156,7 @@ export const MarketoIntegrationComponent: React.FC = () => {
           Set up Marketo integration for your event to enable lead capture and marketing automation.
           {isLocked && ' All fields are locked after the event is created.'}
         </Text>
-      </Flex>
+      </div>
 
       {/* Event Type Selector */}
       <Picker
@@ -177,7 +173,7 @@ export const MarketoIntegrationComponent: React.FC = () => {
       </Picker>
 
       {/* Two-column layout for main fields */}
-      <Flex direction="row" gap="size-400" wrap>
+      <div className={style({display: 'flex', gap: 32, flexWrap: 'wrap'})}>
         <TextField
           label="Salesforce campaign ID"
           isRequired={!isNoIntegration && !isLocked}
@@ -197,10 +193,10 @@ export const MarketoIntegrationComponent: React.FC = () => {
           isDisabled={isNoIntegration || isLocked}
           styles={style({ width: 288 })}
         />
-      </Flex>
+      </div>
 
       {/* Second row */}
-      <Flex direction="row" gap="size-400" wrap>
+      <div className={style({display: 'flex', gap: 32, flexWrap: 'wrap'})}>
         <TextField
           label="Co-marketing partner"
           value={marketoIntegration.coMarketingPartner || ''}
@@ -221,8 +217,8 @@ export const MarketoIntegrationComponent: React.FC = () => {
             <PickerItem key={option.key} id={option.key}>{option.label}</PickerItem>
           ))}
         </Picker>
-      </Flex>
-    </Flex>
+      </div>
+    </div>
   )
 }
 

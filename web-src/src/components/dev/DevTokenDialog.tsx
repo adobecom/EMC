@@ -5,13 +5,12 @@
 
 import React, { useState, useEffect } from 'react'
 import {
-  Text,
   View,
   StatusLight,
   AlertDialog,
   DialogContainer as V3DialogContainer
 } from '@adobe/react-spectrum'
-import { Button, ButtonGroup, TextArea, Dialog, DialogContainer, Content, Heading } from '@react-spectrum/s2'
+import { Text, Button, ButtonGroup, TextArea, Dialog, DialogContainer, Content, Heading } from '@react-spectrum/s2'
 import { style } from '@react-spectrum/s2/style' with { type: 'macro' }
 import { tokenStorage } from '../../services/tokenStorage'
 

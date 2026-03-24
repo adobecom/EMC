@@ -7,9 +7,9 @@ import {
   View,
   Flex,
   Heading,
-  Text,
   ActionButton
 } from '@adobe/react-spectrum'
+import { Text } from '@react-spectrum/s2'
 import Refresh from '@spectrum-icons/workflow/Refresh'
 import Events from '@spectrum-icons/workflow/Events'
 import Collection from '@spectrum-icons/workflow/Collection'

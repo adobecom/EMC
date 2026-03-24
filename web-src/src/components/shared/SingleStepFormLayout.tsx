@@ -1,22 +1,22 @@
-/* 
+/*
 * <license header>
 */
 
 import React from 'react'
 import {
   View,
-  Flex,
   Heading,
   Text
 } from '@adobe/react-spectrum'
 import { Button } from '@react-spectrum/s2'
+import { style } from '@react-spectrum/s2/style' with { type: 'macro' }
 import { useNavigate } from 'react-router-dom'
 import ChevronLeft from '@spectrum-icons/workflow/ChevronLeft'
 import ChevronRight from '@spectrum-icons/workflow/ChevronRight'
 import Document from '@spectrum-icons/workflow/Document'
-import { 
-  SIDE_NAV_STICKY_STYLES, 
-  SCROLLABLE_CONTENT_STYLES, 
+import {
+  SIDE_NAV_STICKY_STYLES,
+  SCROLLABLE_CONTENT_STYLES,
   FIXED_ACTION_BAR_STYLES,
   COLORS,
   TYPOGRAPHY
@@ -130,7 +130,7 @@ export const SingleStepFormLayout: React.FC<SingleStepFormLayoutProps> = ({
       UNSAFE_style={SIDE_NAV_STICKY_STYLES}
     >
       <View padding="size-300" flex={1}>
-        <Text UNSAFE_style={{ 
+        <Text UNSAFE_style={{
           fontSize: '12px',
           fontWeight: 500,
           color: COLORS.GRAY_700,
@@ -140,8 +140,8 @@ export const SingleStepFormLayout: React.FC<SingleStepFormLayoutProps> = ({
         }}>
           {sideNavCategory}
         </Text>
-        
-        <Flex direction="column" gap="size-100">
+
+        <div className={style({ display: 'flex', flexDirection: 'column', gap: 8 })}>
           {/* Dashboard Link */}
           <button
             onClick={handleDashboardClick}
@@ -173,10 +173,10 @@ export const SingleStepFormLayout: React.FC<SingleStepFormLayoutProps> = ({
               }
             }}
           >
-            <Flex direction="row" gap="size-100" alignItems="center">
+            <div className={style({ display: 'flex', gap: 8, alignItems: 'center' })}>
               <ChevronLeft size="S" />
               <Text>{dashboardLabel}</Text>
-            </Flex>
+            </div>
           </button>
 
           {/* Side Nav Items */}
@@ -197,13 +197,13 @@ export const SingleStepFormLayout: React.FC<SingleStepFormLayoutProps> = ({
                 marginBottom: '8px'
               }}
             >
-              <Flex direction="row" gap="size-100" alignItems="center">
+              <div className={style({ display: 'flex', gap: 8, alignItems: 'center' })}>
                 <Document size="S" />
                 <Text>Create series</Text>
-              </Flex>
+              </div>
             </button>
-            
-            <Flex direction="column" gap="size-50">
+
+            <div className={style({ display: 'flex', flexDirection: 'column', gap: 4 })}>
               {sideNavItems.map((item) => (
                 <button
                   key={item.id}
@@ -226,9 +226,9 @@ export const SingleStepFormLayout: React.FC<SingleStepFormLayoutProps> = ({
                   {item.label}
                 </button>
               ))}
-            </Flex>
+            </div>
           </View>
-        </Flex>
+        </div>
       </View>
     </View>
   )
@@ -253,16 +253,12 @@ export const SingleStepFormLayout: React.FC<SingleStepFormLayoutProps> = ({
           backgroundColor: COLORS.ADOBE_RED,
         }}
       >
-        <Flex
-          direction="row"
-          justifyContent="end"
-          alignItems="center"
-          height="100%"
-          marginStart="size-400"
-          marginEnd="size-400"
+        <div
+          className={style({ display: 'flex', justifyContent: 'end', alignItems: 'center', height: '[100%]' })}
+          style={{ marginInlineStart: 'var(--spectrum-global-dimension-size-400)', marginInlineEnd: 'var(--spectrum-global-dimension-size-400)' }}
         >
           {/* Save and Publish buttons */}
-          <Flex direction="row" gap="size-100" alignItems="center">
+          <div className={style({ display: 'flex', gap: 8, alignItems: 'center' })}>
             <Button
               variant="secondary"
               fillStyle="outline"
@@ -279,28 +275,28 @@ export const SingleStepFormLayout: React.FC<SingleStepFormLayoutProps> = ({
               onPress={handlePublish}
               isDisabled={isActionDisabled}
             >
-              <Flex direction="row-reverse" gap="size-50" alignItems="center">
+              <div className={style({ display: 'flex', gap: 4, alignItems: 'center' })} style={{ flexDirection: 'row-reverse' }}>
                 <Text>{getPublishButtonText()}</Text>
                 <ChevronRight size="S" />
-              </Flex>
+              </div>
             </Button>
-          </Flex>
-        </Flex>
+          </div>
+        </div>
       </View>
     )
   }
 
   return (
     <>
-      <Flex direction="row" gap="size-0">
+      <div className={style({ display: 'flex', gap: 0 })}>
         {renderSideNav()}
         <View UNSAFE_style={SCROLLABLE_CONTENT_STYLES} flex={1} padding="size-400">
           <View>
             {/* Title section */}
             <View marginBottom="size-300">
               {typeLabel && (
-                <Text 
-                  UNSAFE_style={{ 
+                <Text
+                  UNSAFE_style={{
                     fontSize: '14px',
                     fontWeight: 500,
                     color: COLORS.GRAY_700,
@@ -311,11 +307,11 @@ export const SingleStepFormLayout: React.FC<SingleStepFormLayoutProps> = ({
                   {typeLabel}
                 </Text>
               )}
-              
+
               {/* Heading row with status badge and optional header actions */}
-              <Flex direction="row" alignItems="center" gap="size-400">
+              <div className={style({ display: 'flex', alignItems: 'center', gap: 32 })}>
                 <Heading level={2} UNSAFE_style={TYPOGRAPHY.STEP_HEADING}>{title}</Heading>
-                
+
                 {/* Status badge */}
                 <View
                   UNSAFE_style={{
@@ -347,13 +343,13 @@ export const SingleStepFormLayout: React.FC<SingleStepFormLayoutProps> = ({
                     {statusLabel}
                   </Text>
                 </View>
-                
+
                 {/* Spacer to push header actions to the right */}
                 {headerActions && <View flex={1} />}
-                
+
                 {/* Optional header actions (e.g., history button) */}
                 {headerActions}
-              </Flex>
+              </div>
             </View>
 
             {/* Form content */}
@@ -362,9 +358,8 @@ export const SingleStepFormLayout: React.FC<SingleStepFormLayoutProps> = ({
             </View>
           </View>
         </View>
-      </Flex>
+      </div>
       {renderActionBar()}
     </>
   )
 }
-

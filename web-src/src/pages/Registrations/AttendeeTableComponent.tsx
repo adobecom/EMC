@@ -5,9 +5,9 @@
 import React, { useMemo } from 'react'
 import {
   View,
-  Text,
   Heading
 } from '@adobe/react-spectrum'
+import { Text } from '@react-spectrum/s2'
 import type { Attendee, AttendeeColumnConfig } from '../../types/attendee'
 import { getAttendeeName } from '../../types/attendee'
 import { DataTable, TableColumn } from '../../components/shared'

@@ -1,10 +1,9 @@
 import React, { useState, useEffect } from 'react'
 import {
   View,
-  Flex,
-  Text,
-  SearchField
 } from '@adobe/react-spectrum'
+import { Text, SearchField } from '@react-spectrum/s2'
+import { style } from '@react-spectrum/s2/style' with { type: 'macro' }
 import Close from '@spectrum-icons/workflow/Close'
 import Add from '@spectrum-icons/workflow/Add'
 import { EventTag, CaasTagsResponse, CaasTag } from '../../types/domain'
@@ -35,7 +34,7 @@ export const TagSelector: React.FC<TagSelectorProps> = ({
 
   useEffect(() => {
     let isMounted = true
-    
+
     const loadTagsAsync = async () => {
       setIsLoading(true)
       setError(null)
@@ -83,7 +82,7 @@ export const TagSelector: React.FC<TagSelectorProps> = ({
   useEffect(() => {
     filterAndGroupTags()
   }, [searchTerm, availableTags, selectedTags])
-  
+
   useEffect(() => {
     groupSelectedTags()
   }, [selectedTags])
@@ -102,13 +101,13 @@ export const TagSelector: React.FC<TagSelectorProps> = ({
           return { ...selectedTag, name: matchingTag.name }
         }
       }
-      
+
       // Look up the tag by caasId to get proper display name
       const matchingTag = availableTags.find(t => t.caasId === selectedTag.caasId)
       if (matchingTag) {
         return { ...selectedTag, name: matchingTag.name }
       }
-      
+
       return selectedTag
     })
 
@@ -159,15 +158,15 @@ export const TagSelector: React.FC<TagSelectorProps> = ({
 
       // Strip "caas:" prefix if present
       const cleanPath = tag.caasId.replace(/^caas:/, '')
-      
+
       // Get parent path by removing the last segment (the tag itself)
       const pathParts = cleanPath.split('/')
       let groupName = 'Base Tags'
-      
+
       if (pathParts.length > 1) {
         // Build the full lineage path (all parents except the tag itself)
         const parentParts = pathParts.slice(0, -1)
-        
+
         // Format each segment and join with " > " for clear hierarchy
         groupName = parentParts
           .map(formatPathSegment)
@@ -248,7 +247,7 @@ export const TagSelector: React.FC<TagSelectorProps> = ({
   }
 
   return (
-    <Flex direction="column" gap="size-200">
+    <div className={style({ display: 'flex', flexDirection: 'column', gap: 16 })}>
       {/* Search/Add Field with Dropdown */}
       <View position="relative">
         <SearchField
@@ -263,9 +262,9 @@ export const TagSelector: React.FC<TagSelectorProps> = ({
             // Delay closing to allow click events on dropdown items
             setTimeout(() => setIsDropdownOpen(false), 200)
           }}
-          width="100%"
+          styles={style({ width: '[100%]' })}
         />
-        
+
         {/* Dropdown with Available Tags */}
         {isDropdownOpen && filteredGroups.length > 0 && (
           <View
@@ -284,10 +283,10 @@ export const TagSelector: React.FC<TagSelectorProps> = ({
               marginTop: '4px'
             }}
           >
-            <Flex direction="column" gap="size-150" UNSAFE_style={{ padding: '12px' }}>
+            <div className={style({ display: 'flex', flexDirection: 'column', gap: 12 })} style={{ padding: '12px' }}>
               {filteredGroups.map(group => (
                 <View key={group.groupName}>
-                  <Text UNSAFE_style={{ 
+                  <Text UNSAFE_style={{
                     display: 'block',
                     marginBottom: '8px',
                     fontSize: '11px',
@@ -298,7 +297,7 @@ export const TagSelector: React.FC<TagSelectorProps> = ({
                   }}>
                     {group.groupName}
                   </Text>
-                  <Flex direction="row" gap="size-100" wrap>
+                  <div className={style({ display: 'flex', gap: 8, flexWrap: 'wrap' })}>
                     {group.tags.map(tag => (
                       <div
                         key={tag.caasId || tag.name}
@@ -319,7 +318,7 @@ export const TagSelector: React.FC<TagSelectorProps> = ({
                         tabIndex={0}
                         aria-label={`Add ${tag.name}`}
                       >
-                        <Text UNSAFE_style={{ 
+                        <Text UNSAFE_style={{
                           color: 'white',
                           fontSize: '14px'
                         }}>
@@ -328,10 +327,10 @@ export const TagSelector: React.FC<TagSelectorProps> = ({
                         <Add size="XS" UNSAFE_style={{ color: 'white' }} />
                       </div>
                     ))}
-                  </Flex>
+                  </div>
                 </View>
               ))}
-            </Flex>
+            </div>
           </View>
         )}
 
@@ -352,7 +351,7 @@ export const TagSelector: React.FC<TagSelectorProps> = ({
               textAlign: 'center'
             }}
           >
-            <Text UNSAFE_style={{ 
+            <Text UNSAFE_style={{
               fontSize: '12px',
               color: 'var(--spectrum-global-color-gray-600)',
               fontStyle: 'italic'
@@ -365,8 +364,8 @@ export const TagSelector: React.FC<TagSelectorProps> = ({
 
       {/* Selected Tags */}
       {selectedTags.length > 0 && (
-        <Flex direction="column" gap="size-150">
-          <Text UNSAFE_style={{ 
+        <div className={style({ display: 'flex', flexDirection: 'column', gap: 12 })}>
+          <Text UNSAFE_style={{
             fontSize: '12px',
             fontWeight: 700,
             color: 'var(--spectrum-global-color-gray-700)',
@@ -376,7 +375,7 @@ export const TagSelector: React.FC<TagSelectorProps> = ({
           </Text>
           {selectedGroups.map(group => (
             <View key={group.groupName}>
-              <Text UNSAFE_style={{ 
+              <Text UNSAFE_style={{
                 display: 'block',
                 marginBottom: '8px',
                 fontSize: '11px',
@@ -387,7 +386,7 @@ export const TagSelector: React.FC<TagSelectorProps> = ({
               }}>
                 {group.groupName}
               </Text>
-              <Flex direction="row" gap="size-100" wrap>
+              <div className={style({ display: 'flex', gap: 8, flexWrap: 'wrap' })}>
                 {group.tags.map(tag => (
                   <div
                     key={tag.caasId || tag.name}
@@ -405,7 +404,7 @@ export const TagSelector: React.FC<TagSelectorProps> = ({
                     tabIndex={0}
                     aria-label={`Remove ${tag.name}`}
                   >
-                    <Text UNSAFE_style={{ 
+                    <Text UNSAFE_style={{
                       color: 'white',
                       fontSize: '14px'
                     }}>
@@ -414,13 +413,12 @@ export const TagSelector: React.FC<TagSelectorProps> = ({
                     <Close size="XS" UNSAFE_style={{ color: 'white' }} />
                   </div>
                 ))}
-              </Flex>
+              </div>
             </View>
           ))}
-        </Flex>
+        </div>
       )}
 
-    </Flex>
+    </div>
   )
 }
-

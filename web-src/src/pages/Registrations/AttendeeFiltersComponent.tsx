@@ -6,12 +6,11 @@ import React, { useMemo, useCallback } from 'react'
 import {
   View,
   Flex,
-  Text,
   ActionButton,
   Checkbox,
   Divider
 } from '@adobe/react-spectrum'
-import { Button } from '@react-spectrum/s2'
+import { Button, Text } from '@react-spectrum/s2'
 import ChevronLeft from '@spectrum-icons/workflow/ChevronLeft'
 import type { AttendeeColumnConfig, AttendeeFilters, Attendee, FilterMenuConfig } from '../../types/attendee'
 import { COLORS } from '../../styles/designSystem'

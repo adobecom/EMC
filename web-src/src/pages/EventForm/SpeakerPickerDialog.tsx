@@ -5,14 +5,11 @@
 import React, { useState, useMemo, useCallback, useEffect } from 'react'
 import {
   View,
-  Flex,
-  Text,
   ActionButton,
   ProgressCircle,
-  SearchField,
   Form,
 } from '@adobe/react-spectrum'
-import { Button, Dialog, DialogContainer, Heading, TextField } from '@react-spectrum/s2'
+import { Button, Dialog, DialogContainer, Heading, TextField, Text, SearchField } from '@react-spectrum/s2'
 import { style } from '@react-spectrum/s2/style' with { type: 'macro' }
 import Add from '@spectrum-icons/workflow/Add'
 import Alert from '@spectrum-icons/workflow/Alert'
@@ -22,7 +19,7 @@ import LinkOut from '@spectrum-icons/workflow/LinkOut'
 import { SeriesSpeaker, SocialLinkFormData } from '../../types/domain'
 import { speakerHasLocalization } from '../../utils/eventFormMappers'
 import { RichTextEditor, ImageUploader } from '../../components/shared'
-import { TYPOGRAPHY, FLEX_GAP, COLORS } from '../../styles/designSystem'
+import { TYPOGRAPHY, COLORS } from '../../styles/designSystem'
 import { detectSocialPlatform, isValidUrl, toApiSocialLink } from '../../utils/socialPlatformDetector'
 import { cachedApi, apiService } from '../../services/api'
 import { getSpeakerPayload } from '../../services/payloadBuilders'
@@ -311,11 +308,11 @@ export const SpeakerPickerDialog: React.FC<SpeakerPickerDialogProps> = ({
 
   const renderSelectView = () => (
     <>
-      <Flex justifyContent="space-between" alignItems="center" marginBottom="size-200">
+      <div className={style({display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16})}>
         <Heading slot="title" level={3} UNSAFE_style={{ margin: 0, fontSize: '20px', fontWeight: 700 }}>
           Select Speaker
         </Heading>
-        <Flex gap="size-100" alignItems="center">
+        <div className={style({display: 'flex', gap: 8, alignItems: 'center'})}>
           <ActionButton onPress={handleSwitchToCreate} aria-label="Create new speaker">
             <Add />
           </ActionButton>
@@ -326,15 +323,14 @@ export const SpeakerPickerDialog: React.FC<SpeakerPickerDialogProps> = ({
           >
             <Text>Select</Text>
           </Button>
-        </Flex>
-      </Flex>
+        </div>
+      </div>
 
       <SearchField
         label="Search speakers"
         value={searchQuery}
         onChange={setSearchQuery}
-        width="100%"
-        marginBottom="size-300"
+        styles={style({ width: '[100%]', marginBottom: 24 })}
       />
 
       {filteredSpeakers.length === 0 ? (
@@ -475,14 +471,14 @@ export const SpeakerPickerDialog: React.FC<SpeakerPickerDialogProps> = ({
     const displayName = `${speakerToLocalize.firstName} ${speakerToLocalize.lastName}`
     return (
       <>
-        <Flex alignItems="center" gap="size-100" marginBottom="size-200">
+        <div className={style({display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16})}>
           <ActionButton onPress={handleBackFromLocalize} isQuiet aria-label="Back to search">
             <ArrowLeft />
           </ActionButton>
           <Heading slot="title" level={3} UNSAFE_style={{ margin: 0, fontSize: '20px', fontWeight: 700 }}>
             Add {locale} content for {displayName}
           </Heading>
-        </Flex>
+        </div>
         {!localizeForm.title.trim() && (
           <div
             role="alert"
@@ -511,7 +507,7 @@ export const SpeakerPickerDialog: React.FC<SpeakerPickerDialogProps> = ({
           </div>
         )}
         <Form>
-          <Flex direction="column" gap={FLEX_GAP.SECTION}>
+          <div className={style({display: 'flex', flexDirection: 'column', gap: 24})}>
             <TextField
               label="Title / Role"
               value={localizeForm.title}
@@ -531,7 +527,7 @@ export const SpeakerPickerDialog: React.FC<SpeakerPickerDialogProps> = ({
                 No bio has been added for this locale.
               </Text>
             )}
-            <Flex gap="size-150" justifyContent="end" marginTop="size-200">
+            <div className={style({display: 'flex', gap: 12, justifyContent: 'end', marginTop: 16})}>
               <Button
                 variant="accent"
                 onPress={handleSaveAndAddLocalization}
@@ -546,8 +542,8 @@ export const SpeakerPickerDialog: React.FC<SpeakerPickerDialogProps> = ({
                   <Text>Save &amp; Add Speaker</Text>
                 )}
               </Button>
-            </Flex>
-          </Flex>
+            </div>
+          </div>
         </Form>
       </>
     )
@@ -555,18 +551,18 @@ export const SpeakerPickerDialog: React.FC<SpeakerPickerDialogProps> = ({
 
   const renderCreateView = () => (
     <>
-      <Flex alignItems="center" gap="size-100" marginBottom="size-200">
+      <div className={style({display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16})}>
         <ActionButton onPress={handleBackToSelect} isQuiet aria-label="Back to search">
           <ArrowLeft />
         </ActionButton>
         <Heading slot="title" level={3} UNSAFE_style={{ margin: 0, fontSize: '20px', fontWeight: 700 }}>
           New Speaker
         </Heading>
-      </Flex>
+      </div>
 
       <Form>
-        <Flex direction="column" gap={FLEX_GAP.SECTION}>
-          <Flex direction="row" gap={FLEX_GAP.FIELD} alignItems="end">
+        <div className={style({display: 'flex', flexDirection: 'column', gap: 24})}>
+          <div className={style({display: 'flex', gap: 16, alignItems: 'end'})}>
             {/* Avatar placeholder */}
             <View>
               <View width="100%">
@@ -594,9 +590,9 @@ export const SpeakerPickerDialog: React.FC<SpeakerPickerDialogProps> = ({
                 />
               </View>
             </View>
-          </Flex>
+          </div>
 
-          <Flex direction="row" gap={FLEX_GAP.FIELD}>
+          <div className={style({display: 'flex', gap: 16})}>
             <TextField
               label="First Name"
               value={createForm.firstName}
@@ -611,7 +607,7 @@ export const SpeakerPickerDialog: React.FC<SpeakerPickerDialogProps> = ({
               isRequired
               styles={style({ width: '[100%]' })}
             />
-          </Flex>
+          </div>
 
           <TextField
             label="Title / Role"
@@ -630,26 +626,26 @@ export const SpeakerPickerDialog: React.FC<SpeakerPickerDialogProps> = ({
 
           {/* Social Links */}
           <View>
-            <Flex justifyContent="space-between" alignItems="center" marginBottom="size-100">
+            <div className={style({display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8})}>
               <Text UNSAFE_style={TYPOGRAPHY.FIELD_LABEL}>Social Media Links</Text>
               <ActionButton onPress={handleAddSocialLink} isQuiet>
                 <Add />
                 <Text>Add Link</Text>
               </ActionButton>
-            </Flex>
+            </div>
 
             {createForm.socialLinks.length === 0 ? (
               <Text UNSAFE_style={{ fontSize: '14px', color: 'var(--spectrum-global-color-gray-600)', fontStyle: 'italic' }}>
                 No social media links added yet.
               </Text>
             ) : (
-              <Flex direction="column" gap="size-100">
+              <div className={style({display: 'flex', flexDirection: 'column', gap: 8})}>
                 {createForm.socialLinks.map((socialLink, index) => {
                   const detectedPlatform = detectSocialPlatform(socialLink.url)
                   const valid = isValidUrl(socialLink.url)
 
                   return (
-                    <Flex key={index} gap="size-100" alignItems="center">
+                    <div key={index} className={style({display: 'flex', gap: 8, alignItems: 'center'})}>
                       <View
                         UNSAFE_style={{
                           minWidth: '40px',
@@ -680,14 +676,14 @@ export const SpeakerPickerDialog: React.FC<SpeakerPickerDialogProps> = ({
                       <ActionButton onPress={() => handleRemoveSocialLink(index)} isQuiet>
                         <Delete />
                       </ActionButton>
-                    </Flex>
+                    </div>
                   )
                 })}
-              </Flex>
+              </div>
             )}
           </View>
 
-          <Flex justifyContent="end" marginTop="size-200">
+          <div className={style({display: 'flex', justifyContent: 'end', marginTop: 16})}>
             <Button
               variant="accent"
               onPress={handleCreateSpeaker}
@@ -702,8 +698,8 @@ export const SpeakerPickerDialog: React.FC<SpeakerPickerDialogProps> = ({
                 <Text>Add Speaker</Text>
               )}
             </Button>
-          </Flex>
-        </Flex>
+          </div>
+        </div>
       </Form>
     </>
   )

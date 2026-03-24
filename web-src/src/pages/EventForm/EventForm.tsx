@@ -5,8 +5,6 @@
 import React, { useEffect, useCallback, useRef, useState } from 'react'
 import {
   View,
-  Flex,
-  Text,
   Heading,
   Divider,
   ProgressCircle,
@@ -15,7 +13,7 @@ import {
   Content,
   ButtonGroup
 } from '@adobe/react-spectrum'
-import { Button, Picker, PickerItem } from '@react-spectrum/s2'
+import { Button, Picker, PickerItem, Text } from '@react-spectrum/s2'
 import { style } from "@react-spectrum/s2/style" with { type: "macro" }
 import { useNavigate, useParams } from 'react-router-dom'
 import ChevronRight from '@spectrum-icons/workflow/ChevronRight'
@@ -260,7 +258,7 @@ const FormatSelectionOverlay: React.FC<{
         }}
       >
         {/* Header */}
-        <Flex direction="column" gap="size-100" marginBottom="size-300">
+        <div className={style({display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 24})}>
           <Text UNSAFE_style={{ 
             fontSize: '13px', 
             fontWeight: 500, 
@@ -279,24 +277,18 @@ const FormatSelectionOverlay: React.FC<{
             Choose the cloud and series for this event. This determines
             where your event will be published and what metadata it inherits.
           </Text>
-        </Flex>
+        </div>
 
         <Divider size="S" marginBottom="size-300" />
 
         {/* Content */}
         {isLoading ? (
-          <Flex 
-            alignItems="center" 
-            justifyContent="center" 
-            minHeight="size-2000"
-            direction="column"
-            gap="size-200"
-          >
+          <div className={style({display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: 16})} style={{minHeight: 'var(--spectrum-global-dimension-size-2000)'}}>
             <ProgressCircle aria-label="Loading format options..." isIndeterminate size="M" />
             <Text UNSAFE_style={{ color: COLORS.GRAY_600, fontSize: '14px' }}>
               Loading format options...
             </Text>
-          </Flex>
+          </div>
         ) : error ? (
           <View
             padding="size-200"
@@ -307,7 +299,7 @@ const FormatSelectionOverlay: React.FC<{
             <Text UNSAFE_style={{ color: 'white' }}>Error: {error}</Text>
           </View>
         ) : (
-          <Flex direction="column" gap="size-300" marginBottom="size-400">
+          <div className={style({display: 'flex', flexDirection: 'column', gap: 24, marginBottom: 32})}>
             <Picker
               label="Cloud"
               isRequired
@@ -356,13 +348,13 @@ const FormatSelectionOverlay: React.FC<{
                 </Text>
               </View>
             )}
-          </Flex>
+          </div>
         )}
 
         <Divider size="S" marginBottom="size-300" />
 
         {/* Actions */}
-        <Flex direction="row" justifyContent="end" gap="size-200">
+        <div className={style({display: 'flex', justifyContent: 'end', gap: 16})}>
           <Button
             variant="secondary"
             onPress={onCancel}
@@ -378,7 +370,7 @@ const FormatSelectionOverlay: React.FC<{
             <Text>Confirm & Continue</Text>
             <ChevronRight size="S" />
           </Button>
-        </Flex>
+        </div>
       </View>
     </div>
   )
@@ -739,7 +731,7 @@ const EventFormInner: React.FC<EventFormInnerProps> = ({ ims: _ims }) => {
     (hasVenue ? Boolean(formData.venue?.placeId) : true)
   
   const step1Component = (
-    <Flex direction="column" gap="size-0">
+    <div className={style({display: 'flex', flexDirection: 'column', gap: 0})}>
       <FormCard>
         <EventFormatComponent />
       </FormCard>
@@ -773,9 +765,9 @@ const EventFormInner: React.FC<EventFormInnerProps> = ({ ims: _ims }) => {
           <MarketoIntegrationComponent />
         </FormCard>
       )}
-    </Flex>
+    </div>
   )
-  
+
   // ============================================================================
   // STEP 2: Speakers & Hosts
   // ============================================================================
@@ -928,7 +920,7 @@ const EventFormInner: React.FC<EventFormInnerProps> = ({ ims: _ims }) => {
           <Heading>{urlDialogState?.collision ? 'URL Conflict Detected' : 'Confirm Event URL'}</Heading>
           <Divider />
           <Content>
-            <Flex direction="column" gap="size-200">
+            <div className={style({display: 'flex', flexDirection: 'column', gap: 16})}>
               <Text>The following detail page URL will be assigned to this event:</Text>
               <View
                 backgroundColor="gray-75"
@@ -940,21 +932,21 @@ const EventFormInner: React.FC<EventFormInnerProps> = ({ ims: _ims }) => {
               </View>
 
               {urlDialogState?.collision && (
-                <Flex direction="column" gap="size-100">
-                  <Flex alignItems="center" gap="size-100">
+                <div className={style({display: 'flex', flexDirection: 'column', gap: 8})}>
+                  <div className={style({display: 'flex', alignItems: 'center', gap: 8})}>
                     <Alert size="S" color="negative" />
                     <Text UNSAFE_style={{ color: COLORS.RED_600, fontWeight: 600 }}>
                       This URL is already in use by another event.
                     </Text>
-                  </Flex>
+                  </div>
                   <Text>
                     The event <strong>{urlDialogState.collision.title || urlDialogState.collision.enTitle || urlDialogState.collision.eventId}</strong> already
                     uses this URL. Please go back and change the fields that affect the URL
                     (e.g. title or start date) before saving.
                   </Text>
-                </Flex>
+                </div>
               )}
-            </Flex>
+            </div>
           </Content>
           <ButtonGroup>
             <Button

@@ -3,7 +3,7 @@
 */
 
 import React, { useState, useEffect } from 'react'
-import { View, TextField, NumberField, Switch, Flex, Text, TooltipTrigger, Tooltip } from '@adobe/react-spectrum'
+import { View, TextField, NumberField, Switch, Text, TooltipTrigger, Tooltip } from '@adobe/react-spectrum'
 import { ActionButton } from "@react-spectrum/s2"
 // S2 style macro for type-safe Spectrum token styling
 import {style} from '@react-spectrum/s2/style' with {type: 'macro'}
@@ -113,32 +113,32 @@ export const RegistrationConfigComponent: React.FC = () => {
   // ============================================================================
 
   return (
-    <Flex direction="column" gap="size-300">
-      <HeadingWithTooltip 
+    <div className={style({display: 'flex', flexDirection: 'column', gap: 24})}>
+      <HeadingWithTooltip
         level={3}
         tooltip={
-          isCreativeCloud 
+          isCreativeCloud
             ? 'Optionally enable email links to the host or add a description to the RSVP process for your attendees.'
             : 'DX events are waitlist only. Call-to-action buttons will only allow waitlisting.'
         }
       >
         RSVP Configuration
       </HeadingWithTooltip>
-      <Flex direction="row" gap="size-400" alignItems="start">
+      <div className={style({display: 'flex', gap: 32, alignItems: 'start'})}>
         {/* Left: Attendee Limit Input */}
         <View>
-          <Flex direction="row" gap="size-100" alignItems="center" marginBottom="size-100">
+          <div className={style({display: 'flex', gap: 8, alignItems: 'center', marginBottom: 8})}>
             <Text UNSAFE_style={{ fontWeight: 'bold' }}>Attendee limit</Text>
             <TooltipTrigger delay={0}>
-              <ActionButton 
-                isQuiet 
+              <ActionButton
+                isQuiet
                 styles={style({minWidth: 0, width: 20})}
               >
                 <InfoCircle />
               </ActionButton>
               <Tooltip variant="info">When no limit is set, all users will be admitted into event.</Tooltip>
             </TooltipTrigger>
-          </Flex>
+          </div>
           <NumberField
             value={attendeeLimit}
             onChange={handleAttendeeLimitChange}
@@ -149,9 +149,9 @@ export const RegistrationConfigComponent: React.FC = () => {
         </View>
 
         {/* Right: All Toggles Container */}
-        <Flex direction="column" gap="size-150" flex={1}>
+        <div className={style({display: 'flex', flexDirection: 'column', gap: 12, flexGrow: 1})}>
           {/* Disable Waitlist Toggle */}
-          <Flex direction="row" gap="size-100" alignItems="center">
+          <div className={style({display: 'flex', gap: 8, alignItems: 'center'})}>
             <Switch
               isSelected={!allowWaitlist}
               onChange={(value) => handleAllowWaitlistChange(!value)}
@@ -159,8 +159,8 @@ export const RegistrationConfigComponent: React.FC = () => {
               When limit is reached, disable registration button
             </Switch>
             <TooltipTrigger delay={0}>
-              <ActionButton 
-                isQuiet 
+              <ActionButton
+                isQuiet
                 styles={style({minWidth: 0, width: 20})}
               >
                 <InfoCircle />
@@ -169,11 +169,11 @@ export const RegistrationConfigComponent: React.FC = () => {
                 When selected, disable registration button when limit is reached.
               </Tooltip>
             </TooltipTrigger>
-          </Flex>
+          </div>
 
           {/* Allow Guest Registration - ExperienceCloud Only */}
           {isExperienceCloud && (
-            <Flex direction="row" alignItems="center">
+            <div className={style({display: 'flex', alignItems: 'center'})}>
               <Switch
                 isSelected={allowGuestRegistration}
                 onChange={handleAllowGuestRegistrationChange}
@@ -181,8 +181,8 @@ export const RegistrationConfigComponent: React.FC = () => {
                 Allow guest registration
               </Switch>
               <TooltipTrigger delay={0}>
-                <ActionButton 
-                  isQuiet 
+                <ActionButton
+                  isQuiet
                   styles={style({minWidth: 0, width: 20})}
                 >
                   <InfoCircle />
@@ -191,13 +191,13 @@ export const RegistrationConfigComponent: React.FC = () => {
                   When selected, users can register for events without logging in.
                 </Tooltip>
               </TooltipTrigger>
-            </Flex>
+            </div>
           )}
 
           {/* Contact Host Toggle and Email Field */}
           {!(isExperienceCloud && isWebinar) && (
-            <Flex direction="row" gap="size-200" alignItems="center" width="100%">
-              <Flex direction="row" alignItems="center">
+            <div className={style({display: 'flex', gap: 16, alignItems: 'center', width: '[100%]'})}>
+              <div className={style({display: 'flex', alignItems: 'center'})}>
                 <Switch
                   isSelected={contactHostEnabled}
                   onChange={handleContactHostToggle}
@@ -205,8 +205,8 @@ export const RegistrationConfigComponent: React.FC = () => {
                   Contact host
                 </Switch>
                 <TooltipTrigger delay={0}>
-                  <ActionButton 
-                    isQuiet 
+                  <ActionButton
+                    isQuiet
                     styles={style({minWidth: 0, width: 20})}
                   >
                     <InfoCircle />
@@ -215,7 +215,7 @@ export const RegistrationConfigComponent: React.FC = () => {
                     Contact host is optional.
                   </Tooltip>
                 </TooltipTrigger>
-              </Flex>
+              </div>
 
               {contactHostEnabled && (
                 <TextField
@@ -225,10 +225,10 @@ export const RegistrationConfigComponent: React.FC = () => {
                   onChange={handleHostEmailChange}
                 />
               )}
-            </Flex>
+            </div>
           )}
-        </Flex>
-      </Flex>
+        </div>
+      </div>
       {/* RSVP Description */}
       <View width="100%" marginTop="size-200">
         <RichTextEditor
@@ -254,6 +254,6 @@ export const RegistrationConfigComponent: React.FC = () => {
           onMarketoFormUrlChange={handleMarketoFormUrlChange}
         />
       </View>
-    </Flex>
+    </div>
   )
 }

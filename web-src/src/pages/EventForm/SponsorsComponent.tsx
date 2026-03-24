@@ -5,16 +5,14 @@
 import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react'
 import {
   View,
-  Flex,
-  Text,
   ActionButton,
   ProgressCircle,
 } from '@adobe/react-spectrum'
-import { Button, ButtonGroup, Text as S2Text, TextField, Picker, PickerItem, Dialog, DialogContainer, Content, Heading } from '@react-spectrum/s2'
+import { Button, ButtonGroup, Text, TextField, Picker, PickerItem, Dialog, DialogContainer, Content, Heading } from '@react-spectrum/s2'
 import { style } from '@react-spectrum/s2/style' with { type: 'macro' }
 import { SponsorData, SeriesSponsor, EventApiResponse, SponsorType } from '../../types/domain'
 import { ImageUploader } from '../../components/shared'
-import { TYPOGRAPHY, SPACING, COLORS, FLEX_GAP } from '../../styles/designSystem'
+import { TYPOGRAPHY, SPACING, COLORS } from '../../styles/designSystem'
 import Add from '@spectrum-icons/workflow/Add'
 import Edit from '@spectrum-icons/workflow/Edit'
 import { apiService, cachedApi } from '../../services/api'
@@ -131,7 +129,7 @@ const PartnerDialog: React.FC<PartnerDialogProps> = ({
             <>
               <Heading slot="title">{isNew ? 'Add new partner' : 'Edit partner'}</Heading>
               <Content>
-                <Flex gap={FLEX_GAP.LARGE} alignItems="start">
+                <div className={style({display: 'flex', gap: 32, alignItems: 'start'})}>
                   {/* Image Upload Section */}
                   <View UNSAFE_style={{ textAlign: 'center' }}>
                     <ImageUploader
@@ -156,7 +154,7 @@ const PartnerDialog: React.FC<PartnerDialogProps> = ({
                   </View>
 
                   {/* Form Fields Section */}
-                  <Flex direction="column" gap={FLEX_GAP.FIELD} flex={1}>
+                  <div className={style({display: 'flex', flexDirection: 'column', gap: 16, flexGrow: 1})}>
                     <TextField
                       label="Partner name"
                       value={name}
@@ -173,8 +171,8 @@ const PartnerDialog: React.FC<PartnerDialogProps> = ({
                       styles={style({ width: '[100%]' })}
                       isRequired
                     />
-                  </Flex>
-                </Flex>
+                  </div>
+                </div>
               </Content>
               <ButtonGroup>
                 <Button variant="secondary" onPress={onClose} isDisabled={isSaving}>
@@ -227,7 +225,7 @@ const PartnerCard: React.FC<PartnerCardProps> = ({
       padding="size-200"
       backgroundColor="gray-50"
     >
-      <Flex alignItems="center" gap={FLEX_GAP.FIELD}>
+      <div className={style({display: 'flex', alignItems: 'center', gap: 16})}>
         {/* Partner Logo */}
         <View 
           width="size-800" 
@@ -273,8 +271,8 @@ const PartnerCard: React.FC<PartnerCardProps> = ({
         </View>
 
         {/* Partner Info */}
-        <Flex direction="column" flex={1} gap="size-50">
-          <Flex alignItems="center" gap={FLEX_GAP.SMALL}>
+        <div className={style({display: 'flex', flexDirection: 'column', flexGrow: 1, gap: 4})}>
+          <div className={style({display: 'flex', alignItems: 'center', gap: 12})}>
             <Text UNSAFE_style={{ ...TYPOGRAPHY.FIELD_LABEL, fontSize: '16px' }}>
               {partner.partnerName || 'Untitled Partner'}
             </Text>
@@ -320,25 +318,25 @@ const PartnerCard: React.FC<PartnerCardProps> = ({
                 ))}
               </Picker>
             </View>
-          </Flex>
-          
+          </div>
+
           {partner.partnerUrl && (
             <Text UNSAFE_style={TYPOGRAPHY.HELPER_TEXT}>
               {partner.partnerUrl}
             </Text>
           )}
-        </Flex>
+        </div>
 
         {/* Action Buttons */}
-        <Flex gap={FLEX_GAP.TIGHT} alignItems="center">
+        <div className={style({display: 'flex', gap: 8, alignItems: 'center'})}>
           <ActionButton onPress={onEdit} isQuiet aria-label="Edit partner">
             <Edit size="S" />
           </ActionButton>
           <ActionButton onPress={onRemove} isQuiet aria-label="Remove partner">
             <RemoveCircle size="S" />
           </ActionButton>
-        </Flex>
-      </Flex>
+        </div>
+      </div>
     </View>
   )
 }
@@ -736,16 +734,16 @@ export const SponsorsComponent: React.FC = () => {
   // ============================================================================
 
   return (
-    <Flex direction="column" gap={FLEX_GAP.FIELD}>
+    <div className={style({display: 'flex', flexDirection: 'column', gap: 16})}>
       {/* Header */}
-      <Flex alignItems="center" gap={FLEX_GAP.SMALL}>
+      <div className={style({display: 'flex', alignItems: 'center', gap: 12})}>
         <Heading level={3} UNSAFE_style={TYPOGRAPHY.COMPONENT_HEADING}>
           Partners (optional)
         </Heading>
         {isLoadingSponsors && (
           <ProgressCircle size="S" isIndeterminate aria-label="Loading partners" />
         )}
-      </Flex>
+      </div>
 
       <Text UNSAFE_style={TYPOGRAPHY.SECTION_DESCRIPTION}>
         Add partners to your event landing page. You can change each partner&apos;s tier for this event.
@@ -753,23 +751,23 @@ export const SponsorsComponent: React.FC = () => {
 
       {sponsors.length === 0 && (
         <View
-          padding={FLEX_GAP.LARGE}
+          padding="size-400"
           backgroundColor="gray-100"
           borderRadius="medium"
           UNSAFE_style={{ textAlign: 'center' }}
         >
-          <Flex direction="column" alignItems="center" gap="size-200">
+          <div className={style({display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 16})}>
             <Text>Add partners to your event using the button below.</Text>
             <Button variant="secondary" onPress={() => setPickerOpen(true)}>
               <Add />
-              <S2Text>Add Partner</S2Text>
+              <Text>Add Partner</Text>
             </Button>
-          </Flex>
+          </div>
         </View>
       )}
 
       {sponsors.length > 0 && (
-        <Flex direction="column" gap={FLEX_GAP.SMALL}>
+        <div className={style({display: 'flex', flexDirection: 'column', gap: 12})}>
           {sponsors.map((partner, index) => (
             <PartnerCard
               key={partner.id || index}
@@ -779,7 +777,7 @@ export const SponsorsComponent: React.FC = () => {
               onTierChange={(tier) => handleTierChange(index, tier)}
             />
           ))}
-        </Flex>
+        </div>
       )}
 
       {sponsors.length > 0 && (
@@ -796,7 +794,7 @@ export const SponsorsComponent: React.FC = () => {
           }}
         >
           <Add />
-          <S2Text>Add Partner</S2Text>
+          <Text>Add Partner</Text>
         </Button>
       )}
 
@@ -820,6 +818,6 @@ export const SponsorsComponent: React.FC = () => {
         isNew={editingIndex === null}
         isSaving={isSaving}
       />
-    </Flex>
+    </div>
   )
 }

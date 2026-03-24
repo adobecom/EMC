@@ -7,7 +7,8 @@
  */
 
 import React from 'react'
-import { Picker, Item, Text, Flex, Divider } from '@adobe/react-spectrum'
+import { Picker, Item, Text, Divider } from '@adobe/react-spectrum'
+import { style } from '@react-spectrum/s2/style' with { type: 'macro' }
 import { useGroup } from '../../contexts/GroupContext'
 
 export const GroupSwitcher: React.FC = () => {
@@ -17,7 +18,7 @@ export const GroupSwitcher: React.FC = () => {
   if (isLoading || groups.length === 0 || !activeGroup) return null
 
   return (
-    <Flex alignItems="center" gap="size-150">
+    <div className={style({ display: 'flex', alignItems: 'center', gap: 12 })}>
       <Divider orientation="vertical" size="S" UNSAFE_style={{ height: 24 }} />
       <Picker
         label="Group"
@@ -34,6 +35,6 @@ export const GroupSwitcher: React.FC = () => {
           </Item>
         ))}
       </Picker>
-    </Flex>
+    </div>
   )
 }

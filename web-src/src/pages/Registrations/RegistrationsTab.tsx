@@ -4,12 +4,12 @@
 
 import React, { useState, useCallback, useMemo } from 'react'
 import {
-  SearchField,
   AlertDialog,
   DialogTrigger as V3DialogTrigger,
   ActionButton,
 } from '@adobe/react-spectrum'
-import { DialogTrigger } from '@react-spectrum/s2'
+import { DialogTrigger, SearchField } from '@react-spectrum/s2'
+import { style } from '@react-spectrum/s2/style' with { type: 'macro' }
 import Download from '@spectrum-icons/workflow/Download'
 import type { Attendee, AttendeeFilters, AttendeeColumnConfig } from '../../types/attendee'
 import type { Campaign } from '../../types/campaign'
@@ -159,8 +159,7 @@ export const RegistrationsTab: React.FC<RegistrationsTabProps> = ({
                   value={searchQuery}
                   onChange={setSearchQuery}
                   onClear={() => setSearchQuery('')}
-                  width="100%"
-                  isQuiet
+                  styles={style({ width: '[100%]' })}
                 />
               </div>
             </div>

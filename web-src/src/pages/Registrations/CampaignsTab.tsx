@@ -5,15 +5,13 @@
 import React, { useState, useCallback, useMemo } from 'react'
 import {
   View,
-  Flex,
-  Text,
   ActionButton,
   DialogTrigger as V3DialogTrigger,
   NumberField,
   Switch,
   AlertDialog,
 } from '@adobe/react-spectrum'
-import { Button, ButtonGroup, TextField, Picker, PickerItem, DialogTrigger, Dialog, Content, Heading } from '@react-spectrum/s2'
+import { Button, ButtonGroup, TextField, Picker, PickerItem, DialogTrigger, Dialog, Content, Heading, Text } from '@react-spectrum/s2'
 import { style } from "@react-spectrum/s2/style" with { type: "macro" }
 import Add from '@spectrum-icons/workflow/Add'
 import Edit from '@spectrum-icons/workflow/Edit'
@@ -126,7 +124,7 @@ export const CampaignsTab: React.FC<CampaignsTabProps> = ({
       name: 'URL',
       width: 200,
       render: (campaign) => (
-        <Flex alignItems="center" gap="size-100">
+        <div className={style({display: 'flex', alignItems: 'center', gap: 8})}>
           <Text UNSAFE_style={{ fontFamily: 'monospace', fontSize: '13px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
             {campaign.url}
           </Text>
@@ -146,7 +144,7 @@ export const CampaignsTab: React.FC<CampaignsTabProps> = ({
               )}
             </>
           )}
-        </Flex>
+        </div>
       )
     },
     {
@@ -201,7 +199,7 @@ export const CampaignsTab: React.FC<CampaignsTabProps> = ({
       width: 100,
       isSticky: true,
       render: (campaign) => (
-        <Flex gap="size-100" justifyContent="end">
+        <div className={style({display: 'flex', gap: 8, justifyContent: 'end'})}>
           {campaign.status === 'Active' && (
             <ActionButton
               isQuiet
@@ -219,7 +217,7 @@ export const CampaignsTab: React.FC<CampaignsTabProps> = ({
           >
             <Delete size="S" />
           </ActionButton>
-        </Flex>
+        </div>
       )
     }
   ], [handleCopyUrl, handleEditClick, copiedId])
@@ -243,19 +241,17 @@ export const CampaignsTab: React.FC<CampaignsTabProps> = ({
         borderRadius="medium"
         marginBottom="size-300"
       >
-        <Flex gap="size-600" wrap>
+        <div className={style({display: 'flex', gap: 48, flexWrap: 'wrap'})}>
           <StatItem label="Total Campaigns" value={stats.totalCampaigns} />
           <StatItem label="Active" value={stats.activeCampaigns} />
           <StatItem label="Registrations" value={stats.totalRegistrations} />
           <StatItem label="Waitlisted" value={stats.totalWaitlisted} />
-        </Flex>
+        </div>
       </View>
 
       {/* Header with Add Button */}
-      <Flex
-        justifyContent="space-between"
-        alignItems="center"
-        marginBottom="size-200"
+      <div
+        className={style({display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16})}
       >
         <Button
           variant="accent"
@@ -264,7 +260,7 @@ export const CampaignsTab: React.FC<CampaignsTabProps> = ({
           <Add size="S" />
           <Text>Add Campaign</Text>
         </Button>
-      </Flex>
+      </div>
 
       {/* Campaigns Table */}
       {campaigns.length > 0 ? (
@@ -376,7 +372,7 @@ const StatItem: React.FC<{
   value: number
   subtext?: string
 }> = ({ label, value, subtext }) => (
-  <Flex direction="column" gap="size-50">
+  <div className={style({display: 'flex', flexDirection: 'column', gap: 4})}>
     <Text UNSAFE_style={{
       fontSize: '12px',
       fontWeight: 600,
@@ -385,7 +381,7 @@ const StatItem: React.FC<{
     }}>
       {label}
     </Text>
-    <Flex alignItems="baseline" gap="size-75">
+    <div className={style({display: 'flex', alignItems: 'baseline', gap: 8})}>
       <Text UNSAFE_style={{
         fontSize: '24px',
         fontWeight: 700,
@@ -398,8 +394,8 @@ const StatItem: React.FC<{
           {subtext}
         </Text>
       )}
-    </Flex>
-  </Flex>
+    </div>
+  </div>
 )
 
 const EmptyCampaignsState: React.FC<{ onCreateClick: () => void }> = ({ onCreateClick }) => (
@@ -471,7 +467,7 @@ const CampaignFormDialogContent: React.FC<CampaignFormDialogContentProps> = ({
     <>
       <Heading slot="title">{campaign ? 'Edit Campaign' : 'Create Campaign'}</Heading>
       <Content>
-        <Flex direction="column" gap="size-300">
+        <div className={style({display: 'flex', flexDirection: 'column', gap: 24})}>
           {/* Name Field */}
           <TextField
             label="Name"
@@ -495,7 +491,7 @@ const CampaignFormDialogContent: React.FC<CampaignFormDialogContentProps> = ({
 
           {/* Attendee Limit (only on create) */}
           {!campaign && (
-            <Flex direction="column" gap="size-200">
+            <div className={style({display: 'flex', flexDirection: 'column', gap: 16})}>
               <NumberField
                 label="Attendee limit"
                 value={noCapacityLimit && eventCapacity != null ? eventCapacity : (attendeeLimit ?? NaN)}
@@ -516,7 +512,7 @@ const CampaignFormDialogContent: React.FC<CampaignFormDialogContentProps> = ({
                   Event has no capacity limit set
                 </Text>
               )}
-            </Flex>
+            </div>
           )}
 
           {/* Status Picker (only when editing; create always uses Active) */}
@@ -531,7 +527,7 @@ const CampaignFormDialogContent: React.FC<CampaignFormDialogContentProps> = ({
               <PickerItem id="Archived">Archived</PickerItem>
             </Picker>
           )}
-        </Flex>
+        </div>
       </Content>
       <ButtonGroup>
         <Button variant="secondary" onPress={onCancel}>

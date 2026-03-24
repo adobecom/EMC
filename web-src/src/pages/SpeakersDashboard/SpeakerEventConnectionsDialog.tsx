@@ -14,11 +14,10 @@
 import React from 'react'
 import {
   View,
-  Flex,
-  Text,
   ActionButton
 } from '@adobe/react-spectrum'
-import { Button, ButtonGroup, Dialog, DialogTrigger, Content, Heading } from '@react-spectrum/s2'
+import { Text, Button, ButtonGroup, Dialog, DialogTrigger, Content, Heading } from '@react-spectrum/s2'
+import { style } from '@react-spectrum/s2/style' with { type: 'macro' }
 import Edit from '@spectrum-icons/workflow/Edit'
 import Calendar from '@spectrum-icons/workflow/Calendar'
 import Link from '@spectrum-icons/workflow/Link'
@@ -67,14 +66,14 @@ export const SpeakerEventConnectionsDialog: React.FC<SpeakerEventConnectionsDial
           <>
             <Heading slot="title">Event Connections</Heading>
             <Content>
-              <Flex direction="column" gap="size-300">
+              <div className={style({display: 'flex', flexDirection: 'column', gap: 24})}>
                 {/* Speaker Info Header */}
                 <View
                   padding="size-200"
                   borderRadius="medium"
                   backgroundColor="gray-100"
                 >
-                  <Flex alignItems="center" gap="size-200">
+                  <div className={style({display: 'flex', alignItems: 'center', gap: 16})}>
                     {/* Speaker Avatar */}
                     <View
                       UNSAFE_style={{
@@ -106,7 +105,7 @@ export const SpeakerEventConnectionsDialog: React.FC<SpeakerEventConnectionsDial
                       )}
                     </View>
 
-                    <Flex direction="column" gap="size-50" flex={1}>
+                    <div className={style({display: 'flex', flexDirection: 'column', gap: 4, flexGrow: 1})}>
                       <Text UNSAFE_style={{ fontWeight: 'bold', fontSize: '16px' }}>
                         {speakerName}
                       </Text>
@@ -115,15 +114,15 @@ export const SpeakerEventConnectionsDialog: React.FC<SpeakerEventConnectionsDial
                           {speaker.title}
                         </Text>
                       )}
-                    </Flex>
+                    </div>
 
-                    <Flex alignItems="center" gap="size-100">
+                    <div className={style({display: 'flex', alignItems: 'center', gap: 8})}>
                       <Link size="S" />
                       <Text UNSAFE_style={{ fontWeight: 'bold' }}>
                         {events.length} {events.length === 1 ? 'event' : 'events'}
                       </Text>
-                    </Flex>
-                  </Flex>
+                    </div>
+                  </div>
                 </View>
 
                 {/* Events List */}
@@ -141,7 +140,7 @@ export const SpeakerEventConnectionsDialog: React.FC<SpeakerEventConnectionsDial
                     maxHeight="size-4600"
                     UNSAFE_style={{ overflowY: 'auto' }}
                   >
-                    <Flex direction="column" gap="size-100">
+                    <div className={style({display: 'flex', flexDirection: 'column', gap: 8})}>
                       {events.map(event => (
                         <View
                           key={event.eventId}
@@ -157,22 +156,22 @@ export const SpeakerEventConnectionsDialog: React.FC<SpeakerEventConnectionsDial
                           onMouseEnter={(e: any) => e.currentTarget.style.backgroundColor = 'var(--spectrum-global-color-gray-100)'}
                           onMouseLeave={(e: any) => e.currentTarget.style.backgroundColor = 'transparent'}
                         >
-                          <Flex alignItems="center" gap="size-200">
+                          <div className={style({display: 'flex', alignItems: 'center', gap: 16})}>
                             {/* Event Info */}
-                            <Flex direction="column" gap="size-50" flex={1}>
+                            <div className={style({display: 'flex', flexDirection: 'column', gap: 4, flexGrow: 1})}>
                               <Text UNSAFE_style={{ fontWeight: 'bold' }}>
                                 {event.enTitle || event.title || 'Untitled Event'}
                               </Text>
-                              <Flex alignItems="center" gap="size-150">
-                                <Flex alignItems="center" gap="size-75">
+                              <div className={style({display: 'flex', alignItems: 'center', gap: 12})}>
+                                <div className={style({display: 'flex', alignItems: 'center', gap: 8})}>
                                   <Calendar size="XS" UNSAFE_style={{ color: 'var(--spectrum-global-color-gray-500)' }} />
                                   <Text UNSAFE_style={{ fontSize: '12px', color: 'var(--spectrum-global-color-gray-600)' }}>
                                     {formatDate(event.localStartDate)}
                                   </Text>
-                                </Flex>
+                                </div>
                                 <StatusBadge status={event.published ? 'published' : 'draft'} />
-                              </Flex>
-                            </Flex>
+                              </div>
+                            </div>
 
                             {/* Actions */}
                             <ActionButton
@@ -183,13 +182,13 @@ export const SpeakerEventConnectionsDialog: React.FC<SpeakerEventConnectionsDial
                               <Edit />
                               <Text>Edit</Text>
                             </ActionButton>
-                          </Flex>
+                          </div>
                         </View>
                       ))}
-                    </Flex>
+                    </div>
                   </View>
                 )}
-              </Flex>
+              </div>
             </Content>
             <ButtonGroup>
               <Button variant="accent" onPress={() => { onClose(); close() }}>

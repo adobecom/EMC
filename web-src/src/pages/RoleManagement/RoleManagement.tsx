@@ -5,19 +5,13 @@
 import React, { useState, useCallback, useMemo, useEffect } from 'react'
 import {
   View,
-  Text,
-  Flex,
   DialogTrigger as V3DialogTrigger,
   AlertDialog,
-  ActionButton,
-  Badge,
-  Checkbox,
-  Well,
 } from '@adobe/react-spectrum'
-import { Button, ButtonGroup, TextField, DialogTrigger, Dialog, Content, Heading } from '@react-spectrum/s2'
+import { Badge, Button, ButtonGroup, Text, TextField, DialogTrigger, Dialog, Content, Heading, Checkbox } from '@react-spectrum/s2'
 import { style } from '@react-spectrum/s2/style' with { type: 'macro' }
-import Delete from '@spectrum-icons/workflow/Delete'
-import Edit from '@spectrum-icons/workflow/Edit'
+import EditS2 from "@react-spectrum/s2/icons/Edit"
+import DeleteS2 from "@react-spectrum/s2/icons/Delete"
 import { useApi } from '../../contexts/ApiContext'
 import { useToast } from '../../contexts'
 import { IMS } from '../../types'
@@ -209,16 +203,16 @@ export const RoleManagement: React.FC<RoleManagementProps> = () => {
       width: 400,
       sortable: false,
       render: (item) => (
-        <Flex gap="size-50" wrap>
+        <div className={style({display: 'flex', gap: 4, flexWrap: 'wrap'})}>
           {item.permissions.slice(0, 5).map(p => (
             <Badge key={p} variant="neutral" UNSAFE_style={{ fontSize: 11 }}>
               {p}
             </Badge>
           ))}
           {item.permissions.length > 5 && (
-            <Badge variant="info">+{item.permissions.length - 5} more</Badge>
+            <Badge variant="informative">+{item.permissions.length - 5} more</Badge>
           )}
-        </Flex>
+        </div>
       ),
     },
     {
@@ -230,31 +224,33 @@ export const RoleManagement: React.FC<RoleManagementProps> = () => {
         <Text>{new Date(item.creationTime).toLocaleDateString()}</Text>
       ),
     },
-    {
-      key: 'actions',
+    ...((canWrite || canDelete) ? [{
+      key: 'actions' as const,
       name: 'ACTIONS',
       width: 120,
-      sortable: false,
-      render: (item) => (
-        <Flex gap="size-100" justifyContent="end">
+      sortable: false as const,
+      render: (item: RBACApiRole) => (
+        <div className={style({display: 'flex', gap: 8, justifyContent: 'end'})}>
           {canWrite && (
-            <ActionButton isQuiet aria-label="Edit role" onPress={() => openEditDialog(item)}>
-              <Edit size="S" />
-            </ActionButton>
+            <Button size="S" variant="secondary" fillStyle="outline" onPress={() => openEditDialog(item)}>
+              <EditS2 />
+              <Text>Edit</Text>
+            </Button>
           )}
           {canDelete && (
-            <ActionButton isQuiet aria-label="Delete role" onPress={() => setRoleToDelete(item)}>
-              <Delete size="S" />
-            </ActionButton>
+            <Button size="S" variant="negative" fillStyle="outline" onPress={() => setRoleToDelete(item)}>
+              <DeleteS2 />
+              <Text>Delete</Text>
+            </Button>
           )}
-        </Flex>
+        </div>
       ),
-    },
+    }] : []),
   ], [canWrite, canDelete, openEditDialog])
 
   return (
     <View padding="size-400" maxWidth="1400px" marginX="auto">
-      <Flex direction="column" gap="size-400">
+      <div className={style({display: 'flex', flexDirection: 'column', gap: 32})}>
         <ResourceDashboardLayout
           title="Roles"
           totalCount={rolesData.length}
@@ -270,7 +266,7 @@ export const RoleManagement: React.FC<RoleManagementProps> = () => {
           searchPlaceholder="Search roles..."
           searchKeys={SEARCH_KEYS}
         />
-      </Flex>
+      </div>
 
       {/* Add/Edit Role Dialog */}
       <DialogTrigger isOpen={isFormOpen} onOpenChange={setIsFormOpen}>
@@ -280,7 +276,7 @@ export const RoleManagement: React.FC<RoleManagementProps> = () => {
             <>
               <Heading slot="title">{editingRole ? 'Edit Role' : 'Create Role'}</Heading>
               <Content>
-                <Flex direction="column" gap="size-300">
+                <div className={style({display: 'flex', flexDirection: 'column', gap: 24})}>
                   <TextField
                     label="Name"
                     value={formName}
@@ -291,13 +287,19 @@ export const RoleManagement: React.FC<RoleManagementProps> = () => {
                   />
                   <Heading level={4}>Permissions ({formPermissions.size} selected)</Heading>
                   <View maxHeight="size-6000" overflow="auto">
-                    <Flex direction="column" gap="size-200">
+                    <div className={style({display: 'flex', flexDirection: 'column', gap: 16})}>
                       {Array.from(groupedPermissions.entries()).map(([resource, perms]) => (
-                        <Well key={resource}>
+                        <div key={resource} className={style({
+                          padding: 16,
+                          borderWidth: 1,
+                          borderStyle: 'solid',
+                          borderColor: 'gray-300',
+                          borderRadius: 'sm',
+                        })}>
                           <Text UNSAFE_style={{ fontWeight: 600, textTransform: 'uppercase', fontSize: 12 }}>
                             {resource}
                           </Text>
-                          <Flex direction="column" gap="size-50" marginTop="size-100">
+                          <div className={style({display: 'flex', flexDirection: 'column', gap: 4, marginTop: 8})}>
                             {perms.map(perm => (
                               <Checkbox
                                 key={perm}
@@ -307,12 +309,12 @@ export const RoleManagement: React.FC<RoleManagementProps> = () => {
                                 {perm}
                               </Checkbox>
                             ))}
-                          </Flex>
-                        </Well>
+                          </div>
+                        </div>
                       ))}
-                    </Flex>
+                    </div>
                   </View>
-                </Flex>
+                </div>
               </Content>
               <ButtonGroup>
                 <Button variant="secondary" onPress={close}>Cancel</Button>

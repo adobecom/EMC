@@ -6,13 +6,12 @@ import React, { useEffect, useMemo, useCallback } from 'react'
 import {
   Flex,
   View,
-  Text,
   Heading,
   ActionButton,
   ProgressCircle,
   StatusLight,
 } from '@adobe/react-spectrum'
-import { Button, Picker, PickerItem } from '@react-spectrum/s2'
+import { Button, Text, Picker, PickerItem } from '@react-spectrum/s2'
 import { style } from '@react-spectrum/s2/style' with { type: 'macro' }
 import Add from '@spectrum-icons/workflow/Add'
 import Checkmark from '@spectrum-icons/workflow/Checkmark'

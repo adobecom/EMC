@@ -16,7 +16,6 @@
 import React, { useEffect, useState, useMemo, useCallback, useRef } from 'react'
 import {
   Flex,
-  Text,
   View,
   ActionButton,
   MenuTrigger,
@@ -25,12 +24,11 @@ import {
   DialogTrigger,
   AlertDialog,
   ProgressCircle,
-  Badge,
   Tooltip,
   TooltipTrigger,
   Well
 } from '@adobe/react-spectrum'
-import { Button, ComboBox, ComboBoxItem, Text as S2Text } from "@react-spectrum/s2"
+import { Badge, Button, ComboBox, ComboBoxItem, Text } from "@react-spectrum/s2"
 import { style } from "@react-spectrum/s2/style" with { type: "macro" }
 import MoreSmallList from '@spectrum-icons/workflow/MoreSmallList'
 import Edit from '@spectrum-icons/workflow/Edit'
@@ -697,10 +695,10 @@ export const SpeakersDashboard: React.FC<SpeakersDashboardProps> = () => {
             >
               {(item) => (
                 <ComboBoxItem id={item.id} textValue={item.name}>
-                  <S2Text slot="label">{item.name}</S2Text>
-                  <S2Text slot="description">
+                  <Text slot="label">{item.name}</Text>
+                  <Text slot="description">
                     {formatCloudType(item.cloudType)} • {truncateDescription(item.description, 50)}
-                  </S2Text>
+                  </Text>
                 </ComboBoxItem>
               )}
             </ComboBox>
@@ -730,7 +728,7 @@ export const SpeakersDashboard: React.FC<SpeakersDashboardProps> = () => {
             <Flex direction="column" gap="size-100">
               <Flex alignItems="center" gap="size-150">
                 <Badge 
-                  variant={selectedSeries.cloudType === 'CreativeCloud' ? 'positive' : 'info'}
+                  variant={selectedSeries.cloudType === 'CreativeCloud' ? 'positive' : 'informative'}
                 >
                   {formatCloudType(selectedSeries.cloudType)}
                 </Badge>
@@ -769,7 +767,7 @@ export const SpeakersDashboard: React.FC<SpeakersDashboardProps> = () => {
       isDisabled={!selectedSeriesId}
     >
       <Add />
-      <S2Text>Add Speaker</S2Text>
+      <Text>Add Speaker</Text>
     </Button>
   ), [handleCreateSpeaker, selectedSeriesId])
   

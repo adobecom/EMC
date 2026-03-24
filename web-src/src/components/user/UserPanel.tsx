@@ -6,11 +6,10 @@ import React from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
   View,
-  Flex,
-  Text,
   Avatar,
   ActionButton,
 } from '@adobe/react-spectrum'
+import { style } from '@react-spectrum/s2/style' with { type: 'macro' }
 import {
   MenuTrigger,
   Menu,
@@ -18,7 +17,7 @@ import {
   MenuSection,
   Header,
   Heading,
-  Text as S2Text
+  Text
 } from '@react-spectrum/s2'
 import User from "@react-spectrum/s2/icons/User"
 import InfoCircle from "@react-spectrum/s2/icons/InfoCircle"
@@ -87,7 +86,7 @@ export const UserPanel: React.FC<UserPanelProps> = ({ ims, compact = false }) =>
         borderRadius="medium"
         marginBottom={compact ? 'size-0' : 'size-300'}
       >
-        <Flex direction="row" alignItems="center" gap="size-150">
+        <div className={style({ display: 'flex', alignItems: 'center', gap: 12 })}>
           <View
             backgroundColor="blue-600"
             width="size-400"
@@ -98,7 +97,7 @@ export const UserPanel: React.FC<UserPanelProps> = ({ ims, compact = false }) =>
             <Text UNSAFE_className="user-initials-compact">GU</Text>
           </View>
           <Text UNSAFE_className="user-name">Guest User</Text>
-        </Flex>
+        </div>
       </View>
     )
   }
@@ -116,7 +115,7 @@ export const UserPanel: React.FC<UserPanelProps> = ({ ims, compact = false }) =>
           isQuiet
           UNSAFE_className={compact ? 'user-panel-button-compact' : 'user-panel-button'}
         >
-          <Flex direction="row" alignItems="center" gap="size-150" width="100%">
+          <div className={style({ display: 'flex', alignItems: 'center', gap: 12, width: '[100%]' })}>
             {/* Avatar: image when available, else initials */}
             {avatarUrl ? (
               <Avatar
@@ -139,7 +138,7 @@ export const UserPanel: React.FC<UserPanelProps> = ({ ims, compact = false }) =>
             )}
 
             {/* User info - only show name in compact mode */}
-            <Flex direction="column" gap="size-25" flex UNSAFE_className="user-info-container">
+            <div className={`${style({ display: 'flex', flexDirection: 'column', gap: 2, flexGrow: 1 })} user-info-container`}>
               <Text UNSAFE_className="user-name">
                 {userName}
               </Text>
@@ -148,15 +147,15 @@ export const UserPanel: React.FC<UserPanelProps> = ({ ims, compact = false }) =>
                   {userEmail}
                 </Text>
               )}
-            </Flex>
-          </Flex>
+            </div>
+          </div>
         </ActionButton>
 
         <Menu onAction={handleMenuAction}>
           <MenuSection>
             <MenuItem id="profile" textValue="View Profile">
               <User />
-              <S2Text slot="label">View Profile</S2Text>
+              <Text slot="label">View Profile</Text>
             </MenuItem>
           </MenuSection>
           {groups.length > 0 ? (
@@ -171,8 +170,8 @@ export const UserPanel: React.FC<UserPanelProps> = ({ ims, compact = false }) =>
                   textValue={group.name}
                 >
                   {activeGroup?.groupId === group.groupId ? <Checkmark /> : <UserGroup />}
-                  <S2Text slot="label">{group.name}</S2Text>
-                  {group.scopeName && <S2Text slot="description">{group.scopeName}</S2Text>}
+                  <Text slot="label">{group.name}</Text>
+                  {group.scopeName && <Text slot="description">{group.scopeName}</Text>}
                 </MenuItem>
               ))}
             </MenuSection>
@@ -185,13 +184,13 @@ export const UserPanel: React.FC<UserPanelProps> = ({ ims, compact = false }) =>
               {canManageAccess ? (
                 <MenuItem id="access" textValue="Access Management">
                   <UserSettings />
-                  <S2Text slot="label">Access Management</S2Text>
+                  <Text slot="label">Access Management</Text>
                 </MenuItem>
               ) : null}
               {canManageRoles ? (
                 <MenuItem id="roles" textValue="Roles">
                   <UserLock />
-                  <S2Text slot="label">Roles</S2Text>
+                  <Text slot="label">Roles</Text>
                 </MenuItem>
               ) : null}
             </MenuSection>
@@ -200,14 +199,14 @@ export const UserPanel: React.FC<UserPanelProps> = ({ ims, compact = false }) =>
             <MenuSection>
               <MenuItem id="signout" textValue="Sign Out">
                 <Leave />
-                <S2Text slot="label">Sign Out</S2Text>
+                <Text slot="label">Sign Out</Text>
               </MenuItem>
             </MenuSection>
           ) : (
             <MenuSection aria-label="shell-mode">
               <MenuItem id="shell-info" textValue="Managed by Experience Cloud">
                 <InfoCircle />
-                <S2Text slot="label">Sign out via Experience Cloud</S2Text>
+                <Text slot="label">Sign out via Experience Cloud</Text>
               </MenuItem>
             </MenuSection>
           )}
@@ -216,14 +215,14 @@ export const UserPanel: React.FC<UserPanelProps> = ({ ims, compact = false }) =>
 
       {/* Organization indicator - only show in full mode */}
       {!compact && ims.org && (
-        <Flex direction="row" alignItems="center" gap="size-100" marginTop="size-150">
+        <div className={style({ display: 'flex', alignItems: 'center', gap: 8 })} style={{ marginTop: 'var(--spectrum-global-dimension-size-150)' }}>
           <Text UNSAFE_className="org-label">
             ORG:
           </Text>
           <Text UNSAFE_className="org-value">
             {ims.org}
           </Text>
-        </Flex>
+        </div>
       )}
     </View>
   )

@@ -1,10 +1,11 @@
-/* 
+/*
 * <license header>
 */
 
 import React, { useEffect, useState } from 'react'
-import { View, Flex, Text } from '@adobe/react-spectrum'
+import { View, Text } from '@adobe/react-spectrum'
 import { Button } from "@react-spectrum/s2"
+import { style } from '@react-spectrum/s2/style' with { type: 'macro' }
 import Close from '@spectrum-icons/workflow/Close'
 import CheckmarkCircle from '@spectrum-icons/workflow/CheckmarkCircle'
 import AlertCircle from '@spectrum-icons/workflow/AlertCircle'
@@ -39,7 +40,7 @@ const getToastStyles = (variant: ToastVariant, isExiting: boolean): React.CSSPro
     transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
     minWidth: 320,
   }
-  
+
   // Variant-specific styles
   const variantStyles: Record<ToastVariant, React.CSSProperties> = {
     positive: {
@@ -63,7 +64,7 @@ const getToastStyles = (variant: ToastVariant, isExiting: boolean): React.CSSPro
       borderLeft: '4px solid #9ca3af',
     },
   }
-  
+
   return { ...baseStyles, ...variantStyles[variant] }
 }
 
@@ -104,21 +105,21 @@ interface ToastItemProps {
 const ToastItem: React.FC<ToastItemProps> = ({ toast, onDismiss }) => {
   const [isExiting, setIsExiting] = useState(false)
   const [isEntering, setIsEntering] = useState(true)
-  
+
   // Entry animation
   useEffect(() => {
     const timer = setTimeout(() => setIsEntering(false), 50)
     return () => clearTimeout(timer)
   }, [])
-  
+
   const handleDismiss = () => {
     setIsExiting(true)
     setTimeout(onDismiss, 300) // Wait for exit animation
   }
-  
+
   const getIcon = () => {
     const iconProps = { size: 'S' as const, UNSAFE_style: ICON_STYLES }
-    
+
     switch (toast.variant) {
       case 'positive':
         return <CheckmarkCircle {...iconProps} />
@@ -131,9 +132,9 @@ const ToastItem: React.FC<ToastItemProps> = ({ toast, onDismiss }) => {
         return <InfoOutline {...iconProps} />
     }
   }
-  
+
   const entryTransform = isEntering ? 'translateX(120%)' : 'translateX(0)'
-  
+
   return (
     <div
       style={{
@@ -143,18 +144,18 @@ const ToastItem: React.FC<ToastItemProps> = ({ toast, onDismiss }) => {
       role="alert"
       aria-live={toast.variant === 'negative' ? 'assertive' : 'polite'}
     >
-      <Flex direction="row" alignItems="start" gap="size-150">
+      <div className={style({ display: 'flex', alignItems: 'start', gap: 12 })}>
         {/* Icon */}
         <View UNSAFE_style={{ marginTop: 2 }}>
           {getIcon()}
         </View>
-        
+
         {/* Message */}
         <View flex UNSAFE_style={{ minWidth: 0 }}>
           <Text UNSAFE_style={MESSAGE_STYLES}>
             {toast.message}
           </Text>
-          
+
           {/* Action button if provided */}
           {toast.action && (
             <View marginTop="size-100">
@@ -171,7 +172,7 @@ const ToastItem: React.FC<ToastItemProps> = ({ toast, onDismiss }) => {
             </View>
           )}
         </View>
-        
+
         {/* Close button */}
         {toast.dismissible && (
           <button
@@ -188,7 +189,7 @@ const ToastItem: React.FC<ToastItemProps> = ({ toast, onDismiss }) => {
             <Close size="S" />
           </button>
         )}
-      </Flex>
+      </div>
     </div>
   )
 }
@@ -199,10 +200,10 @@ const ToastItem: React.FC<ToastItemProps> = ({ toast, onDismiss }) => {
 
 /**
  * ToastContainer - Renders all active toasts
- * 
+ *
  * Place this component once at the app root level, inside the ToastProvider.
  * Toasts will automatically appear here when triggered via useToast().
- * 
+ *
  * @example
  * ```tsx
  * // In App.tsx
@@ -216,11 +217,11 @@ const ToastItem: React.FC<ToastItemProps> = ({ toast, onDismiss }) => {
  */
 export const ToastContainer: React.FC = () => {
   const { toasts, dismiss } = useToast()
-  
+
   if (toasts.length === 0) {
     return null
   }
-  
+
   return (
     <div style={TOAST_CONTAINER_STYLES} aria-label="Notifications">
       {toasts.map((toast) => (
@@ -233,4 +234,3 @@ export const ToastContainer: React.FC = () => {
     </div>
   )
 }
-

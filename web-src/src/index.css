@@ -2,11 +2,11 @@
 * <license header>
 */
 
-/** Global Font Settings **/
+/** Global Font Settings — use S2's variable font for the entire app **/
 html,
 body {
   margin: 0;
-  font-family: --spectrum-global-font-family-base;
+  font-family: adobe-clean-spectrum-vf, adobe-clean, "Source Sans Pro", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Ubuntu, "Trebuchet MS", "Lucida Grande", sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   background-color: #FFFFFF;
@@ -15,6 +15,12 @@ body {
 #root {
   background-color: #FFFFFF;
 }
+
+/** Ensure v3 Provider components also use S2's loaded Adobe Clean variable font **/
+.spectrum-Provider {
+  font-family: adobe-clean-spectrum-vf, adobe-clean, "Source Sans Pro", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Ubuntu, "Trebuchet MS", "Lucida Grande", sans-serif !important;
+}
+
 
 /** Top Navigation Styling **/
 .top-nav {
@@ -114,6 +120,46 @@ body {
 
 .custom-data-table th {
   white-space: nowrap;
+}
+
+/** Expandable Row Styles **/
+.custom-data-table tr.expanded-parent {
+  border-bottom: none;
+}
+
+.custom-data-table tr.expanded-content-row {
+  border-bottom: 1px solid var(--spectrum-global-color-gray-200);
+}
+
+.custom-data-table tr.expanded-content-row > td {
+  padding: 0;
+  background-color: var(--spectrum-global-color-gray-75);
+}
+
+.custom-data-table .expanded-content-panel {
+  padding: 16px 24px 24px 56px;
+}
+
+/** User card styles for expanded group rows **/
+.user-card-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.user-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  border: 1px solid var(--spectrum-global-color-gray-200);
+  border-radius: 6px;
+  background-color: #FFFFFF;
+  transition: background-color 0.15s ease;
+}
+
+.user-card:hover {
+  background-color: var(--spectrum-global-color-gray-75);
 }
 
 

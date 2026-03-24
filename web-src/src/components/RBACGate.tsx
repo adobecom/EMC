@@ -13,10 +13,9 @@ import {
   Provider,
   defaultTheme,
   View,
-  Text,
   Flex,
 } from '@adobe/react-spectrum'
-import { Button, Picker, PickerItem } from '@react-spectrum/s2'
+import { Text, Button, Picker, PickerItem } from '@react-spectrum/s2'
 import { style } from '@react-spectrum/s2/style' with { type: 'macro' }
 import { useGroup } from '../contexts/GroupContext'
 import { GateScreen } from './shared/GateScreen'

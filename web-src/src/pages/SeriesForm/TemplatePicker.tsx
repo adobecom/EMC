@@ -6,12 +6,11 @@ import React, { useState, useEffect, useRef, useCallback } from 'react'
 import {
   View,
   Flex,
-  Text,
   Heading,
   ActionButton,
   Divider
 } from '@adobe/react-spectrum'
-import { Button } from '@react-spectrum/s2'
+import { Text, Button } from '@react-spectrum/s2'
 import Close from '@spectrum-icons/workflow/Close'
 import ZoomIn from '@spectrum-icons/workflow/ZoomIn'
 import ZoomOut from '@spectrum-icons/workflow/ZoomOut'
