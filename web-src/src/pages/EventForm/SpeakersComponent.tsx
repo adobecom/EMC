@@ -6,16 +6,13 @@ import React, { useState, useEffect, useCallback, useRef } from 'react'
 import {
   View,
   Flex,
-  Picker,
-  Item,
-  Heading,
   Text,
   ActionButton,
   ProgressCircle,
   TooltipTrigger,
   Tooltip,
 } from '@adobe/react-spectrum'
-import { Button, Text as S2Text } from '@react-spectrum/s2'
+import { Button, Heading, Text as S2Text, Picker, PickerItem } from '@react-spectrum/s2'
 import { style } from '@react-spectrum/s2/style' with { type: 'macro' }
 import { ProfileData, SeriesSpeaker, SpeakerType, EventApiResponse } from '../../types/domain'
 import { SpeakerPickerDialog } from './SpeakerPickerDialog'
@@ -509,10 +506,10 @@ export const SpeakersComponent: React.FC = () => {
                 labelPosition="side"
                 selectedKey={profile.type}
                 onSelectionChange={(key) => updateProfile(index, { type: key as SpeakerType })}
-                width="size-2400"
+                styles={style({ width: 192 })}
               >
                 {SPEAKER_TYPE_OPTIONS.map(option => (
-                  <Item key={option.key}>{option.label}</Item>
+                  <PickerItem key={option.key} id={option.key}>{option.label}</PickerItem>
                 ))}
               </Picker>
 

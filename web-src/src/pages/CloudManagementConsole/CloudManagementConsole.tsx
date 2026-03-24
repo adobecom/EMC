@@ -8,13 +8,12 @@ import {
   View,
   Text,
   Heading,
-  Picker,
-  Item,
   ActionButton,
   ProgressCircle,
   StatusLight,
 } from '@adobe/react-spectrum'
-import { Button } from '@react-spectrum/s2'
+import { Button, Picker, PickerItem } from '@react-spectrum/s2'
+import { style } from '@react-spectrum/s2/style' with { type: 'macro' }
 import Add from '@spectrum-icons/workflow/Add'
 import Checkmark from '@spectrum-icons/workflow/Checkmark'
 import Refresh from '@spectrum-icons/workflow/Refresh'
@@ -368,12 +367,12 @@ export const CloudManagementConsole: React.FC<CloudManagementConsoleProps> = () 
             label="Select a Cloud type"
             selectedKey={currentCloud}
             onSelectionChange={handleCloudChange}
-            width="size-3000"
+            styles={style({ width: 240 })}
           >
             {clouds.map(cloud => (
-              <Item key={cloud.cloudType}>
+              <PickerItem key={cloud.cloudType} id={cloud.cloudType}>
                 {cloud.cloudName || cloud.cloudType}
-              </Item>
+              </PickerItem>
             ))}
           </Picker>
         </View>

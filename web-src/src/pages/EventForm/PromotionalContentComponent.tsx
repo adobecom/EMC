@@ -9,10 +9,8 @@ import {
   Text,
   ActionButton,
   ProgressCircle,
-  Picker,
-  Item
 } from '@adobe/react-spectrum'
-import { Button, Text as S2Text } from '@react-spectrum/s2'
+import { Button, Text as S2Text, Picker, PickerItem } from '@react-spectrum/s2'
 import { style } from '@react-spectrum/s2/style' with { type: 'macro' }
 import Remove from '@spectrum-icons/workflow/Remove'
 import Add from "@react-spectrum/s2/icons/Add"
@@ -322,11 +320,11 @@ export const PromotionalContentComponent: React.FC = () => {
               placeholder="Select a promotion"
               selectedKey={item.name || null}
               onSelectionChange={(key) => handlePromotionSelect(index, key as string)}
-              width="size-3000"
+              styles={style({ width: 240 })}
               isDisabled={isLoading}
             >
               {availableOptions.map(promo => (
-                <Item key={promo.name}>{promo.name}</Item>
+                <PickerItem key={promo.name} id={promo.name}>{promo.name}</PickerItem>
               ))}
             </Picker>
             

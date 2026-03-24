@@ -14,11 +14,10 @@ import {
   defaultTheme,
   View,
   Text,
-  Picker,
-  Item,
   Flex,
 } from '@adobe/react-spectrum'
-import { Button } from '@react-spectrum/s2'
+import { Button, Picker, PickerItem } from '@react-spectrum/s2'
+import { style } from '@react-spectrum/s2/style' with { type: 'macro' }
 import { useGroup } from '../contexts/GroupContext'
 import { GateScreen } from './shared/GateScreen'
 import { COLORS, TYPOGRAPHY, SPACING } from '../styles/designSystem'
@@ -91,13 +90,13 @@ const GroupSelectionScreen: React.FC = () => {
             label="Group"
             selectedKey={selectedId}
             onSelectionChange={(key) => setSelectedId(key as string)}
-            width="100%"
+            styles={style({ width: '[100%]' })}
           >
             {groups.map(group => (
-              <Item key={group.groupId} textValue={group.name}>
+              <PickerItem key={group.groupId} id={group.groupId} textValue={group.name}>
                 <Text>{group.name}</Text>
                 <Text slot="description">{group.scopeName || ''}</Text>
-              </Item>
+              </PickerItem>
             ))}
           </Picker>
         </View>

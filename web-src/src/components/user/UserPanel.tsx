@@ -1,4 +1,4 @@
-/* 
+/*
 * <license header>
 */
 
@@ -10,17 +10,23 @@ import {
   Text,
   Avatar,
   ActionButton,
+} from '@adobe/react-spectrum'
+import {
   MenuTrigger,
   Menu,
-  Item,
-  Section
-} from '@adobe/react-spectrum'
-import UserIcon from '@spectrum-icons/workflow/User'
-import InfoIcon from '@spectrum-icons/workflow/Info'
-import LogOut from '@spectrum-icons/workflow/LogOut'
-import UserGroup from '@spectrum-icons/workflow/UserGroup'
-import LockClosed from '@spectrum-icons/workflow/LockClosed'
-import Checkmark from '@spectrum-icons/workflow/Checkmark'
+  MenuItem,
+  MenuSection,
+  Header,
+  Heading,
+  Text as S2Text
+} from '@react-spectrum/s2'
+import User from "@react-spectrum/s2/icons/User"
+import InfoCircle from "@react-spectrum/s2/icons/InfoCircle"
+import Leave from "@react-spectrum/s2/icons/Leave"
+import UserGroup from "@react-spectrum/s2/icons/UserGroup"
+import UserSettings from "@react-spectrum/s2/icons/UserSettings"
+import UserLock from "@react-spectrum/s2/icons/UserLock"
+import Checkmark from "@react-spectrum/s2/icons/Checkmark"
 import { IMS } from '../../types'
 import { useAuth } from '../../contexts/AuthContext'
 import { useProfileAvatar } from '../../hooks/useProfileAvatar'
@@ -58,13 +64,9 @@ export const UserPanel: React.FC<UserPanelProps> = ({ ims, compact = false }) =>
     return name.substring(0, 2).toUpperCase()
   }
 
-  const handleViewProfile = () => {
-    navigate('/profile')
-  }
-
   const handleMenuAction = (key: React.Key) => {
     if (key === 'profile') {
-      handleViewProfile()
+      navigate('/profile')
     } else if (key === 'signout') {
       signOut()
     } else if (key === 'access') {
@@ -79,7 +81,7 @@ export const UserPanel: React.FC<UserPanelProps> = ({ ims, compact = false }) =>
   // If no IMS profile, show minimal panel
   if (!ims.profile) {
     return (
-      <View 
+      <View
         backgroundColor={compact ? 'transparent' : 'gray-100'}
         padding={compact ? 'size-100' : 'size-200'}
         borderRadius="medium"
@@ -102,7 +104,7 @@ export const UserPanel: React.FC<UserPanelProps> = ({ ims, compact = false }) =>
   }
 
   return (
-    <View 
+    <View
       backgroundColor={compact ? 'transparent' : 'gray-100'}
       padding={compact ? 'size-100' : 'size-200'}
       borderRadius="medium"
@@ -110,8 +112,8 @@ export const UserPanel: React.FC<UserPanelProps> = ({ ims, compact = false }) =>
       UNSAFE_className={compact ? 'user-panel-compact' : ''}
     >
       <MenuTrigger>
-        <ActionButton 
-          isQuiet 
+        <ActionButton
+          isQuiet
           UNSAFE_className={compact ? 'user-panel-button-compact' : 'user-panel-button'}
         >
           <Flex direction="row" alignItems="center" gap="size-150" width="100%">
@@ -151,59 +153,64 @@ export const UserPanel: React.FC<UserPanelProps> = ({ ims, compact = false }) =>
         </ActionButton>
 
         <Menu onAction={handleMenuAction}>
-          <Section>
-            <Item key="profile" textValue="View Profile">
-              <UserIcon />
-              <Text>View Profile</Text>
-            </Item>
-          </Section>
+          <MenuSection>
+            <MenuItem id="profile" textValue="View Profile">
+              <User />
+              <S2Text slot="label">View Profile</S2Text>
+            </MenuItem>
+          </MenuSection>
           {groups.length > 0 ? (
-            <Section title="Group">
+            <MenuSection>
+              <Header>
+                <Heading>Group</Heading>
+              </Header>
               {groups.map(group => (
-                <Item
+                <MenuItem
                   key={`group_${group.groupId}`}
+                  id={`group_${group.groupId}`}
                   textValue={group.name}
                 >
                   {activeGroup?.groupId === group.groupId ? <Checkmark /> : <UserGroup />}
-                  <Text>{group.name}</Text>
-                  {group.scopeName && <Text slot="description">{group.scopeName}</Text>}
-                </Item>
+                  <S2Text slot="label">{group.name}</S2Text>
+                  {group.scopeName && <S2Text slot="description">{group.scopeName}</S2Text>}
+                </MenuItem>
               ))}
-            </Section>
+            </MenuSection>
           ) : null}
           {showAdminSection ? (
-            <Section title="Administration">
+            <MenuSection>
+              <Header>
+                <Heading>Administration</Heading>
+              </Header>
               {canManageAccess ? (
-                <Item key="access" textValue="Access Management">
-                  <UserGroup />
-                  <Text>Access Management</Text>
-                </Item>
+                <MenuItem id="access" textValue="Access Management">
+                  <UserSettings />
+                  <S2Text slot="label">Access Management</S2Text>
+                </MenuItem>
               ) : null}
               {canManageRoles ? (
-                <Item key="roles" textValue="Roles">
-                  <LockClosed />
-                  <Text>Roles</Text>
-                </Item>
+                <MenuItem id="roles" textValue="Roles">
+                  <UserLock />
+                  <S2Text slot="label">Roles</S2Text>
+                </MenuItem>
               ) : null}
-            </Section>
+            </MenuSection>
           ) : null}
-          {/* Sign Out is only meaningful in standalone mode; in ExC Shell the shell handles it */}
           {authMode === 'standalone' ? (
-            <Section>
-              <Item key="signout" textValue="Sign Out">
-                <LogOut />
-                <Text>Sign Out</Text>
-              </Item>
-            </Section>
+            <MenuSection>
+              <MenuItem id="signout" textValue="Sign Out">
+                <Leave />
+                <S2Text slot="label">Sign Out</S2Text>
+              </MenuItem>
+            </MenuSection>
           ) : (
-            // Empty section to satisfy Menu children type - ExC Shell manages sign-out
-            <Section aria-label="shell-mode">
-              <Item key="shell-info" textValue="Managed by Experience Cloud">
-                <InfoIcon />
-                <Text>Sign out via Experience Cloud</Text>
-              </Item>
-            </Section>
-          ) as any}
+            <MenuSection aria-label="shell-mode">
+              <MenuItem id="shell-info" textValue="Managed by Experience Cloud">
+                <InfoCircle />
+                <S2Text slot="label">Sign out via Experience Cloud</S2Text>
+              </MenuItem>
+            </MenuSection>
+          )}
         </Menu>
       </MenuTrigger>
 

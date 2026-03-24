@@ -14,14 +14,7 @@
 
 import React, { useState, useCallback, useEffect } from 'react'
 import {
-  Dialog,
-  DialogTrigger,
-  Heading,
-  Divider,
-  Content,
   Form,
-  TextField,
-  ButtonGroup,
   View,
   Flex,
   Text,
@@ -29,7 +22,8 @@ import {
   ProgressCircle,
   Checkbox
 } from '@adobe/react-spectrum'
-import { Button } from '@react-spectrum/s2'
+import { Button, ButtonGroup, TextField, Dialog, DialogTrigger, Content, Heading } from '@react-spectrum/s2'
+import { style } from '@react-spectrum/s2/style' with { type: 'macro' }
 import Add from '@spectrum-icons/workflow/Add'
 import Delete from '@spectrum-icons/workflow/Delete'
 import LinkOut from '@spectrum-icons/workflow/LinkOut'
@@ -183,170 +177,173 @@ export const SpeakerFormDialog: React.FC<SpeakerFormDialogProps> = ({
     <DialogTrigger isOpen={isOpen} onOpenChange={(open) => !open && onClose()}>
       <div style={{ display: 'none' }} />
       <Dialog size="L">
-        <Heading>{isEditing ? 'Edit Speaker' : 'Add Speaker'}</Heading>
-        <Divider />
-        <Content>
-          <Form>
-            <Flex direction="column" gap={FLEX_GAP.SECTION}>
-              {/* Name Fields */}
-              <Flex direction="row" gap={FLEX_GAP.FIELD}>
-                <TextField
-                  label="First Name"
-                  value={formState.firstName}
-                  onChange={(value) => updateField('firstName', value)}
-                  isRequired
-                  width="100%"
-                />
-                <TextField
-                  label="Last Name"
-                  value={formState.lastName}
-                  onChange={(value) => updateField('lastName', value)}
-                  isRequired
-                  width="100%"
-                />
-              </Flex>
-              
-              {/* Profile Image */}
-              <View width="100%" UNSAFE_style={{ maxWidth: '300px' }}>
-                <ImageUploader
-                  label="Profile Image"
-                  imageUrl={formState.imageUrl}
-                  imageId={formState.imageId}
-                  imageKind="speaker-photo"
-                  altText={`${formState.firstName} ${formState.lastName}`}
-                  maxSizeMB={25}
-                  width={300}
-                  dropzoneTitle="Add profile image"
-                  dropzoneDimensions="Dimensions 584 x 300 px"
-                  deferUpload={true}
-                  pendingFile={pendingFile || undefined}
-                  onFileSelected={handleFileSelect}
-                  onChange={(imageUrl, imageId) => {
-                    updateField('imageUrl', imageUrl)
-                    updateField('imageId', imageId)
-                  }}
-                  onRemove={handleFileRemove}
-                />
-              </View>
-              
-              {/* Title */}
-              <TextField
-                label="Title / Role"
-                value={formState.title}
-                onChange={(value) => updateField('title', value)}
-                placeholder="e.g., Senior Product Designer at Adobe"
-                width="100%"
-              />
-              
-              {/* Bio */}
-              <RichTextEditor
-                label="Bio (Optional)"
-                value={formState.bio}
-                onChange={(value) => updateField('bio', value)}
-                height="150px"
-              />
-              
-              {/* Social Links */}
-              <View>
-                <Flex justifyContent="space-between" alignItems="center" marginBottom="size-100">
-                  <Text UNSAFE_style={TYPOGRAPHY.FIELD_LABEL}>Social Media Links</Text>
-                  <ActionButton onPress={handleAddSocialLink} isQuiet>
-                    <Add />
-                    <Text>Add Link</Text>
-                  </ActionButton>
-                </Flex>
-                
-                {formState.socialLinks.length === 0 ? (
-                  <Text UNSAFE_style={{ fontSize: '14px', color: 'var(--spectrum-global-color-gray-600)', fontStyle: 'italic' }}>
-                    No social media links added yet.
-                  </Text>
-                ) : (
-                  <Flex direction="column" gap="size-100">
-                    {formState.socialLinks.map((socialLink, index) => {
-                      const detectedPlatform = detectSocialPlatform(socialLink.url)
-                      const valid = isValidUrl(socialLink.url)
-                      
-                      return (
-                        <Flex key={index} gap="size-100" alignItems="center">
-                          <View
-                            UNSAFE_style={{
-                              minWidth: '40px',
-                              height: '40px',
-                              display: 'flex',
-                              alignItems: 'center',
-                              justifyContent: 'center',
-                              backgroundColor: detectedPlatform
-                                ? detectedPlatform.color
-                                : 'var(--spectrum-global-color-gray-400)',
-                              color: 'white',
-                              borderRadius: '4px',
-                              fontSize: '16px',
-                              fontWeight: 'bold'
-                            }}
-                          >
-                            {detectedPlatform ? detectedPlatform.icon : <LinkOut />}
-                          </View>
-                          
-                          <TextField
-                            placeholder="https://..."
-                            value={socialLink.url}
-                            onChange={(value) => handleUpdateSocialLink(index, value)}
-                            width="100%"
-                            validationState={socialLink.url && !valid ? 'invalid' : undefined}
-                          />
-                          
-                          <ActionButton onPress={() => handleRemoveSocialLink(index)} isQuiet>
-                            <Delete />
-                          </ActionButton>
-                        </Flex>
-                      )
-                    })}
+        {({close}) => (
+          <>
+            <Heading slot="title">{isEditing ? 'Edit Speaker' : 'Add Speaker'}</Heading>
+            <Content>
+              <Form>
+                <Flex direction="column" gap={FLEX_GAP.SECTION}>
+                  {/* Name Fields */}
+                  <Flex direction="row" gap={FLEX_GAP.FIELD}>
+                    <TextField
+                      label="First Name"
+                      value={formState.firstName}
+                      onChange={(value) => updateField('firstName', value)}
+                      isRequired
+                      styles={style({ width: '[100%]' })}
+                    />
+                    <TextField
+                      label="Last Name"
+                      value={formState.lastName}
+                      onChange={(value) => updateField('lastName', value)}
+                      isRequired
+                      styles={style({ width: '[100%]' })}
+                    />
                   </Flex>
+
+                  {/* Profile Image */}
+                  <View width="100%" UNSAFE_style={{ maxWidth: '300px' }}>
+                    <ImageUploader
+                      label="Profile Image"
+                      imageUrl={formState.imageUrl}
+                      imageId={formState.imageId}
+                      imageKind="speaker-photo"
+                      altText={`${formState.firstName} ${formState.lastName}`}
+                      maxSizeMB={25}
+                      width={300}
+                      dropzoneTitle="Add profile image"
+                      dropzoneDimensions="Dimensions 584 x 300 px"
+                      deferUpload={true}
+                      pendingFile={pendingFile || undefined}
+                      onFileSelected={handleFileSelect}
+                      onChange={(imageUrl, imageId) => {
+                        updateField('imageUrl', imageUrl)
+                        updateField('imageId', imageId)
+                      }}
+                      onRemove={handleFileRemove}
+                    />
+                  </View>
+
+                  {/* Title */}
+                  <TextField
+                    label="Title / Role"
+                    value={formState.title}
+                    onChange={(value) => updateField('title', value)}
+                    placeholder="e.g., Senior Product Designer at Adobe"
+                    styles={style({ width: '[100%]' })}
+                  />
+
+                  {/* Bio */}
+                  <RichTextEditor
+                    label="Bio (Optional)"
+                    value={formState.bio}
+                    onChange={(value) => updateField('bio', value)}
+                    height="150px"
+                  />
+
+                  {/* Social Links */}
+                  <View>
+                    <Flex justifyContent="space-between" alignItems="center" marginBottom="size-100">
+                      <Text UNSAFE_style={TYPOGRAPHY.FIELD_LABEL}>Social Media Links</Text>
+                      <ActionButton onPress={handleAddSocialLink} isQuiet>
+                        <Add />
+                        <Text>Add Link</Text>
+                      </ActionButton>
+                    </Flex>
+
+                    {formState.socialLinks.length === 0 ? (
+                      <Text UNSAFE_style={{ fontSize: '14px', color: 'var(--spectrum-global-color-gray-600)', fontStyle: 'italic' }}>
+                        No social media links added yet.
+                      </Text>
+                    ) : (
+                      <Flex direction="column" gap="size-100">
+                        {formState.socialLinks.map((socialLink, index) => {
+                          const detectedPlatform = detectSocialPlatform(socialLink.url)
+                          const valid = isValidUrl(socialLink.url)
+
+                          return (
+                            <Flex key={index} gap="size-100" alignItems="center">
+                              <View
+                                UNSAFE_style={{
+                                  minWidth: '40px',
+                                  height: '40px',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'center',
+                                  backgroundColor: detectedPlatform
+                                    ? detectedPlatform.color
+                                    : 'var(--spectrum-global-color-gray-400)',
+                                  color: 'white',
+                                  borderRadius: '4px',
+                                  fontSize: '16px',
+                                  fontWeight: 'bold'
+                                }}
+                              >
+                                {detectedPlatform ? detectedPlatform.icon : <LinkOut />}
+                              </View>
+
+                              <TextField
+                                placeholder="https://..."
+                                value={socialLink.url}
+                                onChange={(value) => handleUpdateSocialLink(index, value)}
+                                styles={style({ width: '[100%]' })}
+                                isInvalid={!!(socialLink.url && !valid)}
+                              />
+
+                              <ActionButton onPress={() => handleRemoveSocialLink(index)} isQuiet>
+                                <Delete />
+                              </ActionButton>
+                            </Flex>
+                          )
+                        })}
+                      </Flex>
+                    )}
+                  </View>
+
+                  {/* Cascade option (only shown for editing with linked events) */}
+                  {isEditing && cascadeToEvents !== undefined && (
+                    <View
+                      padding="size-200"
+                      borderWidth="thin"
+                      borderColor="yellow-400"
+                      borderRadius="medium"
+                      backgroundColor="yellow-400"
+                    >
+                      <Checkbox
+                        isSelected={shouldCascade}
+                        onChange={setShouldCascade}
+                      >
+                        <Text>Update this speaker in all linked events</Text>
+                      </Checkbox>
+                      <Text UNSAFE_style={{ fontSize: '12px', color: 'var(--spectrum-global-color-gray-600)', marginTop: '4px' }}>
+                        This speaker is linked to events. Check this option to propagate changes to all linked events.
+                      </Text>
+                    </View>
+                  )}
+                </Flex>
+              </Form>
+            </Content>
+            <ButtonGroup>
+              <Button variant="secondary" onPress={() => { onClose(); close() }} isDisabled={isSubmitting}>
+                Cancel
+              </Button>
+              <Button
+                variant="accent"
+                onPress={handleSubmit}
+                isDisabled={!isFormValid || isSubmitting}
+              >
+                {isSubmitting ? (
+                  <>
+                    <ProgressCircle size="S" isIndeterminate aria-label="Submitting" />
+                    <Text>Saving...</Text>
+                  </>
+                ) : (
+                  <Text>{isEditing ? 'Update Speaker' : 'Add Speaker'}</Text>
                 )}
-              </View>
-              
-              {/* Cascade option (only shown for editing with linked events) */}
-              {isEditing && cascadeToEvents !== undefined && (
-                <View
-                  padding="size-200"
-                  borderWidth="thin"
-                  borderColor="yellow-400"
-                  borderRadius="medium"
-                  backgroundColor="yellow-400"
-                >
-                  <Checkbox
-                    isSelected={shouldCascade}
-                    onChange={setShouldCascade}
-                  >
-                    <Text>Update this speaker in all linked events</Text>
-                  </Checkbox>
-                  <Text UNSAFE_style={{ fontSize: '12px', color: 'var(--spectrum-global-color-gray-600)', marginTop: '4px' }}>
-                    This speaker is linked to events. Check this option to propagate changes to all linked events.
-                  </Text>
-                </View>
-              )}
-            </Flex>
-          </Form>
-        </Content>
-        <ButtonGroup>
-          <Button variant="secondary" onPress={onClose} isDisabled={isSubmitting}>
-            Cancel
-          </Button>
-          <Button
-            variant="accent"
-            onPress={handleSubmit}
-            isDisabled={!isFormValid || isSubmitting}
-          >
-            {isSubmitting ? (
-              <>
-                <ProgressCircle size="S" isIndeterminate aria-label="Submitting" />
-                <Text>Saving...</Text>
-              </>
-            ) : (
-              <Text>{isEditing ? 'Update Speaker' : 'Add Speaker'}</Text>
-            )}
-          </Button>
-        </ButtonGroup>
+              </Button>
+            </ButtonGroup>
+          </>
+        )}
       </Dialog>
     </DialogTrigger>
   )

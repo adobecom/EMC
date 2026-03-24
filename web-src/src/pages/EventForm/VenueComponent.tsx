@@ -8,10 +8,11 @@ import {
   Flex,
   Heading,
   Text,
-  TextField,
   ActionButton,
   Switch
 } from '@adobe/react-spectrum'
+import { TextField } from '@react-spectrum/s2'
+import { style } from "@react-spectrum/s2/style" with { type: "macro" }
 import Add from '@spectrum-icons/workflow/Add'
 import Remove from '@spectrum-icons/workflow/Remove'
 import { ImageUploader, RichTextEditor } from '../../components/shared'
@@ -664,7 +665,7 @@ export const VenueComponent: React.FC = () => {
           <View marginTop="size-200">
             <TextField
               label="Alternative venue name"
-              width="100%"
+              styles={style({ width: '[100%]' })}
               value={alternativeVenueName}
               onChange={handleAlternativeNameChange}
               maxLength={VENUE_NAME_MAX_LENGTH}

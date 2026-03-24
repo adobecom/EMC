@@ -6,9 +6,10 @@ import React, { useState, useCallback, useMemo } from 'react'
 import {
   SearchField,
   AlertDialog,
-  DialogTrigger,
+  DialogTrigger as V3DialogTrigger,
   ActionButton,
 } from '@adobe/react-spectrum'
+import { DialogTrigger } from '@react-spectrum/s2'
 import Download from '@spectrum-icons/workflow/Download'
 import type { Attendee, AttendeeFilters, AttendeeColumnConfig } from '../../types/attendee'
 import type { Campaign } from '../../types/campaign'
@@ -195,7 +196,7 @@ export const RegistrationsTab: React.FC<RegistrationsTabProps> = ({
       </DialogTrigger>
 
       {/* Delete Confirmation Dialog */}
-      <DialogTrigger
+      <V3DialogTrigger
         isOpen={!!itemToDelete}
         onOpenChange={(isOpen) => !isOpen && setItemToDelete(null)}
       >
@@ -214,11 +215,11 @@ export const RegistrationsTab: React.FC<RegistrationsTabProps> = ({
             }}
             onSecondaryAction={close}
           >
-            Are you sure you want to remove {itemToDelete ? getAttendeeName(itemToDelete) : 'this attendee'}? 
+            Are you sure you want to remove {itemToDelete ? getAttendeeName(itemToDelete) : 'this attendee'}?
             This action cannot be undone.
           </AlertDialog>
         )}
-      </DialogTrigger>
+      </V3DialogTrigger>
     </>
   )
 }

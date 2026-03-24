@@ -5,22 +5,17 @@
 import React, { useState, useCallback, useMemo, useEffect } from 'react'
 import {
   View,
-  Heading,
   Text,
   Flex,
-  TextField,
-  DialogTrigger,
-  Dialog,
-  Content,
-  ButtonGroup,
-  Divider,
+  DialogTrigger as V3DialogTrigger,
   AlertDialog,
   ActionButton,
   Badge,
   Checkbox,
   Well,
 } from '@adobe/react-spectrum'
-import { Button } from '@react-spectrum/s2'
+import { Button, ButtonGroup, TextField, DialogTrigger, Dialog, Content, Heading } from '@react-spectrum/s2'
+import { style } from '@react-spectrum/s2/style' with { type: 'macro' }
 import Delete from '@spectrum-icons/workflow/Delete'
 import Edit from '@spectrum-icons/workflow/Edit'
 import { useApi } from '../../contexts/ApiContext'
@@ -280,61 +275,62 @@ export const RoleManagement: React.FC<RoleManagementProps> = () => {
       {/* Add/Edit Role Dialog */}
       <DialogTrigger isOpen={isFormOpen} onOpenChange={setIsFormOpen}>
         <div style={{ display: 'none' }} />
-        {(close) => (
-          <Dialog size="L">
-            <Heading>{editingRole ? 'Edit Role' : 'Create Role'}</Heading>
-            <Divider />
-            <Content>
-              <Flex direction="column" gap="size-300">
-                <TextField
-                  label="Name"
-                  value={formName}
-                  onChange={setFormName}
-                  width="100%"
-                  isRequired
-                  autoFocus
-                />
-                <Heading level={4}>Permissions ({formPermissions.size} selected)</Heading>
-                <View maxHeight="size-6000" overflow="auto">
-                  <Flex direction="column" gap="size-200">
-                    {Array.from(groupedPermissions.entries()).map(([resource, perms]) => (
-                      <Well key={resource}>
-                        <Text UNSAFE_style={{ fontWeight: 600, textTransform: 'uppercase', fontSize: 12 }}>
-                          {resource}
-                        </Text>
-                        <Flex direction="column" gap="size-50" marginTop="size-100">
-                          {perms.map(perm => (
-                            <Checkbox
-                              key={perm}
-                              isSelected={formPermissions.has(perm)}
-                              onChange={() => togglePermission(perm)}
-                            >
-                              {perm}
-                            </Checkbox>
-                          ))}
-                        </Flex>
-                      </Well>
-                    ))}
-                  </Flex>
-                </View>
-              </Flex>
-            </Content>
-            <ButtonGroup>
-              <Button variant="secondary" onPress={close}>Cancel</Button>
-              <Button
-                variant="accent"
-                onPress={handleSaveRole}
-                isDisabled={!formName.trim() || formPermissions.size === 0 || isSaving}
-              >
-                {editingRole ? 'Update' : 'Create'}
-              </Button>
-            </ButtonGroup>
-          </Dialog>
-        )}
+        <Dialog size="L">
+          {({close}) => (
+            <>
+              <Heading slot="title">{editingRole ? 'Edit Role' : 'Create Role'}</Heading>
+              <Content>
+                <Flex direction="column" gap="size-300">
+                  <TextField
+                    label="Name"
+                    value={formName}
+                    onChange={setFormName}
+                    styles={style({ width: '[100%]' })}
+                    isRequired
+                    autoFocus
+                  />
+                  <Heading level={4}>Permissions ({formPermissions.size} selected)</Heading>
+                  <View maxHeight="size-6000" overflow="auto">
+                    <Flex direction="column" gap="size-200">
+                      {Array.from(groupedPermissions.entries()).map(([resource, perms]) => (
+                        <Well key={resource}>
+                          <Text UNSAFE_style={{ fontWeight: 600, textTransform: 'uppercase', fontSize: 12 }}>
+                            {resource}
+                          </Text>
+                          <Flex direction="column" gap="size-50" marginTop="size-100">
+                            {perms.map(perm => (
+                              <Checkbox
+                                key={perm}
+                                isSelected={formPermissions.has(perm)}
+                                onChange={() => togglePermission(perm)}
+                              >
+                                {perm}
+                              </Checkbox>
+                            ))}
+                          </Flex>
+                        </Well>
+                      ))}
+                    </Flex>
+                  </View>
+                </Flex>
+              </Content>
+              <ButtonGroup>
+                <Button variant="secondary" onPress={close}>Cancel</Button>
+                <Button
+                  variant="accent"
+                  onPress={handleSaveRole}
+                  isDisabled={!formName.trim() || formPermissions.size === 0 || isSaving}
+                >
+                  {editingRole ? 'Update' : 'Create'}
+                </Button>
+              </ButtonGroup>
+            </>
+          )}
+        </Dialog>
       </DialogTrigger>
 
       {/* Delete Confirmation */}
-      <DialogTrigger
+      <V3DialogTrigger
         isOpen={!!roleToDelete}
         onOpenChange={(open) => !open && setRoleToDelete(null)}
       >
@@ -356,7 +352,7 @@ export const RoleManagement: React.FC<RoleManagementProps> = () => {
             This will fail if any groups are using this role.
           </AlertDialog>
         )}
-      </DialogTrigger>
+      </V3DialogTrigger>
 
       <BlurredLoadingOverlay
         visible={isLoading}

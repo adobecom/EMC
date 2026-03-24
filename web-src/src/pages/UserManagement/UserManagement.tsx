@@ -8,23 +8,16 @@
 import React, { useState, useCallback, useMemo, useEffect } from 'react'
 import {
   View,
-  Heading,
   Text,
   Flex,
-  TextField,
-  Picker,
-  Item,
-  DialogTrigger,
-  Dialog,
-  Content,
-  ButtonGroup,
-  Divider,
+  DialogTrigger as V3DialogTrigger,
   AlertDialog,
   ActionButton,
   Badge,
   Well,
 } from '@adobe/react-spectrum'
-import { Button, Text as S2Text } from '@react-spectrum/s2'
+import { Button, ButtonGroup, Text as S2Text, TextField, Picker, PickerItem, DialogTrigger, Dialog, Content, Heading } from '@react-spectrum/s2'
+import { style } from "@react-spectrum/s2/style" with { type: "macro" }
 import Delete from '@spectrum-icons/workflow/Delete'
 import Edit from '@spectrum-icons/workflow/Edit'
 import Key from "@react-spectrum/s2/icons/Key"
@@ -321,51 +314,52 @@ export const UserManagement: React.FC<UserManagementProps> = () => {
                   <Key />
                   <S2Text>Connect GitHub</S2Text>
                 </Button>
-                {(close) => (
-                  <Dialog>
-                    <Heading>GitHub Personal Access Token</Heading>
-                    <Divider />
-                    <Content>
-                      <Flex direction="column" gap="size-200">
-                        <Text>
-                          A GitHub Personal Access Token (classic) with <strong>repo</strong> scope
-                          is required to create pull requests against adobecom/emc.
-                        </Text>
-                        <Text UNSAFE_style={{ fontSize: '13px', color: 'var(--spectrum-global-color-gray-700)' }}>
-                          To create one:
-                        </Text>
-                        <ol style={{ margin: 0, paddingLeft: '20px', fontSize: '13px', color: 'var(--spectrum-global-color-gray-700)' }}>
-                          <li>Go to <strong>GitHub &gt; Settings &gt; Developer settings &gt; Personal access tokens &gt; Tokens (classic)</strong></li>
-                          <li>Click <strong>Generate new token (classic)</strong></li>
-                          <li>Give it a descriptive name (e.g. "EMC User Management")</li>
-                          <li>Select the <strong>repo</strong> scope (full control of private repositories)</li>
-                          <li>Click <strong>Generate token</strong> and copy it</li>
-                        </ol>
-                        <Text UNSAFE_style={{ fontSize: '12px', color: 'var(--spectrum-global-color-gray-600)' }}>
-                          The token is stored in sessionStorage only and is cleared when you close the tab.
-                        </Text>
-                        <TextField
-                          label="Personal Access Token"
-                          type="password"
-                          value={patInput}
-                          onChange={setPatInput}
-                          width="100%"
-                          autoFocus
-                        />
-                      </Flex>
-                    </Content>
-                    <ButtonGroup>
-                      <Button variant="secondary" onPress={close}>Cancel</Button>
-                      <Button
-                        variant="accent"
-                        onPress={() => { handleConnectGitHub(); close() }}
-                        isDisabled={!patInput.trim()}
-                      >
-                        Connect
-                      </Button>
-                    </ButtonGroup>
-                  </Dialog>
-                )}
+                <Dialog>
+                  {({close}) => (
+                    <>
+                      <Heading slot="title">GitHub Personal Access Token</Heading>
+                      <Content>
+                        <Flex direction="column" gap="size-200">
+                          <Text>
+                            A GitHub Personal Access Token (classic) with <strong>repo</strong> scope
+                            is required to create pull requests against adobecom/emc.
+                          </Text>
+                          <Text UNSAFE_style={{ fontSize: '13px', color: 'var(--spectrum-global-color-gray-700)' }}>
+                            To create one:
+                          </Text>
+                          <ol style={{ margin: 0, paddingLeft: '20px', fontSize: '13px', color: 'var(--spectrum-global-color-gray-700)' }}>
+                            <li>Go to <strong>GitHub &gt; Settings &gt; Developer settings &gt; Personal access tokens &gt; Tokens (classic)</strong></li>
+                            <li>Click <strong>Generate new token (classic)</strong></li>
+                            <li>Give it a descriptive name (e.g. "EMC User Management")</li>
+                            <li>Select the <strong>repo</strong> scope (full control of private repositories)</li>
+                            <li>Click <strong>Generate token</strong> and copy it</li>
+                          </ol>
+                          <Text UNSAFE_style={{ fontSize: '12px', color: 'var(--spectrum-global-color-gray-600)' }}>
+                            The token is stored in sessionStorage only and is cleared when you close the tab.
+                          </Text>
+                          <TextField
+                            label="Personal Access Token"
+                            type="password"
+                            value={patInput}
+                            onChange={setPatInput}
+                            styles={style({ width: '[100%]' })}
+                            autoFocus
+                          />
+                        </Flex>
+                      </Content>
+                      <ButtonGroup>
+                        <Button variant="secondary" onPress={close}>Cancel</Button>
+                        <Button
+                          variant="accent"
+                          onPress={() => { handleConnectGitHub(); close() }}
+                          isDisabled={!patInput.trim()}
+                        >
+                          Connect
+                        </Button>
+                      </ButtonGroup>
+                    </>
+                  )}
+                </Dialog>
               </DialogTrigger>
             )}
           </Flex>
@@ -398,66 +392,67 @@ export const UserManagement: React.FC<UserManagementProps> = () => {
       {/* Add/Edit User Dialog */}
       <DialogTrigger isOpen={isFormOpen} onOpenChange={setIsFormOpen}>
         <div style={{ display: 'none' }} />
-        {(close) => (
-          <Dialog>
-            <Heading>{editingUser ? 'Edit User' : 'Add User'}</Heading>
-            <Divider />
-            <Content>
-              <Flex direction="column" gap="size-200">
-                <TextField
-                  label="Email"
-                  value={formEmail}
-                  onChange={setFormEmail}
-                  isDisabled={!!editingUser}
-                  width="100%"
-                  isRequired
-                />
-                <Picker
-                  label="Role"
-                  selectedKey={formRole}
-                  onSelectionChange={(key) => setFormRole(key as UserRole)}
-                  width="100%"
+        <Dialog>
+          {({close}) => (
+            <>
+              <Heading slot="title">{editingUser ? 'Edit User' : 'Add User'}</Heading>
+              <Content>
+                <Flex direction="column" gap="size-200">
+                  <TextField
+                    label="Email"
+                    value={formEmail}
+                    onChange={setFormEmail}
+                    isDisabled={!!editingUser}
+                    styles={style({ width: '[100%]' })}
+                    isRequired
+                  />
+                  <Picker
+                    label="Role"
+                    selectedKey={formRole}
+                    onSelectionChange={(key) => setFormRole(key as UserRole)}
+                    styles={style({ width: '[100%]' })}
+                  >
+                    {ROLE_OPTIONS.map(opt => (
+                      <PickerItem key={opt.key} id={opt.key}>{opt.label}</PickerItem>
+                    ))}
+                  </Picker>
+                  <TextField
+                    label="Business Units (comma-separated)"
+                    value={formBusinessUnits}
+                    onChange={setFormBusinessUnits}
+                    styles={style({ width: '[100%]' })}
+                  />
+                  <TextField
+                    label="Series IDs (comma-separated)"
+                    value={formSeries}
+                    onChange={setFormSeries}
+                    styles={style({ width: '[100%]' })}
+                  />
+                  <TextField
+                    label="Event IDs (comma-separated)"
+                    value={formEvents}
+                    onChange={setFormEvents}
+                    styles={style({ width: '[100%]' })}
+                  />
+                </Flex>
+              </Content>
+              <ButtonGroup>
+                <Button variant="secondary" onPress={close}>Cancel</Button>
+                <Button
+                  variant="accent"
+                  onPress={() => { handleSaveUser(); close() }}
+                  isDisabled={!formEmail.trim() || !isConnected || isSaving}
                 >
-                  {ROLE_OPTIONS.map(opt => (
-                    <Item key={opt.key}>{opt.label}</Item>
-                  ))}
-                </Picker>
-                <TextField
-                  label="Business Units (comma-separated)"
-                  value={formBusinessUnits}
-                  onChange={setFormBusinessUnits}
-                  width="100%"
-                />
-                <TextField
-                  label="Series IDs (comma-separated)"
-                  value={formSeries}
-                  onChange={setFormSeries}
-                  width="100%"
-                />
-                <TextField
-                  label="Event IDs (comma-separated)"
-                  value={formEvents}
-                  onChange={setFormEvents}
-                  width="100%"
-                />
-              </Flex>
-            </Content>
-            <ButtonGroup>
-              <Button variant="secondary" onPress={close}>Cancel</Button>
-              <Button
-                variant="accent"
-                onPress={() => { handleSaveUser(); close() }}
-                isDisabled={!formEmail.trim() || !isConnected || isSaving}
-              >
-                {editingUser ? 'Update' : 'Add'}
-              </Button>
-            </ButtonGroup>
-          </Dialog>
-        )}
+                  {editingUser ? 'Update' : 'Add'}
+                </Button>
+              </ButtonGroup>
+            </>
+          )}
+        </Dialog>
       </DialogTrigger>
 
       {/* Delete Confirmation */}
-      <DialogTrigger
+      <V3DialogTrigger
         isOpen={!!userToDelete}
         onOpenChange={(open) => !open && setUserToDelete(null)}
       >
@@ -479,7 +474,7 @@ export const UserManagement: React.FC<UserManagementProps> = () => {
             This will create a pull request.
           </AlertDialog>
         )}
-      </DialogTrigger>
+      </V3DialogTrigger>
 
       <BlurredLoadingOverlay
         visible={isSaving}

@@ -6,8 +6,6 @@ import React, { useEffect, useCallback, useRef, useState } from 'react'
 import {
   View,
   Flex,
-  Picker,
-  Item,
   Text,
   Heading,
   Divider,
@@ -17,7 +15,8 @@ import {
   Content,
   ButtonGroup
 } from '@adobe/react-spectrum'
-import { Button } from '@react-spectrum/s2'
+import { Button, Picker, PickerItem } from '@react-spectrum/s2'
+import { style } from "@react-spectrum/s2/style" with { type: "macro" }
 import { useNavigate, useParams } from 'react-router-dom'
 import ChevronRight from '@spectrum-icons/workflow/ChevronRight'
 import ChevronLeft from '@spectrum-icons/workflow/ChevronLeft'
@@ -315,10 +314,10 @@ const FormatSelectionOverlay: React.FC<{
               selectedKey={selectedCloud}
               onSelectionChange={handleCloudChange}
               placeholder="Choose a cloud..."
-              width="100%"
+              styles={style({ width: '[100%]' })}
             >
               {clouds.map((cloud) => (
-                <Item key={cloud.key}>{cloud.label}</Item>
+                <PickerItem key={cloud.key} id={cloud.key}>{cloud.label}</PickerItem>
               ))}
             </Picker>
 
@@ -329,7 +328,7 @@ const FormatSelectionOverlay: React.FC<{
               onSelectionChange={handleSeriesChange}
               isDisabled={!selectedCloud}
               placeholder={!selectedCloud ? 'Select a cloud first' : 'Choose a series...'}
-              width="100%"
+              styles={style({ width: '[100%]' })}
               description={
                 selectedSeries
                   ? filteredSeries.find(s => s.id === selectedSeries)?.description || undefined
@@ -337,10 +336,10 @@ const FormatSelectionOverlay: React.FC<{
               }
             >
               {filteredSeries.length === 0 ? (
-                <Item key="no-series">No series available for this cloud</Item>
+                <PickerItem id="no-series">No series available for this cloud</PickerItem>
               ) : (
                 filteredSeries.map((s) => (
-                  <Item key={s.id}>{s.name}</Item>
+                  <PickerItem key={s.id} id={s.id}>{s.name}</PickerItem>
                 ))
               )}
             </Picker>

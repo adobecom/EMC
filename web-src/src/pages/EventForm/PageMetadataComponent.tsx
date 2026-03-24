@@ -7,9 +7,8 @@ import {
   Flex,
   Heading,
   Text,
-  Picker,
-  Item
 } from '@adobe/react-spectrum'
+import { Picker, PickerItem } from '@react-spectrum/s2'
 import { TYPOGRAPHY, FLEX_GAP } from '../../styles/designSystem'
 import { useEventFormComponent } from '../../hooks/useEventFormComponent'
 import { apiService, cachedApi } from '../../services/api'
@@ -295,7 +294,7 @@ export const PageMetadataComponent: React.FC = () => {
             isRequired
             items={allOptions}
           >
-            {(item) => <Item key={item.key}>{item.label}</Item>}
+            {(item) => <PickerItem id={item.key}>{item.label}</PickerItem>}
           </Picker>
         )
       })}

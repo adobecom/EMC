@@ -5,11 +5,10 @@
 import React from 'react'
 import {
   Flex,
-  TextField,
-  Picker,
-  Item,
   Text,
 } from '@adobe/react-spectrum'
+import { TextField, Picker, PickerItem } from '@react-spectrum/s2'
+import { style } from '@react-spectrum/s2/style' with { type: 'macro' }
 import { HeadingWithTooltip } from '../../components/shared'
 import { TYPOGRAPHY, FLEX_GAP } from '../../styles/designSystem'
 import { useEventFormComponent } from '../../hooks/useEventFormComponent'
@@ -170,10 +169,10 @@ export const MarketoIntegrationComponent: React.FC = () => {
         selectedKey={eventType || 'no-integration'}
         onSelectionChange={handleEventTypeChange}
         isDisabled={isLocked}
-        width="size-3600"
+        styles={style({ width: 288 })}
       >
         {EVENT_TYPE_OPTIONS.map((option) => (
-          <Item key={option.key}>{option.label}</Item>
+          <PickerItem key={option.key} id={option.key}>{option.label}</PickerItem>
         ))}
       </Picker>
 
@@ -186,7 +185,7 @@ export const MarketoIntegrationComponent: React.FC = () => {
           onChange={(value) => updateMarketoField('salesforceCampaignId', value)}
           placeholder="Add Salesforce campaign ID"
           isDisabled={isNoIntegration || isLocked}
-          width="size-3600"
+          styles={style({ width: 288 })}
         />
 
         <TextField
@@ -196,7 +195,7 @@ export const MarketoIntegrationComponent: React.FC = () => {
           onChange={(value) => updateMarketoField('mczProgramName', value)}
           placeholder="Add MCZ program name"
           isDisabled={isNoIntegration || isLocked}
-          width="size-3600"
+          styles={style({ width: 288 })}
         />
       </Flex>
 
@@ -208,7 +207,7 @@ export const MarketoIntegrationComponent: React.FC = () => {
           onChange={(value) => updateMarketoField('coMarketingPartner', value)}
           placeholder="Add co-marketing partner name"
           isDisabled={isNoIntegration || isLocked}
-          width="size-3600"
+          styles={style({ width: 288 })}
         />
 
         <Picker
@@ -216,10 +215,10 @@ export const MarketoIntegrationComponent: React.FC = () => {
           selectedKey={marketoIntegration.eventPoi || 'no-poi'}
           onSelectionChange={handlePoiChange}
           isDisabled={isNoIntegration || isLocked}
-          width="size-3600"
+          styles={style({ width: 288 })}
         >
           {EVENT_POI_OPTIONS.map((option) => (
-            <Item key={option.key}>{option.label}</Item>
+            <PickerItem key={option.key} id={option.key}>{option.label}</PickerItem>
           ))}
         </Picker>
       </Flex>

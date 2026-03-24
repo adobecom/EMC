@@ -5,7 +5,6 @@
 import React, { useState, useEffect } from 'react'
 import {
   View,
-  TextField,
   DatePicker,
   TimeField,
   Flex,
@@ -14,7 +13,7 @@ import {
   Heading,
   Text
 } from '@adobe/react-spectrum'
-import { Button, Text as S2Text } from '@react-spectrum/s2'
+import { Button, Text as S2Text, TextField } from '@react-spectrum/s2'
 import { style } from '@react-spectrum/s2/style' with { type: 'macro' }
 import { Time } from '@internationalized/date'
 import { parseDateTime, CalendarDateTime } from '@internationalized/date'
@@ -684,7 +683,7 @@ export const AgendaComponent: React.FC = () => {
                 isRequired
                 value={item.title}
                 onChange={(value) => updateAgendaItem(index, { title: value })}
-                width="100%"
+                styles={style({ width: '[100%]' })}
               />
 
               {/* Description */}

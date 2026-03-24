@@ -4,10 +4,6 @@
 
 import React, { useState, useMemo, useCallback, useEffect } from 'react'
 import {
-  Dialog,
-  DialogContainer,
-  Content,
-  TextField,
   View,
   Flex,
   Text,
@@ -15,7 +11,8 @@ import {
   ProgressCircle,
   SearchField,
 } from '@adobe/react-spectrum'
-import { Button } from '@react-spectrum/s2'
+import { Button, Dialog, DialogContainer, TextField } from '@react-spectrum/s2'
+import { style } from '@react-spectrum/s2/style' with { type: 'macro' }
 import Add from '@spectrum-icons/workflow/Add'
 import ArrowLeft from '@spectrum-icons/workflow/ArrowLeft'
 import { SeriesSponsor, SponsorData } from '../../types/domain'
@@ -392,7 +389,7 @@ export const PartnerPickerDialog: React.FC<PartnerPickerDialogProps> = ({
               value={createForm.name}
               onChange={(v) => updateCreateField('name', v)}
               isRequired
-              width="100%"
+              styles={style({ width: '[100%]' })}
             />
             <TextField
               label="Partner Website"
@@ -400,7 +397,7 @@ export const PartnerPickerDialog: React.FC<PartnerPickerDialogProps> = ({
               onChange={(v) => updateCreateField('website', v)}
               placeholder="www.example.com"
               isRequired
-              width="100%"
+              styles={style({ width: '[100%]' })}
             />
           </Flex>
         </Flex>
@@ -428,10 +425,12 @@ export const PartnerPickerDialog: React.FC<PartnerPickerDialogProps> = ({
   return (
     <DialogContainer onDismiss={onClose}>
       {isOpen && (
-        <Dialog size="L" isDismissable UNSAFE_style={{ maxHeight: '80vh' }}>
-          <Content UNSAFE_style={{ overflow: 'auto' }}>
-            {view === 'select' ? renderSelectView() : renderCreateView()}
-          </Content>
+        <Dialog size="L" isDismissible UNSAFE_style={{ maxHeight: '80vh' }}>
+          {() => (
+            <div style={{ overflow: 'auto' }}>
+              {view === 'select' ? renderSelectView() : renderCreateView()}
+            </div>
+          )}
         </Dialog>
       )}
     </DialogContainer>

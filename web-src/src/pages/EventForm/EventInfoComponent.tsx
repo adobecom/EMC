@@ -5,10 +5,6 @@
 import React, { useState, useEffect } from 'react'
 import {
   View,
-  TextField,
-  TextArea,
-  Picker,
-  Item,
   DatePicker,
   Flex,
   Text,
@@ -18,7 +14,7 @@ import {
   DialogTrigger,
   AlertDialog,
 } from '@adobe/react-spectrum'
-import { ComboBox, ComboBoxItem } from "@react-spectrum/s2"
+import { ComboBox, ComboBoxItem, TextField, TextArea, Picker, PickerItem } from "@react-spectrum/s2"
 import { ActionButton } from "@react-spectrum/s2"
 // S2 style macro for type-safe Spectrum token styling
 import {style} from '@react-spectrum/s2/style' with {type: 'macro'}
@@ -291,7 +287,7 @@ export const EventInfoComponent: React.FC = () => {
         onSelectionChange={handleLanguageChange}
       >
         {LANGUAGE_OPTIONS.map((lang) => (
-          <Item key={lang.key}>{lang.label}</Item>
+          <PickerItem key={lang.key} id={lang.key}>{lang.label}</PickerItem>
         ))}
       </Picker>
       {/* Locale switch confirmation when form has unsaved changes */}
@@ -323,7 +319,7 @@ export const EventInfoComponent: React.FC = () => {
         value={name}
         onChange={handleNameChange}
         description="80 characters max"
-        width="100%"
+        styles={style({ width: '[100%]' })}
       />
       <View width="100%">
         <Flex direction="row" gap="size-100" alignItems="center" marginBottom="size-100">
@@ -342,7 +338,7 @@ export const EventInfoComponent: React.FC = () => {
           aria-label="English title for page URL"
           value={enTitle || ''}
           onChange={(value) => updateFormData({ enTitle: value })}
-          width="100%"
+          styles={style({ width: '[100%]' })}
         />
       </View>
       <View width="100%">
@@ -367,7 +363,7 @@ export const EventInfoComponent: React.FC = () => {
         value={shortDescription || ''}
         onChange={(value) => updateFormData({ shortDescription: value })}
         description="160 characters max"
-        width="100%"
+        styles={style({ width: '[100%]' })}
       />
       <Flex direction="row" gap="size-200" wrap>
         <DatePicker
@@ -415,7 +411,7 @@ export const EventInfoComponent: React.FC = () => {
             value={secondaryLinkTitle || ''}
             onChange={(value) => updateFormData({ secondaryLinkTitle: value })}
             description="Display text for the secondary link"
-            width="100%"
+            styles={style({ width: '[100%]' })}
           />
 
           <TextField
@@ -430,10 +426,10 @@ export const EventInfoComponent: React.FC = () => {
                 setUrlValidationError(null)
               }
             }}
-            validationState={urlValidationError ? 'invalid' : undefined}
-            errorMessage={urlValidationError}
+            isInvalid={!!urlValidationError}
+            errorMessage={urlValidationError || undefined}
             description={urlValidationError ? undefined : 'URL for the secondary link'}
-            width="100%"
+            styles={style({ width: '[100%]' })}
           />
         </>
       )}

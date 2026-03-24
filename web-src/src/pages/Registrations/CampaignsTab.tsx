@@ -8,20 +8,13 @@ import {
   Flex,
   Text,
   ActionButton,
-  DialogTrigger,
-  Dialog,
-  Heading,
-  Content,
-  ButtonGroup,
-  TextField,
+  DialogTrigger as V3DialogTrigger,
   NumberField,
   Switch,
   AlertDialog,
-  Divider,
-  Picker,
-  Item
 } from '@adobe/react-spectrum'
-import { Button } from '@react-spectrum/s2'
+import { Button, ButtonGroup, TextField, Picker, PickerItem, DialogTrigger, Dialog, Content, Heading } from '@react-spectrum/s2'
+import { style } from "@react-spectrum/s2/style" with { type: "macro" }
 import Add from '@spectrum-icons/workflow/Add'
 import Edit from '@spectrum-icons/workflow/Edit'
 import Delete from '@spectrum-icons/workflow/Delete'
@@ -297,21 +290,23 @@ export const CampaignsTab: React.FC<CampaignsTabProps> = ({
         }}
       >
         <div style={{ display: 'none' }} />
-        {(close) => (
-          <CampaignFormDialog
-            campaign={editingCampaign}
-            eventCapacity={event?.attendeeLimit}
-            isSaving={isSaving}
-            onSave={(data) => {
-              handleSaveCampaign(data)
-            }}
-            onCancel={close}
-          />
-        )}
+        <Dialog size="M">
+          {({close}) => (
+            <CampaignFormDialogContent
+              campaign={editingCampaign}
+              eventCapacity={event?.attendeeLimit}
+              isSaving={isSaving}
+              onSave={(data) => {
+                handleSaveCampaign(data)
+              }}
+              onCancel={close}
+            />
+          )}
+        </Dialog>
       </DialogTrigger>
 
       {/* Delete Confirmation Dialog */}
-      <DialogTrigger
+      <V3DialogTrigger
         isOpen={!!campaignToDelete}
         onOpenChange={(isOpen) => !isOpen && setCampaignToDelete(null)}
       >
@@ -332,10 +327,10 @@ export const CampaignsTab: React.FC<CampaignsTabProps> = ({
             The campaign URL will stop working.
           </AlertDialog>
         )}
-      </DialogTrigger>
+      </V3DialogTrigger>
 
       {/* Archive Campaign Confirmation Dialog */}
-      <DialogTrigger
+      <V3DialogTrigger
         isOpen={!!pendingArchiveSave}
         onOpenChange={(isOpen) => !isOpen && setPendingArchiveSave(null)}
       >
@@ -371,7 +366,7 @@ export const CampaignsTab: React.FC<CampaignsTabProps> = ({
             </Text>
           </AlertDialog>
         )}
-      </DialogTrigger>
+      </V3DialogTrigger>
     </View>
   )
 }
@@ -433,7 +428,7 @@ const EmptyCampaignsState: React.FC<{ onCreateClick: () => void }> = ({ onCreate
   </View>
 )
 
-interface CampaignFormDialogProps {
+interface CampaignFormDialogContentProps {
   campaign: Campaign | null
   eventCapacity?: number
   isSaving: boolean
@@ -441,7 +436,7 @@ interface CampaignFormDialogProps {
   onCancel: () => void
 }
 
-const CampaignFormDialog: React.FC<CampaignFormDialogProps> = ({
+const CampaignFormDialogContent: React.FC<CampaignFormDialogContentProps> = ({
   campaign,
   eventCapacity,
   isSaving,
@@ -473,9 +468,8 @@ const CampaignFormDialog: React.FC<CampaignFormDialogProps> = ({
   const isValid = name.trim().length > 0 && hasValidLimit
 
   return (
-    <Dialog size="M">
-      <Heading>{campaign ? 'Edit Campaign' : 'Create Campaign'}</Heading>
-      <Divider />
+    <>
+      <Heading slot="title">{campaign ? 'Edit Campaign' : 'Create Campaign'}</Heading>
       <Content>
         <Flex direction="column" gap="size-300">
           {/* Name Field */}
@@ -485,7 +479,7 @@ const CampaignFormDialog: React.FC<CampaignFormDialogProps> = ({
             onChange={setName}
             isRequired
             autoFocus
-            width="100%"
+            styles={style({ width: '[100%]' })}
           />
 
           {/* Campaign URL (read-only, only shown when editing) */}
@@ -494,7 +488,7 @@ const CampaignFormDialog: React.FC<CampaignFormDialogProps> = ({
               label="Campaign URL"
               value={campaign.url}
               isReadOnly
-              width="100%"
+              styles={style({ width: '[100%]' })}
               description="Auto-generated from the event URL"
             />
           )}
@@ -531,10 +525,10 @@ const CampaignFormDialog: React.FC<CampaignFormDialogProps> = ({
               label="Status"
               selectedKey={status}
               onSelectionChange={(key) => setStatus(key as CampaignStatus)}
-              width="100%"
+              styles={style({ width: '[100%]' })}
             >
-              <Item key="Active">Active</Item>
-              <Item key="Archived">Archived</Item>
+              <PickerItem id="Active">Active</PickerItem>
+              <PickerItem id="Archived">Archived</PickerItem>
             </Picker>
           )}
         </Flex>
@@ -555,7 +549,7 @@ const CampaignFormDialog: React.FC<CampaignFormDialogProps> = ({
           {isSaving ? 'Saving...' : 'Save'}
         </Button>
       </ButtonGroup>
-    </Dialog>
+    </>
   )
 }
 

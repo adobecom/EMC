@@ -11,24 +11,15 @@
 import React, { useState, useCallback, useMemo, useEffect } from 'react'
 import {
   View,
-  Heading,
   Text,
   Flex,
-  TextField,
-  Picker,
-  Item,
-  DialogTrigger,
-  Dialog,
-  Content,
-  ButtonGroup,
-  Divider,
+  DialogTrigger as V3DialogTrigger,
   AlertDialog,
   ActionButton,
   Badge,
   Well,
 } from '@adobe/react-spectrum'
-import { Button } from '@react-spectrum/s2'
-import { ComboBox, ComboBoxItem, Text as S2Text } from "@react-spectrum/s2"
+import { Button, ButtonGroup, TextField, Picker, PickerItem, ComboBox, ComboBoxItem, Text as S2Text, DialogTrigger, Dialog, FullscreenDialog, Content, Heading } from "@react-spectrum/s2"
 import { style } from "@react-spectrum/s2/style" with { type: "macro" }
 import Delete from '@spectrum-icons/workflow/Delete'
 import Edit from '@spectrum-icons/workflow/Edit'
@@ -676,124 +667,125 @@ export const ScopeGroupManagement: React.FC<ScopeGroupManagementProps> = () => {
 
       {/* Users Management Dialog (full-screen takeover) */}
       <DialogTrigger
-        type="fullscreenTakeover"
         isOpen={!!selectedGroup}
         onOpenChange={(open) => { if (!open) { setSelectedGroup(null); setGroupUsers([]) } }}
       >
         <div style={{ display: 'none' }} />
-        {(close) => (
-          <Dialog>
-            <Heading>Users in {selectedGroup?.name}</Heading>
-            <Divider />
-            <Content>
-              <Flex direction="column" gap="size-300" height="100%">
-                {canWriteUser && (
-                  <Flex justifyContent="end">
-                    <Button variant="accent" onPress={() => { setNewUserEmail(''); setNewUserFirstName(''); setNewUserLastName(''); setNewUserGuid(''); setIsAddUserOpen(true) }}>
-                      <UserAdd />
-                      <S2Text>Add User</S2Text>
-                    </Button>
-                  </Flex>
-                )}
+        <FullscreenDialog variant="fullscreenTakeover">
+          {({close}) => (
+            <>
+              <Heading slot="title">Users in {selectedGroup?.name}</Heading>
+              <Content>
+                <Flex direction="column" gap="size-300" height="100%">
+                  {canWriteUser && (
+                    <Flex justifyContent="end">
+                      <Button variant="accent" onPress={() => { setNewUserEmail(''); setNewUserFirstName(''); setNewUserLastName(''); setNewUserGuid(''); setIsAddUserOpen(true) }}>
+                        <UserAdd />
+                        <S2Text>Add User</S2Text>
+                      </Button>
+                    </Flex>
+                  )}
 
-                {isLoadingUsers ? (
-                  <View padding="size-600">
-                    <Text>Loading users...</Text>
-                  </View>
-                ) : (
-                  <ResourceDashboardLayout
-                    title=""
-                    totalCount={groupUsers.length}
-                    error={null}
-                    data={groupUsers}
-                    columns={userColumns}
-                    getItemKey={(item) => item.email}
-                    onRefresh={() => selectedGroup && loadGroupUsers(selectedGroup)}
-                    emptyStateTitle="No Users"
-                    emptyStateDescription="Add users to this group to grant them access"
-                    searchPlaceholder="Search users..."
-                    searchKeys={USER_SEARCH_KEYS}
-                  />
-                )}
-              </Flex>
-            </Content>
-            <ButtonGroup>
-              <Button variant="secondary" onPress={close}>Close</Button>
-            </ButtonGroup>
-          </Dialog>
-        )}
+                  {isLoadingUsers ? (
+                    <View padding="size-600">
+                      <Text>Loading users...</Text>
+                    </View>
+                  ) : (
+                    <ResourceDashboardLayout
+                      title=""
+                      totalCount={groupUsers.length}
+                      error={null}
+                      data={groupUsers}
+                      columns={userColumns}
+                      getItemKey={(item) => item.email}
+                      onRefresh={() => selectedGroup && loadGroupUsers(selectedGroup)}
+                      emptyStateTitle="No Users"
+                      emptyStateDescription="Add users to this group to grant them access"
+                      searchPlaceholder="Search users..."
+                      searchKeys={USER_SEARCH_KEYS}
+                    />
+                  )}
+                </Flex>
+              </Content>
+              <ButtonGroup>
+                <Button variant="secondary" onPress={close}>Close</Button>
+              </ButtonGroup>
+            </>
+          )}
+        </FullscreenDialog>
       </DialogTrigger>
 
       {/* Scope Create/Edit Dialog */}
       <DialogTrigger isOpen={isScopeFormOpen} onOpenChange={setIsScopeFormOpen}>
         <div style={{ display: 'none' }} />
-        {(close) => (
-          <Dialog>
-            <Heading>{editingScope ? 'Edit Scope' : 'Create Scope'}</Heading>
-            <Divider />
-            <Content>
-              <Flex direction="column" gap="size-200">
-                <TextField
-                  label="Name"
-                  value={scopeFormName}
-                  onChange={setScopeFormName}
-                  width="100%"
-                  isRequired
-                  autoFocus
-                />
-                {!editingScope && (
-                  <Picker
-                    label="Type"
-                    selectedKey={scopeFormType}
-                    onSelectionChange={(key) => {
-                      setScopeFormType(key as ScopeType)
-                      setScopeFormParentId('')
-                    }}
-                    width="100%"
-                  >
-                    {SCOPE_TYPES.map(opt => (
-                      <Item key={opt.key}>{opt.label}</Item>
-                    ))}
-                  </Picker>
-                )}
-                {!editingScope && needsParent && (
-                  <ComboBox
-                    label="Parent Scope"
-                    selectedKey={scopeFormParentId || null}
-                    onSelectionChange={(key) => setScopeFormParentId(key as string)}
-                    onInputChange={setParentScopeFilterText}
-                    defaultItems={filteredParentScopes}
+        <Dialog>
+          {({close}) => (
+            <>
+              <Heading slot="title">{editingScope ? 'Edit Scope' : 'Create Scope'}</Heading>
+              <Content>
+                <Flex direction="column" gap="size-200">
+                  <TextField
+                    label="Name"
+                    value={scopeFormName}
+                    onChange={setScopeFormName}
                     styles={style({ width: '[100%]' })}
-                    menuTrigger="input"
-                    allowsCustomValue={false}
                     isRequired
-                  >
-                    {(item) => (
-                      <ComboBoxItem id={item.id} textValue={item.name}>
-                        <S2Text slot="label">{item.name}</S2Text>
-                        <S2Text slot="description">{item.type}</S2Text>
-                      </ComboBoxItem>
-                    )}
-                  </ComboBox>
-                )}
-              </Flex>
-            </Content>
-            <ButtonGroup>
-              <Button variant="secondary" onPress={close}>Cancel</Button>
-              <Button
-                variant="accent"
-                onPress={handleSaveScope}
-                isDisabled={!scopeFormName.trim() || (needsParent && !scopeFormParentId && !editingScope) || isSaving}
-              >
-                {editingScope ? 'Update' : 'Create'}
-              </Button>
-            </ButtonGroup>
-          </Dialog>
-        )}
+                    autoFocus
+                  />
+                  {!editingScope && (
+                    <Picker
+                      label="Type"
+                      selectedKey={scopeFormType}
+                      onSelectionChange={(key) => {
+                        setScopeFormType(key as ScopeType)
+                        setScopeFormParentId('')
+                      }}
+                      styles={style({ width: '[100%]' })}
+                    >
+                      {SCOPE_TYPES.map(opt => (
+                        <PickerItem key={opt.key} id={opt.key}>{opt.label}</PickerItem>
+                      ))}
+                    </Picker>
+                  )}
+                  {!editingScope && needsParent && (
+                    <ComboBox
+                      label="Parent Scope"
+                      selectedKey={scopeFormParentId || null}
+                      onSelectionChange={(key) => setScopeFormParentId(key as string)}
+                      onInputChange={setParentScopeFilterText}
+                      defaultItems={filteredParentScopes}
+                      styles={style({ width: '[100%]' })}
+                      menuTrigger="input"
+                      allowsCustomValue={false}
+                      isRequired
+                    >
+                      {(item) => (
+                        <ComboBoxItem id={item.id} textValue={item.name}>
+                          <S2Text slot="label">{item.name}</S2Text>
+                          <S2Text slot="description">{item.type}</S2Text>
+                        </ComboBoxItem>
+                      )}
+                    </ComboBox>
+                  )}
+                </Flex>
+              </Content>
+              <ButtonGroup>
+                <Button variant="secondary" onPress={close}>Cancel</Button>
+                <Button
+                  variant="accent"
+                  onPress={handleSaveScope}
+                  isDisabled={!scopeFormName.trim() || (needsParent && !scopeFormParentId && !editingScope) || isSaving}
+                >
+                  {editingScope ? 'Update' : 'Create'}
+                </Button>
+              </ButtonGroup>
+            </>
+          )}
+        </Dialog>
       </DialogTrigger>
 
       {/* Scope Delete Confirmation */}
-      <DialogTrigger
+      <V3DialogTrigger
         isOpen={!!scopeToDelete}
         onOpenChange={(open) => !open && setScopeToDelete(null)}
       >
@@ -814,60 +806,61 @@ export const ScopeGroupManagement: React.FC<ScopeGroupManagementProps> = () => {
             Delete scope <strong>{scopeToDelete?.name}</strong>? This action cannot be undone.
           </AlertDialog>
         )}
-      </DialogTrigger>
+      </V3DialogTrigger>
 
       {/* Group Create/Edit Dialog */}
       <DialogTrigger isOpen={isGroupFormOpen} onOpenChange={setIsGroupFormOpen}>
         <div style={{ display: 'none' }} />
-        {(close) => (
-          <Dialog>
-            <Heading>{editingGroup ? 'Edit Group' : 'Create Group'}</Heading>
-            <Divider />
-            <Content>
-              <Flex direction="column" gap="size-200">
-                <TextField
-                  label="Name"
-                  value={groupFormName}
-                  onChange={setGroupFormName}
-                  width="100%"
-                  isRequired
-                  autoFocus
-                />
-                <TextField
-                  label="Description"
-                  value={groupFormDescription}
-                  onChange={setGroupFormDescription}
-                  width="100%"
-                />
-                <Picker
-                  label="Role"
-                  selectedKey={groupFormRoleId}
-                  onSelectionChange={(key) => setGroupFormRoleId(key as string)}
-                  width="100%"
-                  isRequired
+        <Dialog>
+          {({close}) => (
+            <>
+              <Heading slot="title">{editingGroup ? 'Edit Group' : 'Create Group'}</Heading>
+              <Content>
+                <Flex direction="column" gap="size-200">
+                  <TextField
+                    label="Name"
+                    value={groupFormName}
+                    onChange={setGroupFormName}
+                    styles={style({ width: '[100%]' })}
+                    isRequired
+                    autoFocus
+                  />
+                  <TextField
+                    label="Description"
+                    value={groupFormDescription}
+                    onChange={setGroupFormDescription}
+                    styles={style({ width: '[100%]' })}
+                  />
+                  <Picker
+                    label="Role"
+                    selectedKey={groupFormRoleId}
+                    onSelectionChange={(key) => setGroupFormRoleId(key as string)}
+                    styles={style({ width: '[100%]' })}
+                    isRequired
+                  >
+                    {roles.map(role => (
+                      <PickerItem key={role.roleId} id={role.roleId}>{role.name}</PickerItem>
+                    ))}
+                  </Picker>
+                </Flex>
+              </Content>
+              <ButtonGroup>
+                <Button variant="secondary" onPress={close}>Cancel</Button>
+                <Button
+                  variant="accent"
+                  onPress={handleSaveGroup}
+                  isDisabled={!groupFormName.trim() || !groupFormRoleId || isSaving}
                 >
-                  {roles.map(role => (
-                    <Item key={role.roleId}>{role.name}</Item>
-                  ))}
-                </Picker>
-              </Flex>
-            </Content>
-            <ButtonGroup>
-              <Button variant="secondary" onPress={close}>Cancel</Button>
-              <Button
-                variant="accent"
-                onPress={handleSaveGroup}
-                isDisabled={!groupFormName.trim() || !groupFormRoleId || isSaving}
-              >
-                {editingGroup ? 'Update' : 'Create'}
-              </Button>
-            </ButtonGroup>
-          </Dialog>
-        )}
+                  {editingGroup ? 'Update' : 'Create'}
+                </Button>
+              </ButtonGroup>
+            </>
+          )}
+        </Dialog>
       </DialogTrigger>
 
       {/* Group Delete Confirmation */}
-      <DialogTrigger
+      <V3DialogTrigger
         isOpen={!!groupToDelete}
         onOpenChange={(open) => !open && setGroupToDelete(null)}
       >
@@ -888,65 +881,66 @@ export const ScopeGroupManagement: React.FC<ScopeGroupManagementProps> = () => {
             Delete group <strong>{groupToDelete?.name}</strong>? All users in this group will lose access.
           </AlertDialog>
         )}
-      </DialogTrigger>
+      </V3DialogTrigger>
 
       {/* Add User Dialog */}
       <DialogTrigger isOpen={isAddUserOpen} onOpenChange={setIsAddUserOpen}>
         <div style={{ display: 'none' }} />
-        {(close) => (
-          <Dialog>
-            <Heading>Add User to {selectedGroup?.name}</Heading>
-            <Divider />
-            <Content>
-              <Flex direction="column" gap="size-200">
-                <TextField
-                  label="Email"
-                  value={newUserEmail}
-                  onChange={setNewUserEmail}
-                  width="100%"
-                  isRequired
-                  autoFocus
-                  type="email"
-                />
-                <Flex gap="size-200">
+        <Dialog>
+          {({close}) => (
+            <>
+              <Heading slot="title">Add User to {selectedGroup?.name}</Heading>
+              <Content>
+                <Flex direction="column" gap="size-200">
                   <TextField
-                    label="First Name"
-                    value={newUserFirstName}
-                    onChange={setNewUserFirstName}
-                    flex
+                    label="Email"
+                    value={newUserEmail}
+                    onChange={setNewUserEmail}
+                    styles={style({ width: '[100%]' })}
+                    isRequired
+                    autoFocus
+                    type="email"
                   />
+                  <Flex gap="size-200">
+                    <TextField
+                      label="First Name"
+                      value={newUserFirstName}
+                      onChange={setNewUserFirstName}
+                      styles={style({ flexGrow: 1 })}
+                    />
+                    <TextField
+                      label="Last Name"
+                      value={newUserLastName}
+                      onChange={setNewUserLastName}
+                      styles={style({ flexGrow: 1 })}
+                    />
+                  </Flex>
                   <TextField
-                    label="Last Name"
-                    value={newUserLastName}
-                    onChange={setNewUserLastName}
-                    flex
+                    label="User GUID"
+                    value={newUserGuid}
+                    onChange={setNewUserGuid}
+                    styles={style({ width: '[100%]' })}
+                    description="Optional Adobe user identifier"
                   />
                 </Flex>
-                <TextField
-                  label="User GUID"
-                  value={newUserGuid}
-                  onChange={setNewUserGuid}
-                  width="100%"
-                  description="Optional Adobe user identifier"
-                />
-              </Flex>
-            </Content>
-            <ButtonGroup>
-              <Button variant="secondary" onPress={close}>Cancel</Button>
-              <Button
-                variant="accent"
-                onPress={handleAddUser}
-                isDisabled={!newUserEmail.trim() || isSaving}
-              >
-                Add
-              </Button>
-            </ButtonGroup>
-          </Dialog>
-        )}
+              </Content>
+              <ButtonGroup>
+                <Button variant="secondary" onPress={close}>Cancel</Button>
+                <Button
+                  variant="accent"
+                  onPress={handleAddUser}
+                  isDisabled={!newUserEmail.trim() || isSaving}
+                >
+                  Add
+                </Button>
+              </ButtonGroup>
+            </>
+          )}
+        </Dialog>
       </DialogTrigger>
 
       {/* Remove User Confirmation */}
-      <DialogTrigger
+      <V3DialogTrigger
         isOpen={!!userToRemove}
         onOpenChange={(open) => !open && setUserToRemove(null)}
       >
@@ -967,7 +961,7 @@ export const ScopeGroupManagement: React.FC<ScopeGroupManagementProps> = () => {
             Remove <strong>{userToRemove?.email}</strong> from this group?
           </AlertDialog>
         )}
-      </DialogTrigger>
+      </V3DialogTrigger>
 
       <BlurredLoadingOverlay
         visible={isLoadingScopes || isLoadingGroups}

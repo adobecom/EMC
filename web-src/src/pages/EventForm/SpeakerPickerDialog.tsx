@@ -4,11 +4,6 @@
 
 import React, { useState, useMemo, useCallback, useEffect } from 'react'
 import {
-  Dialog,
-  DialogContainer,
-  Heading,
-  Content,
-  TextField,
   View,
   Flex,
   Text,
@@ -17,7 +12,8 @@ import {
   SearchField,
   Form,
 } from '@adobe/react-spectrum'
-import { Button } from '@react-spectrum/s2'
+import { Button, Dialog, DialogContainer, Heading, TextField } from '@react-spectrum/s2'
+import { style } from '@react-spectrum/s2/style' with { type: 'macro' }
 import Add from '@spectrum-icons/workflow/Add'
 import Alert from '@spectrum-icons/workflow/Alert'
 import ArrowLeft from '@spectrum-icons/workflow/ArrowLeft'
@@ -316,7 +312,7 @@ export const SpeakerPickerDialog: React.FC<SpeakerPickerDialogProps> = ({
   const renderSelectView = () => (
     <>
       <Flex justifyContent="space-between" alignItems="center" marginBottom="size-200">
-        <Heading level={3} UNSAFE_style={{ margin: 0, fontSize: '20px', fontWeight: 700 }}>
+        <Heading slot="title" level={3} UNSAFE_style={{ margin: 0, fontSize: '20px', fontWeight: 700 }}>
           Select Speaker
         </Heading>
         <Flex gap="size-100" alignItems="center">
@@ -483,7 +479,7 @@ export const SpeakerPickerDialog: React.FC<SpeakerPickerDialogProps> = ({
           <ActionButton onPress={handleBackFromLocalize} isQuiet aria-label="Back to search">
             <ArrowLeft />
           </ActionButton>
-          <Heading level={3} UNSAFE_style={{ margin: 0, fontSize: '20px', fontWeight: 700 }}>
+          <Heading slot="title" level={3} UNSAFE_style={{ margin: 0, fontSize: '20px', fontWeight: 700 }}>
             Add {locale} content for {displayName}
           </Heading>
         </Flex>
@@ -522,7 +518,7 @@ export const SpeakerPickerDialog: React.FC<SpeakerPickerDialogProps> = ({
               onChange={(v) => setLocalizeForm(prev => ({ ...prev, title: v }))}
               placeholder="e.g., Senior Product Designer"
               isRequired
-              width="100%"
+              styles={style({ width: '[100%]' })}
             />
             <RichTextEditor
               label="Bio (Optional)"
@@ -563,7 +559,7 @@ export const SpeakerPickerDialog: React.FC<SpeakerPickerDialogProps> = ({
         <ActionButton onPress={handleBackToSelect} isQuiet aria-label="Back to search">
           <ArrowLeft />
         </ActionButton>
-        <Heading level={3} UNSAFE_style={{ margin: 0, fontSize: '20px', fontWeight: 700 }}>
+        <Heading slot="title" level={3} UNSAFE_style={{ margin: 0, fontSize: '20px', fontWeight: 700 }}>
           New Speaker
         </Heading>
       </Flex>
@@ -606,14 +602,14 @@ export const SpeakerPickerDialog: React.FC<SpeakerPickerDialogProps> = ({
               value={createForm.firstName}
               onChange={(v) => updateCreateField('firstName', v)}
               isRequired
-              width="100%"
+              styles={style({ width: '[100%]' })}
             />
             <TextField
               label="Last Name"
               value={createForm.lastName}
               onChange={(v) => updateCreateField('lastName', v)}
               isRequired
-              width="100%"
+              styles={style({ width: '[100%]' })}
             />
           </Flex>
 
@@ -622,7 +618,7 @@ export const SpeakerPickerDialog: React.FC<SpeakerPickerDialogProps> = ({
             value={createForm.title}
             onChange={(v) => updateCreateField('title', v)}
             placeholder="e.g., Senior Product Designer"
-            width="100%"
+            styles={style({ width: '[100%]' })}
           />
 
           <RichTextEditor
@@ -677,8 +673,8 @@ export const SpeakerPickerDialog: React.FC<SpeakerPickerDialogProps> = ({
                         placeholder="https://..."
                         value={socialLink.url}
                         onChange={(value) => handleUpdateSocialLink(index, value)}
-                        width="100%"
-                        validationState={socialLink.url && !valid ? 'invalid' : undefined}
+                        styles={style({ width: '[100%]' })}
+                        isInvalid={!!(socialLink.url && !valid)}
                       />
 
                       <ActionButton onPress={() => handleRemoveSocialLink(index)} isQuiet>
@@ -715,14 +711,16 @@ export const SpeakerPickerDialog: React.FC<SpeakerPickerDialogProps> = ({
   return (
     <DialogContainer onDismiss={onClose}>
       {isOpen && (
-        <Dialog size="L" isDismissable UNSAFE_style={{ maxHeight: '80vh' }}>
-          <Content UNSAFE_style={{ overflow: 'auto' }}>
-            {view === 'select'
-              ? renderSelectView()
-              : view === 'localize'
-                ? renderLocalizeView()
-                : renderCreateView()}
-          </Content>
+        <Dialog size="L" isDismissible UNSAFE_style={{ maxHeight: '80vh' }}>
+          {() => (
+            <div style={{ overflow: 'auto' }}>
+              {view === 'select'
+                ? renderSelectView()
+                : view === 'localize'
+                  ? renderLocalizeView()
+                  : renderCreateView()}
+            </div>
+          )}
         </Dialog>
       )}
     </DialogContainer>

@@ -6,20 +6,11 @@ import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react'
 import {
   View,
   Flex,
-  TextField,
-  Heading,
   Text,
   ActionButton,
   ProgressCircle,
-  Picker,
-  Item,
-  Dialog,
-  DialogContainer,
-  Divider,
-  Content,
-  ButtonGroup,
 } from '@adobe/react-spectrum'
-import { Button, Text as S2Text } from '@react-spectrum/s2'
+import { Button, ButtonGroup, Text as S2Text, TextField, Picker, PickerItem, Dialog, DialogContainer, Content, Heading } from '@react-spectrum/s2'
 import { style } from '@react-spectrum/s2/style' with { type: 'macro' }
 import { SponsorData, SeriesSponsor, EventApiResponse, SponsorType } from '../../types/domain'
 import { ImageUploader } from '../../components/shared'
@@ -136,70 +127,73 @@ const PartnerDialog: React.FC<PartnerDialogProps> = ({
     <DialogContainer onDismiss={onClose}>
       {isOpen && (
         <Dialog size="L">
-          <Heading>{isNew ? 'Add new partner' : 'Edit partner'}</Heading>
-          <Divider />
-          <Content>
-            <Flex gap={FLEX_GAP.LARGE} alignItems="start">
-              {/* Image Upload Section */}
-              <View UNSAFE_style={{ textAlign: 'center' }}>
-                <ImageUploader
-                  label=""
-                  imageUrl={previewUrl || imageUrl}
-                  imageId={imageId}
-                  imageKind="sponsor-logo"
-                  altText={name || 'Partner logo'}
-                  maxSizeMB={25}
-                  width={280}
-                  dropzoneTitle="Add partner image"
-                  dropzoneDimensions="Dimensions 584px x 306px. Does not exceed 25mb"
-                  deferUpload={true}
-                  pendingFile={pendingFile}
-                  onFileSelected={handleFileSelected}
-                  onChange={(url, id) => {
-                    setImageUrl(url)
-                    setImageId(id)
-                  }}
-                  onRemove={handleImageRemove}
-                />
-              </View>
+          {() => (
+            <>
+              <Heading slot="title">{isNew ? 'Add new partner' : 'Edit partner'}</Heading>
+              <Content>
+                <Flex gap={FLEX_GAP.LARGE} alignItems="start">
+                  {/* Image Upload Section */}
+                  <View UNSAFE_style={{ textAlign: 'center' }}>
+                    <ImageUploader
+                      label=""
+                      imageUrl={previewUrl || imageUrl}
+                      imageId={imageId}
+                      imageKind="sponsor-logo"
+                      altText={name || 'Partner logo'}
+                      maxSizeMB={25}
+                      width={280}
+                      dropzoneTitle="Add partner image"
+                      dropzoneDimensions="Dimensions 584px x 306px. Does not exceed 25mb"
+                      deferUpload={true}
+                      pendingFile={pendingFile}
+                      onFileSelected={handleFileSelected}
+                      onChange={(url, id) => {
+                        setImageUrl(url)
+                        setImageId(id)
+                      }}
+                      onRemove={handleImageRemove}
+                    />
+                  </View>
 
-              {/* Form Fields Section */}
-              <Flex direction="column" gap={FLEX_GAP.FIELD} flex={1}>
-                <TextField
-                  label="Partner name"
-                  value={name}
-                  onChange={setName}
-                  placeholder="Partner name"
-                  width="100%"
-                  isRequired
-                />
-                <TextField
-                  label="Partner website"
-                  value={website}
-                  onChange={setWebsite}
-                  placeholder="www.example.com"
-                  width="100%"
-                  isRequired
-                />
-              </Flex>
-            </Flex>
-          </Content>
-          <ButtonGroup>
-            <Button variant="secondary" onPress={onClose} isDisabled={isSaving}>
-              Cancel
-            </Button>
-            <Button 
-              variant="accent" 
-              onPress={handleSave} 
-              isDisabled={!isValid || isSaving}
-            >
-              {isSaving ? (
-                <ProgressCircle size="S" isIndeterminate aria-label="Saving" />
-              ) : (
-                isNew ? 'Create' : 'Save'
-              )}
-            </Button>
-          </ButtonGroup>
+                  {/* Form Fields Section */}
+                  <Flex direction="column" gap={FLEX_GAP.FIELD} flex={1}>
+                    <TextField
+                      label="Partner name"
+                      value={name}
+                      onChange={setName}
+                      placeholder="Partner name"
+                      styles={style({ width: '[100%]' })}
+                      isRequired
+                    />
+                    <TextField
+                      label="Partner website"
+                      value={website}
+                      onChange={setWebsite}
+                      placeholder="www.example.com"
+                      styles={style({ width: '[100%]' })}
+                      isRequired
+                    />
+                  </Flex>
+                </Flex>
+              </Content>
+              <ButtonGroup>
+                <Button variant="secondary" onPress={onClose} isDisabled={isSaving}>
+                  Cancel
+                </Button>
+                <Button
+                  variant="accent"
+                  onPress={handleSave}
+                  isDisabled={!isValid || isSaving}
+                >
+                  {isSaving ? (
+                    <ProgressCircle size="S" isIndeterminate aria-label="Saving" />
+                  ) : (
+                    isNew ? 'Create' : 'Save'
+                  )}
+                </Button>
+              </ButtonGroup>
+            </>
+          )}
         </Dialog>
       )}
     </DialogContainer>
@@ -322,7 +316,7 @@ const PartnerCard: React.FC<PartnerCardProps> = ({
                 isQuiet
               >
                 {TIER_OPTIONS.map(option => (
-                  <Item key={option.key}>{option.label}</Item>
+                  <PickerItem key={option.key} id={option.key}>{option.label}</PickerItem>
                 ))}
               </Picker>
             </View>

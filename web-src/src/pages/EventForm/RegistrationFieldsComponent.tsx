@@ -7,11 +7,12 @@ import {
   View,
   Flex,
   Switch,
-  TextField,
   RadioGroup,
   Radio,
   Text
 } from '@adobe/react-spectrum'
+import { TextField } from '@react-spectrum/s2'
+import { style } from "@react-spectrum/s2/style" with { type: "macro" }
 import { HeadingWithTooltip } from '../../components/shared'
 import LinkOut from '@spectrum-icons/workflow/LinkOut'
 import DragHandle from '@spectrum-icons/workflow/DragHandle'
@@ -460,7 +461,7 @@ export const RegistrationFieldsComponent: React.FC<RegistrationFieldsComponentPr
         value={marketoFormUrl}
         onChange={onMarketoFormUrlChange}
         placeholder="Enter Marketo form URL"
-        width="100%"
+        styles={style({ width: '[100%]' })}
       />
     </Flex>
   )
