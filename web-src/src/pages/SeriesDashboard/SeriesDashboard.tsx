@@ -3,7 +3,8 @@
 */
 
 import React, { useEffect, useMemo, useCallback } from 'react'
-import { Flex, Text, ActionButton, MenuTrigger, Menu, Item } from '@adobe/react-spectrum'
+import { Flex, Text, MenuTrigger, Menu, Item } from '@adobe/react-spectrum'
+import { ActionButton } from "@react-spectrum/s2"
 import MoreSmallList from '@spectrum-icons/workflow/MoreSmallList'
 import PublishRemove from '@spectrum-icons/workflow/PublishRemove'
 import Edit from '@spectrum-icons/workflow/Edit'

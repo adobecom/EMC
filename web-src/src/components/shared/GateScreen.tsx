@@ -3,7 +3,8 @@
  */
 
 import React from 'react'
-import { View, Text, Button, ProgressCircle } from '@adobe/react-spectrum'
+import { View, Text, ProgressCircle } from '@adobe/react-spectrum'
+import { Button } from "@react-spectrum/s2"
 import { SPACING, COLORS, TYPOGRAPHY } from '../../styles/designSystem'
 
 /**

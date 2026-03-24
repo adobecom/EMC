@@ -4,7 +4,8 @@
 
 import React, { useEffect, useMemo, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Text, ActionButton, MenuTrigger, Menu, Item, Flex, Button, DialogTrigger, AlertDialog, Link } from '@adobe/react-spectrum'
+import { Text, MenuTrigger, Menu, Item, Flex, DialogTrigger, AlertDialog, Link } from '@adobe/react-spectrum'
+import { ActionButton, Button } from "@react-spectrum/s2"
 import MoreSmallList from '@spectrum-icons/workflow/MoreSmallList'
 import PublishRemove from '@spectrum-icons/workflow/PublishRemove'
 import ViewDetail from '@spectrum-icons/workflow/ViewDetail'

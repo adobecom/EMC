@@ -47,7 +47,7 @@ export const Registrations: React.FC<RegistrationsProps> = ({ ims: _ims }) => {
   const [selectedEventId, setSelectedEventId] = useState<string>(initialEventId)
   const [attendees, setAttendees] = useState<Attendee[]>([])
   const [campaigns, setCampaigns] = useState<Campaign[]>([])
-  const [selectedTab, setSelectedTab] = useState<React.Key>('registrations')
+  const [selectedTab, setSelectedTab] = useState<string>('registrations')
 
   const [isLoadingEvents, setIsLoadingEvents] = useState(true)
   const [isLoadingAttendees, setIsLoadingAttendees] = useState(false)
@@ -340,7 +340,7 @@ export const Registrations: React.FC<RegistrationsProps> = ({ ims: _ims }) => {
         <Tabs
           aria-label="Registrations Dashboard"
           selectedKey={selectedTab}
-          onSelectionChange={setSelectedTab}
+          onSelectionChange={(key) => setSelectedTab(String(key))}
         >
           <TabList>
             <Item key="registrations">Registrations</Item>

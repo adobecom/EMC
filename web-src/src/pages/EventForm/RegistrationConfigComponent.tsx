@@ -3,19 +3,12 @@
 */
 
 import React, { useState, useEffect } from 'react'
-import {
-  View,
-  TextField,
-  NumberField,
-  Switch,
-  Flex,
-  Text,
-  TooltipTrigger,
-  Tooltip,
-  ActionButton
-} from '@adobe/react-spectrum'
+import { View, TextField, NumberField, Switch, Flex, Text, TooltipTrigger, Tooltip } from '@adobe/react-spectrum'
+import { ActionButton } from "@react-spectrum/s2"
+// S2 style macro for type-safe Spectrum token styling
+import {style} from '@react-spectrum/s2/style' with {type: 'macro'}
 import { HeadingWithTooltip, RichTextEditor } from '../../components/shared'
-import Info from '@spectrum-icons/workflow/Info'
+import InfoCircle from "@react-spectrum/s2/icons/InfoCircle"
 import { RegistrationFieldsComponent } from './RegistrationFieldsComponent'
 import { useEventFormComponent } from '../../hooks/useEventFormComponent'
 
@@ -131,7 +124,6 @@ export const RegistrationConfigComponent: React.FC = () => {
       >
         RSVP Configuration
       </HeadingWithTooltip>
-
       <Flex direction="row" gap="size-400" alignItems="start">
         {/* Left: Attendee Limit Input */}
         <View>
@@ -140,14 +132,9 @@ export const RegistrationConfigComponent: React.FC = () => {
             <TooltipTrigger delay={0}>
               <ActionButton 
                 isQuiet 
-                UNSAFE_style={{ 
-                  minWidth: 'auto',
-                  padding: 0,
-                  width: '20px',
-                  height: '20px'
-                }}
+                styles={style({minWidth: 0, width: 20})}
               >
-                <Info size="S" />
+                <InfoCircle />
               </ActionButton>
               <Tooltip variant="info">When no limit is set, all users will be admitted into event.</Tooltip>
             </TooltipTrigger>
@@ -174,14 +161,9 @@ export const RegistrationConfigComponent: React.FC = () => {
             <TooltipTrigger delay={0}>
               <ActionButton 
                 isQuiet 
-                UNSAFE_style={{ 
-                  minWidth: 'auto',
-                  padding: 0,
-                  width: '20px',
-                  height: '20px'
-                }}
+                styles={style({minWidth: 0, width: 20})}
               >
-                <Info size="S" />
+                <InfoCircle />
               </ActionButton>
               <Tooltip variant="info">
                 When selected, disable registration button when limit is reached.
@@ -201,14 +183,9 @@ export const RegistrationConfigComponent: React.FC = () => {
               <TooltipTrigger delay={0}>
                 <ActionButton 
                   isQuiet 
-                  UNSAFE_style={{ 
-                    minWidth: 'auto',
-                    padding: 0,
-                    width: '20px',
-                    height: '20px'
-                  }}
+                  styles={style({minWidth: 0, width: 20})}
                 >
-                  <Info size="S" />
+                  <InfoCircle />
                 </ActionButton>
                 <Tooltip variant="info">
                   When selected, users can register for events without logging in.
@@ -230,14 +207,9 @@ export const RegistrationConfigComponent: React.FC = () => {
                 <TooltipTrigger delay={0}>
                   <ActionButton 
                     isQuiet 
-                    UNSAFE_style={{ 
-                      minWidth: 'auto',
-                      padding: 0,
-                      width: '20px',
-                      height: '20px'
-                    }}
+                    styles={style({minWidth: 0, width: 20})}
                   >
-                    <Info size="S" />
+                    <InfoCircle />
                   </ActionButton>
                   <Tooltip variant="info">
                     Contact host is optional.
@@ -257,7 +229,6 @@ export const RegistrationConfigComponent: React.FC = () => {
           )}
         </Flex>
       </Flex>
-
       {/* RSVP Description */}
       <View width="100%" marginTop="size-200">
         <RichTextEditor
@@ -268,7 +239,6 @@ export const RegistrationConfigComponent: React.FC = () => {
           description="Add additional information about the RSVP process"
         />
       </View>
-
       {/* Registration Fields Configuration */}
       <View width="100%" marginTop="size-400">
         <RegistrationFieldsComponent

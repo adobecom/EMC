@@ -3,16 +3,10 @@
 */
 
 import React, { useState, useEffect } from 'react'
-import {
-  View,
-  Flex,
-  Text,
-  Button,
-  DialogContainer,
-  AlertDialog
-} from '@adobe/react-spectrum'
-import Refresh from '@spectrum-icons/workflow/Refresh'
-import LockClosed from '@spectrum-icons/workflow/LockClosed'
+import { View, Flex, Text, DialogContainer, AlertDialog } from '@adobe/react-spectrum'
+import { Button } from "@react-spectrum/s2"
+import Refresh from "@react-spectrum/s2/icons/Refresh"
+import Lock from "@react-spectrum/s2/icons/Lock"
 import { cachedApi } from '../../services/api'
 import { HeadingWithTooltip } from '../../components/shared'
 import { SeriesApiResponse } from '../../types/domain'
@@ -151,7 +145,6 @@ export const EventFormatComponent: React.FC = () => {
             : 'Cloud and series for this event.'}
         </Text>
       </View>
-
       {/* Read-only display of selections */}
       <Flex direction="row" gap="size-400" alignItems="center" wrap>
         {/* Cloud badge */}
@@ -166,7 +159,7 @@ export const EventFormatComponent: React.FC = () => {
             UNSAFE_style={{ backgroundColor: COLORS.GRAY_100 }}
           >
             <Flex direction="row" gap="size-100" alignItems="center">
-              {isLocked && <LockClosed size="XS" UNSAFE_style={{ color: COLORS.GRAY_600 }} />}
+              {isLocked && <Lock />}
               <Text UNSAFE_style={{ fontWeight: 500 }}>{cloudLabel}</Text>
             </Flex>
           </View>
@@ -184,7 +177,7 @@ export const EventFormatComponent: React.FC = () => {
             UNSAFE_style={{ backgroundColor: COLORS.GRAY_100 }}
           >
             <Flex direction="row" gap="size-100" alignItems="center">
-              {isLocked && <LockClosed size="XS" UNSAFE_style={{ color: COLORS.GRAY_600 }} />}
+              {isLocked && <Lock />}
               <Text UNSAFE_style={{ fontWeight: 500 }}>
                 {isLoadingName ? 'Loading...' : (seriesName || 'Not selected')}
               </Text>
@@ -197,16 +190,15 @@ export const EventFormatComponent: React.FC = () => {
           <View UNSAFE_style={{ alignSelf: 'flex-end', marginBottom: `${SPACING.XXS}px` }}>
             <Button
               variant="secondary"
-              style="outline"
+              fillStyle="outline"
               onPress={handleReselectClick}
             >
-              <Refresh size="S" />
+              <Refresh />
               <Text>Re-select</Text>
             </Button>
           </View>
         )}
       </Flex>
-
       {/* Re-select warning dialog */}
       <DialogContainer onDismiss={handleCancelReselect}>
         {showResetWarning && (

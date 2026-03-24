@@ -4,8 +4,9 @@
 */
 
 import React, { useState, useEffect } from 'react'
-import { ActionButton, Badge, Flex, Text, Tooltip, TooltipTrigger } from '@adobe/react-spectrum'
-import Key from '@spectrum-icons/workflow/Key'
+import { Badge, Flex, Text, Tooltip, TooltipTrigger } from '@adobe/react-spectrum'
+import { ActionButton } from "@react-spectrum/s2"
+import Key from "@react-spectrum/s2/icons/Key"
 import { tokenStorage } from '../../services/tokenStorage'
 import { DevTokenDialog } from './DevTokenDialog'
 import { env } from '../../config/env'

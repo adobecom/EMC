@@ -15,14 +15,16 @@ import {
   Switch,
   TooltipTrigger,
   Tooltip,
-  ActionButton,
   ComboBox,
   DialogTrigger,
-  AlertDialog
+  AlertDialog,
 } from '@adobe/react-spectrum'
+import { ActionButton } from "@react-spectrum/s2"
+// S2 style macro for type-safe Spectrum token styling
+import {style} from '@react-spectrum/s2/style' with {type: 'macro'}
 import { parseDateTime, CalendarDateTime } from '@internationalized/date'
 import { getTimeZones } from '@vvo/tzdb'
-import Info from '@spectrum-icons/workflow/Info'
+import InfoCircle from "@react-spectrum/s2/icons/InfoCircle"
 import { HeadingWithTooltip, RichTextEditor } from '../../components/shared'
 import { FLEX_GAP, SPACING } from '../../styles/designSystem'
 import { LANGUAGE_TO_LOCALE, DEFAULT_LOCALE } from '../../config/localeMapping'
@@ -255,14 +257,9 @@ export const EventInfoComponent: React.FC = () => {
             <TooltipTrigger delay={0}>
               <ActionButton 
                 isQuiet
-                UNSAFE_style={{ 
-                  minWidth: 'auto',
-                  padding: 0,
-                  width: '20px',
-                  height: '20px'
-                }}
+                styles={style({minWidth: 0, width: 20})}
               >
-                <Info size="S" />
+                <InfoCircle />
               </ActionButton>
               <Tooltip variant="info">By setting this to private, your event won't be publicly found online or published to the events hub.</Tooltip>
             </TooltipTrigger>
@@ -277,21 +274,15 @@ export const EventInfoComponent: React.FC = () => {
             <TooltipTrigger delay={0}>
               <ActionButton 
                 isQuiet
-                UNSAFE_style={{ 
-                  minWidth: 'auto',
-                  padding: 0,
-                  width: '20px',
-                  height: '20px'
-                }}
+                styles={style({minWidth: 0, width: 20})}
               >
-                <Info size="S" />
+                <InfoCircle />
               </ActionButton>
               <Tooltip variant="info">If set to true, users can only RSVP with a campaign link.</Tooltip>
             </TooltipTrigger>
           </Flex>
         </div>
       </Flex>
-
       {/* Form Fields */}
       <Picker
         label="Language"
@@ -303,7 +294,6 @@ export const EventInfoComponent: React.FC = () => {
           <Item key={lang.key}>{lang.label}</Item>
         ))}
       </Picker>
-
       {/* Locale switch confirmation when form has unsaved changes */}
       <DialogTrigger
         isOpen={!!pendingLanguageKey}
@@ -326,7 +316,6 @@ export const EventInfoComponent: React.FC = () => {
           </AlertDialog>
         )}
       </DialogTrigger>
-
       <TextField
         label="Event Title"
         isRequired
@@ -336,21 +325,15 @@ export const EventInfoComponent: React.FC = () => {
         description="80 characters max"
         width="100%"
       />
-
       <View width="100%">
         <Flex direction="row" gap="size-100" alignItems="center" marginBottom="size-100">
           <Text>English title for page URL</Text>
           <TooltipTrigger delay={0}>
             <ActionButton 
               isQuiet 
-              UNSAFE_style={{ 
-                minWidth: 'auto',
-                padding: 0,
-                width: '20px',
-                height: '20px'
-              }}
+              styles={style({minWidth: 0, width: 20})}
             >
-              <Info size="S" />
+              <InfoCircle />
             </ActionButton>
             <Tooltip variant="info">SEO friendly title</Tooltip>
           </TooltipTrigger>
@@ -362,7 +345,6 @@ export const EventInfoComponent: React.FC = () => {
           width="100%"
         />
       </View>
-
       <View width="100%">
         <HeadingWithTooltip 
           level={4}
@@ -378,7 +360,6 @@ export const EventInfoComponent: React.FC = () => {
           height="400px"
         />
       </View>
-
       <TextArea
         label="Event Description for Events Hub and SEO"
         isRequired
@@ -388,7 +369,6 @@ export const EventInfoComponent: React.FC = () => {
         description="160 characters max"
         width="100%"
       />
-
       <Flex direction="row" gap="size-200" wrap>
         <DatePicker
           label="Start Date & Time"
@@ -420,7 +400,6 @@ export const EventInfoComponent: React.FC = () => {
           {(item) => <Item key={item.id}>{item.name}</Item>}
         </ComboBox>
       </Flex>
-
       <View UNSAFE_style={{ display: 'inline-block' }}>
         <Switch
           isSelected={hasSecondaryLink}
@@ -429,7 +408,6 @@ export const EventInfoComponent: React.FC = () => {
           Add secondary link
         </Switch>
       </View>
-
       {hasSecondaryLink && (
         <>
           <TextField

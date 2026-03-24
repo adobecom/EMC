@@ -1,6 +1,8 @@
 import React from 'react'
-import { Flex, Heading, TooltipTrigger, Tooltip, ActionButton } from '@adobe/react-spectrum'
-import Info from '@spectrum-icons/workflow/Info'
+import { Flex, Heading, TooltipTrigger, Tooltip } from '@adobe/react-spectrum'
+import { ActionButton } from "@react-spectrum/s2"
+import { style } from "@react-spectrum/s2/style" with { type: "macro" }
+import InfoCircle from "@react-spectrum/s2/icons/InfoCircle"
 import { TYPOGRAPHY } from '../../styles/designSystem'
 
 interface HeadingWithTooltipProps {
@@ -77,16 +79,11 @@ export const HeadingWithTooltip: React.FC<HeadingWithTooltipProps> = ({
       </Heading>
       
       <TooltipTrigger delay={0}>
-        <ActionButton 
-          isQuiet 
-          UNSAFE_style={{ 
-            minWidth: 'auto',
-            padding: 0,
-            width: '20px',
-            height: '20px'
-          }}
+        <ActionButton
+          isQuiet
+          styles={style({ minWidth: 0, width: 20 })}
         >
-          <Info size="S" />
+          <InfoCircle />
         </ActionButton>
         <Tooltip variant="info">{tooltip}</Tooltip>
       </TooltipTrigger>

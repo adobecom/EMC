@@ -3,7 +3,8 @@
 */
 
 import React, { useEffect, useState } from 'react'
-import { View, Flex, Text, Button } from '@adobe/react-spectrum'
+import { View, Flex, Text } from '@adobe/react-spectrum'
+import { Button } from "@react-spectrum/s2"
 import Close from '@spectrum-icons/workflow/Close'
 import CheckmarkCircle from '@spectrum-icons/workflow/CheckmarkCircle'
 import AlertCircle from '@spectrum-icons/workflow/AlertCircle'
@@ -163,10 +164,6 @@ const ToastItem: React.FC<ToastItemProps> = ({ toast, onDismiss }) => {
                 onPress={() => {
                   toast.action?.onPress()
                   handleDismiss()
-                }}
-                UNSAFE_style={{ 
-                  fontSize: 13,
-                  fontWeight: 600,
                 }}
               >
                 {toast.action.label}

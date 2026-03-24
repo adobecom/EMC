@@ -8,6 +8,9 @@ import {
   ActionButton,
   Text
 } from '@adobe/react-spectrum'
+import Sort from "@react-spectrum/s2/icons/Sort"
+import SortUp from "@react-spectrum/s2/icons/SortUp"
+import SortDown from "@react-spectrum/s2/icons/SortDown"
 import Edit from '@spectrum-icons/workflow/Edit'
 import Delete from '@spectrum-icons/workflow/Delete'
 import ViewDetail from '@spectrum-icons/workflow/ViewDetail'
@@ -266,13 +269,14 @@ export function DataTable<T extends Record<string, any>>({
                         {column.name}
                       </Text>
                       {isSortable && (
-                        <span style={{ 
+                        <span style={{
                           opacity: isSorted ? 1 : 0.3,
                           display: 'flex',
-                          alignItems: 'center',
-                          fontSize: '12px'
+                          alignItems: 'center'
                         }}>
-                          {isSorted ? (sortDirection === 'asc' ? '↑' : '↓') : '↕'}
+                          {isSorted
+                            ? (sortDirection === 'asc' ? <SortUp /> : <SortDown />)
+                            : <Sort />}
                         </span>
                       )}
                     </Flex>

@@ -572,51 +572,62 @@ export const ScopeGroupManagement: React.FC<ScopeGroupManagementProps> = () => {
         {/* ── Scope selector + actions ── */}
         <Well UNSAFE_style={{ padding: '20px' }}>
           <Flex justifyContent="space-between" alignItems="end" gap="size-200" wrap>
-            <Flex alignItems="end" gap="size-200">
-              <ComboBox
-                label="Select Scope"
-                selectedKey={selectedScopeId}
-                onSelectionChange={(key) => setSelectedScopeId(key as string)}
-                onInputChange={setScopeFilterText}
-                items={filteredScopes}
-                width="size-6000"
-                menuTrigger="input"
-                allowsCustomValue={false}
-              >
-                {(item) => (
-                  <Item key={item.id} textValue={item.name}>
-                    <Text>{item.name}</Text>
-                    <Text slot="description">{item.type}</Text>
-                  </Item>
+            <Flex alignItems="end" gap="size-100">
+              <div style={{ position: 'relative' }}>
+                <ComboBox
+                  label={`Select Scope (${scopes.length} scope${scopes.length === 1 ? '' : 's'} available)`}
+                  selectedKey={selectedScopeId}
+                  onSelectionChange={(key) => setSelectedScopeId(key as string)}
+                  onInputChange={setScopeFilterText}
+                  items={filteredScopes}
+                  width="size-6000"
+                  menuTrigger="input"
+                  allowsCustomValue={false}
+                >
+                  {(item) => (
+                    <Item key={item.id} textValue={item.name}>
+                      <Text>{item.name}</Text>
+                      <Text slot="description">{item.type}</Text>
+                    </Item>
+                  )}
+                </ComboBox>
+                {selectedScope && (
+                  <div style={{
+                    position: 'absolute',
+                    right: 40,
+                    bottom: 6,
+                    pointerEvents: 'none'
+                  }}>
+                    <Badge variant={SCOPE_TYPE_VARIANTS[selectedScope.type] || 'neutral'}>
+                      {selectedScope.type}
+                    </Badge>
+                  </div>
                 )}
-              </ComboBox>
+              </div>
 
               {selectedScope && (
-                <Flex gap="size-100" alignItems="center">
-                  <Badge variant={SCOPE_TYPE_VARIANTS[selectedScope.type] || 'neutral'}>
-                    {selectedScope.type}
-                  </Badge>
+                <Flex gap="size-50" alignItems="center">
                   {canWriteScope && (
                     <ActionButton isQuiet aria-label="Edit scope" onPress={openScopeEdit}>
                       <Edit size="S" />
                     </ActionButton>
                   )}
+                  <ActionButton
+                    isQuiet
+                    aria-label="Clear scope selection"
+                    onPress={() => {
+                      setSelectedScopeId(null)
+                      setScopeFilterText('')
+                    }}
+                  >
+                    <Delete size="S" />
+                  </ActionButton>
                   {canDeleteScope && selectedScope.type === 'team' && (
                     <ActionButton isQuiet aria-label="Delete scope" onPress={() => setScopeToDelete(selectedScope)}>
                       <Delete size="S" />
                     </ActionButton>
                   )}
                 </Flex>
-              )}
-
-              {scopes.length > 0 && (
-                <Text UNSAFE_style={{
-                  fontSize: '12px',
-                  color: 'var(--spectrum-global-color-gray-600)',
-                  paddingBottom: '8px'
-                }}>
-                  {scopes.length} scopes available
-                </Text>
               )}
             </Flex>
 

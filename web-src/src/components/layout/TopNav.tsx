@@ -4,7 +4,10 @@
 
 import React from 'react'
 import { NavLink } from 'react-router-dom'
-import { Flex, View, Button } from '@adobe/react-spectrum'
+import { Flex, View } from '@adobe/react-spectrum'
+import { Button } from "@react-spectrum/s2"
+// S2 style macro for type-safe Spectrum token styling
+import {style} from '@react-spectrum/s2/style' with {type: 'macro'}
 import Login from '@spectrum-icons/workflow/Login'
 import { IMS } from '../../types'
 import { UserPanel } from '../user'
@@ -144,20 +147,19 @@ const TopNav: React.FC<TopNavProps> = ({ ims }) => {
 
           {showSignIn ? (
             /* Standalone mode, not signed in: show a Sign In button */
-            <Button
+            (<Button
               variant="primary"
-              style="fill"
+              fillStyle="fill"
               onPress={signIn}
-              UNSAFE_style={{ fontSize: 12, padding: '4px 12px' }}
+              styles={style({})}
             >
-              <Login 
-                UNSAFE_style={{ marginRight: 4 }}
-              />
+              // TODO(S2-upgrade): A Spectrum 2 equivalent to 'Login' was not found. Please update this icon manually.
+              <Login UNSAFE_style={{ marginRight: 4 }} />
               <span>Sign In</span>
-            </Button>
+            </Button>)
           ) : (
             /* Signed in (either mode): show user panel */
-            !isLoading && <UserPanel ims={ims} compact />
+            (!isLoading && <UserPanel ims={ims} compact />)
           )}
         </Flex>
       </Flex>
