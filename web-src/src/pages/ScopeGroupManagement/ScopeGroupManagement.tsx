@@ -14,10 +14,8 @@ import {
   Heading,
   Text,
   Flex,
-  Button,
   TextField,
   Picker,
-  ComboBox,
   Item,
   DialogTrigger,
   Dialog,
@@ -29,11 +27,15 @@ import {
   Badge,
   Well,
 } from '@adobe/react-spectrum'
+import { Button } from '@react-spectrum/s2'
+import { ComboBox, ComboBoxItem, Text as S2Text } from "@react-spectrum/s2"
+import { style } from "@react-spectrum/s2/style" with { type: "macro" }
 import Delete from '@spectrum-icons/workflow/Delete'
 import Edit from '@spectrum-icons/workflow/Edit'
-import Add from '@spectrum-icons/workflow/Add'
-import UserAdd from '@spectrum-icons/workflow/UserAdd'
+import Add from "@react-spectrum/s2/icons/Add"
+import UserAdd from "@react-spectrum/s2/icons/UserAdd"
 import UserGroup from '@spectrum-icons/workflow/UserGroup'
+import UserGroupS2 from "@react-spectrum/s2/icons/UserGroup"
 import { useApi } from '../../contexts/ApiContext'
 import { useToast } from '../../contexts'
 import { IMS } from '../../types'
@@ -573,40 +575,30 @@ export const ScopeGroupManagement: React.FC<ScopeGroupManagementProps> = () => {
         <Well UNSAFE_style={{ padding: '20px' }}>
           <Flex justifyContent="space-between" alignItems="end" gap="size-200" wrap>
             <Flex alignItems="end" gap="size-100">
-              <div style={{ position: 'relative' }}>
-                <ComboBox
-                  label={`Select Scope (${scopes.length} scope${scopes.length === 1 ? '' : 's'} available)`}
-                  selectedKey={selectedScopeId}
-                  onSelectionChange={(key) => setSelectedScopeId(key as string)}
-                  onInputChange={setScopeFilterText}
-                  items={filteredScopes}
-                  width="size-6000"
-                  menuTrigger="input"
-                  allowsCustomValue={false}
-                >
-                  {(item) => (
-                    <Item key={item.id} textValue={item.name}>
-                      <Text>{item.name}</Text>
-                      <Text slot="description">{item.type}</Text>
-                    </Item>
-                  )}
-                </ComboBox>
-                {selectedScope && (
-                  <div style={{
-                    position: 'absolute',
-                    right: 40,
-                    bottom: 6,
-                    pointerEvents: 'none'
-                  }}>
-                    <Badge variant={SCOPE_TYPE_VARIANTS[selectedScope.type] || 'neutral'}>
-                      {selectedScope.type}
-                    </Badge>
-                  </div>
+              <ComboBox
+                label={`Select Scope (${scopes.length} scope${scopes.length === 1 ? '' : 's'} available)`}
+                selectedKey={selectedScopeId}
+                onSelectionChange={(key) => setSelectedScopeId(key as string | null)}
+                onInputChange={setScopeFilterText}
+                defaultItems={filteredScopes}
+                styles={style({ width: 480 })}
+                menuTrigger="input"
+                menuWidth={480}
+                allowsCustomValue={false}
+              >
+                {(item) => (
+                  <ComboBoxItem id={item.id} textValue={item.name}>
+                    <S2Text slot="label">{item.name}</S2Text>
+                    <S2Text slot="description">{item.type}</S2Text>
+                  </ComboBoxItem>
                 )}
-              </div>
+              </ComboBox>
 
               {selectedScope && (
                 <Flex gap="size-50" alignItems="center">
+                  <Badge variant={SCOPE_TYPE_VARIANTS[selectedScope.type] || 'neutral'}>
+                    {selectedScope.type}
+                  </Badge>
                   {canWriteScope && (
                     <ActionButton isQuiet aria-label="Edit scope" onPress={openScopeEdit}>
                       <Edit size="S" />
@@ -632,9 +624,9 @@ export const ScopeGroupManagement: React.FC<ScopeGroupManagementProps> = () => {
             </Flex>
 
             {canWriteScope && (
-              <Button variant="primary" onPress={openScopeCreate}>
+              <Button variant="secondary" onPress={openScopeCreate}>
                 <Add />
-                <Text>New Scope</Text>
+                <S2Text>New Scope</S2Text>
               </Button>
             )}
           </Flex>
@@ -649,8 +641,12 @@ export const ScopeGroupManagement: React.FC<ScopeGroupManagementProps> = () => {
             data={groups}
             columns={groupColumns}
             getItemKey={(item) => item.groupId}
-            onCreate={canWriteGroup ? openGroupCreate : undefined}
-            createLabel="Create Group"
+            createButton={canWriteGroup ? (
+              <Button variant="accent" onPress={openGroupCreate}>
+                <UserGroupS2 />
+                <S2Text>Create Group</S2Text>
+              </Button>
+            ) : undefined}
             onRefresh={loadGroups}
             emptyStateTitle="No Groups"
             emptyStateDescription="Create a group in this scope to manage user access"
@@ -693,9 +689,9 @@ export const ScopeGroupManagement: React.FC<ScopeGroupManagementProps> = () => {
               <Flex direction="column" gap="size-300" height="100%">
                 {canWriteUser && (
                   <Flex justifyContent="end">
-                    <Button variant="primary" onPress={() => { setNewUserEmail(''); setNewUserFirstName(''); setNewUserLastName(''); setNewUserGuid(''); setIsAddUserOpen(true) }}>
+                    <Button variant="accent" onPress={() => { setNewUserEmail(''); setNewUserFirstName(''); setNewUserLastName(''); setNewUserGuid(''); setIsAddUserOpen(true) }}>
                       <UserAdd />
-                      <Text>Add User</Text>
+                      <S2Text>Add User</S2Text>
                     </Button>
                   </Flex>
                 )}
@@ -766,17 +762,17 @@ export const ScopeGroupManagement: React.FC<ScopeGroupManagementProps> = () => {
                     selectedKey={scopeFormParentId || null}
                     onSelectionChange={(key) => setScopeFormParentId(key as string)}
                     onInputChange={setParentScopeFilterText}
-                    items={filteredParentScopes}
-                    width="100%"
+                    defaultItems={filteredParentScopes}
+                    styles={style({ width: '[100%]' })}
                     menuTrigger="input"
                     allowsCustomValue={false}
                     isRequired
                   >
                     {(item) => (
-                      <Item key={item.id} textValue={item.name}>
-                        <Text>{item.name}</Text>
-                        <Text slot="description">{item.type}</Text>
-                      </Item>
+                      <ComboBoxItem id={item.id} textValue={item.name}>
+                        <S2Text slot="label">{item.name}</S2Text>
+                        <S2Text slot="description">{item.type}</S2Text>
+                      </ComboBoxItem>
                     )}
                   </ComboBox>
                 )}

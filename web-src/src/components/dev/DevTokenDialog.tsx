@@ -11,13 +11,13 @@ import {
   Divider,
   Content,
   ButtonGroup,
-  Button,
   TextArea,
   Text,
   View,
   StatusLight,
   AlertDialog
 } from '@adobe/react-spectrum'
+import { Button } from '@react-spectrum/s2'
 import { tokenStorage } from '../../services/tokenStorage'
 
 interface DevTokenDialogProps {

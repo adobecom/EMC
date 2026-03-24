@@ -8,7 +8,6 @@ import {
   Flex,
   Picker,
   Item,
-  Button,
   Heading,
   Text,
   ActionButton,
@@ -16,6 +15,8 @@ import {
   TooltipTrigger,
   Tooltip,
 } from '@adobe/react-spectrum'
+import { Button, Text as S2Text } from '@react-spectrum/s2'
+import { style } from '@react-spectrum/s2/style' with { type: 'macro' }
 import { ProfileData, SeriesSpeaker, SpeakerType, EventApiResponse } from '../../types/domain'
 import { SpeakerPickerDialog } from './SpeakerPickerDialog'
 import { TYPOGRAPHY, FLEX_GAP, COLORS } from '../../styles/designSystem'
@@ -378,7 +379,7 @@ export const SpeakersComponent: React.FC = () => {
             <Text>Add speakers to your event using the button below.</Text>
             <Button variant="secondary" onPress={() => setPickerOpen(true)}>
               <Add />
-              <Text>Add Speaker</Text>
+              <S2Text>Add Speaker</S2Text>
             </Button>
           </Flex>
         </View>
@@ -527,7 +528,7 @@ export const SpeakersComponent: React.FC = () => {
         <Button
           variant="secondary"
           onPress={() => setPickerOpen(true)}
-          width="100%"
+          styles={style({ width: 'full' })}
           UNSAFE_style={{
             backgroundColor: 'var(--spectrum-global-color-gray-200)',
             border: 'none',
@@ -537,7 +538,7 @@ export const SpeakersComponent: React.FC = () => {
           }}
         >
           <Add />
-          <Text>Add Speaker</Text>
+          <S2Text>Add Speaker</S2Text>
         </Button>
       )}
 

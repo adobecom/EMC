@@ -7,7 +7,6 @@ import {
   View,
   Flex,
   TextField,
-  Button,
   Heading,
   Text,
   ActionButton,
@@ -20,6 +19,8 @@ import {
   Content,
   ButtonGroup,
 } from '@adobe/react-spectrum'
+import { Button, Text as S2Text } from '@react-spectrum/s2'
+import { style } from '@react-spectrum/s2/style' with { type: 'macro' }
 import { SponsorData, SeriesSponsor, EventApiResponse, SponsorType } from '../../types/domain'
 import { ImageUploader } from '../../components/shared'
 import { TYPOGRAPHY, SPACING, COLORS, FLEX_GAP } from '../../styles/designSystem'
@@ -767,7 +768,7 @@ export const SponsorsComponent: React.FC = () => {
             <Text>Add partners to your event using the button below.</Text>
             <Button variant="secondary" onPress={() => setPickerOpen(true)}>
               <Add />
-              <Text>Add Partner</Text>
+              <S2Text>Add Partner</S2Text>
             </Button>
           </Flex>
         </View>
@@ -791,7 +792,7 @@ export const SponsorsComponent: React.FC = () => {
         <Button
           variant="secondary"
           onPress={() => setPickerOpen(true)}
-          width="100%"
+          styles={style({ width: 'full' })}
           UNSAFE_style={{
             backgroundColor: COLORS.GRAY_200,
             border: 'none',
@@ -801,7 +802,7 @@ export const SponsorsComponent: React.FC = () => {
           }}
         >
           <Add />
-          <Text>Add Partner</Text>
+          <S2Text>Add Partner</S2Text>
         </Button>
       )}
 

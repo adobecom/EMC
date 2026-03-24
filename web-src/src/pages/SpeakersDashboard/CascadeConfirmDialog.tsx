@@ -19,11 +19,11 @@ import {
   Divider,
   Content,
   ButtonGroup,
-  Button,
   View,
   Flex,
   Text
 } from '@adobe/react-spectrum'
+import { Button } from '@react-spectrum/s2'
 import Alert from '@spectrum-icons/workflow/Alert'
 import Link from '@spectrum-icons/workflow/Link'
 import { SpeakerDashboardItem } from './SpeakersDashboard'

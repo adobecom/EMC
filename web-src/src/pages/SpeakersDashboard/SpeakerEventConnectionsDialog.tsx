@@ -19,12 +19,12 @@ import {
   Divider,
   Content,
   ButtonGroup,
-  Button,
   View,
   Flex,
   Text,
   ActionButton
 } from '@adobe/react-spectrum'
+import { Button } from '@react-spectrum/s2'
 import Edit from '@spectrum-icons/workflow/Edit'
 import Calendar from '@spectrum-icons/workflow/Calendar'
 import Link from '@spectrum-icons/workflow/Link'
@@ -197,7 +197,7 @@ export const SpeakerEventConnectionsDialog: React.FC<SpeakerEventConnectionsDial
           </Flex>
         </Content>
         <ButtonGroup>
-          <Button variant="primary" onPress={onClose}>
+          <Button variant="accent" onPress={onClose}>
             Close
           </Button>
         </ButtonGroup>

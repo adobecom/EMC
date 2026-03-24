@@ -8,7 +8,6 @@ import {
   DialogContainer,
   Content,
   TextField,
-  Button,
   View,
   Flex,
   Text,
@@ -16,6 +15,7 @@ import {
   ProgressCircle,
   SearchField,
 } from '@adobe/react-spectrum'
+import { Button } from '@react-spectrum/s2'
 import Add from '@spectrum-icons/workflow/Add'
 import ArrowLeft from '@spectrum-icons/workflow/ArrowLeft'
 import { SeriesSponsor, SponsorData } from '../../types/domain'

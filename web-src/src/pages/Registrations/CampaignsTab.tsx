@@ -7,7 +7,6 @@ import {
   View,
   Flex,
   Text,
-  Button,
   ActionButton,
   DialogTrigger,
   Dialog,
@@ -22,6 +21,7 @@ import {
   Picker,
   Item
 } from '@adobe/react-spectrum'
+import { Button } from '@react-spectrum/s2'
 import Add from '@spectrum-icons/workflow/Add'
 import Edit from '@spectrum-icons/workflow/Edit'
 import Delete from '@spectrum-icons/workflow/Delete'
@@ -544,7 +544,7 @@ const CampaignFormDialog: React.FC<CampaignFormDialogProps> = ({
           Cancel
         </Button>
         <Button
-          variant="cta"
+          variant="accent"
           onPress={handleSave}
           isDisabled={!isValid || isSaving}
           UNSAFE_style={{

@@ -7,11 +7,11 @@ import {
   View,
   Flex,
   Text,
-  Button,
   ActionButton,
   Checkbox,
   Divider
 } from '@adobe/react-spectrum'
+import { Button } from '@react-spectrum/s2'
 import ChevronLeft from '@spectrum-icons/workflow/ChevronLeft'
 import type { AttendeeColumnConfig, AttendeeFilters, Attendee, FilterMenuConfig } from '../../types/attendee'
 import { COLORS } from '../../styles/designSystem'
@@ -145,7 +145,7 @@ export const AttendeeFiltersComponent: React.FC<AttendeeFiltersComponentProps> =
 
         {/* Clear All Button */}
         <Button
-          variant="primary"
+          variant="accent"
           onPress={handleClearAll}
           isDisabled={!hasActiveFilters}
           UNSAFE_style={{ width: '100%' }}

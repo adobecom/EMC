@@ -15,10 +15,10 @@ import {
   Switch,
   TooltipTrigger,
   Tooltip,
-  ComboBox,
   DialogTrigger,
   AlertDialog,
 } from '@adobe/react-spectrum'
+import { ComboBox, ComboBoxItem } from "@react-spectrum/s2"
 import { ActionButton } from "@react-spectrum/s2"
 // S2 style macro for type-safe Spectrum token styling
 import {style} from '@react-spectrum/s2/style' with {type: 'macro'}
@@ -394,10 +394,10 @@ export const EventInfoComponent: React.FC = () => {
           selectedKey={timezone || null}
           onSelectionChange={(key) => updateFormData({ timezone: key ? String(key) : '' })}
           description="Search and select a timezone"
-          width="size-6000"
-          menuWidth="size-6000"
+          styles={style({ width: 480 })}
+          menuWidth={480}
         >
-          {(item) => <Item key={item.id}>{item.name}</Item>}
+          {(item) => <ComboBoxItem id={item.id}>{item.name}</ComboBoxItem>}
         </ComboBox>
       </Flex>
       <View UNSAFE_style={{ display: 'inline-block' }}>

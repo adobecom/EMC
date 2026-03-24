@@ -6,13 +6,13 @@ import React, { useState, useEffect, useCallback } from 'react'
 import {
   View,
   Flex,
-  Button,
   Text,
   ProgressCircle,
   ActionButton,
   TooltipTrigger,
   Tooltip
 } from '@adobe/react-spectrum'
+import { Button } from '@react-spectrum/s2'
 import Clock from '@spectrum-icons/workflow/Clock'
 import Close from '@spectrum-icons/workflow/Close'
 import Add from '@spectrum-icons/workflow/Add'

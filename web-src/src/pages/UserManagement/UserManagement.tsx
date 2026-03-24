@@ -11,7 +11,6 @@ import {
   Heading,
   Text,
   Flex,
-  Button,
   TextField,
   Picker,
   Item,
@@ -25,9 +24,10 @@ import {
   Badge,
   Well,
 } from '@adobe/react-spectrum'
+import { Button, Text as S2Text } from '@react-spectrum/s2'
 import Delete from '@spectrum-icons/workflow/Delete'
 import Edit from '@spectrum-icons/workflow/Edit'
-import Key from '@spectrum-icons/workflow/Key'
+import Key from "@react-spectrum/s2/icons/Key"
 import { useNavigate } from 'react-router-dom'
 import { useRBAC } from '../../contexts/RBACContext'
 import { useHasPermission } from '../../hooks/useHasPermission'
@@ -319,7 +319,7 @@ export const UserManagement: React.FC<UserManagementProps> = () => {
               <DialogTrigger>
                 <Button variant="secondary">
                   <Key />
-                  <Text>Connect GitHub</Text>
+                  <S2Text>Connect GitHub</S2Text>
                 </Button>
                 {(close) => (
                   <Dialog>

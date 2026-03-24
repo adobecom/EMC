@@ -22,7 +22,6 @@ import {
   Form,
   TextField,
   ButtonGroup,
-  Button,
   View,
   Flex,
   Text,
@@ -30,6 +29,7 @@ import {
   ProgressCircle,
   Checkbox
 } from '@adobe/react-spectrum'
+import { Button } from '@react-spectrum/s2'
 import Add from '@spectrum-icons/workflow/Add'
 import Delete from '@spectrum-icons/workflow/Delete'
 import LinkOut from '@spectrum-icons/workflow/LinkOut'

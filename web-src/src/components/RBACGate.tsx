@@ -14,11 +14,11 @@ import {
   defaultTheme,
   View,
   Text,
-  Button,
   Picker,
   Item,
   Flex,
 } from '@adobe/react-spectrum'
+import { Button } from '@react-spectrum/s2'
 import { useGroup } from '../contexts/GroupContext'
 import { GateScreen } from './shared/GateScreen'
 import { COLORS, TYPOGRAPHY, SPACING } from '../styles/designSystem'

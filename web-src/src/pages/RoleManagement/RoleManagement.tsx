@@ -8,7 +8,6 @@ import {
   Heading,
   Text,
   Flex,
-  Button,
   TextField,
   DialogTrigger,
   Dialog,
@@ -21,6 +20,7 @@ import {
   Checkbox,
   Well,
 } from '@adobe/react-spectrum'
+import { Button } from '@react-spectrum/s2'
 import Delete from '@spectrum-icons/workflow/Delete'
 import Edit from '@spectrum-icons/workflow/Edit'
 import { useApi } from '../../contexts/ApiContext'

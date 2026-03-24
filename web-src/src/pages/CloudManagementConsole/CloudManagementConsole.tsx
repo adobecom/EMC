@@ -7,7 +7,6 @@ import {
   Flex,
   View,
   Text,
-  Button,
   Heading,
   Picker,
   Item,
@@ -15,6 +14,7 @@ import {
   ProgressCircle,
   StatusLight,
 } from '@adobe/react-spectrum'
+import { Button } from '@react-spectrum/s2'
 import Add from '@spectrum-icons/workflow/Add'
 import Checkmark from '@spectrum-icons/workflow/Checkmark'
 import Refresh from '@spectrum-icons/workflow/Refresh'
@@ -410,7 +410,7 @@ export const CloudManagementConsole: React.FC<CloudManagementConsoleProps> = () 
             Cancel
           </Button>
           <Button
-            variant="primary"
+            variant="accent"
             isDisabled={!pendingChanges || !currentCloud || isSaving}
             onPress={handleSave}
             UNSAFE_style={ACTION_BAR_BUTTON_STYLES.PRIMARY}

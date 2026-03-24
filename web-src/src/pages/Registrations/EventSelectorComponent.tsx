@@ -5,10 +5,9 @@
 import React, { useMemo, useState } from 'react'
 import {
   View,
-  ComboBox,
-  Item,
-  Text
 } from '@adobe/react-spectrum'
+import { ComboBox, ComboBoxItem, Text } from "@react-spectrum/s2"
+import { style } from "@react-spectrum/s2/style" with { type: "macro" }
 import type { EventApiResponse } from '../../types/domain'
 
 interface EventSelectorComponentProps {
@@ -96,16 +95,16 @@ export const EventSelectorComponent: React.FC<EventSelectorComponentProps> = ({
         onSelectionChange={handleSelectionChange}
         onInputChange={handleInputChange}
         isDisabled={isLoading || events.length === 0}
-        width="100%"
-        items={filteredItems}
+        styles={style({ width: '[100%]' })}
+        defaultItems={filteredItems}
         menuTrigger="input"
         allowsCustomValue={false}
       >
         {(item) => (
-          <Item key={item.id} textValue={`${item.name} ${item.date}`}>
-            <Text>{item.name}</Text>
+          <ComboBoxItem id={item.id} textValue={`${item.name} ${item.date}`}>
+            <Text slot="label">{item.name}</Text>
             <Text slot="description">{item.date}</Text>
-          </Item>
+          </ComboBoxItem>
         )}
       </ComboBox>
     </View>

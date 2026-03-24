@@ -9,7 +9,6 @@ import {
   Heading,
   Content,
   TextField,
-  Button,
   View,
   Flex,
   Text,
@@ -18,6 +17,7 @@ import {
   SearchField,
   Form,
 } from '@adobe/react-spectrum'
+import { Button } from '@react-spectrum/s2'
 import Add from '@spectrum-icons/workflow/Add'
 import Alert from '@spectrum-icons/workflow/Alert'
 import ArrowLeft from '@spectrum-icons/workflow/ArrowLeft'

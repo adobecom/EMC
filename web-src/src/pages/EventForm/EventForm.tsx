@@ -8,7 +8,6 @@ import {
   Flex,
   Picker,
   Item,
-  Button,
   Text,
   Heading,
   Divider,
@@ -18,6 +17,7 @@ import {
   Content,
   ButtonGroup
 } from '@adobe/react-spectrum'
+import { Button } from '@react-spectrum/s2'
 import { useNavigate, useParams } from 'react-router-dom'
 import ChevronRight from '@spectrum-icons/workflow/ChevronRight'
 import ChevronLeft from '@spectrum-icons/workflow/ChevronLeft'

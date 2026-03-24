@@ -6,11 +6,11 @@ import React, { useState, useCallback } from 'react'
 import {
   View,
   Flex,
-  Button,
   ProgressBar,
   Heading,
   Text
 } from '@adobe/react-spectrum'
+import { Button } from '@react-spectrum/s2'
 import { useNavigate } from 'react-router-dom'
 import ChevronLeft from '@spectrum-icons/workflow/ChevronLeft'
 import ChevronRight from '@spectrum-icons/workflow/ChevronRight'
@@ -433,7 +433,7 @@ export const FormWizard: React.FC<FormWizardProps> = ({
           <View>
             <Button
               variant="secondary"
-              style="outline"
+              fillStyle="outline"
               staticColor="white"
               onPress={handleBack}
               isDisabled={isFirstStep || isSubmitting || isNavigating}
@@ -449,7 +449,7 @@ export const FormWizard: React.FC<FormWizardProps> = ({
               <Flex direction="row" gap="size-100" alignItems="center">
                 <Button
                   variant="secondary"
-                  style="fill"
+                  fillStyle="fill"
                   onPress={() => handlePreviewClick('pre-event')}
                   isDisabled={isSubmitting || isNavigating}
                 >
@@ -458,7 +458,7 @@ export const FormWizard: React.FC<FormWizardProps> = ({
                 </Button>
                 <Button
                   variant="secondary"
-                  style="fill"
+                  fillStyle="fill"
                   onPress={() => handlePreviewClick('post-event')}
                   isDisabled={isSubmitting || isNavigating}
                 >
@@ -486,7 +486,7 @@ export const FormWizard: React.FC<FormWizardProps> = ({
             <Flex direction="row" gap="size-100" alignItems="center">
               <Button
                 variant="secondary"
-                style="outline"
+                fillStyle="outline"
                 staticColor="white"
                 onPress={handleSave}
                 isDisabled={isActionDisabled || !onSave}
@@ -495,7 +495,7 @@ export const FormWizard: React.FC<FormWizardProps> = ({
               </Button>
               <Button
                 variant="primary"
-                style="fill"
+                fillStyle="fill"
                 staticColor="black"
                 onPress={handleNext}
                 isDisabled={isActionDisabled}

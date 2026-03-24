@@ -4,7 +4,7 @@
 
 import React, { useState, useEffect } from 'react'
 import { View, Flex, Text, DialogContainer, AlertDialog } from '@adobe/react-spectrum'
-import { Button } from "@react-spectrum/s2"
+import { Button, Text as S2Text } from "@react-spectrum/s2"
 import Refresh from "@react-spectrum/s2/icons/Refresh"
 import Lock from "@react-spectrum/s2/icons/Lock"
 import { cachedApi } from '../../services/api'
@@ -194,7 +194,7 @@ export const EventFormatComponent: React.FC = () => {
               onPress={handleReselectClick}
             >
               <Refresh />
-              <Text>Re-select</Text>
+              <S2Text>Re-select</S2Text>
             </Button>
           </View>
         )}

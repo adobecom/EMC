@@ -6,10 +6,10 @@ import React from 'react'
 import {
   View,
   Flex,
-  Button,
   Heading,
   Text
 } from '@adobe/react-spectrum'
+import { Button } from '@react-spectrum/s2'
 import { useNavigate } from 'react-router-dom'
 import ChevronLeft from '@spectrum-icons/workflow/ChevronLeft'
 import ChevronRight from '@spectrum-icons/workflow/ChevronRight'
@@ -265,7 +265,7 @@ export const SingleStepFormLayout: React.FC<SingleStepFormLayoutProps> = ({
           <Flex direction="row" gap="size-100" alignItems="center">
             <Button
               variant="secondary"
-              style="outline"
+              fillStyle="outline"
               staticColor="white"
               onPress={handleSave}
               isDisabled={isActionDisabled || !onSave}
@@ -274,7 +274,7 @@ export const SingleStepFormLayout: React.FC<SingleStepFormLayoutProps> = ({
             </Button>
             <Button
               variant="primary"
-              style="fill"
+              fillStyle="fill"
               staticColor="black"
               onPress={handlePublish}
               isDisabled={isActionDisabled}

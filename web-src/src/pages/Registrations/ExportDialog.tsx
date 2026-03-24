@@ -13,11 +13,11 @@ import {
   Divider,
   Content,
   ButtonGroup,
-  Button,
   Checkbox,
   Flex,
   Text,
 } from '@adobe/react-spectrum'
+import { Button } from '@react-spectrum/s2'
 import type { Attendee, AttendeeColumnConfig } from '../../types/attendee'
 import type { Campaign } from '../../types/campaign'
 import { generateCsv, downloadCsv, CsvColumn } from '../../utils/csvExport'

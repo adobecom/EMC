@@ -22,8 +22,6 @@ import {
   MenuTrigger,
   Menu,
   Item,
-  ComboBox,
-  Button,
   DialogTrigger,
   AlertDialog,
   ProgressCircle,
@@ -32,6 +30,8 @@ import {
   TooltipTrigger,
   Well
 } from '@adobe/react-spectrum'
+import { Button, ComboBox, ComboBoxItem, Text as S2Text } from "@react-spectrum/s2"
+import { style } from "@react-spectrum/s2/style" with { type: "macro" }
 import MoreSmallList from '@spectrum-icons/workflow/MoreSmallList'
 import Edit from '@spectrum-icons/workflow/Edit'
 import Delete from '@spectrum-icons/workflow/Delete'
@@ -688,19 +688,20 @@ export const SpeakersDashboard: React.FC<SpeakersDashboardProps> = () => {
               selectedKey={selectedSeriesId}
               onSelectionChange={handleSeriesComboBoxChange}
               onInputChange={setSeriesFilterText}
-              width="size-6000"
+              styles={style({ width: 480 })}
               isDisabled={seriesList.length === 0}
-              items={filteredSeriesItems}
+              defaultItems={filteredSeriesItems}
               menuTrigger="input"
+              menuWidth={480}
               allowsCustomValue={false}
             >
               {(item) => (
-                <Item key={item.id} textValue={item.name}>
-                  <Text>{item.name}</Text>
-                  <Text slot="description">
+                <ComboBoxItem id={item.id} textValue={item.name}>
+                  <S2Text slot="label">{item.name}</S2Text>
+                  <S2Text slot="description">
                     {formatCloudType(item.cloudType)} • {truncateDescription(item.description, 50)}
-                  </Text>
-                </Item>
+                  </S2Text>
+                </ComboBoxItem>
               )}
             </ComboBox>
           )}
@@ -768,7 +769,7 @@ export const SpeakersDashboard: React.FC<SpeakersDashboardProps> = () => {
       isDisabled={!selectedSeriesId}
     >
       <Add />
-      <Text>Add Speaker</Text>
+      <S2Text>Add Speaker</S2Text>
     </Button>
   ), [handleCreateSpeaker, selectedSeriesId])
   

@@ -9,15 +9,16 @@ import {
   DatePicker,
   TimeField,
   Flex,
-  Button,
   Switch,
   ActionButton,
   Heading,
   Text
 } from '@adobe/react-spectrum'
+import { Button, Text as S2Text } from '@react-spectrum/s2'
+import { style } from '@react-spectrum/s2/style' with { type: 'macro' }
 import { Time } from '@internationalized/date'
 import { parseDateTime, CalendarDateTime } from '@internationalized/date'
-import Add from '@spectrum-icons/workflow/Add'
+import Add from "@react-spectrum/s2/icons/Add"
 import Delete from '@spectrum-icons/workflow/Delete'
 import Edit from '@spectrum-icons/workflow/Edit'
 import Remove from '@spectrum-icons/workflow/Remove'
@@ -482,7 +483,7 @@ export const AgendaComponent: React.FC = () => {
               onPress={addAgendaItem}
             >
               <Add />
-              <Text>Add slot</Text>
+              <S2Text>Add slot</S2Text>
             </Button>
           </Flex>
         </View>
@@ -714,20 +715,20 @@ export const AgendaComponent: React.FC = () => {
 
       {/* Add Button - only show when items exist */}
       {agendaItems.length > 0 && (
-        <Button 
-          variant="secondary" 
+        <Button
+          variant="secondary"
           onPress={addAgendaItem}
-          width="100%"
+          styles={style({ width: '[100%]' })}
           UNSAFE_style={{
-            backgroundColor: 'var(--spectrum-global-color-gray-200)',
+            backgroundColor: 'var(--spectrum-gray-200)',
             border: 'none',
-            color: 'var(--spectrum-global-color-gray-800)',
-            justifyContent: 'flex-start',
-            paddingLeft: '16px',
+            color: 'var(--spectrum-gray-800)',
+            justifyContent: 'start',
+            paddingLeft: 16,
           }}
         >
           <Add />
-          <Text>Add another time slot</Text>
+          <S2Text>Add another time slot</S2Text>
         </Button>
       )}
 

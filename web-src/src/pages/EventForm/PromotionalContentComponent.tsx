@@ -8,13 +8,14 @@ import {
   Flex,
   Text,
   ActionButton,
-  Button,
   ProgressCircle,
   Picker,
   Item
 } from '@adobe/react-spectrum'
+import { Button, Text as S2Text } from '@react-spectrum/s2'
+import { style } from '@react-spectrum/s2/style' with { type: 'macro' }
 import Remove from '@spectrum-icons/workflow/Remove'
-import Add from '@spectrum-icons/workflow/Add'
+import Add from "@react-spectrum/s2/icons/Add"
 import { useEventFormComponent } from '../../hooks/useEventFormComponent'
 import { configService } from '../../services/configService'
 import { HeadingWithTooltip } from '../../components/shared'
@@ -266,12 +267,12 @@ export const PromotionalContentComponent: React.FC = () => {
               isDisabled={isLoading || availablePromotions.length === 0}
             >
               <Add />
-              <Text>Add promotional item</Text>
+              <S2Text>Add promotional item</S2Text>
             </Button>
           </Flex>
         </View>
       )}
-      
+
       {/* Selected Promotional Items */}
       {selectedItems.map((item, index) => {
         const promotionDetails = item.name ? getPromotionDetails(item.name) : undefined
@@ -350,19 +351,19 @@ export const PromotionalContentComponent: React.FC = () => {
       
       {/* Add Promotional Item Button - only show when items exist */}
       {selectedItems.length > 0 && (
-        <Button 
-          variant="secondary" 
+        <Button
+          variant="secondary"
           onPress={addPromotionalItem}
           isDisabled={isLoading || availablePromotions.length === 0}
-          width="100%"
+          styles={style({ width: '[100%]' })}
           UNSAFE_style={{
-            backgroundColor: 'var(--spectrum-global-color-gray-200)',
+            backgroundColor: 'var(--spectrum-gray-200)',
             border: 'none',
-            color: 'var(--spectrum-global-color-gray-800)'
+            color: 'var(--spectrum-gray-800)',
           }}
         >
           <Add />
-          <Text>Add promotional item</Text>
+          <S2Text>Add promotional item</S2Text>
         </Button>
       )}
     </Flex>

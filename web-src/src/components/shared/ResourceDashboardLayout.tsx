@@ -9,9 +9,9 @@ import {
   View,
   Text,
   ActionButton,
-  Button,
   SearchField
 } from '@adobe/react-spectrum'
+import { Button } from '@react-spectrum/s2'
 import Refresh from '@spectrum-icons/workflow/Refresh'
 import { DataTable, TableColumn, TableAction } from './DataTable'
 import { LoadingSpinner } from './LoadingSpinner'
