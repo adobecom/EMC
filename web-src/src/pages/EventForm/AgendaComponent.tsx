@@ -5,13 +5,11 @@
 import React, { useState, useEffect } from 'react'
 import {
   View,
-  DatePicker,
-  TimeField,
   Switch,
   ActionButton,
   Heading,
 } from '@adobe/react-spectrum'
-import { Button, Text, TextField } from '@react-spectrum/s2'
+import { Button, Text, TextField, DatePicker, TimeField } from '@react-spectrum/s2'
 import { style } from '@react-spectrum/s2/style' with { type: 'macro' }
 import { Time } from '@internationalized/date'
 import { parseDateTime, CalendarDateTime } from '@internationalized/date'

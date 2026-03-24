@@ -16,8 +16,8 @@ import {
 import { Button, Picker, PickerItem, Text } from '@react-spectrum/s2'
 import { style } from "@react-spectrum/s2/style" with { type: "macro" }
 import { useNavigate, useParams } from 'react-router-dom'
-import ChevronRight from '@spectrum-icons/workflow/ChevronRight'
-import ChevronLeft from '@spectrum-icons/workflow/ChevronLeft'
+import ChevronRight from "@react-spectrum/s2/icons/ChevronRight"
+import ChevronLeft from "@react-spectrum/s2/icons/ChevronLeft"
 import Alert from '@spectrum-icons/workflow/Alert'
 import {
   EventApiResponse,
@@ -359,7 +359,7 @@ const FormatSelectionOverlay: React.FC<{
             variant="secondary"
             onPress={onCancel}
           >
-            <ChevronLeft size="S" />
+            <ChevronLeft />
             <Text>Back to Dashboard</Text>
           </Button>
           <Button
@@ -368,7 +368,7 @@ const FormatSelectionOverlay: React.FC<{
             isDisabled={isConfirmDisabled || isLoading}
           >
             <Text>Confirm & Continue</Text>
-            <ChevronRight size="S" />
+            <ChevronRight />
           </Button>
         </div>
       </View>

@@ -5,14 +5,13 @@
 import React, { useState, useEffect } from 'react'
 import {
   View,
-  DatePicker,
   Switch,
   TooltipTrigger,
   Tooltip,
   DialogTrigger,
   AlertDialog,
 } from '@adobe/react-spectrum'
-import { ComboBox, ComboBoxItem, TextField, TextArea, Picker, PickerItem, Text } from "@react-spectrum/s2"
+import { ComboBox, ComboBoxItem, TextField, TextArea, Picker, PickerItem, Text, DatePicker } from "@react-spectrum/s2"
 import { ActionButton } from "@react-spectrum/s2"
 // S2 style macro for type-safe Spectrum token styling
 import {style} from '@react-spectrum/s2/style' with {type: 'macro'}
