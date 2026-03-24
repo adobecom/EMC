@@ -72,6 +72,12 @@ interface ScheduleData {
   [key: string]: any
 }
 
+export type PingResult =
+  | { ok: true }
+  | { ok: false; reason: 'auth'; status: number }
+  | { ok: false; reason: 'network' }
+  | { ok: false; reason: 'no-token' }
+
 interface ApiServiceConfig {
   headers?: Record<string, string>
 }
@@ -1483,19 +1489,26 @@ class ApiService {
    * Uses GET /v1/users/me/groups which validates the token and confirms
    * the user exists in the RBAC system without requiring any group header.
    */
-  async pingEsp(): Promise<boolean> {
+  async pingEsp(): Promise<PingResult> {
     const token = this.getAuthToken()
     if (!token) {
-      return false
+      return { ok: false, reason: 'no-token' }
     }
 
     try {
       const result = await this.callExternalApi('esp', '/v1/users/me/groups', 'GET', undefined,
         { operationName: 'pingEsp (via groups)', shouldReturnFullResponse: true }
       )
-      return !('error' in result)
+      if ('error' in result) {
+        const status = typeof result.status === 'number' ? result.status : 0
+        if (status === 401 || status === 403) {
+          return { ok: false, reason: 'auth', status }
+        }
+        return { ok: false, reason: 'network' }
+      }
+      return { ok: true }
     } catch {
-      return false
+      return { ok: false, reason: 'network' }
     }
   }
 
