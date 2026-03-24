@@ -1480,10 +1480,8 @@ class ApiService {
 
   /**
    * Ping ESP to verify API reachability and token validity.
-   * Used by the gate screen as the final step of the access check.
-   *
-   * TODO: Whitelist /v1/ping on CGW (Cluster Gateway) to fix CORS, then revert
-   * to using GET /v1/ping and checking for "pong" response instead of locales.
+   * Uses GET /v1/users/me/groups which validates the token and confirms
+   * the user exists in the RBAC system without requiring any group header.
    */
   async pingEsp(): Promise<boolean> {
     const token = this.getAuthToken()
@@ -1492,9 +1490,8 @@ class ApiService {
     }
 
     try {
-      // Temporarily use locales as health check (ping has CORS issues)
-      const result = await this.callExternalApi('esp', '/v1/locales', 'GET', undefined,
-        { operationName: 'pingEsp (via locales)', shouldReturnFullResponse: true }
+      const result = await this.callExternalApi('esp', '/v1/users/me/groups', 'GET', undefined,
+        { operationName: 'pingEsp (via groups)', shouldReturnFullResponse: true }
       )
       return !('error' in result)
     } catch {

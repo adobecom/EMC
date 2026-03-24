@@ -12,6 +12,7 @@ import { DevTokenButton } from '../dev'
 import { STICKY_GNAV_STYLES } from '../../styles/designSystem'
 import { useAuth } from '../../contexts/AuthContext'
 import { useHasPermission } from '../../hooks'
+import { useGroup } from '../../contexts/GroupContext'
 
 interface TopNavProps {
   ims: IMS
@@ -19,9 +20,13 @@ interface TopNavProps {
 
 const TopNav: React.FC<TopNavProps> = ({ ims }) => {
   const { isAuthenticated, isLoading, signIn, authMode } = useAuth()
+  const { isLoading: isGroupLoading } = useGroup()
   const canReadEvents = useHasPermission('event', 'read')
   const canReadSeries = useHasPermission('series', 'read')
   const canReadClouds = useHasPermission('cloud', 'read')
+
+  // Hide all tabs until group/permissions are resolved
+  const showNav = !isGroupLoading
 
   // Only show the standalone sign-in button when:
   //   - Running in standalone mode (not the ExC Shell)
@@ -62,10 +67,11 @@ const TopNav: React.FC<TopNavProps> = ({ ims }) => {
           </a>
         </View>
 
-        {/* Center: Navigation Links */}
-        <Flex 
-          direction="row" 
-          alignItems="center" 
+        {/* Center: Navigation Links — hidden until access is resolved */}
+        {showNav && (
+        <Flex
+          direction="row"
+          alignItems="center"
           gap="size-0"
           UNSAFE_className="nav-links"
         >
@@ -129,6 +135,7 @@ const TopNav: React.FC<TopNavProps> = ({ ims }) => {
             About
           </NavLink>
         </Flex>
+        )}
 
         {/* Right: Auth controls + User Panel */}
         <Flex direction="row" alignItems="center" gap="size-100">
