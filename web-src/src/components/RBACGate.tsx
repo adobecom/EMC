@@ -21,10 +21,7 @@ import {
 } from '@adobe/react-spectrum'
 import { useGroup } from '../contexts/GroupContext'
 import { GateScreen } from './shared/GateScreen'
-import { GATE_BACKGROUND_IMAGES } from '../assets/gate-backgrounds'
 import { COLORS, TYPOGRAPHY, SPACING } from '../styles/designSystem'
-
-const GATE_BACKGROUND_FALLBACK = '#E8E8E8'
 
 interface RBACGateProps {
   children: ReactNode
@@ -38,28 +35,18 @@ const GroupSelectionScreen: React.FC = () => {
   const { groups, setActiveGroup } = useGroup()
   const [selectedId, setSelectedId] = useState<string | null>(null)
 
-  const [backgroundImage] = useState(() => {
-    if (GATE_BACKGROUND_IMAGES.length === 0) return null
-    return GATE_BACKGROUND_IMAGES[
-      Math.floor(Math.random() * GATE_BACKGROUND_IMAGES.length)
-    ]
-  })
-
-  // UNSAFE_style needed: fixed fullscreen overlay with background-image is not expressible via Spectrum props
+  // UNSAFE_style needed: fixed fullscreen overlay is not expressible via Spectrum props
   const outerStyle: React.CSSProperties = {
     position: 'fixed',
     top: 0,
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: GATE_BACKGROUND_FALLBACK,
-    backgroundSize: 'cover',
-    backgroundPosition: 'center',
+    backgroundColor: '#E8E8E8',
     display: 'flex',
     alignItems: 'center',
     textAlign: 'center',
-    justifyContent: 'center',
-    ...(backgroundImage && { backgroundImage: `url(${backgroundImage})` })
+    justifyContent: 'center'
   }
 
   return (
