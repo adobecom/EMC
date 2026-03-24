@@ -14,3 +14,19 @@ export const LANGUAGE_TO_LOCALE: Record<string, string> = {
 }
 
 export const DEFAULT_LOCALE = 'en-US'
+
+export const LOCALE_TO_LANGUAGE: Record<string, string> = Object.entries(LANGUAGE_TO_LOCALE).reduce(
+  (acc, [languageKey, locale]) => {
+    acc[locale] = languageKey
+    return acc
+  },
+  {} as Record<string, string>
+)
+
+export function getLanguageKeyFromLocale(locale: string | undefined | null): string {
+  if (!locale) {
+    return 'en'
+  }
+
+  return LOCALE_TO_LANGUAGE[locale] || locale.split('-')[0] || 'en'
+}
