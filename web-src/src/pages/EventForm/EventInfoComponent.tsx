@@ -176,8 +176,10 @@ export const EventInfoComponent: React.FC = () => {
   const [localeOptions, setLocaleOptions] = useState<{ key: string; label: string }[]>(FALLBACK_LOCALE_OPTIONS)
 
   useEffect(() => {
-    cachedApi.getLocales().then((result: any) => {
-      const localeMap = result?.localeNames || result?.locales || result
+    // getLocales returns `any` — the ESP /v1/locales response shape varies
+    // (localeNames object, locales array, or bare object) and has no typed interface
+    cachedApi.getLocales().then((result: Record<string, unknown>) => {
+      const localeMap = result?.localeNames ?? result?.locales ?? result
       if (localeMap && typeof localeMap === 'object' && !Array.isArray(localeMap)) {
         const options = Object.entries(localeMap as Record<string, string>).map(([key, label]) => ({ key, label }))
         if (options.length > 0) setLocaleOptions(options)
