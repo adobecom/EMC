@@ -6,9 +6,9 @@ import React, { useState, useEffect } from 'react'
 import {
   View,
   Flex,
-  Text,
   Button
 } from '@adobe/react-spectrum'
+import { Text } from '@react-spectrum/s2'
 import { HeadingWithTooltip, LoadingSpinner } from '../../components/shared'
 import { FLEX_GAP, COLORS } from '../../styles/designSystem'
 import { useSeriesFormComponent } from '../../hooks/useSeriesFormComponent'

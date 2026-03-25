@@ -4,16 +4,18 @@
 
 import React, { useEffect, useMemo, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Text, ActionButton, MenuTrigger, Menu, Item, Flex, Button, DialogTrigger, AlertDialog, Link } from '@adobe/react-spectrum'
-import MoreSmallList from '@spectrum-icons/workflow/MoreSmallList'
-import PublishRemove from '@spectrum-icons/workflow/PublishRemove'
-import ViewDetail from '@spectrum-icons/workflow/ViewDetail'
-import Copy from '@spectrum-icons/workflow/Copy'
-import Edit from '@spectrum-icons/workflow/Edit'
-import Duplicate from '@spectrum-icons/workflow/Duplicate'
-import Delete from '@spectrum-icons/workflow/Delete'
-import Globe from '@spectrum-icons/workflow/Globe'
-import Location from '@spectrum-icons/workflow/Location'
+import { ActionButton, Button, MenuTrigger, Menu, MenuItem, Text, DialogTrigger, AlertDialog, Link } from "@react-spectrum/s2"
+import { style } from "@react-spectrum/s2/style" with { type: "macro" }
+import More from "@react-spectrum/s2/icons/More"
+import Publish from "@react-spectrum/s2/icons/Publish"
+import PublishNo from "@react-spectrum/s2/icons/PublishNo"
+import Preview from "@react-spectrum/s2/icons/Preview"
+import Copy from "@react-spectrum/s2/icons/Copy"
+import Edit from "@react-spectrum/s2/icons/Edit"
+import Duplicate from "@react-spectrum/s2/icons/Duplicate"
+import Delete from "@react-spectrum/s2/icons/Delete"
+import GlobeGrid from "@react-spectrum/s2/icons/GlobeGrid"
+import Location from "@react-spectrum/s2/icons/Location"
 import { getEventTypeOptions, EventType } from '../../config/eventTypeConfig'
 import { TableColumn } from '../../components/shared/DataTable'
 import { StatusBadge, ResourceDashboardLayout, BlurredLoadingOverlay } from '../../components/shared'
@@ -22,7 +24,7 @@ import { apiService, cachedApi } from '../../services/api'
 import { thumbnailEnrichmentManager, venueEnrichmentManager, historyEnrichmentManager, EventThumbnail, EventVenueInfo, EventHistoryInfo } from '../../services/eventEnrichment'
 import { seriesEnrichmentManager, SeriesInfo } from '../../services/seriesEnrichment'
 import { IMS } from '../../types'
-import { useToast } from '../../contexts'
+import { useToast, useGroup } from '../../contexts'
 import { filterEventData } from '../../utils/dataFilters'
 import { useSafeState, useRBACFilter } from '../../hooks'
 import { getEspEnvParam } from '../../config/constants'
@@ -99,9 +101,10 @@ export const EventsDashboard: React.FC<EventsDashboardProps> = () => {
     }
   }
 
+  const { groupVersion } = useGroup()
   useEffect(() => {
     loadEventsData()
-  }, [])
+  }, [groupVersion]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Fetch thumbnails only for visible event IDs (triggered by pagination)
   useEffect(() => {
@@ -589,7 +592,7 @@ export const EventsDashboard: React.FC<EventsDashboardProps> = () => {
         
         if (isLoading) {
           return (
-            <Flex direction="column" gap="size-50">
+            <div className={style({display: 'flex', flexDirection: 'column', gap: 4})}>
               <div 
                 className="series-shimmer"
                 style={{
@@ -612,13 +615,13 @@ export const EventsDashboard: React.FC<EventsDashboardProps> = () => {
                   borderRadius: '4px'
                 }}
               />
-            </Flex>
+            </div>
           )
         }
         
         if (seriesInfo) {
           return (
-            <Flex direction="column" gap="size-50">
+            <div className={style({display: 'flex', flexDirection: 'column', gap: 4})}>
               <Text>{seriesInfo.seriesName}</Text>
               {seriesInfo.seriesDescription && (
                 <Text UNSAFE_style={{ fontSize: '12px', color: 'var(--spectrum-global-color-gray-700)' }}>
@@ -627,7 +630,7 @@ export const EventsDashboard: React.FC<EventsDashboardProps> = () => {
                     : seriesInfo.seriesDescription}
                 </Text>
               )}
-            </Flex>
+            </div>
           )
         }
         
@@ -811,37 +814,37 @@ export const EventsDashboard: React.FC<EventsDashboardProps> = () => {
       render: (item) => (
         <MenuTrigger>
           <ActionButton isQuiet aria-label="Actions menu">
-            <MoreSmallList />
+            <More />
           </ActionButton>
           <Menu onAction={(key) => handleMenuAction(key as string, item)}>
-            <Item key="publish">
-              <PublishRemove />
-              <Text>{item.published ? 'Unpublish' : 'Publish'}</Text>
-            </Item>
-            <Item key="preview-pre">
-              <ViewDetail />
-              <Text>Preview pre-event</Text>
-            </Item>
-            <Item key="preview-post">
-              <ViewDetail />
-              <Text>Preview post-event</Text>
-            </Item>
-            <Item key="copy-url">
+            <MenuItem id="publish" textValue={item.published ? 'Unpublish' : 'Publish'}>
+              {item.published ? <PublishNo /> : <Publish />}
+              <Text slot="label">{item.published ? 'Unpublish' : 'Publish'}</Text>
+            </MenuItem>
+            <MenuItem id="preview-pre" textValue="Preview pre-event">
+              <Preview />
+              <Text slot="label">Preview pre-event</Text>
+            </MenuItem>
+            <MenuItem id="preview-post" textValue="Preview post-event">
+              <Preview />
+              <Text slot="label">Preview post-event</Text>
+            </MenuItem>
+            <MenuItem id="copy-url" textValue="Copy URL">
               <Copy />
-              <Text>Copy URL</Text>
-            </Item>
-            <Item key="edit">
+              <Text slot="label">Copy URL</Text>
+            </MenuItem>
+            <MenuItem id="edit" textValue="Edit">
               <Edit />
-              <Text>Edit</Text>
-            </Item>
-            <Item key="clone">
+              <Text slot="label">Edit</Text>
+            </MenuItem>
+            <MenuItem id="clone" textValue="Clone">
               <Duplicate />
-              <Text>Clone</Text>
-            </Item>
-            <Item key="delete">
+              <Text slot="label">Clone</Text>
+            </MenuItem>
+            <MenuItem id="delete" textValue="Delete">
               <Delete />
-              <Text>Delete</Text>
-            </Item>
+              <Text slot="label">Delete</Text>
+            </MenuItem>
           </Menu>
         </MenuTrigger>
       )
@@ -881,7 +884,7 @@ export const EventsDashboard: React.FC<EventsDashboardProps> = () => {
   // Icon mapping for event types
   const eventTypeIcons: Record<EventType, React.ReactNode> = {
     'in-person': <Location />,
-    'webinar': <Globe />,
+    'webinar': <GlobeGrid />,
   }
 
   // Custom create button with dropdown menu
@@ -890,10 +893,10 @@ export const EventsDashboard: React.FC<EventsDashboardProps> = () => {
       <Button variant="accent">Create new event</Button>
       <Menu onAction={(key) => handleCreateEvent(key as EventType)}>
         {eventTypeOptions.map(option => (
-          <Item key={option.key} textValue={option.label}>
+          <MenuItem key={option.key} id={option.key} textValue={option.label}>
             {eventTypeIcons[option.key]}
-            <Text>{option.label}</Text>
-          </Item>
+            <Text slot="label">{option.label}</Text>
+          </MenuItem>
         ))}
       </Menu>
     </MenuTrigger>
@@ -935,25 +938,22 @@ export const EventsDashboard: React.FC<EventsDashboardProps> = () => {
         onOpenChange={(isOpen) => !isOpen && setItemToDelete(null)}
       >
         <div style={{ display: 'none' }} />
-        {(close) => (
-          <AlertDialog
-            title="Delete Event"
-            variant="destructive"
-            primaryActionLabel="Delete"
-            secondaryActionLabel="Cancel"
-            onPrimaryAction={() => {
-              if (itemToDelete) {
-                handleDeleteEvent(itemToDelete)
-              }
-              close()
-            }}
-            onSecondaryAction={close}
-            isPrimaryActionDisabled={!!actionInProgress}
-          >
-            Are you sure you want to delete <strong>{itemToDelete?.eventName}</strong>? 
-            This action cannot be undone and will permanently remove the event and all associated data.
-          </AlertDialog>
-        )}
+        <AlertDialog
+          title="Delete Event"
+          variant="destructive"
+          primaryActionLabel="Delete"
+          cancelLabel="Cancel"
+          onPrimaryAction={() => {
+            if (itemToDelete) {
+              handleDeleteEvent(itemToDelete)
+            }
+          }}
+          onCancel={() => setItemToDelete(null)}
+          isPrimaryActionDisabled={!!actionInProgress}
+        >
+          Are you sure you want to delete <strong>{itemToDelete?.eventName}</strong>?
+          This action cannot be undone and will permanently remove the event and all associated data.
+        </AlertDialog>
       </DialogTrigger>
     </>
   )

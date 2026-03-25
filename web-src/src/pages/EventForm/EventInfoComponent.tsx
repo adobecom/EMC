@@ -5,31 +5,22 @@
 import React, { useState, useEffect } from 'react'
 import {
   View,
-  TextField,
-  TextArea,
-  Picker,
-  Item,
-  DatePicker,
-  Flex,
-  Text,
   Switch,
   TooltipTrigger,
   Tooltip,
-  ActionButton,
-  ComboBox,
   DialogTrigger,
-  AlertDialog
+  AlertDialog,
 } from '@adobe/react-spectrum'
+import { ComboBox, ComboBoxItem, TextField, TextArea, Picker, PickerItem, Text, DatePicker } from "@react-spectrum/s2"
+import { ActionButton } from "@react-spectrum/s2"
+// S2 style macro for type-safe Spectrum token styling
+import {style} from '@react-spectrum/s2/style' with {type: 'macro'}
 import { parseDateTime, CalendarDateTime } from '@internationalized/date'
 import { getTimeZones } from '@vvo/tzdb'
-import Info from '@spectrum-icons/workflow/Info'
+import InfoCircle from "@react-spectrum/s2/icons/InfoCircle"
 import { HeadingWithTooltip, RichTextEditor } from '../../components/shared'
-import { FLEX_GAP, SPACING } from '../../styles/designSystem'
-import {
-  LANGUAGE_TO_LOCALE,
-  DEFAULT_LOCALE,
-  getLanguageKeyFromLocale,
-} from '../../config/localeMapping'
+import { SPACING } from '../../styles/designSystem'
+import { cachedApi } from '../../services/api'
 import { useEventFormComponent } from '../../hooks/useEventFormComponent'
 
 /**
@@ -109,15 +100,15 @@ function getMinEndDateTime(startDateTimeStr: string): CalendarDateTime | undefin
   return addMinutes(startDt, 1)
 }
 
-const LANGUAGE_OPTIONS = [
-  { key: 'en', label: 'English' },
-  { key: 'es', label: 'Spanish' },
-  { key: 'fr', label: 'French' },
-  { key: 'de', label: 'German' },
-  { key: 'ja', label: 'Japanese' },
-  { key: 'ko', label: 'Korean' },
-  { key: 'pt', label: 'Portuguese' },
-  { key: 'zh', label: 'Chinese' }
+const FALLBACK_LOCALE_OPTIONS = [
+  { key: 'en-US', label: 'English (US)' },
+  { key: 'es-ES', label: 'Spanish' },
+  { key: 'fr-FR', label: 'French' },
+  { key: 'de-DE', label: 'German' },
+  { key: 'ja-JP', label: 'Japanese' },
+  { key: 'ko-KR', label: 'Korean' },
+  { key: 'pt-BR', label: 'Portuguese (Brazil)' },
+  { key: 'zh-CN', label: 'Chinese (Simplified)' },
 ]
 
 const TIMEZONE_OPTIONS = getTimeZones().map((tz) => ({
@@ -175,8 +166,23 @@ export const EventInfoComponent: React.FC = () => {
   // ============================================================================
   
   const [hasSecondaryLink, setHasSecondaryLink] = useState(false)
-  const [pendingLanguageKey, setPendingLanguageKey] = useState<string | null>(null)
+  const [pendingLocale, setPendingLocale] = useState<string | null>(null)
   const [urlValidationError, setUrlValidationError] = useState<string | null>(null)
+  const [localeOptions, setLocaleOptions] = useState<{ key: string; label: string }[]>(FALLBACK_LOCALE_OPTIONS)
+
+  useEffect(() => {
+    // getLocales returns `any` — the ESP /v1/locales response shape varies
+    // (localeNames object, locales array, or bare object) and has no typed interface
+    cachedApi.getLocales().then((result: Record<string, unknown>) => {
+      const localeMap = result?.localeNames ?? result?.locales ?? result
+      if (localeMap && typeof localeMap === 'object' && !Array.isArray(localeMap)) {
+        const options = Object.entries(localeMap as Record<string, string>).map(([key, label]) => ({ key, label }))
+        if (options.length > 0) setLocaleOptions(options)
+      }
+    }).catch(() => {
+      // fallback stays in place
+    })
+  }, [])
 
   useEffect(() => {
     if (communityForumUrl) {
@@ -216,25 +222,23 @@ export const EventInfoComponent: React.FC = () => {
 
   const handleLanguageChange = (key: React.Key | null) => {
     if (key == null) return
-    const languageKey = String(key)
-    const nextLocale = LANGUAGE_TO_LOCALE[languageKey] || DEFAULT_LOCALE
+    const nextLocale = String(key)
 
     if (nextLocale === locale) {
       return
     }
 
     if (isDirty) {
-      setPendingLanguageKey(languageKey)
+      setPendingLocale(nextLocale)
     } else {
       setLocaleAndRemapFormData(nextLocale)
     }
   }
 
   const handleConfirmLocaleSwitch = () => {
-    if (pendingLanguageKey) {
-      const nextLocale = LANGUAGE_TO_LOCALE[pendingLanguageKey] || DEFAULT_LOCALE
-      setLocaleAndRemapFormData(nextLocale)
-      setPendingLanguageKey(null)
+    if (pendingLocale) {
+      setLocaleAndRemapFormData(pendingLocale)
+      setPendingLocale(null)
     }
   }
 
@@ -243,9 +247,9 @@ export const EventInfoComponent: React.FC = () => {
   // ============================================================================
 
   return (
-    <Flex direction="column" gap={FLEX_GAP.SECTION}>
+    <div className={style({display: 'flex', flexDirection: 'column', gap: 24})}>
       {/* Header Row */}
-      <Flex direction="row" justifyContent="space-between" alignItems="center">
+      <div className={style({display: 'flex', justifyContent: 'space-between', alignItems: 'center'})}>
         <HeadingWithTooltip 
           level={3}
           tooltip="Give your event a title, description, dates, and start/end times. If you have a related forum on community.adobe.com, create a CTA to it here."
@@ -254,7 +258,7 @@ export const EventInfoComponent: React.FC = () => {
         </HeadingWithTooltip>
         
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: SPACING.XS }}>
-          <Flex direction="row" alignItems="center" gap="size-100">
+          <div className={style({display: 'flex', alignItems: 'center', gap: 8})}>
             <Switch
               isSelected={isPrivate}
               onChange={(value) => updateFormData({ isPrivate: value })}
@@ -262,21 +266,15 @@ export const EventInfoComponent: React.FC = () => {
               Set as a private event
             </Switch>
             <TooltipTrigger delay={0}>
-              <ActionButton 
+              <ActionButton
                 isQuiet
-                UNSAFE_style={{ 
-                  minWidth: 'auto',
-                  padding: 0,
-                  width: '20px',
-                  height: '20px'
-                }}
               >
-                <Info size="S" />
+                <InfoCircle />
               </ActionButton>
               <Tooltip variant="info">By setting this to private, your event won't be publicly found online or published to the events hub.</Tooltip>
             </TooltipTrigger>
-          </Flex>
-          <Flex direction="row" alignItems="center" gap="size-100">
+          </div>
+          <div className={style({display: 'flex', alignItems: 'center', gap: 8})}>
             <Switch
               isSelected={inviteOnly}
               onChange={(value) => updateFormData({ inviteOnly: value })}
@@ -285,39 +283,31 @@ export const EventInfoComponent: React.FC = () => {
               Invite only
             </Switch>
             <TooltipTrigger delay={0}>
-              <ActionButton 
+              <ActionButton
                 isQuiet
-                UNSAFE_style={{ 
-                  minWidth: 'auto',
-                  padding: 0,
-                  width: '20px',
-                  height: '20px'
-                }}
               >
-                <Info size="S" />
+                <InfoCircle />
               </ActionButton>
               <Tooltip variant="info">If set to true, users can only RSVP with a campaign link.</Tooltip>
             </TooltipTrigger>
-          </Flex>
+          </div>
         </div>
-      </Flex>
-
+      </div>
       {/* Form Fields */}
       <Picker
         label="Language"
         isRequired
-        selectedKey={getLanguageKeyFromLocale(locale)}
+        selectedKey={locale || null}
         onSelectionChange={handleLanguageChange}
       >
-        {LANGUAGE_OPTIONS.map((lang) => (
-          <Item key={lang.key}>{lang.label}</Item>
+        {localeOptions.map((opt) => (
+          <PickerItem key={opt.key} id={opt.key}>{opt.label}</PickerItem>
         ))}
       </Picker>
-
       {/* Locale switch confirmation when form has unsaved changes */}
       <DialogTrigger
-        isOpen={!!pendingLanguageKey}
-        onOpenChange={(isOpen) => !isOpen && setPendingLanguageKey(null)}
+        isOpen={!!pendingLocale}
+        onOpenChange={(isOpen) => !isOpen && setPendingLocale(null)}
       >
         <div style={{ display: 'none' }} />
         {(close) => (
@@ -336,7 +326,6 @@ export const EventInfoComponent: React.FC = () => {
           </AlertDialog>
         )}
       </DialogTrigger>
-
       <TextField
         label="Event Title"
         isRequired
@@ -344,35 +333,27 @@ export const EventInfoComponent: React.FC = () => {
         value={name}
         onChange={handleNameChange}
         description="80 characters max"
-        width="100%"
+        styles={style({ width: '[100%]' })}
       />
-
       <View width="100%">
-        <Flex direction="row" gap="size-100" alignItems="center" marginBottom="size-100">
+        <div className={style({display: 'flex', gap: 8, alignItems: 'center', marginBottom: 8})}>
           <Text>English title for page URL</Text>
           <TooltipTrigger delay={0}>
-            <ActionButton 
-              isQuiet 
-              UNSAFE_style={{ 
-                minWidth: 'auto',
-                padding: 0,
-                width: '20px',
-                height: '20px'
-              }}
+            <ActionButton
+              isQuiet
             >
-              <Info size="S" />
+              <InfoCircle />
             </ActionButton>
             <Tooltip variant="info">SEO friendly title</Tooltip>
           </TooltipTrigger>
-        </Flex>
+        </div>
         <TextField
           aria-label="English title for page URL"
           value={enTitle || ''}
           onChange={(value) => updateFormData({ enTitle: value })}
-          width="100%"
+          styles={style({ width: '[100%]' })}
         />
       </View>
-
       <View width="100%">
         <HeadingWithTooltip 
           level={4}
@@ -388,7 +369,6 @@ export const EventInfoComponent: React.FC = () => {
           height="400px"
         />
       </View>
-
       <TextArea
         label="Event Description for Events Hub and SEO"
         isRequired
@@ -396,10 +376,9 @@ export const EventInfoComponent: React.FC = () => {
         value={shortDescription || ''}
         onChange={(value) => updateFormData({ shortDescription: value })}
         description="160 characters max"
-        width="100%"
+        styles={style({ width: '[100%]' })}
       />
-
-      <Flex direction="row" gap="size-200" wrap>
+      <div className={style({display: 'flex', gap: 16, flexWrap: 'wrap'})}>
         <DatePicker
           label="Start Date & Time"
           isRequired
@@ -424,13 +403,12 @@ export const EventInfoComponent: React.FC = () => {
           selectedKey={timezone || null}
           onSelectionChange={(key) => updateFormData({ timezone: key ? String(key) : '' })}
           description="Search and select a timezone"
-          width="size-6000"
-          menuWidth="size-6000"
+          styles={style({ width: 480 })}
+          menuWidth={480}
         >
-          {(item) => <Item key={item.id}>{item.name}</Item>}
+          {(item) => <ComboBoxItem id={item.id}>{item.name}</ComboBoxItem>}
         </ComboBox>
-      </Flex>
-
+      </div>
       <View UNSAFE_style={{ display: 'inline-block' }}>
         <Switch
           isSelected={hasSecondaryLink}
@@ -439,7 +417,6 @@ export const EventInfoComponent: React.FC = () => {
           Add secondary link
         </Switch>
       </View>
-
       {hasSecondaryLink && (
         <>
           <TextField
@@ -447,7 +424,7 @@ export const EventInfoComponent: React.FC = () => {
             value={secondaryLinkTitle || ''}
             onChange={(value) => updateFormData({ secondaryLinkTitle: value })}
             description="Display text for the secondary link"
-            width="100%"
+            styles={style({ width: '[100%]' })}
           />
 
           <TextField
@@ -462,13 +439,13 @@ export const EventInfoComponent: React.FC = () => {
                 setUrlValidationError(null)
               }
             }}
-            validationState={urlValidationError ? 'invalid' : undefined}
-            errorMessage={urlValidationError}
+            isInvalid={!!urlValidationError}
+            errorMessage={urlValidationError || undefined}
             description={urlValidationError ? undefined : 'URL for the secondary link'}
-            width="100%"
+            styles={style({ width: '[100%]' })}
           />
         </>
       )}
-    </Flex>
+    </div>
   )
 }

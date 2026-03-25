@@ -45,7 +45,7 @@ useEventFormComponent({
 ## Code conventions (non-negotiable)
 
 - No semicolons
-- React Spectrum v3 components only — no raw HTML inputs
+- Prefer React Spectrum 2 (`@react-spectrum/s2`); use v3 (`@adobe/react-spectrum`) only if a step’s control has no S2 equivalent — no raw HTML inputs unless necessary
 - Use `onPress` not `onClick`
 - Use `Flex`/`Grid` for layout
 - No class components

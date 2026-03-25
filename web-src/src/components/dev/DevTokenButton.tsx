@@ -1,11 +1,13 @@
-/* 
+/*
 * Dev Token Button Component
 * Shows a button/badge to manage dev tokens (only visible in dev mode)
 */
 
 import React, { useState, useEffect } from 'react'
-import { ActionButton, Badge, Flex, Text, Tooltip, TooltipTrigger } from '@adobe/react-spectrum'
-import Key from '@spectrum-icons/workflow/Key'
+import { Text, Tooltip, TooltipTrigger } from '@adobe/react-spectrum'
+import { ActionButton, Badge } from "@react-spectrum/s2"
+import { style } from "@react-spectrum/s2/style" with { type: "macro" }
+import Key from "@react-spectrum/s2/icons/Key"
 import { tokenStorage } from '../../services/tokenStorage'
 import { DevTokenDialog } from './DevTokenDialog'
 import { env } from '../../config/env'
@@ -26,7 +28,7 @@ export const DevTokenButton: React.FC<DevTokenButtonProps> = ({ onTokenChange })
   const checkToken = () => {
     const isValid = tokenStorage.isTokenValid()
     setHasValidToken(isValid)
-    
+
     if (isValid) {
       const info = tokenStorage.getTokenExpiration()
       setExpirationInfo(info)
@@ -39,9 +41,9 @@ export const DevTokenButton: React.FC<DevTokenButtonProps> = ({ onTokenChange })
     if (!isDevMode) {
       return
     }
-    
+
     checkToken()
-    
+
     // Check token validity every minute
     const interval = setInterval(checkToken, 60000)
     return () => clearInterval(interval)
@@ -50,11 +52,11 @@ export const DevTokenButton: React.FC<DevTokenButtonProps> = ({ onTokenChange })
   const handleTokenSaved = (token: string) => {
     setIsDialogOpen(false)
     checkToken()
-    
+
     if (onTokenChange) {
       onTokenChange(token)
     }
-    
+
     // Reload the page to apply the new token
     window.location.reload()
   }
@@ -71,17 +73,17 @@ export const DevTokenButton: React.FC<DevTokenButtonProps> = ({ onTokenChange })
   return (
     <>
       <TooltipTrigger delay={0}>
-        <ActionButton 
+        <ActionButton
           onPress={() => setIsDialogOpen(true)}
           isQuiet
         >
-          <Flex alignItems="center" gap="size-100">
+          <div className={style({ display: 'flex', alignItems: 'center', gap: 8 })}>
             <Key />
             <Text>Dev Token</Text>
             <Badge variant={hasValidToken ? 'positive' : 'neutral'}>
               {hasValidToken ? 'Active' : 'None'}
             </Badge>
-          </Flex>
+          </div>
         </ActionButton>
         <Tooltip variant="info">
           {hasValidToken && expirationInfo ? (
@@ -113,4 +115,3 @@ export const DevTokenButton: React.FC<DevTokenButtonProps> = ({ onTokenChange })
 }
 
 export default DevTokenButton
-

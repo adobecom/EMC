@@ -3,12 +3,12 @@
 */
 
 import React, { useEffect, useMemo, useCallback } from 'react'
-import { Flex, Text, ActionButton, MenuTrigger, Menu, Item } from '@adobe/react-spectrum'
-import MoreSmallList from '@spectrum-icons/workflow/MoreSmallList'
-import PublishRemove from '@spectrum-icons/workflow/PublishRemove'
-import Edit from '@spectrum-icons/workflow/Edit'
-import Duplicate from '@spectrum-icons/workflow/Duplicate'
-import Archive from '@spectrum-icons/workflow/Archive'
+import { ActionButton, Text, MenuTrigger, Menu, MenuItem } from "@react-spectrum/s2"
+import More from '@react-spectrum/s2/icons/More'
+import PublishNo from '@react-spectrum/s2/icons/PublishNo'
+import Edit from '@react-spectrum/s2/icons/Edit'
+import Duplicate from '@react-spectrum/s2/icons/Duplicate'
+import Archive from '@react-spectrum/s2/icons/Archive'
 import { TableColumn } from '../../components/shared/DataTable'
 import { StatusBadge, ResourceDashboardLayout, BlurredLoadingOverlay } from '../../components/shared'
 import { SeriesDashboardItem, EventApiResponse } from '../../types/domain'
@@ -20,6 +20,7 @@ import {
 } from '../../services/seriesEnrichment'
 import { createShimmerStyle } from '../../styles/designSystem'
 import { useSafeState, useRBACFilter } from '../../hooks'
+import { useGroup } from '../../contexts/GroupContext'
 
 const SERIES_SEARCH_KEYS = ['seriesName', 'seriesDescription', 'cloudType', 'seriesStatus']
 
@@ -84,9 +85,10 @@ export const SeriesDashboard: React.FC<SeriesDashboardProps> = () => {
     }
   }
 
+  const { groupVersion } = useGroup()
   useEffect(() => {
     loadSeriesData()
-  }, [])
+  }, [groupVersion]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Fetch history info (creator/modifier) for visible series IDs
   useEffect(() => {
@@ -253,25 +255,25 @@ export const SeriesDashboard: React.FC<SeriesDashboardProps> = () => {
     if (isArchived || isUnknown) {
       return [{ key: 'clone', icon: <Duplicate />, label: 'Clone' }]
     }
-    
+
     if (isDraft) {
       return [
-        { key: 'publish', icon: <PublishRemove />, label: 'Publish' },
+        { key: 'publish', icon: <PublishNo />, label: 'Publish' },
         { key: 'edit', icon: <Edit />, label: 'Edit' },
         { key: 'clone', icon: <Duplicate />, label: 'Clone' },
         { key: 'archive', icon: <Archive />, label: 'Archive' }
       ]
     }
-    
+
     if (isPublished) {
       return [
-        { key: 'unpublish', icon: <PublishRemove />, label: 'Unpublish' },
+        { key: 'unpublish', icon: <PublishNo />, label: 'Unpublish' },
         { key: 'edit', icon: <Edit />, label: 'Edit' },
         { key: 'clone', icon: <Duplicate />, label: 'Clone' },
         { key: 'archive', icon: <Archive />, label: 'Archive' }
       ]
     }
-    
+
     return [{ key: 'clone', icon: <Duplicate />, label: 'Clone' }]
   }, [])
 
@@ -282,11 +284,11 @@ export const SeriesDashboard: React.FC<SeriesDashboardProps> = () => {
       width: 250,
       sortable: true,
       render: (item) => (
-        <Flex direction="column" gap="size-50">
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
           <Text>
-            <a 
+            <a
               href={`#/series/edit/${item.seriesId}`}
-              style={{ 
+              style={{
                 color: 'var(--spectrum-global-color-blue-600)',
                 textDecoration: 'none',
                 fontWeight: 'bold',
@@ -300,12 +302,12 @@ export const SeriesDashboard: React.FC<SeriesDashboardProps> = () => {
           </Text>
           {item.seriesDescription && (
             <Text UNSAFE_style={{ fontSize: '12px', color: 'var(--spectrum-global-color-gray-700)' }}>
-              {item.seriesDescription.length > 60 
-                ? `${item.seriesDescription.substring(0, 60)}...` 
+              {item.seriesDescription.length > 60
+                ? `${item.seriesDescription.substring(0, 60)}...`
                 : item.seriesDescription}
             </Text>
           )}
-        </Flex>
+        </div>
       )
     },
     {
@@ -407,14 +409,14 @@ export const SeriesDashboard: React.FC<SeriesDashboardProps> = () => {
         return (
           <MenuTrigger>
             <ActionButton isQuiet aria-label="Actions menu">
-              <MoreSmallList />
+              <More />
             </ActionButton>
             <Menu onAction={(key) => handleMenuAction(key as string, item)}>
               {menuItems.map(menuItem => (
-                <Item key={menuItem.key}>
+                <MenuItem id={menuItem.key} key={menuItem.key}>
                   {menuItem.icon}
                   <Text>{menuItem.label}</Text>
-                </Item>
+                </MenuItem>
               ))}
             </Menu>
           </MenuTrigger>

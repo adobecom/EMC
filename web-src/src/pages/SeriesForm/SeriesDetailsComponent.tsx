@@ -5,13 +5,11 @@
 import React, { useState, useEffect } from 'react'
 import {
   View,
-  TextField,
-  TextArea,
-  Picker,
-  Item,
   Flex,
   Text
 } from '@adobe/react-spectrum'
+import { TextField, TextArea, Picker, PickerItem } from '@react-spectrum/s2'
+import { style } from '@react-spectrum/s2/style' with { type: 'macro' }
 import { HeadingWithTooltip, LoadingSpinner } from '../../components/shared'
 import { FLEX_GAP } from '../../styles/designSystem'
 import { useSeriesFormComponent } from '../../hooks/useSeriesFormComponent'
@@ -177,10 +175,10 @@ export const SeriesDetailsComponent: React.FC = () => {
           selectedKey={cloudType}
           onSelectionChange={handleCloudChange}
           isDisabled={isLocked}
-          width="size-2400"
+          styles={style({ width: 192 })}
         >
           {SUPPORTED_CLOUDS.map((cloud) => (
-            <Item key={cloud.id}>{cloud.name}</Item>
+            <PickerItem key={cloud.id} id={cloud.id}>{cloud.name}</PickerItem>
           ))}
         </Picker>
 
@@ -201,10 +199,10 @@ export const SeriesDetailsComponent: React.FC = () => {
             selectedKey={targetCms?.code || null}
             onSelectionChange={handleTargetCmsChange}
             isDisabled={isLocked}
-            width="size-2400"
+            styles={style({ width: 192 })}
           >
             {targetCmsOptions.map((option) => (
-              <Item key={option.code}>{option.code}</Item>
+              <PickerItem key={option.code} id={option.code}>{option.code}</PickerItem>
             ))}
           </Picker>
         )}
@@ -218,8 +216,7 @@ export const SeriesDetailsComponent: React.FC = () => {
         value={seriesName}
         onChange={handleNameChange}
         description="30 characters max"
-        width="100%"
-        validationState={seriesName.length > 0 && seriesName.length <= 30 ? 'valid' : undefined}
+        styles={style({ width: '[100%]' })}
       />
 
       {/* Series Description */}
@@ -229,8 +226,7 @@ export const SeriesDetailsComponent: React.FC = () => {
         value={seriesDescription}
         onChange={handleDescriptionChange}
         description="600 characters max"
-        width="100%"
-        height="size-1600"
+        styles={style({ width: '[100%]' })}
       />
     </Flex>
   )

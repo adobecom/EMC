@@ -32,6 +32,10 @@ export interface AuthContextValue {
   isLoading: boolean
   /** Whether ESP ping succeeded (API reachable and token valid). Gate stays until true. */
   isApiReady: boolean
+  /** If ESP ping failed, describes why. Null when ping hasn't run or succeeded. */
+  pingError: 'auth' | 'network' | null
+  /** Re-attempt the ESP ping (e.g. after user clicks Retry). */
+  retryPing: () => void
   /** Which auth mode is active. */
   authMode: AuthMode
   /** Trigger IMS sign-in flow (standalone mode only). */
@@ -73,6 +77,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({
   const [ims, setIms] = useState<IMS>(initialIms || emptyIms)
   const [isLoading, setIsLoading] = useState<boolean>(authMode === 'standalone')
   const [isApiReady, setIsApiReady] = useState<boolean>(false)
+  const [pingError, setPingError] = useState<'auth' | 'network' | null>(null)
 
   const isAuthenticated = Boolean(ims.token)
 
@@ -80,10 +85,12 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({
   useEffect(() => {
     if (!ims.token) {
       setIsApiReady(false)
+      setPingError(null)
       return
     }
 
     setIsApiReady(false)
+    setPingError(null)
     let cancelled = false
 
     const runPing = async () => {
@@ -91,12 +98,17 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({
         console.log('🔌 ESP ping: verifying API access...')
       }
       apiService.setAuthHeaders(ims.token, ims.org)
-      const ok = await apiService.pingEsp()
+      const result = await apiService.pingEsp()
       if (env.isDevelopment()) {
-        console.log('🔌 ESP ping:', ok ? 'pong received' : 'failed')
+        console.log('🔌 ESP ping:', result.ok ? 'pong received' : `failed (${result.reason})`)
       }
-      if (!cancelled && ok) {
+      if (cancelled) return
+      if (result.ok) {
         setIsApiReady(true)
+      } else if (result.reason === 'no-token' || result.reason === 'auth') {
+        setPingError('auth')
+      } else {
+        setPingError('network')
       }
     }
 
@@ -154,7 +166,25 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({
     imsAuthService.signOut()
     setIms(emptyIms)
     setIsApiReady(false)
+    setPingError(null)
   }, [])
+
+  const retryPing = useCallback(() => {
+    if (!ims.token) return
+    setPingError(null)
+    setIsApiReady(false)
+
+    apiService.setAuthHeaders(ims.token, ims.org)
+    apiService.pingEsp().then((result) => {
+      if (result.ok) {
+        setIsApiReady(true)
+      } else if (result.reason === 'no-token' || result.reason === 'auth') {
+        setPingError('auth')
+      } else {
+        setPingError('network')
+      }
+    })
+  }, [ims.token, ims.org])
 
   /**
    * Called by the ExC Shell bootstrap when the shell provides IMS data.
@@ -170,6 +200,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({
     isAuthenticated,
     isLoading,
     isApiReady,
+    pingError,
+    retryPing,
     authMode,
     signIn,
     signOut,
