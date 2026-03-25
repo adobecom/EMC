@@ -366,7 +366,7 @@ export const About: React.FC = () => {
         >
           <QuickRefItem
             label="Tech Stack"
-            value="React 16, TypeScript, Adobe Spectrum"
+            value="React 18, TypeScript, Adobe React Spectrum"
           />
           <QuickRefItem
             label="External APIs"
