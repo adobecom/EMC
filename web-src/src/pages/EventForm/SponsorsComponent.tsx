@@ -3,20 +3,15 @@
 */
 
 import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react'
-import {
-  View,
-  ActionButton,
-  ProgressCircle,
-} from '@adobe/react-spectrum'
-import { Button, ButtonGroup, Text, TextField, Picker, PickerItem, Dialog, DialogContainer, Content, Heading } from '@react-spectrum/s2'
+import { Button, ButtonGroup, Text, TextField, Picker, PickerItem, Dialog, DialogContainer, Content, Heading, ActionButton, ProgressCircle } from '@react-spectrum/s2'
 import { style } from '@react-spectrum/s2/style' with { type: 'macro' }
 import { SponsorData, SeriesSponsor, EventApiResponse, SponsorType } from '../../types/domain'
 import { ImageUploader } from '../../components/shared'
 import { TYPOGRAPHY, SPACING, COLORS } from '../../styles/designSystem'
-import Edit from '@spectrum-icons/workflow/Edit'
+import Edit from '@react-spectrum/s2/icons/Edit'
 import Add from '@react-spectrum/s2/icons/Add'
 import { apiService, cachedApi } from '../../services/api'
-import RemoveCircle from '@spectrum-icons/workflow/RemoveCircle'
+import RemoveCircle from '@react-spectrum/s2/icons/RemoveCircle'
 import { useEventFormComponent } from '../../hooks/useEventFormComponent'
 import { uploadImage, UploadTracker } from '../../services/requestHelpers'
 import { getCurrentEnvironment, getApiHost } from '../../config/constants'
@@ -184,7 +179,7 @@ const PartnerDialog: React.FC<PartnerDialogProps> = ({
                   isDisabled={!isValid || isSaving}
                 >
                   {isSaving ? (
-                    <ProgressCircle size="S" isIndeterminate aria-label="Saving" />
+                    <ProgressCircle isIndeterminate aria-label="Saving" />
                   ) : (
                     isNew ? 'Create' : 'Save'
                   )}
@@ -218,23 +213,23 @@ const PartnerCard: React.FC<PartnerCardProps> = ({
   const currentTier = TIER_OPTIONS.find(t => t.key === partner.type) || TIER_OPTIONS[0]
 
   return (
-    <View
-      borderWidth="thin"
-      borderColor="dark"
-      borderRadius="medium"
-      padding="size-200"
-      backgroundColor="gray-50"
+    <div
+      style={{
+        border: '1px solid var(--spectrum-gray-700)',
+        borderRadius: '4px',
+        padding: '16px',
+        backgroundColor: 'var(--spectrum-gray-50)',
+      }}
     >
       <div className={style({display: 'flex', alignItems: 'center', gap: 16})}>
         {/* Partner Logo */}
-        <View 
-          width="size-800" 
-          height="size-600"
-          borderRadius="small"
-          borderWidth="thin"
-          borderColor="gray-300"
-          backgroundColor="static-white"
-          UNSAFE_style={{
+        <div
+          style={{
+            width: '64px',
+            height: '48px',
+            borderRadius: '2px',
+            border: '1px solid var(--spectrum-gray-300)',
+            backgroundColor: 'white',
             flexShrink: 0,
             display: 'flex',
             alignItems: 'center',
@@ -253,8 +248,8 @@ const PartnerCard: React.FC<PartnerCardProps> = ({
               }}
             />
           ) : (
-            <View
-              UNSAFE_style={{
+            <div
+              style={{
                 width: '100%',
                 height: '100%',
                 backgroundColor: COLORS.GRAY_200,
@@ -266,9 +261,9 @@ const PartnerCard: React.FC<PartnerCardProps> = ({
               }}
             >
               {partner.partnerName?.substring(0, 2).toUpperCase() || 'P'}
-            </View>
+            </div>
           )}
-        </View>
+        </div>
 
         {/* Partner Info */}
         <div className={style({display: 'flex', flexDirection: 'column', flexGrow: 1, gap: 4})}>
@@ -276,24 +271,23 @@ const PartnerCard: React.FC<PartnerCardProps> = ({
             <Text UNSAFE_style={{ ...TYPOGRAPHY.FIELD_LABEL, fontSize: '16px' }}>
               {partner.partnerName || 'Untitled Partner'}
             </Text>
-            
+
             {/* Inline Tier Picker */}
-            <View
-              borderRadius="small"
-              borderWidth="thin"
-              borderColor="gray-300"
-              backgroundColor="static-white"
-              UNSAFE_style={{
+            <div
+              style={{
                 display: 'inline-flex',
                 alignItems: 'center',
                 gap: `${SPACING.XS}px`,
                 padding: `0 ${SPACING.XS}px`,
+                border: '1px solid var(--spectrum-gray-300)',
+                borderRadius: '2px',
+                backgroundColor: 'white',
                 cursor: 'pointer',
               }}
             >
               {currentTier.color !== 'transparent' && (
-                <View
-                  UNSAFE_style={{
+                <div
+                  style={{
                     width: '10px',
                     height: '10px',
                     borderRadius: `${SPACING.XXS}px`,
@@ -317,7 +311,7 @@ const PartnerCard: React.FC<PartnerCardProps> = ({
                   <PickerItem key={option.key} id={option.key}>{option.label}</PickerItem>
                 ))}
               </Picker>
-            </View>
+            </div>
           </div>
 
           {partner.partnerUrl && (
@@ -330,14 +324,14 @@ const PartnerCard: React.FC<PartnerCardProps> = ({
         {/* Action Buttons */}
         <div className={style({display: 'flex', gap: 8, alignItems: 'center'})}>
           <ActionButton onPress={onEdit} isQuiet aria-label="Edit partner">
-            <Edit size="S" />
+            <Edit />
           </ActionButton>
           <ActionButton onPress={onRemove} isQuiet aria-label="Remove partner">
-            <RemoveCircle size="S" />
+            <RemoveCircle />
           </ActionButton>
         </div>
       </div>
-    </View>
+    </div>
   )
 }
 
@@ -741,7 +735,7 @@ export const SponsorsComponent: React.FC = () => {
           Partners (optional)
         </Heading>
         {isLoadingSponsors && (
-          <ProgressCircle size="S" isIndeterminate aria-label="Loading partners" />
+          <ProgressCircle isIndeterminate aria-label="Loading partners" />
         )}
       </div>
 
@@ -750,12 +744,7 @@ export const SponsorsComponent: React.FC = () => {
       </Text>
 
       {sponsors.length === 0 && (
-        <View
-          padding="size-400"
-          backgroundColor="gray-100"
-          borderRadius="medium"
-          UNSAFE_style={{ textAlign: 'center' }}
-        >
+        <div style={{ padding: '32px', backgroundColor: 'var(--spectrum-gray-100)', borderRadius: '4px', textAlign: 'center' }}>
           <div className={style({display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 16})}>
             <Text>Add partners to your event using the button below.</Text>
             <Button variant="secondary" onPress={() => setPickerOpen(true)}>
@@ -763,7 +752,7 @@ export const SponsorsComponent: React.FC = () => {
               <Text>Add Partner</Text>
             </Button>
           </div>
-        </View>
+        </div>
       )}
 
       {sponsors.length > 0 && (

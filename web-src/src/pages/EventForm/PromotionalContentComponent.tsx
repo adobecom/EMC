@@ -3,14 +3,9 @@
 */
 
 import React, { useState, useEffect, useCallback, useRef } from 'react'
-import {
-  View,
-  ActionButton,
-  ProgressCircle,
-} from '@adobe/react-spectrum'
-import { Button, Text, Picker, PickerItem } from '@react-spectrum/s2'
+import { Button, Text, Picker, PickerItem, ActionButton, ProgressCircle } from '@react-spectrum/s2'
 import { style } from '@react-spectrum/s2/style' with { type: 'macro' }
-import Remove from '@spectrum-icons/workflow/Remove'
+import Cancel from '@react-spectrum/s2/icons/Cancel'
 import Add from "@react-spectrum/s2/icons/Add"
 import { useEventFormComponent } from '../../hooks/useEventFormComponent'
 import { configService } from '../../services/configService'
@@ -230,31 +225,21 @@ export const PromotionalContentComponent: React.FC = () => {
           Promotional Content
         </HeadingWithTooltip>
         {isLoading && (
-          <ProgressCircle size="S" isIndeterminate aria-label="Loading promotional content" />
+          <ProgressCircle isIndeterminate aria-label="Loading promotional content" />
         )}
       </div>
 
       {loadError && (
-        <View 
-          padding="size-200" 
-          backgroundColor="negative" 
-          borderRadius="medium"
-          UNSAFE_style={{ backgroundColor: '#FFE5E5' }}
-        >
+        <div style={{ padding: '16px', backgroundColor: '#FFE5E5', borderRadius: '4px' }}>
           <Text UNSAFE_style={{ color: '#C9252D' }}>
             {loadError}
           </Text>
-        </View>
+        </div>
       )}
       
       {/* Empty State */}
       {!isLoading && !loadError && selectedItems.length === 0 && (
-        <View 
-          padding="size-400" 
-          backgroundColor="gray-100" 
-          borderRadius="medium"
-          UNSAFE_style={{ textAlign: 'center' }}
-        >
+        <div style={{ padding: '32px', backgroundColor: 'var(--spectrum-gray-100)', borderRadius: '4px', textAlign: 'center' }}>
           <div className={style({display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 16})}>
             <Text>Add promotional content to feature on your event page</Text>
             <Button
@@ -266,7 +251,7 @@ export const PromotionalContentComponent: React.FC = () => {
               <Text>Add promotional item</Text>
             </Button>
           </div>
-        </View>
+        </div>
       )}
 
       {/* Selected Promotional Items */}
@@ -281,14 +266,12 @@ export const PromotionalContentComponent: React.FC = () => {
             style={{padding: '12px 0'}}
           >
             {/* Promotion Icon/Image */}
-            <View
-              UNSAFE_style={{
+            <div
+              style={{
                 width: '48px',
                 height: '48px',
                 borderRadius: '8px',
-                backgroundColor: promotionDetails?.thumbnail 
-                  ? 'transparent' 
-                  : '#E1E1E1',
+                backgroundColor: promotionDetails?.thumbnail ? 'transparent' : '#E1E1E1',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
@@ -297,17 +280,17 @@ export const PromotionalContentComponent: React.FC = () => {
               }}
             >
               {promotionDetails?.thumbnail && (
-                <img 
-                  src={promotionDetails.thumbnail} 
+                <img
+                  src={promotionDetails.thumbnail}
                   alt={promotionDetails.name}
-                  style={{ 
-                    width: '100%', 
-                    height: '100%', 
-                    objectFit: 'contain' 
+                  style={{
+                    width: '100%',
+                    height: '100%',
+                    objectFit: 'contain'
                   }}
                 />
               )}
-            </View>
+            </div>
             
             {/* Promotion Picker */}
             <Picker
@@ -336,7 +319,7 @@ export const PromotionalContentComponent: React.FC = () => {
                 padding: 0,
               }}
             >
-              <Remove size="S" />
+              <Cancel />
             </ActionButton>
           </div>
         )

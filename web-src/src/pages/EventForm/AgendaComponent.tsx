@@ -3,22 +3,16 @@
 */
 
 import React, { useState, useEffect } from 'react'
-import {
-  View,
-  Switch,
-  ActionButton,
-  Heading,
-} from '@adobe/react-spectrum'
-import { Button, Text, TextField, DatePicker, TimeField } from '@react-spectrum/s2'
+import { Button, Text, TextField, DatePicker, TimeField, Switch, ActionButton, Heading } from '@react-spectrum/s2'
 import { style } from '@react-spectrum/s2/style' with { type: 'macro' }
 import { Time } from '@internationalized/date'
 import { parseDateTime, CalendarDateTime } from '@internationalized/date'
 import Add from "@react-spectrum/s2/icons/Add"
-import Delete from '@spectrum-icons/workflow/Delete'
-import Edit from '@spectrum-icons/workflow/Edit'
-import Remove from '@spectrum-icons/workflow/Remove'
+import Delete from '@react-spectrum/s2/icons/Delete'
+import Edit from '@react-spectrum/s2/icons/Edit'
+import Cancel from '@react-spectrum/s2/icons/Cancel'
 import DragHandle from '@spectrum-icons/workflow/DragHandle'
-import ChevronDown from '@spectrum-icons/workflow/ChevronDown'
+import ChevronDown from '@react-spectrum/s2/icons/ChevronDown'
 // @ts-ignore - uuid types not installed
 import { v4 as uuidv4 } from 'uuid'
 import { HeadingWithTooltip, RichTextEditor } from '../../components/shared'
@@ -442,16 +436,16 @@ export const AgendaComponent: React.FC = () => {
         </HeadingWithTooltip>
         
         <div className={style({display: 'flex', flexDirection: 'column', gap: 8, alignItems: 'end'})}>
-          <View UNSAFE_style={{ display: 'inline-block' }}>
+          <div style={{ display: 'inline-block' }}>
             <Switch
               isSelected={orderByTime}
               onChange={setOrderByTime}
             >
               Order by time
             </Switch>
-          </View>
-          
-          <View UNSAFE_style={{ display: 'inline-block' }}>
+          </div>
+
+          <div style={{ display: 'inline-block' }}>
             <Switch
               isSelected={allowDatesOutsideEvent}
               onChange={setAllowDatesOutsideEvent}
@@ -459,18 +453,13 @@ export const AgendaComponent: React.FC = () => {
             >
               Allow dates outside event window
             </Switch>
-          </View>
+          </div>
         </div>
       </div>
 
       {/* Agenda Items - Empty State */}
       {agendaItems.length === 0 && (
-        <View 
-          padding="size-400" 
-          backgroundColor="gray-100" 
-          borderRadius="medium"
-          UNSAFE_style={{ textAlign: 'center' }}
-        >
+        <div style={{ padding: '32px', backgroundColor: 'var(--spectrum-gray-100)', borderRadius: '4px', textAlign: 'center' }}>
           <div className={style({display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 16})}>
             <Text>Create a new time slot to add to your agenda</Text>
             <Button
@@ -481,7 +470,7 @@ export const AgendaComponent: React.FC = () => {
               <Text>Add slot</Text>
             </Button>
           </div>
-        </View>
+        </div>
       )}
 
       {agendaItems.map((item, index) => {
@@ -558,16 +547,16 @@ export const AgendaComponent: React.FC = () => {
 
                 {/* Action buttons */}
                 <div className={style({display: 'flex', gap: 8, alignItems: 'center'})} style={{ flexShrink: 0 }}>
-                  <ActionButton 
-                    onPress={() => removeAgendaItem(index)} 
-                    isQuiet 
+                  <ActionButton
+                    onPress={() => removeAgendaItem(index)}
+                    isQuiet
                     aria-label="Remove"
                   >
-                    <Remove />
+                    <Cancel />
                   </ActionButton>
-                  <ActionButton 
-                    onPress={() => handleToggleEdit(index)} 
-                    isQuiet 
+                  <ActionButton
+                    onPress={() => handleToggleEdit(index)}
+                    isQuiet
                     aria-label="Edit"
                   >
                     <Edit />
@@ -608,7 +597,7 @@ export const AgendaComponent: React.FC = () => {
                     aria-label="Collapse"
                     UNSAFE_style={{ padding: 0 }}
                   >
-                    <ChevronDown size="S" />
+                    <ChevronDown />
                   </ActionButton>
                 )}
                 <Heading level={4} UNSAFE_style={{ margin: 0 }}>
@@ -683,14 +672,14 @@ export const AgendaComponent: React.FC = () => {
               />
 
               {/* Description */}
-              <View width="100%">
+              <div style={{ width: '100%' }}>
                 <RichTextEditor
                   label="Agenda Description"
                   value={item.description || ''}
                   onChange={(value) => updateAgendaItem(index, { description: value })}
                   height="200px"
                 />
-              </View>
+              </div>
 
               {/* Done button - collapse when complete */}
               {isItemComplete(item) && (
@@ -728,14 +717,14 @@ export const AgendaComponent: React.FC = () => {
       )}
 
       {/* Show Agenda Post-Event Toggle */}
-      <View UNSAFE_style={{ display: 'inline-block' }}>
+      <div style={{ display: 'inline-block' }}>
         <Switch
           isSelected={showAgendaPostEvent}
           onChange={handleShowAgendaPostEventChange}
         >
           Show agenda post-event
         </Switch>
-      </View>
+      </div>
     </div>
   )
 }

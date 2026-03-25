@@ -3,16 +3,10 @@
 */
 
 import React, { useEffect, useRef, useState, useCallback } from 'react'
-import {
-  View,
-  Heading,
-  ActionButton,
-  Switch
-} from '@adobe/react-spectrum'
-import { TextField, Text } from '@react-spectrum/s2'
+import { TextField, Text, Heading, ActionButton, Switch } from '@react-spectrum/s2'
 import { style } from "@react-spectrum/s2/style" with { type: "macro" }
-import Add from '@spectrum-icons/workflow/Add'
-import Remove from '@spectrum-icons/workflow/Remove'
+import Add from '@react-spectrum/s2/icons/Add'
+import Cancel from '@react-spectrum/s2/icons/Cancel'
 import { ImageUploader, RichTextEditor } from '../../components/shared'
 import { TYPOGRAPHY, COLORS } from '../../styles/designSystem'
 import { VenueData, EventApiResponse } from '../../types/domain'
@@ -572,7 +566,7 @@ export const VenueComponent: React.FC = () => {
       </Switch>
 
       {/* Venue Name Field */}
-      <View width="100%">
+      <div style={{ width: '100%' }}>
         <div className={style({display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4})}>
           <Text UNSAFE_style={{ 
             fontSize: '14px',
@@ -629,8 +623,8 @@ export const VenueComponent: React.FC = () => {
         )}
         
         {placesApiError && (
-          <Text UNSAFE_style={{ 
-            fontSize: '12px', 
+          <Text UNSAFE_style={{
+            fontSize: '12px',
             color: COLORS.ADOBE_RED,
             marginTop: '4px',
             display: 'block'
@@ -638,10 +632,10 @@ export const VenueComponent: React.FC = () => {
             {placesApiError}
           </Text>
         )}
-      </View>
+      </div>
 
       {/* Alternative Venue Name Toggle */}
-      <View>
+      <div>
         <ActionButton
           isQuiet
           onPress={handleAlternativeNameToggle}
@@ -651,7 +645,7 @@ export const VenueComponent: React.FC = () => {
             marginLeft: '-8px'
           }}
         >
-          {showAlternativeNameField ? <Remove size="S" /> : <Add size="S" />}
+          {showAlternativeNameField ? <Cancel /> : <Add />}
           <Text UNSAFE_style={{ marginLeft: '4px', color: COLORS.GRAY_800 }}>
             {showAlternativeNameField 
               ? 'Remove alternative venue name' 
@@ -660,7 +654,7 @@ export const VenueComponent: React.FC = () => {
         </ActionButton>
         
         {showAlternativeNameField && (
-          <View marginTop="size-200">
+          <div style={{ marginTop: '16px' }}>
             <TextField
               label="Alternative venue name"
               styles={style({ width: '[100%]' })}
@@ -669,21 +663,19 @@ export const VenueComponent: React.FC = () => {
               maxLength={VENUE_NAME_MAX_LENGTH}
               description="This name will be displayed instead of the Google Places name"
             />
-          </View>
+          </div>
         )}
-      </View>
+      </div>
 
       {/* Venue Image Section */}
-      <View marginTop="size-200">
+      <div className={style({display: 'flex', flexDirection: 'column', gap: 16})}>
         <Heading level={4} UNSAFE_style={TYPOGRAPHY.SUBSECTION_HEADING}>
           Venue image or map
         </Heading>
-        
+
         <Switch
           isSelected={venue.showVenueImagePostEvent || false}
           onChange={handleShowVenueImagePostEventChange}
-          marginTop="size-100"
-          marginBottom="size-200"
         >
           Display image and instructions post-event.
         </Switch>
@@ -706,17 +698,17 @@ export const VenueComponent: React.FC = () => {
           onFileSelected={handleImageFileSelected}
           pendingFile={pendingImageFile ?? undefined}
         />
-      </View>
+      </div>
 
       {/* Instructions for Attendees */}
-      <View marginTop="size-200">
+      <div style={{ marginTop: '16px' }}>
         <RichTextEditor
           label="Instructions for attendees"
           value={venue.additionalInformation || ''}
           onChange={handleAdditionalInfoChange}
           height="200px"
         />
-      </View>
+      </div>
     </div>
   )
 }

@@ -3,17 +3,10 @@
 */
 
 import React, { useState, useEffect } from 'react'
-import {
-  View,
-  Switch,
-  RadioGroup,
-  Radio,
-  Text
-} from '@adobe/react-spectrum'
-import { TextField } from '@react-spectrum/s2'
+import { TextField, Switch, RadioGroup, Radio, Text } from '@react-spectrum/s2'
 import { style } from "@react-spectrum/s2/style" with { type: "macro" }
 import { HeadingWithTooltip } from '../../components/shared'
-import LinkOut from '@spectrum-icons/workflow/LinkOut'
+import OpenIn from '@react-spectrum/s2/icons/OpenIn'
 import DragHandle from '@spectrum-icons/workflow/DragHandle'
 
 /**
@@ -317,11 +310,11 @@ export const RegistrationFieldsComponent: React.FC<RegistrationFieldsComponentPr
           </Text>
         )}
         
-        <View
-          UNSAFE_style={{
+        <div
+          style={{
             backgroundColor: '#F5F5F5',
             borderRadius: '8px',
-            padding: 'var(--spectrum-global-dimension-size-600)'
+            padding: '48px'
           }}
         >
           {/* Header row - 4 columns now with drag handle */}
@@ -346,7 +339,7 @@ export const RegistrationFieldsComponent: React.FC<RegistrationFieldsComponentPr
           </div>
 
           {/* Field rows */}
-          <div className={style({display: 'flex', flexDirection: 'column', gap: 8})}>
+          <div className={style({display: 'flex', flexDirection: 'column', gap: 8})} >
             {sortedDisplayFields.map((displayField, displayIndex) => {
               const { fieldName, isMandated } = displayField
               const isVisible = visibleFields.includes(fieldName)
@@ -414,25 +407,23 @@ export const RegistrationFieldsComponent: React.FC<RegistrationFieldsComponentPr
                     Required field
                   </Switch>
                   {/* Drag handle - only visible for selected fields */}
-                  <View
-                    UNSAFE_style={{
+                  <div
+                    style={{
                       display: 'flex',
                       justifyContent: 'center',
                       alignItems: 'center',
                       cursor: canDrag ? 'grab' : 'default',
-                      color: canDrag 
-                        ? '#6E6E6E' 
-                        : '#D3D3D3',
+                      color: canDrag ? '#6E6E6E' : '#D3D3D3',
                       opacity: canDrag ? 1 : 0.3
                     }}
                   >
-                    <DragHandle size="S" />
-                  </View>
+                    <DragHandle />
+                  </div>
                 </div>
               )
             })}
           </div>
-        </View>
+        </div>
       </div>
     )
   }
@@ -452,7 +443,7 @@ export const RegistrationFieldsComponent: React.FC<RegistrationFieldsComponentPr
         Configure the Marketo RSVP Form here:{' '}
         <a href="https://milo.adobe.com/tools/marketo" target="_blank" rel="noopener noreferrer">
           https://milo.adobe.com/tools/marketo
-          <LinkOut size="S" UNSAFE_style={{ marginLeft: '4px', verticalAlign: 'middle' }} />
+          <OpenIn UNSAFE_style={{ marginLeft: '4px', verticalAlign: 'middle' }} />
         </a>
       </Text>
 
@@ -467,17 +458,17 @@ export const RegistrationFieldsComponent: React.FC<RegistrationFieldsComponentPr
 
   if (loading) {
     return (
-      <View padding="size-400">
+      <div style={{ padding: '32px' }}>
         <Text>Loading registration field configurations...</Text>
-      </View>
+      </div>
     )
   }
 
   if (error) {
     return (
-      <View padding="size-400">
+      <div style={{ padding: '32px' }}>
         <Text UNSAFE_style={{ color: '#D7373F' }}>{error}</Text>
-      </View>
+      </div>
     )
   }
 

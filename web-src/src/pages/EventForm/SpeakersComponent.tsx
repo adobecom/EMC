@@ -3,21 +3,15 @@
 */
 
 import React, { useState, useEffect, useCallback, useRef } from 'react'
-import {
-  ActionButton,
-  ProgressCircle,
-  TooltipTrigger,
-  Tooltip,
-} from '@adobe/react-spectrum'
-import { Button, Heading, Text, Picker, PickerItem } from '@react-spectrum/s2'
+import { Button, Heading, Text, Picker, PickerItem, ActionButton, ProgressCircle, TooltipTrigger, Tooltip } from '@react-spectrum/s2'
 import { style } from '@react-spectrum/s2/style' with { type: 'macro' }
 import { ProfileData, SeriesSpeaker, SpeakerType, EventApiResponse } from '../../types/domain'
 import { SpeakerPickerDialog } from './SpeakerPickerDialog'
 import { TYPOGRAPHY, COLORS } from '../../styles/designSystem'
 import { speakerHasLocalization } from '../../utils/eventFormMappers'
 import Add from '@react-spectrum/s2/icons/Add'
-import Alert from '@spectrum-icons/workflow/Alert'
-import Delete from '@spectrum-icons/workflow/Delete'
+import AlertTriangle from '@react-spectrum/s2/icons/AlertTriangle'
+import Delete from '@react-spectrum/s2/icons/Delete'
 import DragHandle from '@spectrum-icons/workflow/DragHandle'
 import { apiService, cachedApi } from '../../services/api'
 import { useToast } from '../../contexts'
@@ -354,7 +348,7 @@ export const SpeakersComponent: React.FC = () => {
           Speakers & Hosts
         </Heading>
         {isLoadingSpeakers && (
-          <ProgressCircle size="S" isIndeterminate aria-label="Loading speakers" />
+          <ProgressCircle isIndeterminate aria-label="Loading speakers" />
         )}
       </div>
 
@@ -468,12 +462,11 @@ export const SpeakersComponent: React.FC = () => {
                   {missingLocalization && (
                     <TooltipTrigger delay={0}>
                       <ActionButton isQuiet aria-label={`Missing ${locale} content`}>
-                        <Alert
-                          size="S"
+                        <AlertTriangle
                           UNSAFE_style={{ color: COLORS.ADOBE_RED }}
                         />
                       </ActionButton>
-                      <Tooltip variant="negative">
+                      <Tooltip>
                         This speaker is missing a localized title for {locale}. Add it in the
                         Speakers dashboard or when adding the speaker to avoid display issues.
                       </Tooltip>
@@ -513,7 +506,7 @@ export const SpeakersComponent: React.FC = () => {
               </Picker>
 
               <ActionButton onPress={() => removeProfile(index)} isQuiet aria-label="Remove speaker">
-                <Delete size="S" />
+                <Delete />
               </ActionButton>
             </div>
           </div>
