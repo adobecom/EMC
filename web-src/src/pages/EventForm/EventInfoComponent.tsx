@@ -143,6 +143,7 @@ export const EventInfoComponent: React.FC = () => {
     setLocaleAndRemapFormData,
     locale,
     isDirty,
+    eventId,
   } = useEventFormComponent({
     componentId: 'event-info',
     validate: () => {
@@ -279,6 +280,7 @@ export const EventInfoComponent: React.FC = () => {
             <Switch
               isSelected={inviteOnly}
               onChange={(value) => updateFormData({ inviteOnly: value })}
+              isDisabled={!!eventId}
             >
               Invite only
             </Switch>
