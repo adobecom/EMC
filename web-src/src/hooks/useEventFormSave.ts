@@ -96,7 +96,7 @@ export function useEventFormSave() {
     
     // Process each field according to the data filter
     // Note: Some fields are handled specially below (tags, eventType, dates, etc.)
-    const speciallyHandledFields = new Set(['tags', 'eventType', 'startDateTime', 'endDateTime', 'agendaItems', 'promotionalItems', 'timezone'])
+    const speciallyHandledFields = new Set(['tags', 'eventType', 'startDateTime', 'endDateTime', 'agendaItems', 'promotionalItems', 'timezone', 'inviteOnly'])
     
     Object.entries(mergedData).forEach(([key, value]) => {
       const descriptor = EVENT_DATA_FILTER[key]
@@ -170,7 +170,14 @@ export function useEventFormSave() {
     // Title mapping
     if (mergedData.name) {
       setEventAttribute(payload, 'title', mergedData.name, locale)
-      payload.enTitle = mergedData.name // English title for URL generation
+    }
+    // English title for URL generation — prefer the dedicated enTitle field
+    // so that saving in a non-English locale doesn't overwrite enTitle with
+    // the localized name.
+    if (mergedData.enTitle) {
+      payload.enTitle = mergedData.enTitle
+    } else if (mergedData.name) {
+      payload.enTitle = mergedData.name
     }
     
     // Description mapping (shortDescription -> description in API)
@@ -252,7 +259,9 @@ export function useEventFormSave() {
     
     // Privacy mapping
     payload.isPrivate = mergedData.isPrivate ?? false
-    payload.inviteOnly = mergedData.inviteOnly ?? false
+    if (!eventId) {
+      payload.inviteOnly = mergedData.inviteOnly ?? false
+    }
 
     // Tags transformation (array of EventTag -> comma-separated CAAS IDs string)
     // Per OpenAPI TagIdList schema:

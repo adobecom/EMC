@@ -25,7 +25,11 @@ import { getTimeZones } from '@vvo/tzdb'
 import Info from '@spectrum-icons/workflow/Info'
 import { HeadingWithTooltip, RichTextEditor } from '../../components/shared'
 import { FLEX_GAP, SPACING } from '../../styles/designSystem'
-import { LANGUAGE_TO_LOCALE, DEFAULT_LOCALE } from '../../config/localeMapping'
+import {
+  LANGUAGE_TO_LOCALE,
+  DEFAULT_LOCALE,
+  getLanguageKeyFromLocale,
+} from '../../config/localeMapping'
 import { useEventFormComponent } from '../../hooks/useEventFormComponent'
 
 /**
@@ -137,7 +141,9 @@ export const EventInfoComponent: React.FC = () => {
     formData,
     updateFormData,
     setLocaleAndRemapFormData,
+    locale,
     isDirty,
+    eventId,
   } = useEventFormComponent({
     componentId: 'event-info',
     validate: () => {
@@ -151,7 +157,6 @@ export const EventInfoComponent: React.FC = () => {
   
   // Destructure form data
   const {
-    language = 'en',
     name = '',
     enTitle = '',
     description = '',
@@ -212,19 +217,23 @@ export const EventInfoComponent: React.FC = () => {
   const handleLanguageChange = (key: React.Key | null) => {
     if (key == null) return
     const languageKey = String(key)
-    const locale = LANGUAGE_TO_LOCALE[languageKey] || DEFAULT_LOCALE
+    const nextLocale = LANGUAGE_TO_LOCALE[languageKey] || DEFAULT_LOCALE
+
+    if (nextLocale === locale) {
+      return
+    }
 
     if (isDirty) {
       setPendingLanguageKey(languageKey)
     } else {
-      setLocaleAndRemapFormData(locale)
+      setLocaleAndRemapFormData(nextLocale)
     }
   }
 
   const handleConfirmLocaleSwitch = () => {
     if (pendingLanguageKey) {
-      const locale = LANGUAGE_TO_LOCALE[pendingLanguageKey] || DEFAULT_LOCALE
-      setLocaleAndRemapFormData(locale)
+      const nextLocale = LANGUAGE_TO_LOCALE[pendingLanguageKey] || DEFAULT_LOCALE
+      setLocaleAndRemapFormData(nextLocale)
       setPendingLanguageKey(null)
     }
   }
@@ -271,6 +280,7 @@ export const EventInfoComponent: React.FC = () => {
             <Switch
               isSelected={inviteOnly}
               onChange={(value) => updateFormData({ inviteOnly: value })}
+              isDisabled={!!eventId}
             >
               Invite only
             </Switch>
@@ -296,7 +306,7 @@ export const EventInfoComponent: React.FC = () => {
       <Picker
         label="Language"
         isRequired
-        selectedKey={language}
+        selectedKey={getLanguageKeyFromLocale(locale)}
         onSelectionChange={handleLanguageChange}
       >
         {LANGUAGE_OPTIONS.map((lang) => (

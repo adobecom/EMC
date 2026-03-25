@@ -49,7 +49,7 @@ export function buildTokenContext(
     : formData.localStartDate || ''
 
   return {
-    enTitle: formData.name || '',
+    enTitle: formData.enTitle || formData.name || '',
     seriesName: seriesData.seriesName || '',
     localStartDate,
     cloudType: formData.cloudType || '',
@@ -72,6 +72,20 @@ export function resolveUrlPattern(
     if (raw === undefined || raw === '') return `{${token}}`
     return slugify(raw)
   })
+}
+
+/**
+ * Normalize a resolved pattern into a bare relative URL that matches
+ * ESP's writable `url` field pattern: `^(([a-z0-9\-]+\/?)+)$`.
+ * Strips leading/trailing slashes, removes characters outside the
+ * allowed set, and collapses duplicate slashes.
+ */
+export function normalizeRelativeUrl(resolved: string): string {
+  return resolved
+    .replace(/^\/+/, '')
+    .replace(/\/+$/, '')
+    .replace(/[^a-z0-9\-\/]/g, '')
+    .replace(/\/{2,}/g, '/')
 }
 
 /**

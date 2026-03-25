@@ -13,7 +13,10 @@ import React, {
 } from 'react'
 import { EventFormData, EventApiResponse } from '../types/domain'
 import { saveFormDraft, loadFormDraft, clearFormDraft } from '../utils/formPersistence'
-import { mapApiResponseToFormData } from '../utils/eventFormMappers'
+import {
+  applyLocaleMetadataToFormData,
+  buildLocaleSwitchResult,
+} from '../utils/eventLocaleSwitch'
 
 // ============================================================================
 // TYPES
@@ -112,6 +115,7 @@ type EventFormAction =
   | { type: 'SET_MAX_STEP_REACHED'; payload: number }
   | { type: 'SET_FORMAT_CONFIRMED'; payload: boolean }
   | { type: 'RESET_FOR_RESELECT'; payload: { eventType: 'in-person' | 'webinar' } }
+  | { type: 'SWITCH_LOCALE_FORM_DATA'; payload: { locale: string; formData: EventFormData; isDirty: boolean } }
   | { type: 'RESET_TO_SAVED' }
 
 /**
@@ -143,7 +147,7 @@ export interface EventFormContextValue {
   setEventId: (id: string | null) => void
   setSeriesId: (id: string) => void
   setLocale: (locale: string) => void
-  /** Switch locale and re-map form data from eventDataResp for the new locale */
+  /** Switch locale and update formData for the new locale */
   setLocaleAndRemapFormData: (locale: string) => void
   setEditMode: (isEdit: boolean) => void
   resetToSaved: () => void
@@ -251,7 +255,11 @@ function eventFormReducer(state: EventFormState, action: EventFormAction): Event
       }
     
     case 'SET_LOCALE':
-      return { ...state, locale: action.payload }
+      return {
+        ...state,
+        locale: action.payload,
+        formData: applyLocaleMetadataToFormData(state.formData, action.payload),
+      }
     
     case 'SET_EDIT_MODE':
       return { ...state, isEditMode: action.payload }
@@ -280,6 +288,8 @@ function eventFormReducer(state: EventFormState, action: EventFormAction): Event
     case 'RESET_FORM_DATA':
       return {
         ...state,
+        locale: action.payload.defaultLocale || DEFAULT_LOCALE,
+        seriesId: action.payload.seriesId || state.seriesId,
         formData: action.payload,
         isDirty: false
       }
@@ -307,6 +317,14 @@ function eventFormReducer(state: EventFormState, action: EventFormAction): Event
     
     case 'SET_FORMAT_CONFIRMED':
       return { ...state, isFormatConfirmed: action.payload }
+
+    case 'SWITCH_LOCALE_FORM_DATA':
+      return {
+        ...state,
+        locale: action.payload.locale,
+        formData: action.payload.formData,
+        isDirty: action.payload.isDirty,
+      }
     
     case 'RESET_FOR_RESELECT':
       return {
@@ -415,12 +433,21 @@ export const EventFormProvider: React.FC<EventFormProviderProps> = ({
   }, [])
 
   const setLocaleAndRemapFormData = useCallback((newLocale: string) => {
-    dispatch({ type: 'SET_LOCALE', payload: newLocale })
-    if (state.eventDataResp) {
-      const mapped = mapApiResponseToFormData(state.eventDataResp, newLocale)
-      dispatch({ type: 'POPULATE_FORM_DATA', payload: mapped })
-    }
-  }, [state.eventDataResp])
+    const nextState = buildLocaleSwitchResult(
+      state.formData,
+      newLocale,
+      state.eventDataResp
+    )
+
+    dispatch({
+      type: 'SWITCH_LOCALE_FORM_DATA',
+      payload: {
+        locale: newLocale,
+        formData: nextState.formData,
+        isDirty: nextState.isDirty,
+      },
+    })
+  }, [state.eventDataResp, state.formData])
 
   const setEditMode = useCallback((isEdit: boolean) => {
     dispatch({ type: 'SET_EDIT_MODE', payload: isEdit })
@@ -629,4 +656,3 @@ export function useFormData() {
   const { formData, updateFormData, locale } = useEventFormContext()
   return { formData, updateFormData, locale }
 }
-
