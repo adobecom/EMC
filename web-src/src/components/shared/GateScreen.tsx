@@ -6,6 +6,7 @@ import React from 'react'
 import { View, Text, ProgressCircle } from '@adobe/react-spectrum'
 import { Button } from "@react-spectrum/s2"
 import { SPACING, COLORS, TYPOGRAPHY } from '../../styles/designSystem'
+const gateBg = new URL('../../assets/gate-bg.png', import.meta.url).href
 
 /**
  * Browser access forbidden icon - from ecc-milo browser-access-forbidden-lg.svg
@@ -83,7 +84,9 @@ export const GateScreen: React.FC<GateScreenProps> = ({
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: '#E8E8E8',
+    backgroundImage: `url(${gateBg})`,
+    backgroundSize: 'cover',
+    backgroundPosition: 'center',
     display: 'flex',
     alignItems: 'center',
     textAlign: 'center',

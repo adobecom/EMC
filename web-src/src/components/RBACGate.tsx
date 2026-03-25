@@ -20,6 +20,7 @@ import { style } from '@react-spectrum/s2/style' with { type: 'macro' }
 import { useGroup } from '../contexts/GroupContext'
 import { GateScreen } from './shared/GateScreen'
 import { COLORS, TYPOGRAPHY, SPACING } from '../styles/designSystem'
+const gateBg = new URL('../assets/gate-bg.png', import.meta.url).href
 
 interface RBACGateProps {
   children: ReactNode
@@ -40,7 +41,9 @@ const GroupSelectionScreen: React.FC = () => {
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: '#E8E8E8',
+    backgroundImage: `url(${gateBg})`,
+    backgroundSize: 'cover',
+    backgroundPosition: 'center',
     display: 'flex',
     alignItems: 'center',
     textAlign: 'center',
