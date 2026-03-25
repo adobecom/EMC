@@ -8,7 +8,7 @@ import { Provider, defaultTheme, Grid, View } from '@adobe/react-spectrum'
 import { Fonts } from '@react-spectrum/s2/dist/Fonts.mjs'
 import { Provider as S2Provider } from '@react-spectrum/s2'
 import { ErrorBoundary, FallbackProps } from 'react-error-boundary'
-import { HashRouter as Router, Routes, Route } from 'react-router-dom'
+import { HashRouter as Router, Routes, Route, Navigate } from 'react-router-dom'
 import { TopNav } from './layout'
 import { ToastContainer } from './shared'
 import { AuthGate } from './AuthGate'
@@ -18,6 +18,19 @@ import { RBACGate } from './RBACGate'
 import { useAuth } from '../contexts/AuthContext'
 import { Runtime, IMS } from '../types'
 import type { AuthMode } from '../contexts/AuthContext'
+import { useHasPermission } from '../hooks/useHasPermission'
+
+interface ProtectedRouteProps {
+  resource: string
+  access: string
+  redirectTo: string
+  children: React.ReactNode
+}
+
+const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ resource, access, redirectTo, children }) => {
+  const allowed = useHasPermission(resource, access)
+  return allowed ? <>{children}</> : <Navigate to={redirectTo} replace />
+}
 
 // Pages - route-level components
 import {
@@ -104,11 +117,11 @@ const AppContent: React.FC<{ runtime: Runtime }> = ({ runtime }) => {
                           <Route path='/overview' element={<OverviewDashboard ims={ims} />} />
                           <Route path='/profile' element={<UserProfile ims={ims} />} />
                           <Route path='/series' element={<SeriesDashboard ims={ims} />} />
-                          <Route path='/series/new' element={<SeriesForm ims={ims} />} />
-                          <Route path='/series/edit/:id' element={<SeriesForm ims={ims} />} />
+                          <Route path='/series/new' element={<ProtectedRoute resource="series" access="write" redirectTo="/series"><SeriesForm ims={ims} /></ProtectedRoute>} />
+                          <Route path='/series/edit/:id' element={<ProtectedRoute resource="series" access="write" redirectTo="/series"><SeriesForm ims={ims} /></ProtectedRoute>} />
                           <Route path='/events' element={<EventsDashboard ims={ims} />} />
-                          <Route path='/events/new/:eventType' element={<EventForm ims={ims} />} />
-                          <Route path='/events/edit/:id' element={<EventForm ims={ims} />} />
+                          <Route path='/events/new/:eventType' element={<ProtectedRoute resource="event" access="write" redirectTo="/events"><EventForm ims={ims} /></ProtectedRoute>} />
+                          <Route path='/events/edit/:id' element={<ProtectedRoute resource="event" access="write" redirectTo="/events"><EventForm ims={ims} /></ProtectedRoute>} />
                           <Route path='/registrations' element={<Registrations ims={ims} />} />
                           <Route path='/registrations/:eventId' element={<Registrations ims={ims} />} />
                           <Route path='/speakers' element={<SpeakersDashboard ims={ims} />} />

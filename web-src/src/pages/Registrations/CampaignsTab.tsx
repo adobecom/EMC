@@ -14,6 +14,7 @@ import type { Campaign, CampaignFormData, CampaignStatus } from '../../types/cam
 import { calculateCampaignStats } from '../../types/campaign'
 import { DataTable, TableColumn } from '../../components/shared'
 import { COLORS, SPACING } from '../../styles/designSystem'
+import { useHasPermission } from '../../hooks/useHasPermission'
 
 interface CampaignsTabProps {
   eventId: string
@@ -32,6 +33,8 @@ export const CampaignsTab: React.FC<CampaignsTabProps> = ({
   onUpdateCampaign,
   onDeleteCampaign,
 }) => {
+  const canWriteEvent = useHasPermission('event', 'write')
+  const canDeleteEvent = useHasPermission('event', 'delete')
   const [isFormOpen, setIsFormOpen] = useState(false)
   const [editingCampaign, setEditingCampaign] = useState<Campaign | null>(null)
   const [campaignToDelete, setCampaignToDelete] = useState<Campaign | null>(null)
@@ -190,7 +193,7 @@ export const CampaignsTab: React.FC<CampaignsTabProps> = ({
       isSticky: true,
       render: (campaign) => (
         <div className={style({display: 'flex', gap: 8, justifyContent: 'end'})}>
-          {campaign.status === 'Active' && (
+          {canWriteEvent && campaign.status === 'Active' && (
             <ActionButton
               isQuiet
               onPress={() => handleEditClick(campaign)}
@@ -199,18 +202,20 @@ export const CampaignsTab: React.FC<CampaignsTabProps> = ({
               <Edit />
             </ActionButton>
           )}
-          <ActionButton
-            isQuiet
-            isDisabled={campaign.attendeeCount > 0}
-            onPress={() => setCampaignToDelete(campaign)}
-            aria-label="Delete campaign"
-          >
-            <Delete />
-          </ActionButton>
+          {canDeleteEvent && (
+            <ActionButton
+              isQuiet
+              isDisabled={campaign.attendeeCount > 0}
+              onPress={() => setCampaignToDelete(campaign)}
+              aria-label="Delete campaign"
+            >
+              <Delete />
+            </ActionButton>
+          )}
         </div>
       )
     }
-  ], [handleCopyUrl, handleEditClick, copiedId])
+  ], [handleCopyUrl, handleEditClick, copiedId, canWriteEvent, canDeleteEvent])
 
   if (!eventId) {
     return (
@@ -235,17 +240,19 @@ export const CampaignsTab: React.FC<CampaignsTabProps> = ({
       </div>
 
       {/* Header with Add Button */}
-      <div
-        className={style({display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16})}
-      >
-        <Button
-          variant="accent"
-          onPress={handleCreateClick}
+      {canWriteEvent && (
+        <div
+          className={style({display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16})}
         >
-          <Add />
-          <Text>Add Campaign</Text>
-        </Button>
-      </div>
+          <Button
+            variant="accent"
+            onPress={handleCreateClick}
+          >
+            <Add />
+            <Text>Add Campaign</Text>
+          </Button>
+        </div>
+      )}
 
       {/* Campaigns Table */}
       {campaigns.length > 0 ? (

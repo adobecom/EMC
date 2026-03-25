@@ -27,6 +27,7 @@ import { IMS } from '../../types'
 import { useToast, useGroup } from '../../contexts'
 import { filterEventData } from '../../utils/dataFilters'
 import { useSafeState, useRBACFilter } from '../../hooks'
+import { useHasPermission } from '../../hooks/useHasPermission'
 import { getEspEnvParam } from '../../config/constants'
 
 const EVENTS_SEARCH_KEYS = ['eventName', 'eventType', 'cloudType', 'hostEmail', 'seriesId']
@@ -39,6 +40,8 @@ export const EventsDashboard: React.FC<EventsDashboardProps> = () => {
   const toast = useToast()
   const navigate = useNavigate()
   const { filterEvents } = useRBACFilter()
+  const canWriteEvent = useHasPermission('event', 'write')
+  const canDeleteEvent = useHasPermission('event', 'delete')
   const [events, setEvents] = useSafeState<EventDashboardItem[]>([])
   const [isLoading, setIsLoading] = useSafeState(true)
   const [error, setError] = useSafeState<string | null>(null)
@@ -817,10 +820,12 @@ export const EventsDashboard: React.FC<EventsDashboardProps> = () => {
             <More />
           </ActionButton>
           <Menu onAction={(key) => handleMenuAction(key as string, item)}>
-            <MenuItem id="publish" textValue={item.published ? 'Unpublish' : 'Publish'}>
-              {item.published ? <PublishNo /> : <Publish />}
-              <Text slot="label">{item.published ? 'Unpublish' : 'Publish'}</Text>
-            </MenuItem>
+            {canWriteEvent && (
+              <MenuItem id="publish" textValue={item.published ? 'Unpublish' : 'Publish'}>
+                {item.published ? <PublishNo /> : <Publish />}
+                <Text slot="label">{item.published ? 'Unpublish' : 'Publish'}</Text>
+              </MenuItem>
+            )}
             <MenuItem id="preview-pre" textValue="Preview pre-event">
               <Preview />
               <Text slot="label">Preview pre-event</Text>
@@ -833,18 +838,24 @@ export const EventsDashboard: React.FC<EventsDashboardProps> = () => {
               <Copy />
               <Text slot="label">Copy URL</Text>
             </MenuItem>
-            <MenuItem id="edit" textValue="Edit">
-              <Edit />
-              <Text slot="label">Edit</Text>
-            </MenuItem>
-            <MenuItem id="clone" textValue="Clone">
-              <Duplicate />
-              <Text slot="label">Clone</Text>
-            </MenuItem>
-            <MenuItem id="delete" textValue="Delete">
-              <Delete />
-              <Text slot="label">Delete</Text>
-            </MenuItem>
+            {canWriteEvent && (
+              <MenuItem id="edit" textValue="Edit">
+                <Edit />
+                <Text slot="label">Edit</Text>
+              </MenuItem>
+            )}
+            {canWriteEvent && (
+              <MenuItem id="clone" textValue="Clone">
+                <Duplicate />
+                <Text slot="label">Clone</Text>
+              </MenuItem>
+            )}
+            {canDeleteEvent && (
+              <MenuItem id="delete" textValue="Delete">
+                <Delete />
+                <Text slot="label">Delete</Text>
+              </MenuItem>
+            )}
           </Menu>
         </MenuTrigger>
       )
@@ -887,20 +898,23 @@ export const EventsDashboard: React.FC<EventsDashboardProps> = () => {
     'webinar': <GlobeGrid />,
   }
 
-  // Custom create button with dropdown menu
-  const createEventButton = useMemo(() => (
-    <MenuTrigger>
-      <Button variant="accent">Create new event</Button>
-      <Menu onAction={(key) => handleCreateEvent(key as EventType)}>
-        {eventTypeOptions.map(option => (
-          <MenuItem key={option.key} id={option.key} textValue={option.label}>
-            {eventTypeIcons[option.key]}
-            <Text slot="label">{option.label}</Text>
-          </MenuItem>
-        ))}
-      </Menu>
-    </MenuTrigger>
-  ), [handleCreateEvent, eventTypeOptions])
+  // Custom create button with dropdown menu — only shown when user has event:write
+  const createEventButton = useMemo(() => {
+    if (!canWriteEvent) return undefined
+    return (
+      <MenuTrigger>
+        <Button variant="accent">Create new event</Button>
+        <Menu onAction={(key) => handleCreateEvent(key as EventType)}>
+          {eventTypeOptions.map(option => (
+            <MenuItem key={option.key} id={option.key} textValue={option.label}>
+              {eventTypeIcons[option.key]}
+              <Text slot="label">{option.label}</Text>
+            </MenuItem>
+          ))}
+        </Menu>
+      </MenuTrigger>
+    )
+  }, [canWriteEvent, handleCreateEvent, eventTypeOptions])
 
   return (
     <>

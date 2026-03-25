@@ -20,6 +20,7 @@ import {
 } from '../../services/seriesEnrichment'
 import { createShimmerStyle } from '../../styles/designSystem'
 import { useSafeState, useRBACFilter } from '../../hooks'
+import { useHasPermission } from '../../hooks/useHasPermission'
 import { useGroup } from '../../contexts/GroupContext'
 
 const SERIES_SEARCH_KEYS = ['seriesName', 'seriesDescription', 'cloudType', 'seriesStatus']
@@ -30,6 +31,7 @@ interface SeriesDashboardProps {
 
 export const SeriesDashboard: React.FC<SeriesDashboardProps> = () => {
   const { filterSeries } = useRBACFilter()
+  const canWriteSeries = useHasPermission('series', 'write')
   const [series, setSeries] = useSafeState<SeriesDashboardItem[]>([])
   const [isLoading, setIsLoading] = useSafeState(true)
   const [error, setError] = useSafeState<string | null>(null)
@@ -286,19 +288,23 @@ export const SeriesDashboard: React.FC<SeriesDashboardProps> = () => {
       render: (item) => (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
           <Text>
-            <a
-              href={`#/series/edit/${item.seriesId}`}
-              style={{
-                color: 'var(--spectrum-global-color-blue-600)',
-                textDecoration: 'none',
-                fontWeight: 'bold',
-                cursor: 'pointer'
-              }}
-              onMouseEnter={(e) => e.currentTarget.style.textDecoration = 'underline'}
-              onMouseLeave={(e) => e.currentTarget.style.textDecoration = 'none'}
-            >
-              {item.seriesName}
-            </a>
+            {canWriteSeries ? (
+              <a
+                href={`#/series/edit/${item.seriesId}`}
+                style={{
+                  color: 'var(--spectrum-global-color-blue-600)',
+                  textDecoration: 'none',
+                  fontWeight: 'bold',
+                  cursor: 'pointer'
+                }}
+                onMouseEnter={(e) => e.currentTarget.style.textDecoration = 'underline'}
+                onMouseLeave={(e) => e.currentTarget.style.textDecoration = 'none'}
+              >
+                {item.seriesName}
+              </a>
+            ) : (
+              <span style={{ fontWeight: 'bold' }}>{item.seriesName}</span>
+            )}
           </Text>
           {item.seriesDescription && (
             <Text UNSAFE_style={{ fontSize: '12px', color: 'var(--spectrum-global-color-gray-700)' }}>
@@ -404,8 +410,10 @@ export const SeriesDashboard: React.FC<SeriesDashboardProps> = () => {
       width: 100,
       sortable: false,
       render: (item) => {
-        const menuItems = getMenuItems(item.seriesStatus)
-        
+        const menuItems = canWriteSeries ? getMenuItems(item.seriesStatus) : []
+
+        if (menuItems.length === 0) return null
+
         return (
           <MenuTrigger>
             <ActionButton isQuiet aria-label="Actions menu">
@@ -423,7 +431,7 @@ export const SeriesDashboard: React.FC<SeriesDashboardProps> = () => {
         )
       }
     }
-  ], [formatDate, loadingHistory, historyErrors, handleMenuAction, getMenuItems])
+  ], [formatDate, loadingHistory, historyErrors, handleMenuAction, getMenuItems, canWriteSeries])
 
   // Callback to track visible series IDs for enrichment
   const handleVisibleIdsChange = useCallback((ids: string[]) => {
@@ -449,7 +457,7 @@ export const SeriesDashboard: React.FC<SeriesDashboardProps> = () => {
         getItemKey={getItemKey}
         onVisibleIdsChange={handleVisibleIdsChange}
         onRefresh={loadSeriesData}
-        onCreate={handleCreateSeries}
+        onCreate={canWriteSeries ? handleCreateSeries : undefined}
         createLabel="Create new series"
         emptyStateTitle="No Series Found"
         emptyStateDescription="Get started by creating your first series"
