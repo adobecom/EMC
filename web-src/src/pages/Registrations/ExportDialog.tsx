@@ -7,11 +7,7 @@
  */
 
 import React, { useState, useMemo, useCallback } from 'react'
-import {
-  Checkbox,
-  Divider,
-} from '@adobe/react-spectrum'
-import { Button, ButtonGroup, Dialog, Content, Heading, Text } from '@react-spectrum/s2'
+import { Button, ButtonGroup, Dialog, Content, Heading, Text, Checkbox, Divider } from '@react-spectrum/s2'
 import { style } from '@react-spectrum/s2/style' with { type: 'macro' }
 import type { Attendee, AttendeeColumnConfig } from '../../types/attendee'
 import type { Campaign } from '../../types/campaign'

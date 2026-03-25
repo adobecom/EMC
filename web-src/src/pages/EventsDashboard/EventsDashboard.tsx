@@ -4,8 +4,7 @@
 
 import React, { useEffect, useMemo, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { DialogTrigger, AlertDialog, Link } from '@adobe/react-spectrum'
-import { ActionButton, Button, MenuTrigger, Menu, MenuItem, Text } from "@react-spectrum/s2"
+import { ActionButton, Button, MenuTrigger, Menu, MenuItem, Text, DialogTrigger, AlertDialog, Link } from "@react-spectrum/s2"
 import { style } from "@react-spectrum/s2/style" with { type: "macro" }
 import More from "@react-spectrum/s2/icons/More"
 import Publish from "@react-spectrum/s2/icons/Publish"
@@ -939,25 +938,22 @@ export const EventsDashboard: React.FC<EventsDashboardProps> = () => {
         onOpenChange={(isOpen) => !isOpen && setItemToDelete(null)}
       >
         <div style={{ display: 'none' }} />
-        {(close) => (
-          <AlertDialog
-            title="Delete Event"
-            variant="destructive"
-            primaryActionLabel="Delete"
-            secondaryActionLabel="Cancel"
-            onPrimaryAction={() => {
-              if (itemToDelete) {
-                handleDeleteEvent(itemToDelete)
-              }
-              close()
-            }}
-            onSecondaryAction={close}
-            isPrimaryActionDisabled={!!actionInProgress}
-          >
-            Are you sure you want to delete <strong>{itemToDelete?.eventName}</strong>? 
-            This action cannot be undone and will permanently remove the event and all associated data.
-          </AlertDialog>
-        )}
+        <AlertDialog
+          title="Delete Event"
+          variant="destructive"
+          primaryActionLabel="Delete"
+          cancelLabel="Cancel"
+          onPrimaryAction={() => {
+            if (itemToDelete) {
+              handleDeleteEvent(itemToDelete)
+            }
+          }}
+          onCancel={() => setItemToDelete(null)}
+          isPrimaryActionDisabled={!!actionInProgress}
+        >
+          Are you sure you want to delete <strong>{itemToDelete?.eventName}</strong>?
+          This action cannot be undone and will permanently remove the event and all associated data.
+        </AlertDialog>
       </DialogTrigger>
     </>
   )

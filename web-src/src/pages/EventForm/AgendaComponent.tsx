@@ -3,7 +3,8 @@
 */
 
 import React, { useState, useEffect } from 'react'
-import { Button, Text, TextField, DatePicker, TimeField, Switch, ActionButton, Heading } from '@react-spectrum/s2'
+import { Button, Text, TextField, DatePicker, TimeField, ActionButton, Heading } from '@react-spectrum/s2'
+import { Switch } from '@adobe/react-spectrum'
 import { style } from '@react-spectrum/s2/style' with { type: 'macro' }
 import { Time } from '@internationalized/date'
 import { parseDateTime, CalendarDateTime } from '@internationalized/date'

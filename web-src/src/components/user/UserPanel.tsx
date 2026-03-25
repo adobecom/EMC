@@ -151,7 +151,7 @@ export const UserPanel: React.FC<UserPanelProps> = ({ ims, compact = false }) =>
           </div>
         </ActionButton>
 
-        <Menu onAction={handleMenuAction}>
+        <Menu onAction={handleMenuAction} UNSAFE_style={{ minWidth: '240px' }}>
           <MenuSection>
             <MenuItem id="profile" textValue="View Profile">
               <User />

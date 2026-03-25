@@ -3,20 +3,12 @@
 */
 
 import React, { useState, useCallback, useMemo } from 'react'
-import {
-  View,
-  ActionButton,
-  DialogTrigger as V3DialogTrigger,
-  NumberField,
-  Switch,
-  AlertDialog,
-} from '@adobe/react-spectrum'
-import { Button, ButtonGroup, TextField, Picker, PickerItem, DialogTrigger, Dialog, Content, Heading, Text } from '@react-spectrum/s2'
+import { Button, ButtonGroup, TextField, Picker, PickerItem, DialogTrigger, Dialog, Content, Heading, Text, ActionButton, NumberField, Switch, AlertDialog } from '@react-spectrum/s2'
 import { style } from "@react-spectrum/s2/style" with { type: "macro" }
-import Add from '@spectrum-icons/workflow/Add'
-import Edit from '@spectrum-icons/workflow/Edit'
-import Delete from '@spectrum-icons/workflow/Delete'
-import Copy from '@spectrum-icons/workflow/Copy'
+import Add from '@react-spectrum/s2/icons/Add'
+import Edit from '@react-spectrum/s2/icons/Edit'
+import Delete from '@react-spectrum/s2/icons/Delete'
+import Copy from '@react-spectrum/s2/icons/Copy'
 import type { EventApiResponse } from '../../types/domain'
 import type { Campaign, CampaignFormData, CampaignStatus } from '../../types/campaign'
 import { calculateCampaignStats } from '../../types/campaign'
@@ -135,7 +127,7 @@ export const CampaignsTab: React.FC<CampaignsTabProps> = ({
                 onPress={() => handleCopyUrl(campaign)}
                 aria-label="Copy URL"
               >
-                <Copy size="S" />
+                <Copy />
               </ActionButton>
               {copiedId === campaign.campaignId && (
                 <Text UNSAFE_style={{ fontSize: '11px', color: COLORS.STATUS_DRAFT }}>
@@ -176,21 +168,19 @@ export const CampaignsTab: React.FC<CampaignsTabProps> = ({
       width: 100,
       sortable: true,
       render: (campaign) => (
-        <View
-          UNSAFE_style={{
-            display: 'inline-block',
-            padding: '4px 12px',
-            borderRadius: '16px',
-            backgroundColor: campaign.status === 'Active'
-              ? 'rgba(45, 157, 146, 0.15)'
-              : 'rgba(102, 102, 102, 0.15)',
-            color: campaign.status === 'Active' ? COLORS.STATUS_DRAFT : COLORS.STATUS_ARCHIVED
-          }}
-        >
+        <div style={{
+          display: 'inline-block',
+          padding: '4px 12px',
+          borderRadius: '16px',
+          backgroundColor: campaign.status === 'Active'
+            ? 'rgba(45, 157, 146, 0.15)'
+            : 'rgba(102, 102, 102, 0.15)',
+          color: campaign.status === 'Active' ? COLORS.STATUS_DRAFT : COLORS.STATUS_ARCHIVED
+        }}>
           <Text UNSAFE_style={{ fontSize: '12px', fontWeight: 600 }}>
             {campaign.status}
           </Text>
-        </View>
+        </div>
       )
     },
     {
@@ -206,7 +196,7 @@ export const CampaignsTab: React.FC<CampaignsTabProps> = ({
               onPress={() => handleEditClick(campaign)}
               aria-label="Edit campaign"
             >
-              <Edit size="S" />
+              <Edit />
             </ActionButton>
           )}
           <ActionButton
@@ -215,7 +205,7 @@ export const CampaignsTab: React.FC<CampaignsTabProps> = ({
             onPress={() => setCampaignToDelete(campaign)}
             aria-label="Delete campaign"
           >
-            <Delete size="S" />
+            <Delete />
           </ActionButton>
         </div>
       )
@@ -224,30 +214,25 @@ export const CampaignsTab: React.FC<CampaignsTabProps> = ({
 
   if (!eventId) {
     return (
-      <View padding="size-400">
+      <div style={{ padding: '32px' }}>
         <Text UNSAFE_style={{ color: COLORS.GRAY_600 }}>
           Select an event to manage campaigns
         </Text>
-      </View>
+      </div>
     )
   }
 
   return (
-    <View>
+    <div>
       {/* Stats Bar */}
-      <View
-        backgroundColor="gray-100"
-        padding="size-300"
-        borderRadius="medium"
-        marginBottom="size-300"
-      >
+      <div style={{ backgroundColor: 'var(--spectrum-gray-100)', padding: '24px', borderRadius: '8px', marginBottom: '24px' }}>
         <div className={style({display: 'flex', gap: 48, flexWrap: 'wrap'})}>
           <StatItem label="Total Campaigns" value={stats.totalCampaigns} />
           <StatItem label="Active" value={stats.activeCampaigns} />
           <StatItem label="Registrations" value={stats.totalRegistrations} />
           <StatItem label="Waitlisted" value={stats.totalWaitlisted} />
         </div>
-      </View>
+      </div>
 
       {/* Header with Add Button */}
       <div
@@ -257,7 +242,7 @@ export const CampaignsTab: React.FC<CampaignsTabProps> = ({
           variant="accent"
           onPress={handleCreateClick}
         >
-          <Add size="S" />
+          <Add />
           <Text>Add Campaign</Text>
         </Button>
       </div>
@@ -302,68 +287,42 @@ export const CampaignsTab: React.FC<CampaignsTabProps> = ({
       </DialogTrigger>
 
       {/* Delete Confirmation Dialog */}
-      <V3DialogTrigger
-        isOpen={!!campaignToDelete}
-        onOpenChange={(isOpen) => !isOpen && setCampaignToDelete(null)}
-      >
+      <DialogTrigger isOpen={!!campaignToDelete} onOpenChange={(isOpen) => !isOpen && setCampaignToDelete(null)}>
         <div style={{ display: 'none' }} />
-        {(close) => (
-          <AlertDialog
-            title="Delete Campaign"
-            variant="destructive"
-            primaryActionLabel="Delete"
-            secondaryActionLabel="Cancel"
-            onPrimaryAction={() => {
-              handleDeleteCampaign()
-              close()
-            }}
-            onSecondaryAction={close}
-          >
-            Are you sure you want to delete the campaign &ldquo;{campaignToDelete?.name}&rdquo;?
-            The campaign URL will stop working.
-          </AlertDialog>
-        )}
-      </V3DialogTrigger>
+        <AlertDialog title="Delete Campaign" variant="destructive" primaryActionLabel="Delete" cancelLabel="Cancel"
+          onPrimaryAction={handleDeleteCampaign}
+          onCancel={() => setCampaignToDelete(null)}
+        >
+          Are you sure you want to delete the campaign &ldquo;{campaignToDelete?.name}&rdquo;?
+          The campaign URL will stop working.
+        </AlertDialog>
+      </DialogTrigger>
 
       {/* Archive Campaign Confirmation Dialog */}
-      <V3DialogTrigger
-        isOpen={!!pendingArchiveSave}
-        onOpenChange={(isOpen) => !isOpen && setPendingArchiveSave(null)}
-      >
+      <DialogTrigger isOpen={!!pendingArchiveSave} onOpenChange={(isOpen) => !isOpen && setPendingArchiveSave(null)}>
         <div style={{ display: 'none' }} />
-        {(close) => (
-          <AlertDialog
-            title="Archive Campaign"
-            variant="warning"
-            primaryActionLabel="Archive campaign"
-            secondaryActionLabel="Cancel"
-            onPrimaryAction={() => {
-              if (pendingArchiveSave) {
-                performSaveCampaign(pendingArchiveSave.campaign, pendingArchiveSave.formData)
-              }
-              close()
-            }}
-            onSecondaryAction={close}
-          >
-            <Text>
-              You are about to archive the campaign &ldquo;{pendingArchiveSave?.campaign.name}&rdquo;.
-              This action is <strong>permanent and cannot be undone</strong>.
-            </Text>
-            <Text UNSAFE_style={{ marginTop: '12px', display: 'block' }}>
-              Once archived:
-            </Text>
-            <ul style={{ marginTop: '8px', paddingLeft: '20px' }}>
-              <li>The campaign cannot be reactivated</li>
-              <li>The campaign cannot be edited</li>
-              <li>Existing registrations will remain, but no new registrations will be accepted through this campaign</li>
-            </ul>
-            <Text UNSAFE_style={{ marginTop: '12px', display: 'block' }}>
-              Are you sure you want to archive this campaign?
-            </Text>
-          </AlertDialog>
-        )}
-      </V3DialogTrigger>
-    </View>
+        <AlertDialog title="Archive Campaign" variant="warning" primaryActionLabel="Archive campaign" cancelLabel="Cancel"
+          onPrimaryAction={() => { if (pendingArchiveSave) { performSaveCampaign(pendingArchiveSave.campaign, pendingArchiveSave.formData) } }}
+          onCancel={() => setPendingArchiveSave(null)}
+        >
+          <Text>
+            You are about to archive the campaign &ldquo;{pendingArchiveSave?.campaign.name}&rdquo;.
+            This action is <strong>permanent and cannot be undone</strong>.
+          </Text>
+          <Text UNSAFE_style={{ marginTop: '12px', display: 'block' }}>
+            Once archived:
+          </Text>
+          <ul style={{ marginTop: '8px', paddingLeft: '20px' }}>
+            <li>The campaign cannot be reactivated</li>
+            <li>The campaign cannot be edited</li>
+            <li>Existing registrations will remain, but no new registrations will be accepted through this campaign</li>
+          </ul>
+          <Text UNSAFE_style={{ marginTop: '12px', display: 'block' }}>
+            Are you sure you want to archive this campaign?
+          </Text>
+        </AlertDialog>
+      </DialogTrigger>
+    </div>
   )
 }
 
@@ -399,17 +358,10 @@ const StatItem: React.FC<{
 )
 
 const EmptyCampaignsState: React.FC<{ onCreateClick: () => void }> = ({ onCreateClick }) => (
-  <View
-    padding="size-600"
-    UNSAFE_style={{
-      textAlign: 'center',
-      border: `2px dashed ${COLORS.GRAY_300}`,
-      borderRadius: '8px'
-    }}
-  >
-    <Heading level={3} UNSAFE_style={{ marginBottom: SPACING.MD }}>
+  <div style={{ padding: '48px', textAlign: 'center', border: `2px dashed ${COLORS.GRAY_300}`, borderRadius: '8px' }}>
+    <h3 style={{ marginBottom: SPACING.MD }}>
       No campaigns yet
-    </Heading>
+    </h3>
     <Text UNSAFE_style={{
       color: COLORS.GRAY_600,
       marginBottom: SPACING.LG,
@@ -417,11 +369,7 @@ const EmptyCampaignsState: React.FC<{ onCreateClick: () => void }> = ({ onCreate
     }}>
       Create campaigns to track registrations from different sources like email, social media, or partner promotions.
     </Text>
-    <Button variant="accent" onPress={onCreateClick}>
-      <Add size="S" />
-      <Text>Create Your First Campaign</Text>
-    </Button>
-  </View>
+  </div>
 )
 
 interface CampaignFormDialogContentProps {
@@ -497,7 +445,6 @@ const CampaignFormDialogContent: React.FC<CampaignFormDialogContentProps> = ({
                 value={noCapacityLimit && eventCapacity != null ? eventCapacity : (attendeeLimit ?? NaN)}
                 onChange={(value) => setAttendeeLimit(value)}
                 minValue={1}
-                width="100%"
                 isDisabled={noCapacityLimit}
               />
               <Switch

@@ -132,7 +132,6 @@ export const RegistrationConfigComponent: React.FC = () => {
             <TooltipTrigger delay={0}>
               <ActionButton
                 isQuiet
-                styles={style({minWidth: 0, width: 20})}
               >
                 <InfoCircle />
               </ActionButton>
@@ -161,7 +160,6 @@ export const RegistrationConfigComponent: React.FC = () => {
             <TooltipTrigger delay={0}>
               <ActionButton
                 isQuiet
-                styles={style({minWidth: 0, width: 20})}
               >
                 <InfoCircle />
               </ActionButton>
@@ -183,7 +181,7 @@ export const RegistrationConfigComponent: React.FC = () => {
               <TooltipTrigger delay={0}>
                 <ActionButton
                   isQuiet
-                  styles={style({minWidth: 0, width: 20})}
+                  
                 >
                   <InfoCircle />
                 </ActionButton>
@@ -207,7 +205,7 @@ export const RegistrationConfigComponent: React.FC = () => {
                 <TooltipTrigger delay={0}>
                   <ActionButton
                     isQuiet
-                    styles={style({minWidth: 0, width: 20})}
+                    
                   >
                     <InfoCircle />
                   </ActionButton>

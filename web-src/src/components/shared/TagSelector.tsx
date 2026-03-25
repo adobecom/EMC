@@ -1,11 +1,8 @@
 import React, { useState, useEffect } from 'react'
-import {
-  View,
-} from '@adobe/react-spectrum'
 import { Text, SearchField } from '@react-spectrum/s2'
 import { style } from '@react-spectrum/s2/style' with { type: 'macro' }
-import Close from '@spectrum-icons/workflow/Close'
-import Add from '@spectrum-icons/workflow/Add'
+import Close from '@react-spectrum/s2/icons/Close'
+import Add from '@react-spectrum/s2/icons/Add'
 import { EventTag, CaasTagsResponse, CaasTag } from '../../types/domain'
 import { cachedApi } from '../../services/api'
 import { LoadingSpinner } from './LoadingSpinner'
@@ -236,20 +233,16 @@ export const TagSelector: React.FC<TagSelectorProps> = ({
 
   if (error) {
     return (
-      <View
-        padding="size-200"
-        backgroundColor="negative"
-        borderRadius="medium"
-      >
+      <div style={{ padding: 16, backgroundColor: 'var(--spectrum-negative-background-color-default)', borderRadius: 4 }}>
         <Text UNSAFE_style={{ color: 'white' }}>Error: {error}</Text>
-      </View>
+      </div>
     )
   }
 
   return (
     <div className={style({ display: 'flex', flexDirection: 'column', gap: 16 })}>
       {/* Search/Add Field with Dropdown */}
-      <View position="relative">
+      <div style={{ position: 'relative' }}>
         <SearchField
           label="Search tags"
           value={searchTerm}
@@ -267,10 +260,10 @@ export const TagSelector: React.FC<TagSelectorProps> = ({
 
         {/* Dropdown with Available Tags */}
         {isDropdownOpen && filteredGroups.length > 0 && (
-          <View
-            position="absolute"
-            width="100%"
-            UNSAFE_style={{
+          <div
+            style={{
+              position: 'absolute',
+              width: '100%',
               top: '100%',
               left: 0,
               zIndex: 1000,
@@ -285,7 +278,7 @@ export const TagSelector: React.FC<TagSelectorProps> = ({
           >
             <div className={style({ display: 'flex', flexDirection: 'column', gap: 12 })} style={{ padding: '12px' }}>
               {filteredGroups.map(group => (
-                <View key={group.groupName}>
+                <div key={group.groupName}>
                   <Text UNSAFE_style={{
                     display: 'block',
                     marginBottom: '8px',
@@ -324,21 +317,21 @@ export const TagSelector: React.FC<TagSelectorProps> = ({
                         }}>
                           {tag.name}
                         </Text>
-                        <Add size="XS" UNSAFE_style={{ color: 'white' }} />
+                        <Add UNSAFE_style={{ color: 'white' }} />
                       </div>
                     ))}
                   </div>
-                </View>
+                </div>
               ))}
             </div>
-          </View>
+          </div>
         )}
 
         {isDropdownOpen && filteredGroups.length === 0 && searchTerm && (
-          <View
-            position="absolute"
-            width="100%"
-            UNSAFE_style={{
+          <div
+            style={{
+              position: 'absolute',
+              width: '100%',
               top: '100%',
               left: 0,
               zIndex: 1000,
@@ -358,9 +351,9 @@ export const TagSelector: React.FC<TagSelectorProps> = ({
             }}>
               No matching tags found
             </Text>
-          </View>
+          </div>
         )}
-      </View>
+      </div>
 
       {/* Selected Tags */}
       {selectedTags.length > 0 && (
@@ -374,7 +367,7 @@ export const TagSelector: React.FC<TagSelectorProps> = ({
             Selected Tags
           </Text>
           {selectedGroups.map(group => (
-            <View key={group.groupName}>
+            <div key={group.groupName}>
               <Text UNSAFE_style={{
                 display: 'block',
                 marginBottom: '8px',
@@ -410,11 +403,11 @@ export const TagSelector: React.FC<TagSelectorProps> = ({
                     }}>
                       {tag.name}
                     </Text>
-                    <Close size="XS" UNSAFE_style={{ color: 'white' }} />
+                    <Close UNSAFE_style={{ color: 'white' }} />
                   </div>
                 ))}
               </div>
-            </View>
+            </div>
           ))}
         </div>
       )}

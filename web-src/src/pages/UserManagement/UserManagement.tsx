@@ -6,17 +6,10 @@
  */
 
 import React, { useState, useCallback, useMemo, useEffect } from 'react'
-import {
-  View,
-  DialogTrigger as V3DialogTrigger,
-  AlertDialog,
-  ActionButton,
-  Well,
-} from '@adobe/react-spectrum'
-import { Badge, Button, ButtonGroup, Text, TextField, Picker, PickerItem, DialogTrigger, Dialog, Content, Heading } from '@react-spectrum/s2'
+import { Badge, Button, ButtonGroup, Text, TextField, Picker, PickerItem, DialogTrigger, Dialog, Content, Heading, ActionButton, AlertDialog } from '@react-spectrum/s2'
 import { style } from "@react-spectrum/s2/style" with { type: "macro" }
-import Delete from '@spectrum-icons/workflow/Delete'
-import Edit from '@spectrum-icons/workflow/Edit'
+import Delete from '@react-spectrum/s2/icons/Delete'
+import Edit from '@react-spectrum/s2/icons/Edit'
 import Key from "@react-spectrum/s2/icons/Key"
 import { useNavigate } from 'react-router-dom'
 import { useRBAC } from '../../contexts/RBACContext'
@@ -279,10 +272,10 @@ export const UserManagement: React.FC<UserManagementProps> = () => {
       render: (item) => (
         <div className={style({display: 'flex', gap: 8})}>
           <ActionButton isQuiet aria-label="Edit user" onPress={() => openEditDialog(item)}>
-            <Edit size="S" />
+            <Edit />
           </ActionButton>
           <ActionButton isQuiet aria-label="Delete user" onPress={() => setUserToDelete(item)}>
-            <Delete size="S" />
+            <Delete />
           </ActionButton>
         </div>
       ),
@@ -292,7 +285,7 @@ export const UserManagement: React.FC<UserManagementProps> = () => {
   if (!isAdmin) return null
 
   return (
-    <View padding="size-400" maxWidth="1400px" marginX="auto">
+    <div style={{ padding: '32px', maxWidth: '1400px', marginLeft: 'auto', marginRight: 'auto' }}>
       <div className={style({display: 'flex', flexDirection: 'column', gap: 32})}>
         {/* Header */}
         <div className={style({display: 'flex', justifyContent: 'space-between', alignItems: 'center'})}>
@@ -363,9 +356,9 @@ export const UserManagement: React.FC<UserManagementProps> = () => {
         </div>
 
         {!isConnected && (
-          <Well>
+          <div style={{ border: '1px solid var(--spectrum-gray-300)', borderRadius: '4px', padding: '16px', backgroundColor: 'var(--spectrum-gray-75)' }}>
             <Text>Connect a GitHub PAT to add, edit, or remove users. Changes create a pull request.</Text>
-          </Well>
+          </div>
         )}
 
         {/* Users Table */}
@@ -449,36 +442,33 @@ export const UserManagement: React.FC<UserManagementProps> = () => {
       </DialogTrigger>
 
       {/* Delete Confirmation */}
-      <V3DialogTrigger
+      <DialogTrigger
         isOpen={!!userToDelete}
         onOpenChange={(open) => !open && setUserToDelete(null)}
       >
         <div style={{ display: 'none' }} />
-        {(close) => (
-          <AlertDialog
-            title="Remove User"
-            variant="destructive"
-            primaryActionLabel="Remove"
-            secondaryActionLabel="Cancel"
-            onPrimaryAction={() => {
-              if (userToDelete) handleDeleteUser(userToDelete)
-              close()
-            }}
-            onSecondaryAction={close}
-            isPrimaryActionDisabled={isSaving || !isConnected}
-          >
-            Remove <strong>{userToDelete?.email}</strong> from the users list?
-            This will create a pull request.
-          </AlertDialog>
-        )}
-      </V3DialogTrigger>
+        <AlertDialog
+          title="Remove User"
+          variant="destructive"
+          primaryActionLabel="Remove"
+          cancelLabel="Cancel"
+          onPrimaryAction={() => {
+            if (userToDelete) handleDeleteUser(userToDelete)
+          }}
+          onCancel={() => setUserToDelete(null)}
+          isPrimaryActionDisabled={isSaving || !isConnected}
+        >
+          Remove <strong>{userToDelete?.email}</strong> from the users list?
+          This will create a pull request.
+        </AlertDialog>
+      </DialogTrigger>
 
       <BlurredLoadingOverlay
         visible={isSaving}
         message="Creating pull request..."
         ariaLabel="Creating pull request"
       />
-    </View>
+    </div>
   )
 }
 

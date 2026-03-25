@@ -3,7 +3,8 @@
 */
 
 import React, { useState, useEffect } from 'react'
-import { TextField, Switch, RadioGroup, Radio, Text } from '@react-spectrum/s2'
+import { TextField, RadioGroup, Radio, Text } from '@react-spectrum/s2'
+import { Switch } from '@adobe/react-spectrum'
 import { style } from "@react-spectrum/s2/style" with { type: "macro" }
 import { HeadingWithTooltip } from '../../components/shared'
 import OpenIn from '@react-spectrum/s2/icons/OpenIn'

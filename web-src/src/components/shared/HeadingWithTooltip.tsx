@@ -79,7 +79,6 @@ export const HeadingWithTooltip: React.FC<HeadingWithTooltipProps> = ({
       <TooltipTrigger delay={0}>
         <ActionButton
           isQuiet
-          styles={style({ minWidth: 0, width: 20 })}
         >
           <InfoCircle />
         </ActionButton>

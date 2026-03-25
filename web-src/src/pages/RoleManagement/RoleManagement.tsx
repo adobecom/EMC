@@ -271,7 +271,7 @@ export const RoleManagement: React.FC<RoleManagementProps> = () => {
       {/* Add/Edit Role Dialog */}
       <DialogTrigger isOpen={isFormOpen} onOpenChange={setIsFormOpen}>
         <div style={{ display: 'none' }} />
-        <Dialog size="L">
+        <Dialog size="XL">
           {({close}) => (
             <>
               <Heading slot="title">{editingRole ? 'Edit Role' : 'Create Role'}</Heading>
@@ -287,7 +287,7 @@ export const RoleManagement: React.FC<RoleManagementProps> = () => {
                   />
                   <Heading level={4}>Permissions ({formPermissions.size} selected)</Heading>
                   <View maxHeight="size-6000" overflow="auto">
-                    <div className={style({display: 'flex', flexDirection: 'column', gap: 16})}>
+                    <div className={style({display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16})}>
                       {Array.from(groupedPermissions.entries()).map(([resource, perms]) => (
                         <div key={resource} className={style({
                           padding: 16,

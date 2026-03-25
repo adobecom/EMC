@@ -171,12 +171,8 @@ export const ScopeGroupManagement: React.FC<ScopeGroupManagementProps> = () => {
   const loadScopes = useCallback(async () => {
     setIsLoadingScopes(true)
     try {
-      const [scopesResult, rolesResult] = await Promise.all([
-        apiService.getScopes(),
-        apiService.getRoles(),
-      ])
+      const scopesResult = await apiService.getScopes()
       if (!('error' in scopesResult)) setScopes(scopesResult)
-      if (!('error' in rolesResult)) setRoles(rolesResult)
     } catch {
       // Individual errors handled by consumers
     } finally {
@@ -185,25 +181,30 @@ export const ScopeGroupManagement: React.FC<ScopeGroupManagementProps> = () => {
   }, [apiService])
 
   const loadGroups = useCallback(async () => {
-    if (!selectedScopeId) {
+    if (!selectedScopeId || !selectedScope) {
       setGroups([])
+      setRoles([])
       return
     }
     setIsLoadingGroups(true)
     setGroupError(null)
     try {
-      const result = await apiService.getGroupsForScope(selectedScopeId)
-      if ('error' in result) {
+      const [groupsResult, rolesResult] = await Promise.all([
+        apiService.getGroupsForScope(selectedScopeId),
+        apiService.getRoles(selectedScope.type),
+      ])
+      if ('error' in groupsResult) {
         setGroupError('Failed to load groups')
-        return
+      } else {
+        setGroups(groupsResult)
       }
-      setGroups(result)
+      if (!('error' in rolesResult)) setRoles(rolesResult)
     } catch (err) {
       setGroupError(err instanceof Error ? err.message : 'Failed to load groups')
     } finally {
       setIsLoadingGroups(false)
     }
-  }, [apiService, selectedScopeId])
+  }, [apiService, selectedScopeId, selectedScope])
 
   const loadGroupUsersForExpand = useCallback(async (groupId: string) => {
     if (!selectedScopeId) return

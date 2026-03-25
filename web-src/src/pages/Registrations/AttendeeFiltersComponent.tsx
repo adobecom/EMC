@@ -3,15 +3,9 @@
 */
 
 import React, { useMemo, useCallback } from 'react'
-import {
-  View,
-  Flex,
-  ActionButton,
-  Checkbox,
-  Divider
-} from '@adobe/react-spectrum'
-import { Button, Text } from '@react-spectrum/s2'
-import ChevronLeft from '@spectrum-icons/workflow/ChevronLeft'
+import { Button, Text, ActionButton, Checkbox, Divider } from '@react-spectrum/s2'
+import { style } from '@react-spectrum/s2/style' with { type: 'macro' }
+import ChevronLeft from '@react-spectrum/s2/icons/ChevronLeft'
 import type { AttendeeColumnConfig, AttendeeFilters, Attendee, FilterMenuConfig } from '../../types/attendee'
 import { COLORS } from '../../styles/designSystem'
 
@@ -115,15 +109,8 @@ export const AttendeeFiltersComponent: React.FC<AttendeeFiltersComponentProps> =
   }, [filterMenus, onFiltersChange])
 
   return (
-    <View
-      backgroundColor="gray-100"
-      borderRadius="medium"
-      padding="size-200"
-      minWidth="200px"
-      maxWidth="220px"
-      UNSAFE_style={{ alignSelf: 'flex-start' }}
-    >
-      <Flex direction="column" gap="size-200">
+    <div style={{ backgroundColor: 'var(--spectrum-gray-100)', borderRadius: '8px', padding: '16px', minWidth: '200px', maxWidth: '220px', alignSelf: 'flex-start' }}>
+      <div className={style({display: 'flex', flexDirection: 'column', gap: 16})}>
         {/* Back Button */}
         {onBackClick && backLabel && (
           <>
@@ -135,7 +122,7 @@ export const AttendeeFiltersComponent: React.FC<AttendeeFiltersComponentProps> =
                 marginLeft: '-4px'
               }}
             >
-              <ChevronLeft size="S" />
+              <ChevronLeft />
               <Text UNSAFE_style={{ fontWeight: 700 }}>{backLabel}</Text>
             </ActionButton>
             <Divider size="S" />
@@ -167,8 +154,8 @@ export const AttendeeFiltersComponent: React.FC<AttendeeFiltersComponentProps> =
             />
           ))
         )}
-      </Flex>
-    </View>
+      </div>
+    </div>
   )
 }
 
@@ -185,7 +172,7 @@ const FilterMenu: React.FC<FilterMenuProps> = ({ menu, selectedValues, onToggle 
   const [isExpanded, setIsExpanded] = React.useState(true)
 
   return (
-    <View>
+    <div>
       <ActionButton
         onPress={() => setIsExpanded(!isExpanded)}
         isQuiet
@@ -203,26 +190,26 @@ const FilterMenu: React.FC<FilterMenuProps> = ({ menu, selectedValues, onToggle 
       </ActionButton>
 
       {isExpanded && (
-        <Flex direction="column" gap="size-50" marginTop="size-100">
+        <div className={style({display: 'flex', flexDirection: 'column', gap: 4, marginTop: 8})}>
           {menu.options.map(option => (
             <Checkbox
               key={option.value}
               isSelected={selectedValues.includes(option.value)}
               onChange={(checked) => onToggle(option.value, checked)}
             >
-              <Flex direction="row" gap="size-50" alignItems="center">
+              <span style={{display: 'flex', gap: 4, alignItems: 'center'}}>
                 <Text UNSAFE_style={{ fontSize: '13px' }}>{option.label}</Text>
                 {option.count !== undefined && (
                   <Text UNSAFE_style={{ fontSize: '11px', color: COLORS.GRAY_600 }}>
                     ({option.count})
                   </Text>
                 )}
-              </Flex>
+              </span>
             </Checkbox>
           ))}
-        </Flex>
+        </div>
       )}
-    </View>
+    </div>
   )
 }
 

@@ -4,19 +4,19 @@
 
 import React, { useState, useEffect, useCallback } from 'react'
 import {
-  View,
   ProgressCircle,
   ActionButton,
   TooltipTrigger,
-  Tooltip
-} from '@adobe/react-spectrum'
-import { Text, Button } from '@react-spectrum/s2'
+  Tooltip,
+  Text,
+  Button
+} from '@react-spectrum/s2'
 import { style } from '@react-spectrum/s2/style' with { type: 'macro' }
-import Clock from '@spectrum-icons/workflow/Clock'
-import Close from '@spectrum-icons/workflow/Close'
-import Add from '@spectrum-icons/workflow/Add'
-import Edit from '@spectrum-icons/workflow/Edit'
-import Delete from '@spectrum-icons/workflow/Delete'
+import Clock from '@react-spectrum/s2/icons/Clock'
+import Close from '@react-spectrum/s2/icons/Close'
+import Add from '@react-spectrum/s2/icons/Add'
+import Edit from '@react-spectrum/s2/icons/Edit'
+import Delete from '@react-spectrum/s2/icons/Delete'
 import {
   COLORS,
   Z_INDEX,
@@ -130,13 +130,13 @@ export function getChangeDescription(record: HistoryRecord): string {
 export function getChangeIcon(changeType: string): React.ReactNode {
   switch (changeType) {
     case 'create':
-      return <Add size="XS" />
+      return <Add />
     case 'update':
-      return <Edit size="XS" />
+      return <Edit />
     case 'delete':
-      return <Delete size="XS" />
+      return <Delete />
     default:
-      return <Edit size="XS" />
+      return <Edit />
   }
 }
 
@@ -327,7 +327,7 @@ export const HistoryTimeline: React.FC<HistoryTimelineProps> = ({
             backgroundColor: isOpen ? COLORS.GRAY_200 : 'transparent'
           }}
         >
-          <Clock size="S" />
+          <Clock />
           <Text UNSAFE_style={{ marginInlineStart: '6px' }}>History</Text>
         </ActionButton>
         <Tooltip>View event change history</Tooltip>
@@ -381,13 +381,13 @@ export const HistoryTimeline: React.FC<HistoryTimelineProps> = ({
           }}
         >
           <div className={style({ display: 'flex', gap: 12, alignItems: 'center' })}>
-            <Clock size="S" />
+            <Clock />
             <Text UNSAFE_style={TYPOGRAPHY.SUBSECTION_HEADING}>
               {resourceLabel} History
             </Text>
             {historyRecords.length > 0 && (
-              <View
-                UNSAFE_style={{
+              <div
+                style={{
                   backgroundColor: COLORS.GRAY_300,
                   padding: '2px 10px',
                   borderRadius: '12px',
@@ -397,17 +397,17 @@ export const HistoryTimeline: React.FC<HistoryTimelineProps> = ({
                 <Text UNSAFE_style={{ fontSize: '12px', fontWeight: 500 }}>
                   {historyRecords.length} change{historyRecords.length !== 1 ? 's' : ''}
                 </Text>
-              </View>
+              </div>
             )}
           </div>
           <ActionButton isQuiet onPress={() => setIsOpen(false)} aria-label="Close history panel">
-            <Close size="S" />
+            <Close />
           </ActionButton>
         </div>
 
         {/* Panel Content */}
-        <View
-          UNSAFE_style={{
+        <div
+          style={{
             flex: 1,
             overflow: 'auto',
             padding: `${SPACING.MD}px 0`
@@ -431,10 +431,10 @@ export const HistoryTimeline: React.FC<HistoryTimelineProps> = ({
               </Text>
             </div>
           ) : (
-            <View>
+            <div>
               {/* Timeline Container */}
-              <View
-                UNSAFE_style={{
+              <div
+                style={{
                   overflowX: 'auto',
                   padding: `0 ${SPACING.LG}px`,
                   marginBottom: `${SPACING.MD}px`
@@ -462,12 +462,12 @@ export const HistoryTimeline: React.FC<HistoryTimelineProps> = ({
                     />
                   ))}
                 </div>
-              </View>
+              </div>
 
               {/* Detail Card - shows selected record details */}
-              <View UNSAFE_style={{ marginTop: `${SPACING.SM}px` }}>
+              <div style={{ marginTop: `${SPACING.SM}px` }}>
                 <DetailCard record={activeRecord} isLocked={isLocked} />
-              </View>
+              </div>
 
               {/* Legend */}
               <div
@@ -512,9 +512,9 @@ export const HistoryTimeline: React.FC<HistoryTimelineProps> = ({
                   <Text UNSAFE_style={{ fontSize: '12px', color: COLORS.GRAY_600 }}>Deleted</Text>
                 </div>
               </div>
-            </View>
+            </div>
           )}
-        </View>
+        </div>
       </div>
     </>
   )

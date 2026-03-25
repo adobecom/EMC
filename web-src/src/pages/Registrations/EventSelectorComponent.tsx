@@ -3,9 +3,6 @@
 */
 
 import React, { useMemo, useState } from 'react'
-import {
-  View,
-} from '@adobe/react-spectrum'
 import { ComboBox, ComboBoxItem, Text } from "@react-spectrum/s2"
 import { style } from "@react-spectrum/s2/style" with { type: "macro" }
 import type { EventApiResponse } from '../../types/domain'
@@ -88,7 +85,7 @@ export const EventSelectorComponent: React.FC<EventSelectorComponentProps> = ({
   }
 
   return (
-    <View width="100%">
+    <div style={{ width: '100%' }}>
       <ComboBox
         label={label}
         selectedKey={selectedEventId || null}
@@ -107,7 +104,7 @@ export const EventSelectorComponent: React.FC<EventSelectorComponentProps> = ({
           </ComboBoxItem>
         )}
       </ComboBox>
-    </View>
+    </div>
   )
 }
 

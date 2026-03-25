@@ -3,12 +3,7 @@
 */
 
 import React, { useState, useMemo, useEffect, useCallback } from 'react'
-import {
-  Heading,
-  View,
-  ActionButton,
-} from '@adobe/react-spectrum'
-import { Text, Button, SearchField } from '@react-spectrum/s2'
+import { Text, Button, SearchField, Heading, ActionButton } from '@react-spectrum/s2'
 import { style } from '@react-spectrum/s2/style' with { type: 'macro' }
 import Refresh from "@react-spectrum/s2/icons/Refresh"
 import { DataTable, TableColumn, TableAction } from './DataTable'
@@ -152,7 +147,7 @@ export function ResourceDashboardLayout<T extends Record<string, any>>({
 
   if (error) {
     return (
-      <View height="100%">
+      <div style={{height: '100%'}}>
         <div className={style({ display: 'flex', flexDirection: 'column', gap: 12, alignItems: 'center', justifyContent: 'center', height: '[100%]' })}>
           <Heading level={3}>Error Loading Data</Heading>
           <Text>{error}</Text>
@@ -161,7 +156,7 @@ export function ResourceDashboardLayout<T extends Record<string, any>>({
             <Text>Retry</Text>
           </Button>
         </div>
-      </View>
+      </div>
     )
   }
 
@@ -169,12 +164,12 @@ export function ResourceDashboardLayout<T extends Record<string, any>>({
   const isSearching = inputValue !== debouncedQuery
 
   return (
-    <View padding="size-400">
+    <div className={style({padding: 32})}>
       <div className={style({ display: 'flex', flexDirection: 'column', gap: 12, height: '[100%]' })}>
         {/* Header */}
         <div className={style({ display: 'flex', justifyContent: 'space-between', alignItems: 'center' })}>
           <div className={style({ display: 'flex', gap: 8, alignItems: 'baseline' })}>
-            <Heading level={2} marginBottom="size-0">{title}</Heading>
+            <Heading level={2}>{title}</Heading>
             {debouncedQuery ? (
               <Text UNSAFE_style={{ fontSize: '14px', color: 'var(--spectrum-global-color-gray-700)' }}>
                 (Showing {displayCount} of {totalCount})
@@ -211,7 +206,7 @@ export function ResourceDashboardLayout<T extends Record<string, any>>({
         </div>
 
         {/* Table */}
-        <View flex="1" borderRadius="medium">
+        <div className={style({flex: 1})}>
           {isSearching ? (
             <div
               className={`${style({ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '[100%]' })} fade-in`}
@@ -242,9 +237,7 @@ export function ResourceDashboardLayout<T extends Record<string, any>>({
                     }
                   </Text>
                   {debouncedQuery ? (
-                    <ActionButton onPress={handleClear}>
-                      Clear Search
-                    </ActionButton>
+                    <ActionButton onPress={handleClear}><Text>Clear Search</Text></ActionButton>
                   ) : (
                     createButton ? createButton : onCreate && (
                       <Button onPress={onCreate} variant="accent">
@@ -257,8 +250,8 @@ export function ResourceDashboardLayout<T extends Record<string, any>>({
               />
             </div>
           )}
-        </View>
+        </div>
       </div>
-    </View>
+    </div>
   )
 }

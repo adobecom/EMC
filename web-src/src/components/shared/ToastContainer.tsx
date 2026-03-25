@@ -3,13 +3,12 @@
 */
 
 import React, { useEffect, useState } from 'react'
-import { View, Text } from '@adobe/react-spectrum'
-import { Button } from "@react-spectrum/s2"
+import { Button, Text } from '@react-spectrum/s2'
 import { style } from '@react-spectrum/s2/style' with { type: 'macro' }
-import Close from '@spectrum-icons/workflow/Close'
-import CheckmarkCircle from '@spectrum-icons/workflow/CheckmarkCircle'
-import AlertCircle from '@spectrum-icons/workflow/AlertCircle'
-import InfoOutline from '@spectrum-icons/workflow/InfoOutline'
+import Close from '@react-spectrum/s2/icons/Close'
+import CheckmarkCircle from '@react-spectrum/s2/icons/CheckmarkCircle'
+import AlertDiamond from '@react-spectrum/s2/icons/AlertDiamond'
+import InfoCircle from '@react-spectrum/s2/icons/InfoCircle'
 import { useToast, Toast, ToastVariant } from '../../contexts/ToastContext'
 import { Z_INDEX } from '../../styles/designSystem'
 
@@ -118,18 +117,18 @@ const ToastItem: React.FC<ToastItemProps> = ({ toast, onDismiss }) => {
   }
 
   const getIcon = () => {
-    const iconProps = { size: 'S' as const, UNSAFE_style: ICON_STYLES }
+    const iconProps = { UNSAFE_style: ICON_STYLES }
 
     switch (toast.variant) {
       case 'positive':
         return <CheckmarkCircle {...iconProps} />
       case 'negative':
-        return <AlertCircle {...iconProps} />
+        return <AlertDiamond {...iconProps} />
       case 'info':
-        return <InfoOutline {...iconProps} />
+        return <InfoCircle {...iconProps} />
       case 'neutral':
       default:
-        return <InfoOutline {...iconProps} />
+        return <InfoCircle {...iconProps} />
     }
   }
 
@@ -146,19 +145,19 @@ const ToastItem: React.FC<ToastItemProps> = ({ toast, onDismiss }) => {
     >
       <div className={style({ display: 'flex', alignItems: 'start', gap: 12 })}>
         {/* Icon */}
-        <View UNSAFE_style={{ marginTop: 2 }}>
+        <div style={{ marginTop: 2 }}>
           {getIcon()}
-        </View>
+        </div>
 
         {/* Message */}
-        <View flex UNSAFE_style={{ minWidth: 0 }}>
+        <div style={{ flex: 1, minWidth: 0 }}>
           <Text UNSAFE_style={MESSAGE_STYLES}>
             {toast.message}
           </Text>
 
           {/* Action button if provided */}
           {toast.action && (
-            <View marginTop="size-100">
+            <div style={{ marginTop: 8 }}>
               <Button
                 variant="secondary"
                 staticColor="white"
@@ -169,9 +168,9 @@ const ToastItem: React.FC<ToastItemProps> = ({ toast, onDismiss }) => {
               >
                 {toast.action.label}
               </Button>
-            </View>
+            </div>
           )}
-        </View>
+        </div>
 
         {/* Close button */}
         {toast.dismissible && (
@@ -186,7 +185,7 @@ const ToastItem: React.FC<ToastItemProps> = ({ toast, onDismiss }) => {
               e.currentTarget.style.backgroundColor = 'transparent'
             }}
           >
-            <Close size="S" />
+            <Close />
           </button>
         )}
       </div>

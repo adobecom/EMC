@@ -4,15 +4,14 @@
 
 import React, { useState, useRef } from 'react'
 import {
-  View,
   ProgressCircle,
   ActionButton,
   AlertDialog,
-  DialogTrigger
-} from '@adobe/react-spectrum'
-import { Text } from '@react-spectrum/s2'
+  DialogTrigger,
+  Text
+} from '@react-spectrum/s2'
 import { style, iconStyle } from '@react-spectrum/s2/style' with { type: 'macro' }
-import Delete from '@spectrum-icons/workflow/Delete'
+import Delete from '@react-spectrum/s2/icons/Delete'
 import ImageAdd from '@react-spectrum/s2/icons/ImageAdd';
 import { uploadImage, UploadTracker } from '../../services/requestHelpers'
 import { getCurrentEnvironment, getApiHost } from '../../config/constants'
@@ -341,7 +340,7 @@ export const ImageUploader: React.FC<ImageUploaderProps> = ({
   const containerWidth = width ?? '100%'
 
   return (
-    <View UNSAFE_style={{ width: typeof containerWidth === 'number' ? `${containerWidth}px` : containerWidth }}>
+    <div style={{ width: typeof containerWidth === 'number' ? `${containerWidth}px` : containerWidth }}>
       <Text UNSAFE_style={{ fontWeight: 'bold', marginBottom: '8px', display: 'block' }}>
         {label}
       </Text>
@@ -354,11 +353,8 @@ export const ImageUploader: React.FC<ImageUploaderProps> = ({
 
       {imageUrl || previewUrl ? (
         // Show uploaded image or pending file preview
-        <View
-          borderWidth="thin"
-          borderColor="default"
-          borderRadius="medium"
-          UNSAFE_style={{ position: 'relative', overflow: 'hidden' }}
+        <div
+          style={{ position: 'relative', overflow: 'hidden', border: '1px solid var(--spectrum-gray-400)', borderRadius: '4px' }}
         >
           <img
             src={imageUrl || previewUrl || ''}
@@ -370,8 +366,8 @@ export const ImageUploader: React.FC<ImageUploaderProps> = ({
             }}
           />
           {previewUrl && !imageUrl && (
-            <View
-              UNSAFE_style={{
+            <div
+              style={{
                 position: 'absolute',
                 bottom: 0,
                 left: 0,
@@ -384,7 +380,7 @@ export const ImageUploader: React.FC<ImageUploaderProps> = ({
               <Text UNSAFE_style={{ fontSize: '12px', fontWeight: 'bold' }}>
                 Pending upload - save to upload
               </Text>
-            </View>
+            </div>
           )}
           {!isDisabled && (
             <ActionButton
@@ -404,8 +400,8 @@ export const ImageUploader: React.FC<ImageUploaderProps> = ({
             </ActionButton>
           )}
           {isDeleting && (
-            <View
-              UNSAFE_style={{
+            <div
+              style={{
                 position: 'absolute',
                 top: 0,
                 left: 0,
@@ -418,9 +414,9 @@ export const ImageUploader: React.FC<ImageUploaderProps> = ({
               }}
             >
               <ProgressCircle aria-label="Deleting image" isIndeterminate size="M" />
-            </View>
+            </div>
           )}
-        </View>
+        </div>
       ) : (
         // Show dropzone - entire area is clickable and droppable
         <div
@@ -453,7 +449,7 @@ export const ImageUploader: React.FC<ImageUploaderProps> = ({
             </div>
           ) : (
             <div className={style({ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12 })}>
-              <ImageAdd styles={iconStyle({ color: 'gray'})} aria-hidden />
+              <ImageAdd styles={iconStyle({ size: 'XL', color: 'gray'})} aria-hidden />
               <Text UNSAFE_style={{ fontSize: '14px', color: '#4B4B4B' }}>
                 {dropzoneTitle || 'Drop image here or click to browse'}
               </Text>
@@ -490,23 +486,25 @@ export const ImageUploader: React.FC<ImageUploaderProps> = ({
       )}
 
       {/* Delete Confirmation Dialog */}
-      <DialogTrigger
-        isOpen={isDeleteDialogOpen}
-        onOpenChange={(isOpen) => !isOpen && handleDeleteCancel()}
-      >
-        <div style={{ display: 'none' }} />
-        <AlertDialog
-          title="You are deleting this image."
-          variant="destructive"
-          primaryActionLabel="Yes, I want to delete this image"
-          cancelLabel="Do not delete"
-          onPrimaryAction={handleDeleteConfirm}
-          onCancel={handleDeleteCancel}
-          isPrimaryActionDisabled={isDeleting}
+      {isDeleteDialogOpen && (
+        <DialogTrigger
+          isOpen
+          onOpenChange={(isOpen) => !isOpen && handleDeleteCancel()}
         >
-          Are you sure you want to do this? This cannot be undone.
-        </AlertDialog>
-      </DialogTrigger>
-    </View>
+          <div style={{ display: 'none' }} />
+          <AlertDialog
+            title="You are deleting this image."
+            variant="destructive"
+            primaryActionLabel="Yes, I want to delete this image"
+            cancelLabel="Do not delete"
+            onPrimaryAction={handleDeleteConfirm}
+            onCancel={handleDeleteCancel}
+            isPrimaryActionDisabled={isDeleting}
+          >
+            Are you sure you want to do this? This cannot be undone.
+          </AlertDialog>
+        </DialogTrigger>
+      )}
+    </div>
   )
 }
