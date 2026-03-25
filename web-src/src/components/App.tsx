@@ -4,7 +4,7 @@
 
 import React from 'react'
 import { Provider, defaultTheme, Grid, View } from '@adobe/react-spectrum'
-import ErrorBoundary from 'react-error-boundary'
+import { ErrorBoundary, FallbackProps } from 'react-error-boundary'
 import { HashRouter as Router, Routes, Route } from 'react-router-dom'
 import { TopNav } from './layout'
 import { ToastContainer } from './shared'
@@ -56,18 +56,19 @@ const AppContent: React.FC<{ runtime: Runtime }> = ({ runtime }) => {
   }, [runtime, updateFromShell])
 
   // error handler on UI rendering failure
-  const onError = (_e: Error, _componentStack: string) => {
+  const onError = (_e: unknown, _info: React.ErrorInfo) => {
     // Handle error
   }
 
   // component to show if UI fails rendering
-  const fallbackComponent = ({ componentStack, error }: { componentStack?: string; error?: Error }) => {
+  const fallbackComponent = ({ error }: FallbackProps) => {
+    const message = error instanceof Error ? error.message : String(error)
     return (
       <React.Fragment>
         <h1 style={{ textAlign: 'center', marginTop: '20px' }}>
           Something went wrong :(
         </h1>
-        <pre>{(componentStack || '') + '\n' + (error?.message || '')}</pre>
+        <pre>{message}</pre>
       </React.Fragment>
     )
   }
