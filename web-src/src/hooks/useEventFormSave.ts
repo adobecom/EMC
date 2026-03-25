@@ -259,7 +259,9 @@ export function useEventFormSave() {
     
     // Privacy mapping
     payload.isPrivate = mergedData.isPrivate ?? false
-    payload.inviteOnly = mergedData.inviteOnly ?? false
+    if (!eventId) {
+      payload.inviteOnly = mergedData.inviteOnly ?? false
+    }
 
     // Tags transformation (array of EventTag -> comma-separated CAAS IDs string)
     // Per OpenAPI TagIdList schema:
