@@ -39,6 +39,7 @@ import { IMS } from '../../types'
 import { useToast, useGroup } from '../../contexts'
 import { createShimmerStyle, COLORS } from '../../styles/designSystem'
 import { useSafeState, useRBACFilter } from '../../hooks'
+import { useHasPermission } from '../../hooks/useHasPermission'
 import { SpeakerFormDialog } from './SpeakerFormDialog'
 import { CascadeConfirmDialog, CascadeAction } from './CascadeConfirmDialog'
 import { SpeakerEventConnectionsDialog } from './SpeakerEventConnectionsDialog'
@@ -60,6 +61,8 @@ export const SpeakersDashboard: React.FC<SpeakersDashboardProps> = () => {
   const toast = useToast()
   const { groupVersion } = useGroup()
   const { filterSeries } = useRBACFilter()
+  const canWriteEvent = useHasPermission('event', 'write')
+  const canDeleteEvent = useHasPermission('event', 'delete')
   
   // ============================================================================
   // STATE
@@ -577,6 +580,9 @@ export const SpeakersDashboard: React.FC<SpeakersDashboardProps> = () => {
       render: (item) => {
         const eventCount = item.eventCount ?? 0
         
+        const hasAnyAction = canWriteEvent || canDeleteEvent || eventCount > 0
+        if (!hasAnyAction) return null
+
         return (
           <ActionMenu
             isQuiet
@@ -584,23 +590,27 @@ export const SpeakersDashboard: React.FC<SpeakersDashboardProps> = () => {
             onAction={(key) => handleMenuAction(key as string, item)}
             disabledKeys={eventCount === 0 ? ['view-connections'] : []}
           >
-            <MenuItem key="edit">
-              <Edit />
-              <Text>Edit Speaker</Text>
-            </MenuItem>
+            {canWriteEvent && (
+              <MenuItem key="edit">
+                <Edit />
+                <Text>Edit Speaker</Text>
+              </MenuItem>
+            )}
             <MenuItem key="view-connections">
               <Link />
               <Text>View Connections ({eventCount})</Text>
             </MenuItem>
-            <MenuItem key="delete">
-              <Delete />
-              <Text>Delete Speaker</Text>
-            </MenuItem>
+            {canDeleteEvent && (
+              <MenuItem key="delete">
+                <Delete />
+                <Text>Delete Speaker</Text>
+              </MenuItem>
+            )}
           </ActionMenu>
         )
       }
     }
-  ], [loadingEventCounts, handleMenuAction, handleViewConnections])
+  ], [loadingEventCounts, handleMenuAction, handleViewConnections, canWriteEvent, canDeleteEvent])
   
   // ============================================================================
   // RENDER
@@ -745,17 +755,20 @@ export const SpeakersDashboard: React.FC<SpeakersDashboardProps> = () => {
     </Well>
   ), [isLoadingSeries, selectedSeriesId, handleSeriesComboBoxChange, seriesList, filteredSeriesItems, selectedSeries, speakers.length])
   
-  // Custom create button
-  const createButton = useMemo(() => (
-    <Button
-      variant="accent"
-      onPress={handleCreateSpeaker}
-      isDisabled={!selectedSeriesId}
-    >
-      <Add />
-      <Text>Add Speaker</Text>
-    </Button>
-  ), [handleCreateSpeaker, selectedSeriesId])
+  // Custom create button — only shown when user has event:write
+  const createButton = useMemo(() => {
+    if (!canWriteEvent) return undefined
+    return (
+      <Button
+        variant="accent"
+        onPress={handleCreateSpeaker}
+        isDisabled={!selectedSeriesId}
+      >
+        <Add />
+        <Text>Add Speaker</Text>
+      </Button>
+    )
+  }, [canWriteEvent, handleCreateSpeaker, selectedSeriesId])
   
   return (
     <View>
