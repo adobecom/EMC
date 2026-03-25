@@ -24,7 +24,6 @@ import {
   Home,
   About,
   UserProfile,
-  CloudManagementConsole,
   SeriesDashboard,
   EventsDashboard,
   SeriesForm,
@@ -104,7 +103,6 @@ const AppContent: React.FC<{ runtime: Runtime }> = ({ runtime }) => {
                           <Route path='/' element={<Home />} />
                           <Route path='/overview' element={<OverviewDashboard ims={ims} />} />
                           <Route path='/profile' element={<UserProfile ims={ims} />} />
-                          <Route path='/clouds' element={<CloudManagementConsole ims={ims} />} />
                           <Route path='/series' element={<SeriesDashboard ims={ims} />} />
                           <Route path='/series/new' element={<SeriesForm ims={ims} />} />
                           <Route path='/series/edit/:id' element={<SeriesForm ims={ims} />} />

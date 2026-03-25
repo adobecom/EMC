@@ -9,7 +9,6 @@ import {
   Text
 } from '@react-spectrum/s2'
 import { style } from '@react-spectrum/s2/style' with { type: 'macro' }
-import Cloud from '@react-spectrum/s2/icons/Cloud'
 import Collection from '@react-spectrum/s2/icons/Collection'
 import CursorClick from '@react-spectrum/s2/icons/CursorClick'
 import UserGroup from '@react-spectrum/s2/icons/UserGroup'
@@ -77,15 +76,6 @@ const destinations: NavDestination[] = [
     description: 'Create and manage event series to group related events together.',
     color: '#2D9D92',
     permission: { resource: 'series', access: 'read' }
-  },
-  {
-    id: 'clouds',
-    path: '/clouds',
-    icon: <Cloud />,
-    title: 'Clouds',
-    description: 'Manage cloud configurations and settings for Creative Cloud and Experience Cloud events.',
-    color: '#E68619',
-    permission: { resource: 'cloud', access: 'read' }
   },
   {
     id: 'about',

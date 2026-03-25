@@ -20,11 +20,7 @@ import { getTimeZones } from '@vvo/tzdb'
 import InfoCircle from "@react-spectrum/s2/icons/InfoCircle"
 import { HeadingWithTooltip, RichTextEditor } from '../../components/shared'
 import { SPACING } from '../../styles/designSystem'
-import {
-  LANGUAGE_TO_LOCALE,
-  DEFAULT_LOCALE,
-  getLanguageKeyFromLocale,
-} from '../../config/localeMapping'
+import { cachedApi } from '../../services/api'
 import { useEventFormComponent } from '../../hooks/useEventFormComponent'
 
 /**
@@ -104,15 +100,15 @@ function getMinEndDateTime(startDateTimeStr: string): CalendarDateTime | undefin
   return addMinutes(startDt, 1)
 }
 
-const LANGUAGE_OPTIONS = [
-  { key: 'en', label: 'English' },
-  { key: 'es', label: 'Spanish' },
-  { key: 'fr', label: 'French' },
-  { key: 'de', label: 'German' },
-  { key: 'ja', label: 'Japanese' },
-  { key: 'ko', label: 'Korean' },
-  { key: 'pt', label: 'Portuguese' },
-  { key: 'zh', label: 'Chinese' }
+const FALLBACK_LOCALE_OPTIONS = [
+  { key: 'en-US', label: 'English (US)' },
+  { key: 'es-ES', label: 'Spanish' },
+  { key: 'fr-FR', label: 'French' },
+  { key: 'de-DE', label: 'German' },
+  { key: 'ja-JP', label: 'Japanese' },
+  { key: 'ko-KR', label: 'Korean' },
+  { key: 'pt-BR', label: 'Portuguese (Brazil)' },
+  { key: 'zh-CN', label: 'Chinese (Simplified)' },
 ]
 
 const TIMEZONE_OPTIONS = getTimeZones().map((tz) => ({
@@ -170,8 +166,23 @@ export const EventInfoComponent: React.FC = () => {
   // ============================================================================
   
   const [hasSecondaryLink, setHasSecondaryLink] = useState(false)
-  const [pendingLanguageKey, setPendingLanguageKey] = useState<string | null>(null)
+  const [pendingLocale, setPendingLocale] = useState<string | null>(null)
   const [urlValidationError, setUrlValidationError] = useState<string | null>(null)
+  const [localeOptions, setLocaleOptions] = useState<{ key: string; label: string }[]>(FALLBACK_LOCALE_OPTIONS)
+
+  useEffect(() => {
+    // getLocales returns `any` — the ESP /v1/locales response shape varies
+    // (localeNames object, locales array, or bare object) and has no typed interface
+    cachedApi.getLocales().then((result: Record<string, unknown>) => {
+      const localeMap = result?.localeNames ?? result?.locales ?? result
+      if (localeMap && typeof localeMap === 'object' && !Array.isArray(localeMap)) {
+        const options = Object.entries(localeMap as Record<string, string>).map(([key, label]) => ({ key, label }))
+        if (options.length > 0) setLocaleOptions(options)
+      }
+    }).catch(() => {
+      // fallback stays in place
+    })
+  }, [])
 
   useEffect(() => {
     if (communityForumUrl) {
@@ -211,25 +222,23 @@ export const EventInfoComponent: React.FC = () => {
 
   const handleLanguageChange = (key: React.Key | null) => {
     if (key == null) return
-    const languageKey = String(key)
-    const nextLocale = LANGUAGE_TO_LOCALE[languageKey] || DEFAULT_LOCALE
+    const nextLocale = String(key)
 
     if (nextLocale === locale) {
       return
     }
 
     if (isDirty) {
-      setPendingLanguageKey(languageKey)
+      setPendingLocale(nextLocale)
     } else {
       setLocaleAndRemapFormData(nextLocale)
     }
   }
 
   const handleConfirmLocaleSwitch = () => {
-    if (pendingLanguageKey) {
-      const nextLocale = LANGUAGE_TO_LOCALE[pendingLanguageKey] || DEFAULT_LOCALE
-      setLocaleAndRemapFormData(nextLocale)
-      setPendingLanguageKey(null)
+    if (pendingLocale) {
+      setLocaleAndRemapFormData(pendingLocale)
+      setPendingLocale(null)
     }
   }
 
@@ -288,17 +297,17 @@ export const EventInfoComponent: React.FC = () => {
       <Picker
         label="Language"
         isRequired
-        selectedKey={getLanguageKeyFromLocale(locale)}
+        selectedKey={locale || null}
         onSelectionChange={handleLanguageChange}
       >
-        {LANGUAGE_OPTIONS.map((lang) => (
-          <PickerItem key={lang.key} id={lang.key}>{lang.label}</PickerItem>
+        {localeOptions.map((opt) => (
+          <PickerItem key={opt.key} id={opt.key}>{opt.label}</PickerItem>
         ))}
       </Picker>
       {/* Locale switch confirmation when form has unsaved changes */}
       <DialogTrigger
-        isOpen={!!pendingLanguageKey}
-        onOpenChange={(isOpen) => !isOpen && setPendingLanguageKey(null)}
+        isOpen={!!pendingLocale}
+        onOpenChange={(isOpen) => !isOpen && setPendingLocale(null)}
       >
         <div style={{ display: 'none' }} />
         {(close) => (
