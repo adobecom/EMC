@@ -10,7 +10,6 @@ import {
   Heading,
   Text
 } from '@adobe/react-spectrum'
-import Cloud from '@spectrum-icons/workflow/Cloud'
 import Collection from '@spectrum-icons/workflow/Collection'
 import Events from '@spectrum-icons/workflow/Events'
 import UserGroup from '@spectrum-icons/workflow/UserGroup'
@@ -78,15 +77,6 @@ const destinations: NavDestination[] = [
     description: 'Create and manage event series to group related events together.',
     color: '#2D9D92',
     permission: { resource: 'series', access: 'read' }
-  },
-  {
-    id: 'clouds',
-    path: '/clouds',
-    icon: <Cloud size="XL" />,
-    title: 'Clouds',
-    description: 'Manage cloud configurations and settings for Creative Cloud and Experience Cloud events.',
-    color: '#E68619',
-    permission: { resource: 'cloud', access: 'read' }
   },
   {
     id: 'about',

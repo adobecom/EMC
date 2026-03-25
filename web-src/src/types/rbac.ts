@@ -33,8 +33,6 @@ export interface RBACContextValue {
   canAccessEvent: (event: { eventId?: string; seriesId?: string; cloudType?: string }) => boolean
   /** Check if user can access a specific series */
   canAccessSeries: (series: { seriesId?: string; cloudType?: string }) => boolean
-  /** Check if user can access a specific cloud */
-  canAccessCloud: (cloud: { cloudType?: string }) => boolean
   /** All users — only populated for admins */
   allUsers: RBACUser[]
   /** Refresh users list from GitHub (for admin UI) */

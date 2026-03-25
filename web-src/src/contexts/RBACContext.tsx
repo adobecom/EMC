@@ -111,16 +111,6 @@ export const RBACProvider: React.FC<RBACProviderProps> = ({ children }) => {
     [isAdmin, hasAccess, scope]
   )
 
-  const canAccessCloud = useCallback(
-    (cloud: { cloudType?: string }) => {
-      if (isAdmin) return true
-      if (!hasAccess) return false
-      if (cloud.cloudType && scope.cloudTypes.has(cloud.cloudType)) return true
-      return false
-    },
-    [isAdmin, hasAccess, scope]
-  )
-
   const allUsers = useMemo(
     () => (isAdmin ? users : []),
     [isAdmin, users]
@@ -159,7 +149,6 @@ export const RBACProvider: React.FC<RBACProviderProps> = ({ children }) => {
     scope,
     canAccessEvent,
     canAccessSeries,
-    canAccessCloud,
     allUsers,
     refreshUsers,
   }

@@ -30,13 +30,5 @@ export function useRBACFilter() {
     [permissions]
   )
 
-  const filterClouds = useCallback(
-    <T>(clouds: T[]): T[] => {
-      if (checkPermission(permissions, 'cloud', 'read')) return clouds
-      return []
-    },
-    [permissions]
-  )
-
-  return { filterEvents, filterSeries, filterClouds }
+  return { filterEvents, filterSeries }
 }

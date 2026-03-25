@@ -23,7 +23,6 @@ const TopNav: React.FC<TopNavProps> = ({ ims }) => {
   const { isLoading: isGroupLoading } = useGroup()
   const canReadEvents = useHasPermission('event', 'read')
   const canReadSeries = useHasPermission('series', 'read')
-  const canReadClouds = useHasPermission('cloud', 'read')
 
   // Hide all tabs until group/permissions are resolved
   const showNav = !isGroupLoading
@@ -118,14 +117,6 @@ const TopNav: React.FC<TopNavProps> = ({ ims }) => {
               to="/series"
             >
               Series
-            </NavLink>
-          )}
-          {canReadClouds && (
-            <NavLink
-              className={({ isActive }) => `nav-link ${isActive ? 'is-selected' : ''}`}
-              to="/clouds"
-            >
-              Clouds
             </NavLink>
           )}
           <NavLink

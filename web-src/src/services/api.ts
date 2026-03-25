@@ -1522,27 +1522,6 @@ class ApiService {
     )
   }
 
-  async getClouds(): Promise<any[] | ErrorResponse> {
-    return this.callExternalApi('esp', '/v1/clouds', 'GET', undefined,
-      { operationName: 'getClouds', transformResponse: (data) => data.clouds }
-    )
-  }
-
-  async getCloud(cloudType: string): Promise<any | ErrorResponse> {
-    validateString(cloudType, 'cloud ID')
-    return this.callExternalApi('esp', `/v1/clouds/${cloudType}`, 'GET', undefined,
-      { operationName: 'getCloud', shouldReturnFullResponse: true }
-    )
-  }
-
-  async updateCloud(cloudType: string, cloudData: any): Promise<any | ErrorResponse> {
-    validateString(cloudType, 'cloud Type')
-    validateObject(cloudData, 'cloud data')
-    return this.callExternalApi('esp', `/v1/clouds/${cloudType}`, 'PUT', cloudData,
-      { operationName: 'updateCloud', shouldReturnFullResponse: true }
-    )
-  }
-
   // ============================================================================
   // IMAGE APIs
   // ============================================================================
@@ -2259,8 +2238,6 @@ export const cachedApi = {
   },
 
   // === OTHER GET Operations (Cached) ===
-  getClouds: () => apiCache.get(() => apiService.getClouds()),
-  getCloud: (cloudType: string) => apiCache.get((ct: string) => apiService.getCloud(ct), cloudType),
   getLocales: () => apiCache.get(() => apiService.getLocales()),
   getPublishingProfiles: () => apiCache.get(() => apiService.getPublishingProfiles()),
   getPublishingProfile: (profileId: string) => apiCache.get((id: string) => apiService.getPublishingProfile(id), profileId),
@@ -2359,14 +2336,6 @@ export const cachedApi = {
     apiCache.invalidate(eventId)
     apiCache.invalidate('getEventAttendees')
     apiCache.invalidate('getAllEventAttendees')
-    return result
-  },
-
-  // Cloud Mutations
-  async updateCloud(cloudType: string, data: any) {
-    const result = await apiService.updateCloud(cloudType, data)
-    apiCache.invalidate(cloudType)
-    apiCache.invalidate('getClouds')
     return result
   },
 
