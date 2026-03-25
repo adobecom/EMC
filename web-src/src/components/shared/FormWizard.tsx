@@ -7,17 +7,18 @@ import {
   View,
   ProgressBar,
   Heading,
-  Text
+  ProgressCircle,
 } from '@adobe/react-spectrum'
-import { Button } from '@react-spectrum/s2'
-import { style } from '@react-spectrum/s2/style' with { type: 'macro' }
+import { Button, Text } from '@react-spectrum/s2'
+import { style, iconStyle } from '@react-spectrum/s2/style' with { type: 'macro' }
 import { useNavigate } from 'react-router-dom'
-import ChevronLeft from '@spectrum-icons/workflow/ChevronLeft'
-import ChevronRight from '@spectrum-icons/workflow/ChevronRight'
-import WebPage from '@spectrum-icons/workflow/WebPage'
-import Document from '@spectrum-icons/workflow/Document'
-import Checkmark from '@spectrum-icons/workflow/Checkmark'
-import LockClosed from '@spectrum-icons/workflow/LockClosed'
+import ChevronLeft from '@react-spectrum/s2/icons/ChevronLeft';
+import ChevronRight from '@react-spectrum/s2/icons/ChevronRight';
+import RocketQuickActions from '@react-spectrum/s2/icons/RocketQuickActions';
+import WebPage from '@react-spectrum/s2/icons/WebPage';
+import FileText from '@react-spectrum/s2/icons/FileText';
+import CheckmarkCircle from '@react-spectrum/s2/icons/CheckmarkCircle';
+import Lock from '@react-spectrum/s2/icons/Lock';
 import {
   SIDE_NAV_STICKY_STYLES,
   SCROLLABLE_CONTENT_STYLES,
@@ -254,7 +255,7 @@ export const FormWizard: React.FC<FormWizardProps> = ({
             }}
           >
             <div className={style({ display: 'flex', gap: 8, alignItems: 'center' })}>
-              <ChevronLeft size="S" />
+              <ChevronLeft styles={iconStyle({ color: 'gray'})} aria-hidden />
               <Text>Dashboard</Text>
             </div>
           </button>
@@ -279,7 +280,7 @@ export const FormWizard: React.FC<FormWizardProps> = ({
               }}
             >
               <div className={style({ display: 'flex', gap: 8, alignItems: 'center' })}>
-                <Document size="S" />
+                <FileText styles={iconStyle({ color: 'gray'})} aria-hidden />
                 <Text>Add Content</Text>
               </div>
             </button>
@@ -311,7 +312,8 @@ export const FormWizard: React.FC<FormWizardProps> = ({
                       opacity: isLocked ? 0.6 : 1,
                       transition: 'all 0.2s ease',
                       width: '100%',
-                      position: 'relative'
+                      position: 'relative',
+                      gap: 8,
                     }}
                     onMouseEnter={(e) => {
                       if (!isActive && !isDisabled) {
@@ -344,22 +346,18 @@ export const FormWizard: React.FC<FormWizardProps> = ({
                       transform: 'translateY(-50%)',
                       display: 'flex',
                       alignItems: 'center',
-                      justifyContent: 'center'
+                      justifyContent: 'center',
                     }}>
                       {isCompleted && (
-                        <Checkmark
-                          size="XS"
-                          UNSAFE_style={{ color: 'var(--spectrum-global-color-green-600)' }}
-                        />
+                        <CheckmarkCircle
+                          styles={iconStyle({ color: 'positive' })} aria-hidden />
                       )}
                       {isLocked && (
-                        <LockClosed
-                          size="XS"
-                          UNSAFE_style={{ color: COLORS.GRAY_600 }}
-                        />
+                        <Lock
+                          styles={iconStyle({ color: 'gray'})} aria-hidden />
                       )}
                     </span>
-                    {step.title}
+                    <Text>{step.title}</Text>
                   </button>
                 )
               })}
@@ -399,6 +397,13 @@ export const FormWizard: React.FC<FormWizardProps> = ({
   )
 
   const renderActionBar = () => {
+    const getNextButtonIcon = () => {
+      if (isLastStep) {
+        return <RocketQuickActions styles={iconStyle({ color: 'white'})} aria-hidden />
+      }
+      return <ChevronRight styles={iconStyle({ color: 'white'})} aria-hidden />
+    }
+
     const getNextButtonText = () => {
       if (isSubmitting) {
         return isLastStep ? 'Publishing...' : 'Saving...'
@@ -449,7 +454,7 @@ export const FormWizard: React.FC<FormWizardProps> = ({
                   onPress={() => handlePreviewClick('pre-event')}
                   isDisabled={isSubmitting || isNavigating}
                 >
-                  <WebPage size="S" />
+                  <WebPage />
                   <Text>Pre-event</Text>
                 </Button>
                 <Button
@@ -458,7 +463,7 @@ export const FormWizard: React.FC<FormWizardProps> = ({
                   onPress={() => handlePreviewClick('post-event')}
                   isDisabled={isSubmitting || isNavigating}
                 >
-                  <WebPage size="S" />
+                  <WebPage />
                   <Text>Post-event</Text>
                 </Button>
               </div>
@@ -496,10 +501,8 @@ export const FormWizard: React.FC<FormWizardProps> = ({
                 onPress={handleNext}
                 isDisabled={isActionDisabled}
               >
-                <div className={style({ display: 'flex', gap: 4, alignItems: 'center' })} style={{ flexDirection: 'row-reverse' }}>
-                  <Text>{getNextButtonText()}</Text>
-                  <ChevronRight size="S" />
-                </div>
+                <Text>{getNextButtonText()}</Text>
+                {getNextButtonIcon()}
               </Button>
             </div>
           </div>

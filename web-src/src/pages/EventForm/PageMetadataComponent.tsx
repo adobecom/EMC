@@ -253,7 +253,7 @@ export const PageMetadataComponent: React.FC = () => {
         <Heading level={3} UNSAFE_style={TYPOGRAPHY.COMPONENT_HEADING}>
           Page metadata management
         </Heading>
-        <Text UNSAFE_style={{ color: 'var(--spectrum-global-color-red-600)' }}>
+        <Text UNSAFE_style={{ color: '#D7373F' }}>
           {error}
         </Text>
       </div>

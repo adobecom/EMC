@@ -11,9 +11,9 @@ import {
   DialogTrigger
 } from '@adobe/react-spectrum'
 import { Text } from '@react-spectrum/s2'
-import { style } from '@react-spectrum/s2/style' with { type: 'macro' }
+import { style, iconStyle } from '@react-spectrum/s2/style' with { type: 'macro' }
 import Delete from '@spectrum-icons/workflow/Delete'
-import ImageAdd from '@spectrum-icons/workflow/ImageAdd'
+import ImageAdd from '@react-spectrum/s2/icons/ImageAdd';
 import { uploadImage, UploadTracker } from '../../services/requestHelpers'
 import { getCurrentEnvironment, getApiHost } from '../../config/constants'
 import { apiService } from '../../services/api'
@@ -347,7 +347,7 @@ export const ImageUploader: React.FC<ImageUploaderProps> = ({
       </Text>
 
       {description && (
-        <Text UNSAFE_style={{ fontSize: '14px', color: 'var(--spectrum-global-color-gray-700)', marginBottom: '8px', display: 'block' }}>
+        <Text UNSAFE_style={{ fontSize: '14px', color: '#4B4B4B', marginBottom: '8px', display: 'block' }}>
           {description}
         </Text>
       )}
@@ -430,10 +430,10 @@ export const ImageUploader: React.FC<ImageUploaderProps> = ({
           onClick={isUploading || isDisabled ? undefined : handleBrowseClick}
           style={{
             border: isDragging
-              ? '2px dashed var(--spectrum-global-color-blue-600)'
-              : '2px dotted var(--spectrum-global-color-gray-500)',
+              ? '2px dashed #1473E6'
+              : '2px dotted #909090',
             backgroundColor: isDragging
-              ? 'var(--spectrum-global-color-blue-100)'
+              ? '#E5F0FF'
               : 'transparent',
             cursor: isUploading || isDisabled ? 'default' : 'pointer',
             opacity: isDisabled ? 0.5 : 1,
@@ -453,20 +453,20 @@ export const ImageUploader: React.FC<ImageUploaderProps> = ({
             </div>
           ) : (
             <div className={style({ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12 })}>
-              <ImageAdd size="XXL" UNSAFE_style={{ color: 'var(--spectrum-global-color-gray-600)' }} />
-              <Text UNSAFE_style={{ fontSize: '14px', color: 'var(--spectrum-global-color-gray-700)' }}>
+              <ImageAdd styles={iconStyle({ color: 'gray'})} aria-hidden />
+              <Text UNSAFE_style={{ fontSize: '14px', color: '#4B4B4B' }}>
                 {dropzoneTitle || 'Drop image here or click to browse'}
               </Text>
               <div className={style({ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 })}>
                 {(dropzoneDimensions || recommendedDimensions) && (
-                  <Text UNSAFE_style={{ fontSize: '12px', color: 'var(--spectrum-global-color-gray-500)' }}>
+                  <Text UNSAFE_style={{ fontSize: '12px', color: '#909090' }}>
                     {dropzoneDimensions || recommendedDimensions}
                   </Text>
                 )}
-                <Text UNSAFE_style={{ fontSize: '12px', color: 'var(--spectrum-global-color-gray-500)' }}>
+                <Text UNSAFE_style={{ fontSize: '12px', color: '#909090' }}>
                   Supported formats: <strong>JPG, PNG, SVG</strong>
                 </Text>
-                <Text UNSAFE_style={{ fontSize: '12px', color: 'var(--spectrum-global-color-gray-500)' }}>
+                <Text UNSAFE_style={{ fontSize: '12px', color: '#909090' }}>
                   Max size: <strong>{maxSizeMB}</strong> MB
                 </Text>
               </div>
@@ -484,7 +484,7 @@ export const ImageUploader: React.FC<ImageUploaderProps> = ({
       )}
 
       {error && (
-        <Text UNSAFE_style={{ color: 'var(--spectrum-global-color-red-600)', marginTop: '8px', display: 'block' }}>
+        <Text UNSAFE_style={{ color: '#D7373F', marginTop: '8px', display: 'block' }}>
           {error}
         </Text>
       )}

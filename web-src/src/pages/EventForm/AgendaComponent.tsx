@@ -505,11 +505,11 @@ export const AgendaComponent: React.FC = () => {
               style={{
                 padding: '16px 20px',
                 border: isDragOver 
-                  ? '2px solid var(--spectrum-global-color-blue-500)' 
-                  : '1px solid var(--spectrum-global-color-gray-300)',
+                  ? '2px solid #1473E6' 
+                  : '1px solid #D3D3D3',
                 borderRadius: '8px',
                 backgroundColor: isDragging 
-                  ? 'var(--spectrum-global-color-gray-100)' 
+                  ? '#F5F5F5' 
                   : 'white',
                 opacity: isDragging ? 0.5 : 1,
                 cursor: 'default',
@@ -532,7 +532,7 @@ export const AgendaComponent: React.FC = () => {
                   {timeRange && (
                     <Text UNSAFE_style={{ 
                       fontSize: '13px', 
-                      color: 'var(--spectrum-global-color-gray-700)'
+                      color: '#4B4B4B'
                     }}>
                       {timeRange}
                     </Text>
@@ -541,7 +541,7 @@ export const AgendaComponent: React.FC = () => {
                   <Text UNSAFE_style={{ 
                     fontWeight: 'bold', 
                     fontSize: '16px',
-                    color: 'var(--spectrum-global-color-gray-900)'
+                    color: '#1B1B1B'
                   }}>
                     {item.title || 'Untitled'}
                   </Text>
@@ -549,7 +549,7 @@ export const AgendaComponent: React.FC = () => {
                   {truncatedDesc && (
                     <Text UNSAFE_style={{ 
                       fontSize: '14px', 
-                      color: 'var(--spectrum-global-color-gray-700)'
+                      color: '#4B4B4B'
                     }}>
                       {truncatedDesc}
                     </Text>
@@ -592,8 +592,8 @@ export const AgendaComponent: React.FC = () => {
             style={{
               padding: '20px',
               border: isDragOver 
-                ? '2px solid var(--spectrum-global-color-blue-500)' 
-                : '1px solid var(--spectrum-global-color-gray-400)',
+                ? '2px solid #1473E6' 
+                : '1px solid #B8B8B8',
               borderRadius: '8px',
               transition: 'border-color 0.2s'
             }}

@@ -881,7 +881,7 @@ const EventFormInner: React.FC<EventFormInnerProps> = ({ ims: _ims }) => {
   return (
     <View 
       UNSAFE_style={{
-        backgroundColor: 'var(--spectrum-global-color-gray-100)',
+        backgroundColor: '#F5F5F5',
       }}
     >
       <FormWizard

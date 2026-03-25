@@ -605,9 +605,9 @@ export const VenueComponent: React.FC = () => {
             fontSize: '14px',
             border: showVenueNameError
               ? `2px solid ${COLORS.ADOBE_RED}` 
-              : '1px solid var(--spectrum-global-color-gray-400)',
+              : '1px solid #B8B8B8',
             borderRadius: '4px',
-            backgroundColor: 'var(--spectrum-global-color-gray-50)',
+            backgroundColor: '#FFFFFF',
             color: COLORS.GRAY_800,
             fontFamily: 'adobe-clean, sans-serif',
             boxSizing: 'border-box'

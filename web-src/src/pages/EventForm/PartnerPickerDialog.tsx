@@ -4,17 +4,13 @@
 
 import React, { useState, useMemo, useCallback, useEffect } from 'react'
 import {
-  View,
-  ActionButton,
   ProgressCircle,
 } from '@adobe/react-spectrum'
-import { Button, Dialog, DialogContainer, TextField, Text, SearchField } from '@react-spectrum/s2'
+import { Button, Dialog, DialogContainer, TextField, Text, SearchField, Content, Heading } from '@react-spectrum/s2'
 import { style } from '@react-spectrum/s2/style' with { type: 'macro' }
-import Add from '@spectrum-icons/workflow/Add'
-import ArrowLeft from '@spectrum-icons/workflow/ArrowLeft'
+import Add from '@react-spectrum/s2/icons/Add'
 import { SeriesSponsor, SponsorData } from '../../types/domain'
 import { ImageUploader } from '../../components/shared'
-import { TYPOGRAPHY } from '../../styles/designSystem'
 import { apiService, cachedApi } from '../../services/api'
 import { uploadImage, UploadTracker } from '../../services/requestHelpers'
 import { getCurrentEnvironment, getApiHost } from '../../config/constants'
@@ -239,29 +235,17 @@ export const PartnerPickerDialog: React.FC<PartnerPickerDialogProps> = ({
     setView('select')
   }, [])
 
-  const renderSelectView = () => (
+  const renderSelectContent = () => (
     <>
-      <div className={style({display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16})}>
-        <div className={style({display: 'flex', alignItems: 'center', gap: 8})}>
-          <Text UNSAFE_style={TYPOGRAPHY.COMPONENT_HEADING}>Select Partner</Text>
-          {isLoadingSponsors && (
-            <ProgressCircle size="S" isIndeterminate aria-label="Loading partners" />
-          )}
-        </div>
-        <div className={style({display: 'flex', gap: 8, alignItems: 'center'})}>
-          <ActionButton onPress={handleSwitchToCreate} aria-label="Create new partner">
-            <Add />
-          </ActionButton>
-          <Button
-            variant="accent"
-            onPress={handleSelectConfirm}
-            isDisabled={!selectedSponsorId}
-          >
-            <Text>Select</Text>
-          </Button>
-        </div>
+      <div className={style({display: 'flex', justifyContent: 'end', gap: 8, marginBottom: 16, alignItems: 'center'})}>
+        <Button variant="secondary" onPress={handleSwitchToCreate} aria-label="Create new partner">
+          <Add />
+          <Text>New Partner</Text>
+        </Button>
+        <Button variant="accent" onPress={handleSelectConfirm} isDisabled={!selectedSponsorId}>
+          <Text>Select Partner</Text>
+        </Button>
       </div>
-
       <SearchField
         label="Search partners"
         value={searchQuery}
@@ -270,9 +254,9 @@ export const PartnerPickerDialog: React.FC<PartnerPickerDialogProps> = ({
       />
 
       {filteredSponsors.length === 0 ? (
-        <View padding="size-400" UNSAFE_style={{ textAlign: 'center' }}>
+        <div style={{ padding: 32, textAlign: 'center' }}>
           <Text>No partners available. Create a new one using the + button above.</Text>
-        </View>
+        </div>
       ) : (
         <div className={style({display: 'flex', flexDirection: 'column', gap: 8})}>
           {filteredSponsors.map((sponsor) => {
@@ -295,11 +279,11 @@ export const PartnerPickerDialog: React.FC<PartnerPickerDialogProps> = ({
                   padding: '12px',
                   borderRadius: '8px',
                   border: isSelected
-                    ? '2px solid var(--spectrum-global-color-blue-500)'
-                    : '1px solid var(--spectrum-global-color-gray-300)',
+                    ? '2px solid #1473E6'
+                    : '1px solid #D3D3D3',
                   backgroundColor: isSelected
-                    ? 'var(--spectrum-global-color-blue-100)'
-                    : 'var(--spectrum-global-color-gray-50)',
+                    ? '#E5F0FF'
+                    : '#FFFFFF',
                   cursor: 'pointer',
                   display: 'flex',
                   alignItems: 'center',
@@ -327,7 +311,7 @@ export const PartnerPickerDialog: React.FC<PartnerPickerDialogProps> = ({
                 <div style={{ display: 'flex', flexDirection: 'column', minWidth: 0 }}>
                   <span style={{ fontWeight: 600 }}>{sponsor.name}</span>
                   {(sponsor.externalUrl || sponsor.link) && (
-                    <span style={{ fontSize: '12px', color: 'var(--spectrum-global-color-gray-600)' }}>
+                    <span style={{ fontSize: '12px', color: '#6E6E6E' }}>
                       {sponsor.externalUrl || sponsor.link}
                     </span>
                   )}
@@ -340,20 +324,30 @@ export const PartnerPickerDialog: React.FC<PartnerPickerDialogProps> = ({
     </>
   )
 
-  const renderCreateView = () => (
+  const renderCreateContent = () => (
     <>
       <div className={style({display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16})}>
-        <div className={style({display: 'flex', alignItems: 'center', gap: 8})}>
-          <ActionButton onPress={handleBackToSelect} isQuiet aria-label="Back to search">
-            <ArrowLeft />
-          </ActionButton>
-          <Text UNSAFE_style={TYPOGRAPHY.COMPONENT_HEADING}>New Partner</Text>
-        </div>
+        <Button variant="secondary" onPress={handleBackToSelect} aria-label="Back to search">
+          <Text>Back</Text>
+        </Button>
+        <Button
+          variant="accent"
+          onPress={handleCreatePartner}
+          isDisabled={!isCreateFormValid || isCreating}
+        >
+          {isCreating ? (
+            <>
+              <ProgressCircle size="S" isIndeterminate aria-label="Creating" />
+              <Text>Creating...</Text>
+            </>
+          ) : (
+            <Text>Add Partner</Text>
+          )}
+        </Button>
       </div>
-
       <div className={style({display: 'flex', flexDirection: 'column', gap: 16})}>
         <div className={style({display: 'flex', gap: 32, alignItems: 'start'})}>
-          <View UNSAFE_style={{ textAlign: 'center' }}>
+          <div style={{ textAlign: 'center' }}>
             <ImageUploader
               label=""
               imageUrl={createForm.imageUrl || ''}
@@ -377,7 +371,7 @@ export const PartnerPickerDialog: React.FC<PartnerPickerDialogProps> = ({
                 updateCreateField('imageId', undefined)
               }}
             />
-          </View>
+          </div>
 
           <div className={style({display: 'flex', flexDirection: 'column', gap: 16, flexGrow: 1})}>
             <TextField
@@ -397,23 +391,6 @@ export const PartnerPickerDialog: React.FC<PartnerPickerDialogProps> = ({
             />
           </div>
         </div>
-
-        <div className={style({display: 'flex', justifyContent: 'end', marginTop: 16})}>
-          <Button
-            variant="accent"
-            onPress={handleCreatePartner}
-            isDisabled={!isCreateFormValid || isCreating}
-          >
-            {isCreating ? (
-              <>
-                <ProgressCircle size="S" isIndeterminate aria-label="Creating" />
-                <Text>Creating...</Text>
-              </>
-            ) : (
-              <Text>Add Partner</Text>
-            )}
-          </Button>
-        </div>
       </div>
     </>
   )
@@ -421,11 +398,18 @@ export const PartnerPickerDialog: React.FC<PartnerPickerDialogProps> = ({
   return (
     <DialogContainer onDismiss={onClose}>
       {isOpen && (
-        <Dialog size="L" isDismissible UNSAFE_style={{ maxHeight: '80vh' }}>
+        <Dialog isDismissible size="L">
           {() => (
-            <div style={{ overflow: 'auto' }}>
-              {view === 'select' ? renderSelectView() : renderCreateView()}
-            </div>
+            <>
+              <Heading slot="title">
+                {view === 'select' ? 'Select Partner' : 'New Partner'}
+              </Heading>
+              <Content>
+                <div style={{ overflow: 'auto', maxHeight: '60vh' }}>
+                  {view === 'select' ? renderSelectContent() : renderCreateContent()}
+                </div>
+              </Content>
+            </>
           )}
         </Dialog>
       )}

@@ -13,8 +13,8 @@ import { style } from '@react-spectrum/s2/style' with { type: 'macro' }
 import { SponsorData, SeriesSponsor, EventApiResponse, SponsorType } from '../../types/domain'
 import { ImageUploader } from '../../components/shared'
 import { TYPOGRAPHY, SPACING, COLORS } from '../../styles/designSystem'
-import Add from '@spectrum-icons/workflow/Add'
 import Edit from '@spectrum-icons/workflow/Edit'
+import Add from '@react-spectrum/s2/icons/Add'
 import { apiService, cachedApi } from '../../services/api'
 import RemoveCircle from '@spectrum-icons/workflow/RemoveCircle'
 import { useEventFormComponent } from '../../hooks/useEventFormComponent'
@@ -131,7 +131,7 @@ const PartnerDialog: React.FC<PartnerDialogProps> = ({
               <Content>
                 <div className={style({display: 'flex', gap: 32, alignItems: 'start'})}>
                   {/* Image Upload Section */}
-                  <View UNSAFE_style={{ textAlign: 'center' }}>
+                  <div style={{ textAlign: 'center' }}>
                     <ImageUploader
                       label=""
                       imageUrl={previewUrl || imageUrl}
@@ -151,7 +151,7 @@ const PartnerDialog: React.FC<PartnerDialogProps> = ({
                       }}
                       onRemove={handleImageRemove}
                     />
-                  </View>
+                  </div>
 
                   {/* Form Fields Section */}
                   <div className={style({display: 'flex', flexDirection: 'column', gap: 16, flexGrow: 1})}>
@@ -784,11 +784,11 @@ export const SponsorsComponent: React.FC = () => {
         <Button
           variant="secondary"
           onPress={() => setPickerOpen(true)}
-          styles={style({ width: 'full' })}
+          styles={style({ width: '[100%]' })}
           UNSAFE_style={{
-            backgroundColor: COLORS.GRAY_200,
+            backgroundColor: '#E1E1E1',
             border: 'none',
-            color: 'var(--spectrum-global-color-gray-800)',
+            color: '#2C2C2C',
             justifyContent: 'flex-start',
             paddingLeft: '16px',
           }}

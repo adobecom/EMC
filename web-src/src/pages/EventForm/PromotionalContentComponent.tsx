@@ -239,9 +239,9 @@ export const PromotionalContentComponent: React.FC = () => {
           padding="size-200" 
           backgroundColor="negative" 
           borderRadius="medium"
-          UNSAFE_style={{ backgroundColor: 'var(--spectrum-global-color-red-100)' }}
+          UNSAFE_style={{ backgroundColor: '#FFE5E5' }}
         >
-          <Text UNSAFE_style={{ color: 'var(--spectrum-global-color-red-700)' }}>
+          <Text UNSAFE_style={{ color: '#C9252D' }}>
             {loadError}
           </Text>
         </View>
@@ -288,7 +288,7 @@ export const PromotionalContentComponent: React.FC = () => {
                 borderRadius: '8px',
                 backgroundColor: promotionDetails?.thumbnail 
                   ? 'transparent' 
-                  : 'var(--spectrum-global-color-gray-200)',
+                  : '#E1E1E1',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',

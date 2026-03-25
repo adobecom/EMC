@@ -4,18 +4,14 @@
 
 import React, { useState, useMemo, useCallback, useEffect } from 'react'
 import {
-  View,
-  ActionButton,
   ProgressCircle,
-  Form,
 } from '@adobe/react-spectrum'
-import { Button, Dialog, DialogContainer, Heading, TextField, Text, SearchField } from '@react-spectrum/s2'
-import { style } from '@react-spectrum/s2/style' with { type: 'macro' }
-import Add from '@spectrum-icons/workflow/Add'
-import Alert from '@spectrum-icons/workflow/Alert'
-import ArrowLeft from '@spectrum-icons/workflow/ArrowLeft'
-import Delete from '@spectrum-icons/workflow/Delete'
-import LinkOut from '@spectrum-icons/workflow/LinkOut'
+import { Button, Dialog, DialogContainer, Heading, TextField, Text, SearchField, Content } from '@react-spectrum/s2'
+import { style, iconStyle } from '@react-spectrum/s2/style' with { type: 'macro' }
+import Add from '@react-spectrum/s2/icons/Add'
+import AlertTriangle from '@react-spectrum/s2/icons/AlertTriangle'
+import Delete from '@react-spectrum/s2/icons/Delete'
+import OpenIn from '@react-spectrum/s2/icons/OpenIn'
 import { SeriesSpeaker, SocialLinkFormData } from '../../types/domain'
 import { speakerHasLocalization } from '../../utils/eventFormMappers'
 import { RichTextEditor, ImageUploader } from '../../components/shared'
@@ -306,26 +302,17 @@ export const SpeakerPickerDialog: React.FC<SpeakerPickerDialogProps> = ({
     return speaker.localizations?.[locale]?.title || speaker.title || ''
   }
 
-  const renderSelectView = () => (
+  const renderSelectContent = () => (
     <>
-      <div className={style({display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16})}>
-        <Heading slot="title" level={3} UNSAFE_style={{ margin: 0, fontSize: '20px', fontWeight: 700 }}>
-          Select Speaker
-        </Heading>
-        <div className={style({display: 'flex', gap: 8, alignItems: 'center'})}>
-          <ActionButton onPress={handleSwitchToCreate} aria-label="Create new speaker">
-            <Add />
-          </ActionButton>
-          <Button
-            variant="accent"
-            onPress={handleSelectConfirm}
-            isDisabled={!selectedSpeakerId}
-          >
-            <Text>Select</Text>
-          </Button>
-        </div>
+      <div className={style({display: 'flex', justifyContent: 'end', gap: 8, marginBottom: 16})}>
+        <Button variant="secondary" onPress={handleSwitchToCreate} aria-label="Create new speaker">
+          <Add />
+          <Text>New Speaker</Text>
+        </Button>
+        <Button variant="accent" onPress={handleSelectConfirm} isDisabled={!selectedSpeakerId}>
+          <Text>Select Speaker</Text>
+        </Button>
       </div>
-
       <SearchField
         label="Search speakers"
         value={searchQuery}
@@ -334,13 +321,13 @@ export const SpeakerPickerDialog: React.FC<SpeakerPickerDialogProps> = ({
       />
 
       {filteredSpeakers.length === 0 ? (
-        <View padding="size-400" UNSAFE_style={{ textAlign: 'center' }}>
-          <Text UNSAFE_style={{ color: 'var(--spectrum-global-color-gray-600)' }}>
+        <div style={{ padding: '32px', textAlign: 'center' }}>
+          <Text UNSAFE_style={{ color: '#6E6E6E' }}>
             {searchQuery.trim()
               ? 'No speakers match your search. Try a different query or create a new speaker.'
               : 'No speakers available. Create a new speaker to get started.'}
           </Text>
-        </View>
+        </div>
       ) : (
         <div
           style={{
@@ -374,13 +361,13 @@ export const SpeakerPickerDialog: React.FC<SpeakerPickerDialogProps> = ({
                 style={{
                   padding: '16px 12px',
                   border: isSelected
-                    ? '2px solid var(--spectrum-global-color-blue-500)'
-                    : '1px solid var(--spectrum-global-color-gray-300)',
+                    ? '2px solid #1473E6'
+                    : '1px solid #D3D3D3',
                   borderRadius: '8px',
                   cursor: 'pointer',
                   backgroundColor: isSelected
-                    ? 'var(--spectrum-global-color-blue-100)'
-                    : 'var(--spectrum-global-color-gray-50)',
+                    ? '#E5F0FF'
+                    : '#FFFFFF',
                   display: 'flex',
                   flexDirection: 'column',
                   alignItems: 'center',
@@ -400,7 +387,7 @@ export const SpeakerPickerDialog: React.FC<SpeakerPickerDialogProps> = ({
                       height: '56px',
                       borderRadius: '50%',
                       objectFit: 'cover',
-                      border: '1px solid var(--spectrum-global-color-gray-300)',
+                      border: '1px solid #D3D3D3',
                     }}
                   />
                 ) : (
@@ -409,11 +396,11 @@ export const SpeakerPickerDialog: React.FC<SpeakerPickerDialogProps> = ({
                       width: '56px',
                       height: '56px',
                       borderRadius: '50%',
-                      backgroundColor: 'var(--spectrum-global-color-gray-300)',
+                      backgroundColor: '#D3D3D3',
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
-                      color: 'var(--spectrum-global-color-gray-600)',
+                      color: '#6E6E6E',
                       fontSize: '16px',
                       fontWeight: 'bold',
                     }}
@@ -438,14 +425,14 @@ export const SpeakerPickerDialog: React.FC<SpeakerPickerDialogProps> = ({
                         lineHeight: '16px',
                       }}
                     >
-                      <Alert size="S" UNSAFE_style={{ color: COLORS.ADOBE_RED, flexShrink: 0 }} aria-hidden />
+                      <AlertTriangle styles={iconStyle({ color: 'negative'})} aria-hidden />
                       <span>Missing title for {locale}</span>
                     </div>
                   ) : title ? (
                     <div
                       style={{
                         fontSize: '11px',
-                        color: 'var(--spectrum-global-color-gray-600)',
+                        color: '#6E6E6E',
                         lineHeight: '16px',
                         marginTop: '2px',
                         overflow: 'hidden',
@@ -466,18 +453,28 @@ export const SpeakerPickerDialog: React.FC<SpeakerPickerDialogProps> = ({
     </>
   )
 
-  const renderLocalizeView = () => {
+  const renderLocalizeContent = () => {
     if (!speakerToLocalize) return null
-    const displayName = `${speakerToLocalize.firstName} ${speakerToLocalize.lastName}`
     return (
       <>
-        <div className={style({display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16})}>
-          <ActionButton onPress={handleBackFromLocalize} isQuiet aria-label="Back to search">
-            <ArrowLeft />
-          </ActionButton>
-          <Heading slot="title" level={3} UNSAFE_style={{ margin: 0, fontSize: '20px', fontWeight: 700 }}>
-            Add {locale} content for {displayName}
-          </Heading>
+        <div className={style({display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16})}>
+          <Button variant="secondary" size="S" onPress={handleBackFromLocalize} aria-label="Back to search">
+            <Text>Back</Text>
+          </Button>
+          <Button
+            variant="accent"
+            onPress={handleSaveAndAddLocalization}
+            isDisabled={!localizeForm.title.trim() || isSavingLocalization}
+          >
+            {isSavingLocalization ? (
+              <>
+                <ProgressCircle size="S" isIndeterminate aria-label="Saving" />
+                <Text>Saving...</Text>
+              </>
+            ) : (
+              <Text>Save &amp; Add Speaker</Text>
+            )}
+          </Button>
         </div>
         {!localizeForm.title.trim() && (
           <div
@@ -506,7 +503,7 @@ export const SpeakerPickerDialog: React.FC<SpeakerPickerDialogProps> = ({
             </span>
           </div>
         )}
-        <Form>
+        <form>
           <div className={style({display: 'flex', flexDirection: 'column', gap: 24})}>
             <TextField
               label="Title / Role"
@@ -523,49 +520,29 @@ export const SpeakerPickerDialog: React.FC<SpeakerPickerDialogProps> = ({
               height="150px"
             />
             {!localizeForm.bio.trim() && (
-              <Text UNSAFE_style={{ fontSize: '12px', color: 'var(--spectrum-global-color-gray-600)', fontStyle: 'italic' }}>
+              <Text UNSAFE_style={{ fontSize: '12px', color: '#6E6E6E', fontStyle: 'italic' }}>
                 No bio has been added for this locale.
               </Text>
             )}
-            <div className={style({display: 'flex', gap: 12, justifyContent: 'end', marginTop: 16})}>
-              <Button
-                variant="accent"
-                onPress={handleSaveAndAddLocalization}
-                isDisabled={!localizeForm.title.trim() || isSavingLocalization}
-              >
-                {isSavingLocalization ? (
-                  <>
-                    <ProgressCircle size="S" isIndeterminate aria-label="Saving" />
-                    <Text>Saving...</Text>
-                  </>
-                ) : (
-                  <Text>Save &amp; Add Speaker</Text>
-                )}
-              </Button>
-            </div>
           </div>
-        </Form>
+        </form>
       </>
     )
   }
 
-  const renderCreateView = () => (
+  const renderCreateContent = () => (
     <>
-      <div className={style({display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16})}>
-        <ActionButton onPress={handleBackToSelect} isQuiet aria-label="Back to search">
-          <ArrowLeft />
-        </ActionButton>
-        <Heading slot="title" level={3} UNSAFE_style={{ margin: 0, fontSize: '20px', fontWeight: 700 }}>
-          New Speaker
-        </Heading>
-      </div>
-
-      <Form>
+    <div className={style({display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16})}>
+      <Button variant="secondary" size="S" onPress={handleBackToSelect} aria-label="Back to search">
+        <Text>Back</Text>
+      </Button>
+    </div>
+    <form>
         <div className={style({display: 'flex', flexDirection: 'column', gap: 24})}>
           <div className={style({display: 'flex', gap: 16, alignItems: 'end'})}>
             {/* Avatar placeholder */}
-            <View>
-              <View width="100%">
+            <div>
+              <div style={{ width: '100%' }}>
                 <ImageUploader
                   label="Photo"
                   imageUrl={createForm.imageUrl}
@@ -588,8 +565,8 @@ export const SpeakerPickerDialog: React.FC<SpeakerPickerDialogProps> = ({
                     updateCreateField('imageId', undefined)
                   }}
                 />
-              </View>
-            </View>
+              </div>
+            </div>
           </div>
 
           <div className={style({display: 'flex', gap: 16})}>
@@ -625,17 +602,17 @@ export const SpeakerPickerDialog: React.FC<SpeakerPickerDialogProps> = ({
           />
 
           {/* Social Links */}
-          <View>
+          <div>
             <div className={style({display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8})}>
               <Text UNSAFE_style={TYPOGRAPHY.FIELD_LABEL}>Social Media Links</Text>
-              <ActionButton onPress={handleAddSocialLink} isQuiet>
+              <Button variant="secondary" size="S" onPress={handleAddSocialLink}>
                 <Add />
                 <Text>Add Link</Text>
-              </ActionButton>
+              </Button>
             </div>
 
             {createForm.socialLinks.length === 0 ? (
-              <Text UNSAFE_style={{ fontSize: '14px', color: 'var(--spectrum-global-color-gray-600)', fontStyle: 'italic' }}>
+              <Text UNSAFE_style={{ fontSize: '14px', color: '#6E6E6E', fontStyle: 'italic' }}>
                 No social media links added yet.
               </Text>
             ) : (
@@ -646,8 +623,8 @@ export const SpeakerPickerDialog: React.FC<SpeakerPickerDialogProps> = ({
 
                   return (
                     <div key={index} className={style({display: 'flex', gap: 8, alignItems: 'center'})}>
-                      <View
-                        UNSAFE_style={{
+                      <div
+                        style={{
                           minWidth: '40px',
                           height: '40px',
                           display: 'flex',
@@ -655,15 +632,15 @@ export const SpeakerPickerDialog: React.FC<SpeakerPickerDialogProps> = ({
                           justifyContent: 'center',
                           backgroundColor: detectedPlatform
                             ? detectedPlatform.color
-                            : 'var(--spectrum-global-color-gray-400)',
+                            : '#B8B8B8',
                           color: 'white',
                           borderRadius: '4px',
                           fontSize: '16px',
                           fontWeight: 'bold',
                         }}
                       >
-                        {detectedPlatform ? detectedPlatform.icon : <LinkOut />}
-                      </View>
+                        {detectedPlatform ? detectedPlatform.icon : <OpenIn />}
+                      </div>
 
                       <TextField
                         placeholder="https://..."
@@ -673,49 +650,62 @@ export const SpeakerPickerDialog: React.FC<SpeakerPickerDialogProps> = ({
                         isInvalid={!!(socialLink.url && !valid)}
                       />
 
-                      <ActionButton onPress={() => handleRemoveSocialLink(index)} isQuiet>
+                      <Button variant="secondary" size="S" onPress={() => handleRemoveSocialLink(index)} aria-label="Remove link">
                         <Delete />
-                      </ActionButton>
+                      </Button>
                     </div>
                   )
                 })}
               </div>
             )}
-          </View>
-
-          <div className={style({display: 'flex', justifyContent: 'end', marginTop: 16})}>
-            <Button
-              variant="accent"
-              onPress={handleCreateSpeaker}
-              isDisabled={!isCreateFormValid || isCreating}
-            >
-              {isCreating ? (
-                <>
-                  <ProgressCircle size="S" isIndeterminate aria-label="Creating" />
-                  <Text>Creating...</Text>
-                </>
-              ) : (
-                <Text>Add Speaker</Text>
-              )}
-            </Button>
           </div>
+
         </div>
-      </Form>
+      </form>
+      <div className={style({display: 'flex', justifyContent: 'end', alignItems: 'center', marginTop: 16})}>
+        <Button
+          variant="accent"
+          onPress={handleCreateSpeaker}
+          isDisabled={!isCreateFormValid || isCreating}
+        >
+          {isCreating ? (
+            <>
+              <ProgressCircle size="S" isIndeterminate aria-label="Creating" />
+              <Text>Creating...</Text>
+            </>
+          ) : (
+            <Text>Add Speaker</Text>
+          )}
+        </Button>
+      </div>
     </>
   )
+
+  const speakerDisplayName = speakerToLocalize
+    ? `${speakerToLocalize.firstName} ${speakerToLocalize.lastName}`
+    : ''
 
   return (
     <DialogContainer onDismiss={onClose}>
       {isOpen && (
-        <Dialog size="L" isDismissible UNSAFE_style={{ maxHeight: '80vh' }}>
+        <Dialog size="L" isDismissible>
           {() => (
-            <div style={{ overflow: 'auto' }}>
-              {view === 'select'
-                ? renderSelectView()
-                : view === 'localize'
-                  ? renderLocalizeView()
-                  : renderCreateView()}
-            </div>
+            <>
+              <Heading slot="title">
+                {view === 'select' ? 'Select Speaker'
+                  : view === 'create' ? 'New Speaker'
+                  : `Add ${locale} content for ${speakerDisplayName}`}
+              </Heading>
+              <Content>
+                <div style={{ overflow: 'auto', maxHeight: '60vh' }}>
+                  {view === 'select'
+                    ? renderSelectContent()
+                    : view === 'localize'
+                      ? renderLocalizeContent()
+                      : renderCreateContent()}
+                </div>
+              </Content>
+            </>
           )}
         </Dialog>
       )}
