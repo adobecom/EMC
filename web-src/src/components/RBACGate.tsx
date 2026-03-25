@@ -13,18 +13,14 @@ import {
   Provider,
   defaultTheme,
   View,
-  Text,
-  Button,
-  Picker,
-  Item,
   Flex,
 } from '@adobe/react-spectrum'
+import { Text, Button, Picker, PickerItem } from '@react-spectrum/s2'
+import { style } from '@react-spectrum/s2/style' with { type: 'macro' }
 import { useGroup } from '../contexts/GroupContext'
 import { GateScreen } from './shared/GateScreen'
-import { GATE_BACKGROUND_IMAGES } from '../assets/gate-backgrounds'
 import { COLORS, TYPOGRAPHY, SPACING } from '../styles/designSystem'
-
-const GATE_BACKGROUND_FALLBACK = '#E8E8E8'
+const gateBg = new URL('../assets/gate-bg.png', import.meta.url).href
 
 interface RBACGateProps {
   children: ReactNode
@@ -38,28 +34,20 @@ const GroupSelectionScreen: React.FC = () => {
   const { groups, setActiveGroup } = useGroup()
   const [selectedId, setSelectedId] = useState<string | null>(null)
 
-  const [backgroundImage] = useState(() => {
-    if (GATE_BACKGROUND_IMAGES.length === 0) return null
-    return GATE_BACKGROUND_IMAGES[
-      Math.floor(Math.random() * GATE_BACKGROUND_IMAGES.length)
-    ]
-  })
-
-  // UNSAFE_style needed: fixed fullscreen overlay with background-image is not expressible via Spectrum props
+  // UNSAFE_style needed: fixed fullscreen overlay is not expressible via Spectrum props
   const outerStyle: React.CSSProperties = {
     position: 'fixed',
     top: 0,
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: GATE_BACKGROUND_FALLBACK,
+    backgroundImage: `url(${gateBg})`,
     backgroundSize: 'cover',
     backgroundPosition: 'center',
     display: 'flex',
     alignItems: 'center',
     textAlign: 'center',
-    justifyContent: 'center',
-    ...(backgroundImage && { backgroundImage: `url(${backgroundImage})` })
+    justifyContent: 'center'
   }
 
   return (
@@ -104,13 +92,13 @@ const GroupSelectionScreen: React.FC = () => {
             label="Group"
             selectedKey={selectedId}
             onSelectionChange={(key) => setSelectedId(key as string)}
-            width="100%"
+            styles={style({ width: '[100%]' })}
           >
             {groups.map(group => (
-              <Item key={group.groupId} textValue={group.name}>
+              <PickerItem key={group.groupId} id={group.groupId} textValue={group.name}>
                 <Text>{group.name}</Text>
                 <Text slot="description">{group.scopeName || ''}</Text>
-              </Item>
+              </PickerItem>
             ))}
           </Picker>
         </View>

@@ -1,4 +1,4 @@
-/* 
+/*
 * <license header>
 */
 
@@ -6,21 +6,26 @@ import React from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
   View,
-  Flex,
-  Text,
   Avatar,
   ActionButton,
+} from '@adobe/react-spectrum'
+import { style } from '@react-spectrum/s2/style' with { type: 'macro' }
+import {
   MenuTrigger,
   Menu,
-  Item,
-  Section
-} from '@adobe/react-spectrum'
-import UserIcon from '@spectrum-icons/workflow/User'
-import InfoIcon from '@spectrum-icons/workflow/Info'
-import LogOut from '@spectrum-icons/workflow/LogOut'
-import UserGroup from '@spectrum-icons/workflow/UserGroup'
-import LockClosed from '@spectrum-icons/workflow/LockClosed'
-import Checkmark from '@spectrum-icons/workflow/Checkmark'
+  MenuItem,
+  MenuSection,
+  Header,
+  Heading,
+  Text
+} from '@react-spectrum/s2'
+import User from "@react-spectrum/s2/icons/User"
+import InfoCircle from "@react-spectrum/s2/icons/InfoCircle"
+import Leave from "@react-spectrum/s2/icons/Leave"
+import UserGroup from "@react-spectrum/s2/icons/UserGroup"
+import UserSettings from "@react-spectrum/s2/icons/UserSettings"
+import UserLock from "@react-spectrum/s2/icons/UserLock"
+import Checkmark from "@react-spectrum/s2/icons/Checkmark"
 import { IMS } from '../../types'
 import { useAuth } from '../../contexts/AuthContext'
 import { useProfileAvatar } from '../../hooks/useProfileAvatar'
@@ -58,13 +63,9 @@ export const UserPanel: React.FC<UserPanelProps> = ({ ims, compact = false }) =>
     return name.substring(0, 2).toUpperCase()
   }
 
-  const handleViewProfile = () => {
-    navigate('/profile')
-  }
-
   const handleMenuAction = (key: React.Key) => {
     if (key === 'profile') {
-      handleViewProfile()
+      navigate('/profile')
     } else if (key === 'signout') {
       signOut()
     } else if (key === 'access') {
@@ -79,13 +80,13 @@ export const UserPanel: React.FC<UserPanelProps> = ({ ims, compact = false }) =>
   // If no IMS profile, show minimal panel
   if (!ims.profile) {
     return (
-      <View 
+      <View
         backgroundColor={compact ? 'transparent' : 'gray-100'}
         padding={compact ? 'size-100' : 'size-200'}
         borderRadius="medium"
         marginBottom={compact ? 'size-0' : 'size-300'}
       >
-        <Flex direction="row" alignItems="center" gap="size-150">
+        <div className={style({ display: 'flex', alignItems: 'center', gap: 12 })}>
           <View
             backgroundColor="blue-600"
             width="size-400"
@@ -96,13 +97,13 @@ export const UserPanel: React.FC<UserPanelProps> = ({ ims, compact = false }) =>
             <Text UNSAFE_className="user-initials-compact">GU</Text>
           </View>
           <Text UNSAFE_className="user-name">Guest User</Text>
-        </Flex>
+        </div>
       </View>
     )
   }
 
   return (
-    <View 
+    <View
       backgroundColor={compact ? 'transparent' : 'gray-100'}
       padding={compact ? 'size-100' : 'size-200'}
       borderRadius="medium"
@@ -110,11 +111,11 @@ export const UserPanel: React.FC<UserPanelProps> = ({ ims, compact = false }) =>
       UNSAFE_className={compact ? 'user-panel-compact' : ''}
     >
       <MenuTrigger>
-        <ActionButton 
-          isQuiet 
+        <ActionButton
+          isQuiet
           UNSAFE_className={compact ? 'user-panel-button-compact' : 'user-panel-button'}
         >
-          <Flex direction="row" alignItems="center" gap="size-150" width="100%">
+          <div className={style({ display: 'flex', alignItems: 'center', gap: 12, width: '[100%]' })}>
             {/* Avatar: image when available, else initials */}
             {avatarUrl ? (
               <Avatar
@@ -137,7 +138,7 @@ export const UserPanel: React.FC<UserPanelProps> = ({ ims, compact = false }) =>
             )}
 
             {/* User info - only show name in compact mode */}
-            <Flex direction="column" gap="size-25" flex UNSAFE_className="user-info-container">
+            <div className={`${style({ display: 'flex', flexDirection: 'column', gap: 2, flexGrow: 1 })} user-info-container`}>
               <Text UNSAFE_className="user-name">
                 {userName}
               </Text>
@@ -146,77 +147,82 @@ export const UserPanel: React.FC<UserPanelProps> = ({ ims, compact = false }) =>
                   {userEmail}
                 </Text>
               )}
-            </Flex>
-          </Flex>
+            </div>
+          </div>
         </ActionButton>
 
-        <Menu onAction={handleMenuAction}>
-          <Section>
-            <Item key="profile" textValue="View Profile">
-              <UserIcon />
-              <Text>View Profile</Text>
-            </Item>
-          </Section>
+        <Menu onAction={handleMenuAction} UNSAFE_style={{ minWidth: '240px' }}>
+          <MenuSection>
+            <MenuItem id="profile" textValue="View Profile">
+              <User />
+              <Text slot="label">View Profile</Text>
+            </MenuItem>
+          </MenuSection>
           {groups.length > 0 ? (
-            <Section title="Group">
+            <MenuSection>
+              <Header>
+                <Heading>Group</Heading>
+              </Header>
               {groups.map(group => (
-                <Item
+                <MenuItem
                   key={`group_${group.groupId}`}
+                  id={`group_${group.groupId}`}
                   textValue={group.name}
                 >
                   {activeGroup?.groupId === group.groupId ? <Checkmark /> : <UserGroup />}
-                  <Text>{group.name}</Text>
+                  <Text slot="label">{group.name}</Text>
                   {group.scopeName && <Text slot="description">{group.scopeName}</Text>}
-                </Item>
+                </MenuItem>
               ))}
-            </Section>
+            </MenuSection>
           ) : null}
           {showAdminSection ? (
-            <Section title="Administration">
+            <MenuSection>
+              <Header>
+                <Heading>Administration</Heading>
+              </Header>
               {canManageAccess ? (
-                <Item key="access" textValue="Access Management">
-                  <UserGroup />
-                  <Text>Access Management</Text>
-                </Item>
+                <MenuItem id="access" textValue="Access Management">
+                  <UserSettings />
+                  <Text slot="label">Access Management</Text>
+                </MenuItem>
               ) : null}
               {canManageRoles ? (
-                <Item key="roles" textValue="Roles">
-                  <LockClosed />
-                  <Text>Roles</Text>
-                </Item>
+                <MenuItem id="roles" textValue="Roles">
+                  <UserLock />
+                  <Text slot="label">Roles</Text>
+                </MenuItem>
               ) : null}
-            </Section>
+            </MenuSection>
           ) : null}
-          {/* Sign Out is only meaningful in standalone mode; in ExC Shell the shell handles it */}
           {authMode === 'standalone' ? (
-            <Section>
-              <Item key="signout" textValue="Sign Out">
-                <LogOut />
-                <Text>Sign Out</Text>
-              </Item>
-            </Section>
+            <MenuSection>
+              <MenuItem id="signout" textValue="Sign Out">
+                <Leave />
+                <Text slot="label">Sign Out</Text>
+              </MenuItem>
+            </MenuSection>
           ) : (
-            // Empty section to satisfy Menu children type - ExC Shell manages sign-out
-            <Section aria-label="shell-mode">
-              <Item key="shell-info" textValue="Managed by Experience Cloud">
-                <InfoIcon />
-                <Text>Sign out via Experience Cloud</Text>
-              </Item>
-            </Section>
-          ) as any}
+            <MenuSection aria-label="shell-mode">
+              <MenuItem id="shell-info" textValue="Managed by Experience Cloud">
+                <InfoCircle />
+                <Text slot="label">Sign out via Experience Cloud</Text>
+              </MenuItem>
+            </MenuSection>
+          )}
         </Menu>
       </MenuTrigger>
 
       {/* Organization indicator - only show in full mode */}
       {!compact && ims.org && (
-        <Flex direction="row" alignItems="center" gap="size-100" marginTop="size-150">
+        <div className={style({ display: 'flex', alignItems: 'center', gap: 8 })} style={{ marginTop: 'var(--spectrum-global-dimension-size-150)' }}>
           <Text UNSAFE_className="org-label">
             ORG:
           </Text>
           <Text UNSAFE_className="org-value">
             {ims.org}
           </Text>
-        </Flex>
+        </div>
       )}
     </View>
   )

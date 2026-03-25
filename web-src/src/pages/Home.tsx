@@ -1,22 +1,21 @@
-/* 
+/*
 * <license header>
 */
 
 import React from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
-  View,
-  Flex,
   Heading,
   Text
-} from '@adobe/react-spectrum'
-import Cloud from '@spectrum-icons/workflow/Cloud'
-import Collection from '@spectrum-icons/workflow/Collection'
-import Events from '@spectrum-icons/workflow/Events'
-import UserGroup from '@spectrum-icons/workflow/UserGroup'
-import Stage from '@spectrum-icons/workflow/Stage'
-import Info from '@spectrum-icons/workflow/Info'
-import GraphBarVertical from '@spectrum-icons/workflow/GraphBarVertical'
+} from '@react-spectrum/s2'
+import { style } from '@react-spectrum/s2/style' with { type: 'macro' }
+import Cloud from '@react-spectrum/s2/icons/Cloud'
+import Collection from '@react-spectrum/s2/icons/Collection'
+import CursorClick from '@react-spectrum/s2/icons/CursorClick'
+import UserGroup from '@react-spectrum/s2/icons/UserGroup'
+import Slideshow from '@react-spectrum/s2/icons/Slideshow'
+import InfoCircle from '@react-spectrum/s2/icons/InfoCircle'
+import ChartBarVert from '@react-spectrum/s2/icons/ChartBarVert'
 import { SPACING, COLORS } from '../styles/designSystem'
 import { checkPermission } from '../hooks/useHasPermission'
 import { useGroup } from '../contexts/GroupContext'
@@ -38,7 +37,7 @@ const destinations: NavDestination[] = [
   {
     id: 'overview',
     path: '/overview',
-    icon: <GraphBarVertical size="XL" />,
+    icon: <ChartBarVert />,
     title: 'Overview',
     description: 'View comprehensive statistics, metrics, and insights across all events and series.',
     color: '#0D66D0'
@@ -46,7 +45,7 @@ const destinations: NavDestination[] = [
   {
     id: 'events',
     path: '/events',
-    icon: <Events size="XL" />,
+    icon: <CursorClick />,
     title: 'Events',
     description: 'Create, edit, and publish events with full configuration options.',
     color: COLORS.ADOBE_RED,
@@ -55,7 +54,7 @@ const destinations: NavDestination[] = [
   {
     id: 'registrations',
     path: '/registrations',
-    icon: <UserGroup size="XL" />,
+    icon: <UserGroup />,
     title: 'Registrations',
     description: 'View and manage event registrations, campaigns, and track RSVPs.',
     color: '#268E6C',
@@ -64,7 +63,7 @@ const destinations: NavDestination[] = [
   {
     id: 'speakers',
     path: '/speakers',
-    icon: <Stage size="XL" />,
+    icon: <Slideshow />,
     title: 'Speakers',
     description: 'Manage speakers at the series level and assign them to events.',
     color: '#CD3ACE',
@@ -73,7 +72,7 @@ const destinations: NavDestination[] = [
   {
     id: 'series',
     path: '/series',
-    icon: <Collection size="XL" />,
+    icon: <Collection />,
     title: 'Series',
     description: 'Create and manage event series to group related events together.',
     color: '#2D9D92',
@@ -82,7 +81,7 @@ const destinations: NavDestination[] = [
   {
     id: 'clouds',
     path: '/clouds',
-    icon: <Cloud size="XL" />,
+    icon: <Cloud />,
     title: 'Clouds',
     description: 'Manage cloud configurations and settings for Creative Cloud and Experience Cloud events.',
     color: '#E68619',
@@ -91,7 +90,7 @@ const destinations: NavDestination[] = [
   {
     id: 'about',
     path: '/about',
-    icon: <Info size="XL" />,
+    icon: <InfoCircle />,
     title: 'Documentation',
     description: 'Access comprehensive documentation, guides, and API references.',
     color: '#6E6E6E'
@@ -109,20 +108,19 @@ interface NavCardProps {
 const NavCard: React.FC<NavCardProps> = ({ destination, onClick }) => {
   const color = destination.color || COLORS.ADOBE_RED
   return (
-    <View
-      backgroundColor="gray-50"
-      borderWidth="thin"
-      borderColor="gray-200"
-      borderRadius="medium"
-      padding="size-300"
-      UNSAFE_style={{
+    <div
+      style={{
+        backgroundColor: 'var(--spectrum-gray-75)',
+        border: '1px solid var(--spectrum-gray-200)',
+        borderRadius: '8px',
+        padding: '24px',
         cursor: 'pointer',
         transition: 'all 0.2s ease',
         minHeight: '160px',
         position: 'relative',
         overflow: 'hidden'
       }}
-      UNSAFE_className="nav-card"
+      className="nav-card"
     >
       <div onClick={onClick} style={{ height: '100%' }}>
         <div
@@ -135,34 +133,32 @@ const NavCard: React.FC<NavCardProps> = ({ destination, onClick }) => {
             backgroundColor: color
           }}
         />
-        <Flex direction="column" gap="size-200" height="100%">
+        <div className={style({ display: 'flex', flexDirection: 'column', gap: 16 })}
+          style={{ height: '100%' }}
+        >
           {/* Icon */}
-          <View
-            UNSAFE_style={{
-              color: 'var(--spectrum-global-color-gray-700)'
-            }}
-          >
+          <div style={{ color: 'var(--spectrum-gray-700)' }}>
             {destination.icon}
-          </View>
-          
+          </div>
+
           {/* Title */}
-          <Heading level={3} marginTop="size-0" marginBottom="size-0">
+          <Heading level={3}>
             {destination.title}
           </Heading>
-          
+
           {/* Description */}
           <Text
             UNSAFE_style={{
-              color: 'var(--spectrum-global-color-gray-700)',
+              color: 'var(--spectrum-gray-700)',
               fontSize: '14px',
               lineHeight: '1.5'
             }}
           >
             {destination.description}
           </Text>
-        </Flex>
+        </div>
       </div>
-    </View>
+    </div>
   )
 }
 
@@ -178,24 +174,24 @@ export const Home: React.FC = () => {
   )
 
   return (
-    <View padding="size-400" maxWidth="1400px" marginX="auto">
-      <Flex direction="column" gap="size-400">
+    <div style={{ padding: '32px', maxWidth: '1400px', marginLeft: 'auto', marginRight: 'auto' }}>
+      <div className={style({ display: 'flex', flexDirection: 'column', gap: 32 })}>
         {/* Header */}
-        <View>
-          <Heading level={1} marginBottom="size-50">Event Management Cloud</Heading>
+        <div>
+          <Heading level={1}>Event Management Cloud</Heading>
           <Text
             UNSAFE_style={{
-              color: 'var(--spectrum-global-color-gray-700)',
+              color: 'var(--spectrum-gray-700)',
               fontSize: '14px'
             }}
           >
             Adobe Experience Cloud application for managing events, series, and attendees.
           </Text>
-        </View>
+        </div>
 
         {/* Navigation Cards Grid */}
-        <View
-          UNSAFE_style={{
+        <div
+          style={{
             display: 'grid',
             gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))',
             gap: `${SPACING.MD}px`
@@ -208,9 +204,9 @@ export const Home: React.FC = () => {
               onClick={() => navigate(dest.path)}
             />
           ))}
-        </View>
-      </Flex>
-    </View>
+        </div>
+      </div>
+    </div>
   )
 }
 

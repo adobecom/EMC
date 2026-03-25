@@ -5,26 +5,21 @@
 import React, { useState, useEffect } from 'react'
 import {
   View,
-  TextField,
-  TextArea,
-  Picker,
-  Item,
-  DatePicker,
-  Flex,
-  Text,
   Switch,
   TooltipTrigger,
   Tooltip,
-  ActionButton,
-  ComboBox,
   DialogTrigger,
-  AlertDialog
+  AlertDialog,
 } from '@adobe/react-spectrum'
+import { ComboBox, ComboBoxItem, TextField, TextArea, Picker, PickerItem, Text, DatePicker } from "@react-spectrum/s2"
+import { ActionButton } from "@react-spectrum/s2"
+// S2 style macro for type-safe Spectrum token styling
+import {style} from '@react-spectrum/s2/style' with {type: 'macro'}
 import { parseDateTime, CalendarDateTime } from '@internationalized/date'
 import { getTimeZones } from '@vvo/tzdb'
-import Info from '@spectrum-icons/workflow/Info'
+import InfoCircle from "@react-spectrum/s2/icons/InfoCircle"
 import { HeadingWithTooltip, RichTextEditor } from '../../components/shared'
-import { FLEX_GAP, SPACING } from '../../styles/designSystem'
+import { SPACING } from '../../styles/designSystem'
 import {
   LANGUAGE_TO_LOCALE,
   DEFAULT_LOCALE,
@@ -243,9 +238,9 @@ export const EventInfoComponent: React.FC = () => {
   // ============================================================================
 
   return (
-    <Flex direction="column" gap={FLEX_GAP.SECTION}>
+    <div className={style({display: 'flex', flexDirection: 'column', gap: 24})}>
       {/* Header Row */}
-      <Flex direction="row" justifyContent="space-between" alignItems="center">
+      <div className={style({display: 'flex', justifyContent: 'space-between', alignItems: 'center'})}>
         <HeadingWithTooltip 
           level={3}
           tooltip="Give your event a title, description, dates, and start/end times. If you have a related forum on community.adobe.com, create a CTA to it here."
@@ -254,7 +249,7 @@ export const EventInfoComponent: React.FC = () => {
         </HeadingWithTooltip>
         
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: SPACING.XS }}>
-          <Flex direction="row" alignItems="center" gap="size-100">
+          <div className={style({display: 'flex', alignItems: 'center', gap: 8})}>
             <Switch
               isSelected={isPrivate}
               onChange={(value) => updateFormData({ isPrivate: value })}
@@ -262,21 +257,15 @@ export const EventInfoComponent: React.FC = () => {
               Set as a private event
             </Switch>
             <TooltipTrigger delay={0}>
-              <ActionButton 
+              <ActionButton
                 isQuiet
-                UNSAFE_style={{ 
-                  minWidth: 'auto',
-                  padding: 0,
-                  width: '20px',
-                  height: '20px'
-                }}
               >
-                <Info size="S" />
+                <InfoCircle />
               </ActionButton>
               <Tooltip variant="info">By setting this to private, your event won't be publicly found online or published to the events hub.</Tooltip>
             </TooltipTrigger>
-          </Flex>
-          <Flex direction="row" alignItems="center" gap="size-100">
+          </div>
+          <div className={style({display: 'flex', alignItems: 'center', gap: 8})}>
             <Switch
               isSelected={inviteOnly}
               onChange={(value) => updateFormData({ inviteOnly: value })}
@@ -285,23 +274,16 @@ export const EventInfoComponent: React.FC = () => {
               Invite only
             </Switch>
             <TooltipTrigger delay={0}>
-              <ActionButton 
+              <ActionButton
                 isQuiet
-                UNSAFE_style={{ 
-                  minWidth: 'auto',
-                  padding: 0,
-                  width: '20px',
-                  height: '20px'
-                }}
               >
-                <Info size="S" />
+                <InfoCircle />
               </ActionButton>
               <Tooltip variant="info">If set to true, users can only RSVP with a campaign link.</Tooltip>
             </TooltipTrigger>
-          </Flex>
+          </div>
         </div>
-      </Flex>
-
+      </div>
       {/* Form Fields */}
       <Picker
         label="Language"
@@ -310,10 +292,9 @@ export const EventInfoComponent: React.FC = () => {
         onSelectionChange={handleLanguageChange}
       >
         {LANGUAGE_OPTIONS.map((lang) => (
-          <Item key={lang.key}>{lang.label}</Item>
+          <PickerItem key={lang.key} id={lang.key}>{lang.label}</PickerItem>
         ))}
       </Picker>
-
       {/* Locale switch confirmation when form has unsaved changes */}
       <DialogTrigger
         isOpen={!!pendingLanguageKey}
@@ -336,7 +317,6 @@ export const EventInfoComponent: React.FC = () => {
           </AlertDialog>
         )}
       </DialogTrigger>
-
       <TextField
         label="Event Title"
         isRequired
@@ -344,35 +324,27 @@ export const EventInfoComponent: React.FC = () => {
         value={name}
         onChange={handleNameChange}
         description="80 characters max"
-        width="100%"
+        styles={style({ width: '[100%]' })}
       />
-
       <View width="100%">
-        <Flex direction="row" gap="size-100" alignItems="center" marginBottom="size-100">
+        <div className={style({display: 'flex', gap: 8, alignItems: 'center', marginBottom: 8})}>
           <Text>English title for page URL</Text>
           <TooltipTrigger delay={0}>
-            <ActionButton 
-              isQuiet 
-              UNSAFE_style={{ 
-                minWidth: 'auto',
-                padding: 0,
-                width: '20px',
-                height: '20px'
-              }}
+            <ActionButton
+              isQuiet
             >
-              <Info size="S" />
+              <InfoCircle />
             </ActionButton>
             <Tooltip variant="info">SEO friendly title</Tooltip>
           </TooltipTrigger>
-        </Flex>
+        </div>
         <TextField
           aria-label="English title for page URL"
           value={enTitle || ''}
           onChange={(value) => updateFormData({ enTitle: value })}
-          width="100%"
+          styles={style({ width: '[100%]' })}
         />
       </View>
-
       <View width="100%">
         <HeadingWithTooltip 
           level={4}
@@ -388,7 +360,6 @@ export const EventInfoComponent: React.FC = () => {
           height="400px"
         />
       </View>
-
       <TextArea
         label="Event Description for Events Hub and SEO"
         isRequired
@@ -396,10 +367,9 @@ export const EventInfoComponent: React.FC = () => {
         value={shortDescription || ''}
         onChange={(value) => updateFormData({ shortDescription: value })}
         description="160 characters max"
-        width="100%"
+        styles={style({ width: '[100%]' })}
       />
-
-      <Flex direction="row" gap="size-200" wrap>
+      <div className={style({display: 'flex', gap: 16, flexWrap: 'wrap'})}>
         <DatePicker
           label="Start Date & Time"
           isRequired
@@ -424,13 +394,12 @@ export const EventInfoComponent: React.FC = () => {
           selectedKey={timezone || null}
           onSelectionChange={(key) => updateFormData({ timezone: key ? String(key) : '' })}
           description="Search and select a timezone"
-          width="size-6000"
-          menuWidth="size-6000"
+          styles={style({ width: 480 })}
+          menuWidth={480}
         >
-          {(item) => <Item key={item.id}>{item.name}</Item>}
+          {(item) => <ComboBoxItem id={item.id}>{item.name}</ComboBoxItem>}
         </ComboBox>
-      </Flex>
-
+      </div>
       <View UNSAFE_style={{ display: 'inline-block' }}>
         <Switch
           isSelected={hasSecondaryLink}
@@ -439,7 +408,6 @@ export const EventInfoComponent: React.FC = () => {
           Add secondary link
         </Switch>
       </View>
-
       {hasSecondaryLink && (
         <>
           <TextField
@@ -447,7 +415,7 @@ export const EventInfoComponent: React.FC = () => {
             value={secondaryLinkTitle || ''}
             onChange={(value) => updateFormData({ secondaryLinkTitle: value })}
             description="Display text for the secondary link"
-            width="100%"
+            styles={style({ width: '[100%]' })}
           />
 
           <TextField
@@ -462,13 +430,13 @@ export const EventInfoComponent: React.FC = () => {
                 setUrlValidationError(null)
               }
             }}
-            validationState={urlValidationError ? 'invalid' : undefined}
-            errorMessage={urlValidationError}
+            isInvalid={!!urlValidationError}
+            errorMessage={urlValidationError || undefined}
             description={urlValidationError ? undefined : 'URL for the secondary link'}
-            width="100%"
+            styles={style({ width: '[100%]' })}
           />
         </>
       )}
-    </Flex>
+    </div>
   )
 }

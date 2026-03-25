@@ -1,22 +1,20 @@
-/* 
+/*
 * <license header>
 */
 
 import React from 'react'
 import {
-  View,
   Heading,
-  Flex,
   Text,
   Content,
   IllustratedMessage,
-  Divider,
-  Well
-} from '@adobe/react-spectrum'
-import User from '@spectrum-icons/workflow/User'
-import Building from '@spectrum-icons/workflow/Building'
-import Key from '@spectrum-icons/workflow/Key'
-import Box from '@spectrum-icons/workflow/Box'
+  Divider
+} from '@react-spectrum/s2'
+import { style } from '@react-spectrum/s2/style' with { type: 'macro' }
+import User from '@react-spectrum/s2/icons/User'
+import Building from '@react-spectrum/s2/icons/Building'
+import Key from '@react-spectrum/s2/icons/Key'
+import UserIcon from '@react-spectrum/s2/icons/User'
 import { IMS } from '../types'
 import { COLORS, TYPOGRAPHY } from '../styles/designSystem'
 import { useProfileAvatar } from '../hooks/useProfileAvatar'
@@ -35,26 +33,28 @@ interface InfoItemProps {
 }
 
 const InfoItem: React.FC<InfoItemProps> = ({ label, value, isMonospace = false }) => (
-  <View
-    backgroundColor="gray-50"
-    padding="size-150"
-    borderRadius="regular"
+  <div
+    style={{
+      backgroundColor: 'var(--spectrum-gray-75)',
+      padding: '12px',
+      borderRadius: '4px'
+    }}
   >
-    <Flex direction="column" gap="size-50">
-      <Text 
-        UNSAFE_style={{ 
-          fontSize: '11px', 
+    <div className={style({ display: 'flex', flexDirection: 'column', gap: 4 })}>
+      <Text
+        UNSAFE_style={{
+          fontSize: '11px',
           fontWeight: 600,
-          color: 'var(--spectrum-global-color-gray-600)',
+          color: 'var(--spectrum-gray-600)',
           textTransform: 'uppercase',
           letterSpacing: '0.5px'
         }}
       >
         {label}
       </Text>
-      <Text 
-        UNSAFE_style={{ 
-          fontWeight: 500, 
+      <Text
+        UNSAFE_style={{
+          fontWeight: 500,
           fontSize: '14px',
           fontFamily: isMonospace ? 'monospace' : 'inherit',
           wordBreak: 'break-all'
@@ -62,8 +62,8 @@ const InfoItem: React.FC<InfoItemProps> = ({ label, value, isMonospace = false }
       >
         {value}
       </Text>
-    </Flex>
-  </View>
+    </div>
+  </div>
 )
 
 /**
@@ -77,20 +77,23 @@ interface SectionCardProps {
 }
 
 const SectionCard: React.FC<SectionCardProps> = ({ icon, title, description, children }) => (
-  <View
-    backgroundColor="gray-50"
-    borderWidth="thin"
-    borderColor="gray-200"
-    borderRadius="medium"
-    padding="size-300"
-    marginBottom="size-300"
+  <div
+    style={{
+      backgroundColor: 'var(--spectrum-gray-75)',
+      border: '1px solid var(--spectrum-gray-200)',
+      borderRadius: '8px',
+      padding: '24px',
+      marginBottom: '24px'
+    }}
   >
-    <Flex direction="row" alignItems="center" gap="size-150" marginBottom="size-200">
-      <View UNSAFE_style={{ color: COLORS.GRAY_700 }}>
+    <div className={style({ display: 'flex', flexDirection: 'row', alignItems: 'center', gap: 12 })}
+      style={{ marginBottom: '16px' }}
+    >
+      <div style={{ color: COLORS.GRAY_700 }}>
         {icon}
-      </View>
-      <Flex direction="column" gap="size-0">
-        <Heading level={3} margin="size-0">
+      </div>
+      <div className={style({ display: 'flex', flexDirection: 'column', gap: 0 })}>
+        <Heading level={3}>
           {title}
         </Heading>
         {description && (
@@ -98,11 +101,12 @@ const SectionCard: React.FC<SectionCardProps> = ({ icon, title, description, chi
             {description}
           </Text>
         )}
-      </Flex>
-    </Flex>
-    <Divider marginBottom="size-200" />
+      </div>
+    </div>
+    <Divider />
+    <div style={{ marginBottom: '16px' }} />
     {children}
-  </View>
+  </div>
 )
 
 /**
@@ -121,26 +125,28 @@ interface RoleData {
 }
 
 const RoleItem: React.FC<{ role: RoleData; index: number }> = ({ role, index }) => (
-  <View
-    backgroundColor="gray-75"
-    borderRadius="regular"
-    padding="size-200"
-    UNSAFE_style={{
-      borderLeft: '3px solid var(--spectrum-global-color-blue-400)'
+  <div
+    style={{
+      backgroundColor: 'var(--spectrum-gray-75)',
+      borderRadius: '4px',
+      padding: '16px',
+      borderLeft: '3px solid var(--spectrum-blue-400)'
     }}
   >
-    <Flex direction="column" gap="size-100">
-      <Flex direction="row" alignItems="center" justifyContent="space-between" wrap="wrap" gap="size-100">
+    <div className={style({ display: 'flex', flexDirection: 'column', gap: 8 })}>
+      <div className={style({ display: 'flex', flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' })}
+        style={{ flexWrap: 'wrap', gap: '8px' }}
+      >
         <Text UNSAFE_style={{ fontWeight: 600 }}>
           {role.named_role || `Role ${index + 1}`}
         </Text>
         {role.target_type && (
-          <Text 
-            UNSAFE_style={{ 
-              fontSize: '11px', 
-              color: 'var(--spectrum-global-color-blue-600)',
+          <Text
+            UNSAFE_style={{
+              fontSize: '11px',
+              color: 'var(--spectrum-blue-600)',
               fontFamily: 'monospace',
-              backgroundColor: 'var(--spectrum-global-color-blue-100)',
+              backgroundColor: 'var(--spectrum-blue-100)',
               padding: '2px 8px',
               borderRadius: '4px'
             }}
@@ -148,20 +154,20 @@ const RoleItem: React.FC<{ role: RoleData; index: number }> = ({ role, index }) 
             {role.target_type}
           </Text>
         )}
-      </Flex>
+      </div>
       {role.target_data?.group_name && (
-        <Text 
-          UNSAFE_style={{ 
-            fontSize: '13px', 
-            color: 'var(--spectrum-global-color-gray-700)',
+        <Text
+          UNSAFE_style={{
+            fontSize: '13px',
+            color: 'var(--spectrum-gray-700)',
             lineHeight: '1.5'
           }}
         >
           Group: {role.target_data.group_name}
         </Text>
       )}
-    </Flex>
-  </View>
+    </div>
+  </div>
 )
 
 /**
@@ -184,30 +190,32 @@ const ProductContextItem: React.FC<{ context: ProductContext; index: number }> =
   if (!ctx) return null
 
   return (
-    <View
-      backgroundColor="gray-75"
-      borderRadius="regular"
-      padding="size-200"
-      UNSAFE_style={{
-        borderLeft: `3px solid ${ctx.statusCode === 'ACTIVE' ? 'var(--spectrum-global-color-green-500)' : 'var(--spectrum-global-color-gray-400)'}`
+    <div
+      style={{
+        backgroundColor: 'var(--spectrum-gray-75)',
+        borderRadius: '4px',
+        padding: '16px',
+        borderLeft: `3px solid ${ctx.statusCode === 'ACTIVE' ? 'var(--spectrum-green-500)' : 'var(--spectrum-gray-400)'}`
       }}
     >
-      <Flex direction="column" gap="size-100">
-        <Flex direction="row" alignItems="center" justifyContent="space-between" wrap="wrap" gap="size-100">
+      <div className={style({ display: 'flex', flexDirection: 'column', gap: 8 })}>
+        <div className={style({ display: 'flex', flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' })}
+          style={{ flexWrap: 'wrap', gap: '8px' }}
+        >
           <Text UNSAFE_style={{ fontWeight: 600 }}>
             {ctx.label || ctx.serviceCode || `Product ${index + 1}`}
           </Text>
           {ctx.statusCode && (
-            <Text 
-              UNSAFE_style={{ 
-                fontSize: '11px', 
-                color: ctx.statusCode === 'ACTIVE' 
-                  ? 'var(--spectrum-global-color-green-700)' 
-                  : 'var(--spectrum-global-color-gray-600)',
+            <Text
+              UNSAFE_style={{
+                fontSize: '11px',
+                color: ctx.statusCode === 'ACTIVE'
+                  ? 'var(--spectrum-green-700)'
+                  : 'var(--spectrum-gray-600)',
                 fontFamily: 'monospace',
                 backgroundColor: ctx.statusCode === 'ACTIVE'
-                  ? 'var(--spectrum-global-color-green-100)'
-                  : 'var(--spectrum-global-color-gray-200)',
+                  ? 'var(--spectrum-green-100)'
+                  : 'var(--spectrum-gray-200)',
                 padding: '2px 8px',
                 borderRadius: '4px'
               }}
@@ -215,13 +223,15 @@ const ProductContextItem: React.FC<{ context: ProductContext; index: number }> =
               {ctx.statusCode}
             </Text>
           )}
-        </Flex>
-        <Flex direction="row" gap="size-200" wrap="wrap">
+        </div>
+        <div className={style({ display: 'flex', flexDirection: 'row', gap: 16 })}
+          style={{ flexWrap: 'wrap' }}
+        >
           {ctx.serviceCode && (
-            <Text 
-              UNSAFE_style={{ 
-                fontSize: '12px', 
-                color: 'var(--spectrum-global-color-gray-600)',
+            <Text
+              UNSAFE_style={{
+                fontSize: '12px',
+                color: 'var(--spectrum-gray-600)',
                 fontFamily: 'monospace'
               }}
             >
@@ -229,18 +239,18 @@ const ProductContextItem: React.FC<{ context: ProductContext; index: number }> =
             </Text>
           )}
           {ctx.serviceLevel && (
-            <Text UNSAFE_style={{ fontSize: '12px', color: 'var(--spectrum-global-color-gray-600)' }}>
+            <Text UNSAFE_style={{ fontSize: '12px', color: 'var(--spectrum-gray-600)' }}>
               Level: {ctx.serviceLevel}
             </Text>
           )}
           {ctx.geo && (
-            <Text UNSAFE_style={{ fontSize: '12px', color: 'var(--spectrum-global-color-gray-600)' }}>
+            <Text UNSAFE_style={{ fontSize: '12px', color: 'var(--spectrum-gray-600)' }}>
               Region: {ctx.geo}
             </Text>
           )}
-        </Flex>
-      </Flex>
-    </View>
+        </div>
+      </div>
+    </div>
   )
 }
 
@@ -248,16 +258,17 @@ const ProductContextItem: React.FC<{ context: ProductContext; index: number }> =
  * Tag badge component
  */
 const TagBadge: React.FC<{ tag: string }> = ({ tag }) => (
-  <View
-    backgroundColor="gray-200"
-    borderRadius="regular"
-    paddingX="size-100"
-    paddingY="size-50"
+  <div
+    style={{
+      backgroundColor: 'var(--spectrum-gray-200)',
+      borderRadius: '4px',
+      padding: '4px 8px'
+    }}
   >
     <Text UNSAFE_style={{ fontSize: '12px', fontWeight: 500 }}>
       {tag}
     </Text>
-  </View>
+  </div>
 )
 
 /**
@@ -279,13 +290,13 @@ export const UserProfile: React.FC<UserProfileProps> = ({ ims }) => {
 
   if (!ims.profile) {
     return (
-      <View padding="size-400" maxWidth="900px" marginX="auto">
+      <div style={{ padding: '32px', maxWidth: '900px', marginLeft: 'auto', marginRight: 'auto' }}>
         <IllustratedMessage>
-          <User size="XXL" />
+          <User />
           <Heading>No User Profile</Heading>
           <Content>User profile information is not available.</Content>
         </IllustratedMessage>
-      </View>
+      </div>
     )
   }
 
@@ -317,32 +328,35 @@ export const UserProfile: React.FC<UserProfileProps> = ({ ims }) => {
     }))
 
   return (
-    <View padding="size-400" maxWidth="900px" marginX="auto">
+    <div style={{ padding: '32px', maxWidth: '900px', marginLeft: 'auto', marginRight: 'auto' }}>
       {/* Header */}
-      <View marginBottom="size-400">
+      <div style={{ marginBottom: '32px' }}>
         <Heading level={1}>User Profile</Heading>
         <Text
           UNSAFE_style={{
-            color: 'var(--spectrum-global-color-gray-700)',
+            color: 'var(--spectrum-gray-700)',
             fontSize: '16px'
           }}
         >
           Your Adobe Identity Management System (IMS) profile information.
         </Text>
-      </View>
+      </div>
 
       {/* Profile Header Card with Avatar */}
-      <View
-        backgroundColor="gray-50"
-        borderWidth="thin"
-        borderColor="gray-200"
-        borderRadius="medium"
-        padding="size-400"
-        marginBottom="size-300"
+      <div
+        style={{
+          backgroundColor: 'var(--spectrum-gray-75)',
+          border: '1px solid var(--spectrum-gray-200)',
+          borderRadius: '8px',
+          padding: '32px',
+          marginBottom: '24px'
+        }}
       >
-        <Flex direction="row" alignItems="center" gap="size-300" wrap="wrap">
+        <div className={style({ display: 'flex', flexDirection: 'row', alignItems: 'center', gap: 24 })}
+          style={{ flexWrap: 'wrap' }}
+        >
           {/* Avatar */}
-          <View>
+          <div>
             {avatarUrl ? (
               <img
                 src={avatarUrl}
@@ -352,48 +366,50 @@ export const UserProfile: React.FC<UserProfileProps> = ({ ims }) => {
                   height: '80px',
                   borderRadius: '50%',
                   objectFit: 'cover',
-                  border: '3px solid var(--spectrum-global-color-gray-300)'
+                  border: '3px solid var(--spectrum-gray-300)'
                 }}
               />
             ) : (
-              <View
-                width="size-1000"
-                height="size-1000"
-                backgroundColor="gray-300"
-                UNSAFE_style={{
+              <div
+                style={{
+                  width: '80px',
+                  height: '80px',
+                  backgroundColor: 'var(--spectrum-gray-300)',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
                   borderRadius: '50%'
                 }}
               >
-                <User size="XL" />
-              </View>
+                <User />
+              </div>
             )}
-          </View>
+          </div>
 
           {/* Basic Info */}
-          <Flex direction="column" gap="size-50" flex>
-            <Heading level={2} margin="size-0">
+          <div className={style({ display: 'flex', flexDirection: 'column', gap: 4 })}
+            style={{ flex: 1 }}
+          >
+            <Heading level={2}>
               {profile.displayName || profile.name || 'Unknown User'}
             </Heading>
             {profile.email && (
-              <Text UNSAFE_style={{ fontSize: '16px', color: 'var(--spectrum-global-color-gray-700)' }}>
+              <Text UNSAFE_style={{ fontSize: '16px', color: 'var(--spectrum-gray-700)' }}>
                 {profile.email}
               </Text>
             )}
             {(profile.first_name || profile.last_name) && profile.displayName !== `${profile.first_name} ${profile.last_name}` && (
-              <Text UNSAFE_style={{ fontSize: '14px', color: 'var(--spectrum-global-color-gray-600)' }}>
+              <Text UNSAFE_style={{ fontSize: '14px', color: 'var(--spectrum-gray-600)' }}>
                 {profile.first_name} {profile.last_name}
               </Text>
             )}
             {profile.account_type && (
-              <Text 
-                UNSAFE_style={{ 
-                  fontSize: '12px', 
-                  color: 'var(--spectrum-global-color-gray-600)',
+              <Text
+                UNSAFE_style={{
+                  fontSize: '12px',
+                  color: 'var(--spectrum-gray-600)',
                   fontFamily: 'monospace',
-                  backgroundColor: 'var(--spectrum-global-color-gray-200)',
+                  backgroundColor: 'var(--spectrum-gray-200)',
                   padding: '2px 8px',
                   borderRadius: '4px',
                   width: 'fit-content'
@@ -402,18 +418,18 @@ export const UserProfile: React.FC<UserProfileProps> = ({ ims }) => {
                 {profile.account_type}
               </Text>
             )}
-          </Flex>
-        </Flex>
-      </View>
+          </div>
+        </div>
+      </div>
 
       {/* Organization & Authentication Section */}
       <SectionCard
-        icon={<Building size="S" />}
+        icon={<Building />}
         title="Organization & Authentication"
         description="Your organization and authentication details"
       >
-        <View
-          UNSAFE_style={{
+        <div
+          style={{
             display: 'grid',
             gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
             gap: '12px'
@@ -434,67 +450,69 @@ export const UserProfile: React.FC<UserProfileProps> = ({ ims }) => {
           {profile.countryCode && (
             <InfoItem label="Country Code" value={String(profile.countryCode)} />
           )}
-          <InfoItem 
-            label="Token Status" 
-            value={ims.token ? '✓ Active' : '✗ Not available'} 
+          <InfoItem
+            label="Token Status"
+            value={ims.token ? '✓ Active' : '✗ Not available'}
           />
-        </View>
+        </div>
       </SectionCard>
 
       {/* Tags Section */}
       {tags && tags.length > 0 && (
         <SectionCard
-          icon={<Key size="S" />}
+          icon={<Key />}
           title="Account Tags"
           description="Tags associated with your account"
         >
-          <Flex direction="row" gap="size-100" wrap="wrap">
+          <div className={style({ display: 'flex', flexDirection: 'row', gap: 8 })}
+            style={{ flexWrap: 'wrap' }}
+          >
             {tags.map((tag, index) => (
               <TagBadge key={index} tag={tag} />
             ))}
-          </Flex>
+          </div>
         </SectionCard>
       )}
 
       {/* Roles Section */}
       {roles && roles.length > 0 && (
         <SectionCard
-          icon={<User size="S" />}
+          icon={<User />}
           title="Assigned Roles"
           description={`${roles.length} role${roles.length === 1 ? '' : 's'} assigned to your account`}
         >
-          <Flex direction="column" gap="size-150">
+          <div className={style({ display: 'flex', flexDirection: 'column', gap: 12 })}>
             {roles.map((role, index) => (
               <RoleItem key={index} role={role} index={index} />
             ))}
-          </Flex>
+          </div>
         </SectionCard>
       )}
 
       {/* Product Context Section */}
       {projectedProductContext && projectedProductContext.length > 0 && (
         <SectionCard
-          icon={<Box size="S" />}
+          icon={<UserIcon />}
           title="Product Entitlements"
           description={`${projectedProductContext.length} product${projectedProductContext.length === 1 ? '' : 's'} available`}
         >
-          <Flex direction="column" gap="size-150">
+          <div className={style({ display: 'flex', flexDirection: 'column', gap: 12 })}>
             {projectedProductContext.map((context, index) => (
               <ProductContextItem key={index} context={context} index={index} />
             ))}
-          </Flex>
+          </div>
         </SectionCard>
       )}
 
       {/* Additional Fields Section */}
       {additionalFields.length > 0 && (
         <SectionCard
-          icon={<Key size="S" />}
+          icon={<Key />}
           title="Additional Information"
           description="Other profile attributes"
         >
-          <View
-            UNSAFE_style={{
+          <div
+            style={{
               display: 'grid',
               gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
               gap: '12px'
@@ -503,18 +521,26 @@ export const UserProfile: React.FC<UserProfileProps> = ({ ims }) => {
             {additionalFields.map((field, index) => (
               <InfoItem key={index} label={field.label} value={field.value} />
             ))}
-          </View>
+          </div>
         </SectionCard>
       )}
 
       {/* Footer Note */}
-      <Well marginTop="size-300">
-        <Flex direction="row" alignItems="start" gap="size-200">
-          <View UNSAFE_style={{ color: 'var(--spectrum-global-color-blue-600)', flexShrink: 0, marginTop: '2px' }}>
-            <Key size="S" />
-          </View>
-          <View>
-            <Heading level={4} marginTop="size-0" marginBottom="size-50">
+      <div
+        style={{
+          border: '1px solid var(--spectrum-gray-300)',
+          borderRadius: '4px',
+          padding: '16px',
+          backgroundColor: 'var(--spectrum-gray-75)',
+          marginTop: '24px'
+        }}
+      >
+        <div className={style({ display: 'flex', flexDirection: 'row', alignItems: 'start', gap: 16 })}>
+          <div style={{ color: 'var(--spectrum-blue-600)', flexShrink: 0, marginTop: '2px' }}>
+            <Key />
+          </div>
+          <div>
+            <Heading level={4}>
               Security Information
             </Heading>
             <Text UNSAFE_style={{ fontSize: '14px', lineHeight: '1.5' }}>
@@ -522,9 +548,9 @@ export const UserProfile: React.FC<UserProfileProps> = ({ ims }) => {
               Your authentication token is securely managed and automatically included in API requests.
               Sensitive information like full tokens and session data are not displayed.
             </Text>
-          </View>
-        </Flex>
-      </Well>
-    </View>
+          </div>
+        </div>
+      </div>
+    </div>
   )
 }

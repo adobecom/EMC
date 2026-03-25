@@ -3,11 +3,8 @@
 */
 
 import React, { useEffect } from 'react'
-import {
-  View,
-  Flex,
-  Text
-} from '@adobe/react-spectrum'
+import { Text } from '@react-spectrum/s2'
+import { style } from '@react-spectrum/s2/style' with { type: 'macro' }
 import type { EventApiResponse } from '../../types/domain'
 import type { AttendeeStats } from '../../types/attendee'
 import { COLORS } from '../../styles/designSystem'
@@ -121,13 +118,9 @@ export const EventInfoComponent: React.FC<EventInfoComponentProps> = ({
 
   if (!event) {
     return (
-      <View
-        backgroundColor="gray-100"
-        padding="size-300"
-        borderRadius="medium"
-      >
+      <div style={{ backgroundColor: 'var(--spectrum-gray-100)', padding: '24px', borderRadius: '8px' }}>
         <Text>Select an event to view details</Text>
-      </View>
+      </div>
     )
   }
 
@@ -139,22 +132,11 @@ export const EventInfoComponent: React.FC<EventInfoComponentProps> = ({
     : 'N/A'
 
   return (
-    <View
-      backgroundColor="gray-100"
-      padding="size-300"
-      borderRadius="medium"
-    >
-      <Flex direction="row" gap="size-400" alignItems="start">
+    <div style={{ backgroundColor: 'var(--spectrum-gray-100)', padding: '24px', borderRadius: '8px' }}>
+      <div className={style({ display: 'flex', flexDirection: 'row', gap: 32, alignItems: 'start' })}>
         {/* Event Image */}
         {imageUrl && (
-          <View
-            width="224px"
-            minWidth="224px"
-            UNSAFE_style={{
-              borderRadius: '8px',
-              overflow: 'hidden'
-            }}
-          >
+          <div style={{ width: '224px', minWidth: '224px', borderRadius: '8px', overflow: 'hidden' }}>
             <img
               src={imageUrl}
               alt={eventTitle}
@@ -165,51 +147,46 @@ export const EventInfoComponent: React.FC<EventInfoComponentProps> = ({
                 display: 'block'
               }}
             />
-          </View>
+          </div>
         )}
 
         {/* Event Info */}
-        <Flex direction="column" gap="size-200" flex={1}>
+        <div className={style({ display: 'flex', flexDirection: 'column', gap: 16, flex: 1 })}>
           {/* Metadata Row */}
-          <View
-            UNSAFE_style={{
-              borderBottom: `1px solid ${COLORS.GRAY_400}`,
-              paddingBottom: 'var(--spectrum-global-dimension-size-200)'
-            }}
-          >
-            <Flex direction="row" gap="size-600" wrap>
+          <div style={{ borderBottom: `1px solid ${COLORS.GRAY_400}`, paddingBottom: 'var(--spectrum-global-dimension-size-200)' }}>
+            <div className={style({ display: 'flex', flexDirection: 'row', gap: 48, flexWrap: 'wrap' })}>
               <InfoItem label="EVENT" value={eventTitle} />
               <InfoItem label="WHEN" value={formatEventDate(event)} />
               <InfoItem label="TYPE" value={getEventTypeDisplay(event)} />
-            </Flex>
-          </View>
+            </div>
+          </div>
 
           {/* Stats Row */}
-          <Flex direction="row" gap="size-600" alignItems="start" marginTop="size-100">
-            <StatItem 
-              label="RSVPs" 
-              value={stats.total.toString()} 
+          <div className={style({ display: 'flex', flexDirection: 'row', gap: 48, alignItems: 'start', marginTop: 8 })}>
+            <StatItem
+              label="RSVPs"
+              value={stats.total.toString()}
               subtext={capacityTotal > 0 ? rsvpPercentage : undefined}
             />
-            <StatItem 
-              label="Registered" 
-              value={stats.registered.toString()} 
+            <StatItem
+              label="Registered"
+              value={stats.registered.toString()}
               variant="secondary"
             />
-            <StatItem 
-              label="Waitlisted" 
-              value={stats.waitlisted.toString()} 
+            <StatItem
+              label="Waitlisted"
+              value={stats.waitlisted.toString()}
               variant="secondary"
             />
-            <StatItem 
-              label="Checked In" 
-              value={stats.checkedIn.toString()} 
+            <StatItem
+              label="Checked In"
+              value={stats.checkedIn.toString()}
               variant="secondary"
             />
-          </Flex>
-        </Flex>
-      </Flex>
-    </View>
+          </div>
+        </div>
+      </div>
+    </div>
   )
 }
 
@@ -217,43 +194,43 @@ export const EventInfoComponent: React.FC<EventInfoComponentProps> = ({
  * Info item component for metadata display
  */
 const InfoItem: React.FC<{ label: string; value: string }> = ({ label, value }) => (
-  <Flex direction="row" gap="size-100" alignItems="baseline">
-    <Text 
-      UNSAFE_style={{ 
-        fontWeight: 700, 
+  <div className={style({ display: 'flex', flexDirection: 'row', gap: 8, alignItems: 'baseline' })}>
+    <Text
+      UNSAFE_style={{
+        fontWeight: 700,
         fontSize: '12px',
-        color: COLORS.GRAY_600 
+        color: COLORS.GRAY_600
       }}
     >
       {label}:
     </Text>
     <Text UNSAFE_style={{ fontSize: '14px' }}>{value}</Text>
-  </Flex>
+  </div>
 )
 
 /**
  * Stat item component for statistics display
  */
-const StatItem: React.FC<{ 
+const StatItem: React.FC<{
   label: string
   value: string
   subtext?: string
   variant?: 'primary' | 'secondary'
 }> = ({ label, value, subtext, variant = 'primary' }) => (
-  <Flex direction="column" gap="size-50">
-    <Text 
-      UNSAFE_style={{ 
+  <div className={style({ display: 'flex', flexDirection: 'column', gap: 4 })}>
+    <Text
+      UNSAFE_style={{
         fontSize: '12px',
         fontWeight: 600,
-        color: COLORS.GRAY_600 
+        color: COLORS.GRAY_600
       }}
     >
       {label}
     </Text>
     {variant === 'primary' ? (
-      <Flex direction="column" gap="size-50">
-        <Text 
-          UNSAFE_style={{ 
+      <div className={style({ display: 'flex', flexDirection: 'column', gap: 4 })}>
+        <Text
+          UNSAFE_style={{
             fontSize: '48px',
             fontWeight: 700,
             lineHeight: '1',
@@ -267,10 +244,10 @@ const StatItem: React.FC<{
             {subtext}
           </Text>
         )}
-      </Flex>
+      </div>
     ) : (
-      <Text 
-        UNSAFE_style={{ 
+      <Text
+        UNSAFE_style={{
           fontSize: '20px',
           fontWeight: 700,
           color: COLORS.GRAY_800
@@ -279,7 +256,7 @@ const StatItem: React.FC<{
         {value}
       </Text>
     )}
-  </Flex>
+  </div>
 )
 
 export default EventInfoComponent

@@ -7,17 +7,8 @@
  */
 
 import React, { useState, useMemo, useCallback } from 'react'
-import {
-  Dialog,
-  Heading,
-  Divider,
-  Content,
-  ButtonGroup,
-  Button,
-  Checkbox,
-  Flex,
-  Text,
-} from '@adobe/react-spectrum'
+import { Button, ButtonGroup, Dialog, Content, Heading, Text, Checkbox, Divider } from '@react-spectrum/s2'
+import { style } from '@react-spectrum/s2/style' with { type: 'macro' }
 import type { Attendee, AttendeeColumnConfig } from '../../types/attendee'
 import type { Campaign } from '../../types/campaign'
 import { generateCsv, downloadCsv, CsvColumn } from '../../utils/csvExport'
@@ -93,47 +84,50 @@ export const ExportDialog: React.FC<ExportDialogProps> = ({
 
   return (
     <Dialog>
-      <Heading>Export Attendees to CSV</Heading>
-      <Divider />
-      <Content>
-        <Flex direction="column" gap="size-200">
-          <Text>Select columns to include in the export:</Text>
+      {() => (
+        <>
+          <Heading slot="title">Export Attendees to CSV</Heading>
+          <Content>
+            <div className={style({display: 'flex', flexDirection: 'column', gap: 16})}>
+              <Text>Select columns to include in the export:</Text>
 
-          <Checkbox
-            isSelected={allSelected}
-            onChange={toggleAll}
-            isIndeterminate={selectedColumns.size > 0 && !allSelected}
-          >
-            Select All
-          </Checkbox>
-
-          <Divider size="S" />
-
-          <Flex direction="column" gap="size-100" UNSAFE_style={{ maxHeight: 300, overflowY: 'auto' }}>
-            {columnConfig.map(col => (
               <Checkbox
-                key={col.key}
-                isSelected={selectedColumns.has(col.key)}
-                onChange={() => toggleColumn(col.key)}
+                isSelected={allSelected}
+                onChange={toggleAll}
+                isIndeterminate={selectedColumns.size > 0 && !allSelected}
               >
-                {col.label}
+                Select All
               </Checkbox>
-            ))}
-          </Flex>
-        </Flex>
-      </Content>
-      <ButtonGroup>
-        <Button variant="secondary" onPress={onClose}>
-          Cancel
-        </Button>
-        <Button
-          variant="accent"
-          onPress={handleExport}
-          isDisabled={selectedColumns.size === 0 || attendees.length === 0}
-        >
-          Export ({attendees.length} rows)
-        </Button>
-      </ButtonGroup>
+
+              <Divider size="S" />
+
+              <div className={style({display: 'flex', flexDirection: 'column', gap: 8})} style={{ maxHeight: 300, overflowY: 'auto' }}>
+                {columnConfig.map(col => (
+                  <Checkbox
+                    key={col.key}
+                    isSelected={selectedColumns.has(col.key)}
+                    onChange={() => toggleColumn(col.key)}
+                  >
+                    {col.label}
+                  </Checkbox>
+                ))}
+              </div>
+            </div>
+          </Content>
+          <ButtonGroup>
+            <Button variant="secondary" onPress={onClose}>
+              Cancel
+            </Button>
+            <Button
+              variant="accent"
+              onPress={handleExport}
+              isDisabled={selectedColumns.size === 0 || attendees.length === 0}
+            >
+              Export ({attendees.length} rows)
+            </Button>
+          </ButtonGroup>
+        </>
+      )}
     </Dialog>
   )
 }

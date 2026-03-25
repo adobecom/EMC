@@ -3,17 +3,11 @@
 */
 
 import React, { useEffect, useRef, useState, useCallback } from 'react'
-import {
-  View,
-  Flex,
-  Heading,
-  Text,
-  TextField,
-  ActionButton,
-  Switch
-} from '@adobe/react-spectrum'
-import Add from '@spectrum-icons/workflow/Add'
-import Remove from '@spectrum-icons/workflow/Remove'
+import { TextField, Text, Heading, ActionButton } from '@react-spectrum/s2'
+import { Switch } from '@adobe/react-spectrum'
+import { style } from "@react-spectrum/s2/style" with { type: "macro" }
+import Add from '@react-spectrum/s2/icons/Add'
+import Cancel from '@react-spectrum/s2/icons/Cancel'
 import { ImageUploader, RichTextEditor } from '../../components/shared'
 import { TYPOGRAPHY, COLORS } from '../../styles/designSystem'
 import { VenueData, EventApiResponse } from '../../types/domain'
@@ -555,7 +549,7 @@ export const VenueComponent: React.FC = () => {
   // ============================================================================
 
   return (
-    <Flex direction="column" gap="size-300">
+    <div className={style({display: 'flex', flexDirection: 'column', gap: 24})}>
       {/* Section Heading */}
       <Heading level={3} UNSAFE_style={TYPOGRAPHY.COMPONENT_HEADING}>
         Venue information<span style={{ color: COLORS.ADOBE_RED }}>*</span>
@@ -573,8 +567,8 @@ export const VenueComponent: React.FC = () => {
       </Switch>
 
       {/* Venue Name Field */}
-      <View width="100%">
-        <Flex justifyContent="space-between" alignItems="center" marginBottom="size-50">
+      <div style={{ width: '100%' }}>
+        <div className={style({display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4})}>
           <Text UNSAFE_style={{ 
             fontSize: '14px',
             color: COLORS.GRAY_700
@@ -587,8 +581,8 @@ export const VenueComponent: React.FC = () => {
           }}>
             {VENUE_NAME_MAX_LENGTH} characters max
           </Text>
-        </Flex>
-        
+        </div>
+
         <input
           id="venue-name-input"
           ref={venueNameInputRef}
@@ -606,9 +600,9 @@ export const VenueComponent: React.FC = () => {
             fontSize: '14px',
             border: showVenueNameError
               ? `2px solid ${COLORS.ADOBE_RED}` 
-              : '1px solid var(--spectrum-global-color-gray-400)',
+              : '1px solid #B8B8B8',
             borderRadius: '4px',
-            backgroundColor: 'var(--spectrum-global-color-gray-50)',
+            backgroundColor: '#FFFFFF',
             color: COLORS.GRAY_800,
             fontFamily: 'adobe-clean, sans-serif',
             boxSizing: 'border-box'
@@ -630,8 +624,8 @@ export const VenueComponent: React.FC = () => {
         )}
         
         {placesApiError && (
-          <Text UNSAFE_style={{ 
-            fontSize: '12px', 
+          <Text UNSAFE_style={{
+            fontSize: '12px',
             color: COLORS.ADOBE_RED,
             marginTop: '4px',
             display: 'block'
@@ -639,10 +633,10 @@ export const VenueComponent: React.FC = () => {
             {placesApiError}
           </Text>
         )}
-      </View>
+      </div>
 
       {/* Alternative Venue Name Toggle */}
-      <View>
+      <div>
         <ActionButton
           isQuiet
           onPress={handleAlternativeNameToggle}
@@ -652,7 +646,7 @@ export const VenueComponent: React.FC = () => {
             marginLeft: '-8px'
           }}
         >
-          {showAlternativeNameField ? <Remove size="S" /> : <Add size="S" />}
+          {showAlternativeNameField ? <Cancel /> : <Add />}
           <Text UNSAFE_style={{ marginLeft: '4px', color: COLORS.GRAY_800 }}>
             {showAlternativeNameField 
               ? 'Remove alternative venue name' 
@@ -661,30 +655,28 @@ export const VenueComponent: React.FC = () => {
         </ActionButton>
         
         {showAlternativeNameField && (
-          <View marginTop="size-200">
+          <div style={{ marginTop: '16px' }}>
             <TextField
               label="Alternative venue name"
-              width="100%"
+              styles={style({ width: '[100%]' })}
               value={alternativeVenueName}
               onChange={handleAlternativeNameChange}
               maxLength={VENUE_NAME_MAX_LENGTH}
               description="This name will be displayed instead of the Google Places name"
             />
-          </View>
+          </div>
         )}
-      </View>
+      </div>
 
       {/* Venue Image Section */}
-      <View marginTop="size-200">
+      <div className={style({display: 'flex', flexDirection: 'column', gap: 16})}>
         <Heading level={4} UNSAFE_style={TYPOGRAPHY.SUBSECTION_HEADING}>
           Venue image or map
         </Heading>
-        
+
         <Switch
           isSelected={venue.showVenueImagePostEvent || false}
           onChange={handleShowVenueImagePostEventChange}
-          marginTop="size-100"
-          marginBottom="size-200"
         >
           Display image and instructions post-event.
         </Switch>
@@ -707,17 +699,17 @@ export const VenueComponent: React.FC = () => {
           onFileSelected={handleImageFileSelected}
           pendingFile={pendingImageFile ?? undefined}
         />
-      </View>
+      </div>
 
       {/* Instructions for Attendees */}
-      <View marginTop="size-200">
+      <div style={{ marginTop: '16px' }}>
         <RichTextEditor
           label="Instructions for attendees"
           value={venue.additionalInformation || ''}
           onChange={handleAdditionalInfoChange}
           height="200px"
         />
-      </View>
-    </Flex>
+      </div>
+    </div>
   )
 }

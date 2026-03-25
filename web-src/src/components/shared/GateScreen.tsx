@@ -2,13 +2,11 @@
  * <license header>
  */
 
-import React, { useState } from 'react'
-import { View, Text, Button, ProgressCircle } from '@adobe/react-spectrum'
+import React from 'react'
+import { View, Text, ProgressCircle } from '@adobe/react-spectrum'
+import { Button } from "@react-spectrum/s2"
 import { SPACING, COLORS, TYPOGRAPHY } from '../../styles/designSystem'
-import { GATE_BACKGROUND_IMAGES } from '../../assets/gate-backgrounds'
-
-/** Fallback background when images are unavailable */
-const GATE_BACKGROUND_FALLBACK = '#E8E8E8'
+const gateBg = new URL('../../assets/gate-bg.png', import.meta.url).href
 
 /**
  * Browser access forbidden icon - from ecc-milo browser-access-forbidden-lg.svg
@@ -80,29 +78,19 @@ export const GateScreen: React.FC<GateScreenProps> = ({
   message = 'Please sign in with an authorized account to continue.',
   actionLabel = 'Sign In'
 }) => {
-  const [backgroundImage] = useState(() => {
-    if (GATE_BACKGROUND_IMAGES.length === 0) return null
-    return GATE_BACKGROUND_IMAGES[
-      Math.floor(Math.random() * GATE_BACKGROUND_IMAGES.length)
-    ]
-  })
-
   const outerStyle: React.CSSProperties = {
     position: 'fixed',
     top: 0,
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: GATE_BACKGROUND_FALLBACK,
+    backgroundImage: `url(${gateBg})`,
     backgroundSize: 'cover',
     backgroundPosition: 'center',
     display: 'flex',
     alignItems: 'center',
     textAlign: 'center',
     justifyContent: 'center'
-  }
-  if (backgroundImage) {
-    outerStyle.backgroundImage = `url(${backgroundImage})`
   }
 
   return (

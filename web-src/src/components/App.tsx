@@ -4,6 +4,9 @@
 
 import React from 'react'
 import { Provider, defaultTheme, Grid, View } from '@adobe/react-spectrum'
+// @ts-ignore — Fonts component exists but isn't in the package exports for v0.12.0
+import { Fonts } from '@react-spectrum/s2/dist/Fonts.mjs'
+import { Provider as S2Provider } from '@react-spectrum/s2'
 import { ErrorBoundary, FallbackProps } from 'react-error-boundary'
 import { HashRouter as Router, Routes, Route } from 'react-router-dom'
 import { TopNav } from './layout'
@@ -77,6 +80,8 @@ const AppContent: React.FC<{ runtime: Runtime }> = ({ runtime }) => {
     <ErrorBoundary onError={onError} FallbackComponent={fallbackComponent}>
       <Router>
         <Provider theme={defaultTheme} colorScheme={'light'} scale={'medium'}>
+          <S2Provider colorScheme="light">
+          <Fonts />
           <ApiProvider ims={ims}>
             <RBACProvider>
               <GroupProvider>
@@ -122,6 +127,7 @@ const AppContent: React.FC<{ runtime: Runtime }> = ({ runtime }) => {
               </GroupProvider>
             </RBACProvider>
           </ApiProvider>
+          </S2Provider>
         </Provider>
       </Router>
     </ErrorBoundary>

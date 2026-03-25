@@ -5,19 +5,12 @@
 import React, { useEffect, useMemo, useCallback } from 'react'
 import {
   Flex,
-  View,
-  Text,
-  Button,
-  Heading,
-  Picker,
-  Item,
-  ActionButton,
-  ProgressCircle,
-  StatusLight,
 } from '@adobe/react-spectrum'
-import Add from '@spectrum-icons/workflow/Add'
-import Checkmark from '@spectrum-icons/workflow/Checkmark'
-import Refresh from '@spectrum-icons/workflow/Refresh'
+import { Button, Text, ActionButton, ProgressCircle, StatusLight, Picker, PickerItem } from '@react-spectrum/s2'
+import { style } from '@react-spectrum/s2/style' with { type: 'macro' }
+import Add from '@react-spectrum/s2/icons/Add'
+import Checkmark from '@react-spectrum/s2/icons/Checkmark'
+import Refresh from '@react-spectrum/s2/icons/Refresh'
 import { IMS } from '../../types'
 import { apiService, cachedApi } from '../../services/api'
 import { BlurredLoadingOverlay } from '../../components/shared'
@@ -317,7 +310,7 @@ export const CloudManagementConsole: React.FC<CloudManagementConsoleProps> = () 
               UNSAFE_className={isSelected ? 'locale-btn-selected' : 'locale-btn'}
             >
               <Flex alignItems="center" gap="size-75">
-                {isSelected ? <Checkmark size="S" /> : <Add size="S" />}
+                {isSelected ? <Checkmark /> : <Add />}
                 <Text>{name}</Text>
               </Flex>
             </ActionButton>
@@ -333,74 +326,74 @@ export const CloudManagementConsole: React.FC<CloudManagementConsoleProps> = () 
 
   if (error) {
     return (
-      <View padding="size-400">
+      <div style={{ padding: 32 }}>
         <Flex direction="column" gap="size-200" alignItems="center" justifyContent="center" minHeight="size-6000">
-          <Heading level={3}>Error Loading Cloud Management</Heading>
+          <h3>Error Loading Cloud Management</h3>
           <Text>{error}</Text>
           <ActionButton onPress={loadInitialData}>
             <Refresh />
             <Text>Retry</Text>
           </ActionButton>
         </Flex>
-      </View>
+      </div>
     )
   }
 
   return (
     <>
-      <View UNSAFE_style={createActionBarPadding()}>
-        <View UNSAFE_style={styles.container}>
+      <div style={createActionBarPadding()}>
+        <div style={styles.container}>
         {/* Header */}
-        <View UNSAFE_style={styles.header}>
+        <div style={styles.header}>
           <h1 style={styles.headerTitle}>Manage Clouds</h1>
-          <View UNSAFE_style={styles.statusContainer}>
+          <div style={styles.statusContainer}>
             {pendingChanges ? (
               <StatusLight variant="notice">Unsaved changes</StatusLight>
             ) : (
               <StatusLight variant="positive">Up-to-date</StatusLight>
             )}
-          </View>
-        </View>
+          </div>
+        </div>
 
         {/* Cloud Picker */}
-        <View marginBottom={FLEX_GAP.LARGE} paddingX={FLEX_GAP.FIELD}>
+        <div style={{ marginBottom: FLEX_GAP.LARGE, paddingLeft: FLEX_GAP.FIELD, paddingRight: FLEX_GAP.FIELD }}>
           <Picker
             label="Select a Cloud type"
             selectedKey={currentCloud}
             onSelectionChange={handleCloudChange}
-            width="size-3000"
+            styles={style({ width: 240 })}
           >
             {clouds.map(cloud => (
-              <Item key={cloud.cloudType}>
+              <PickerItem key={cloud.cloudType} id={cloud.cloudType}>
                 {cloud.cloudName || cloud.cloudType}
-              </Item>
+              </PickerItem>
             ))}
           </Picker>
-        </View>
+        </div>
 
         {currentCloud && (
           <>
             {/* Language Manager Section */}
-            <View UNSAFE_style={styles.formSection}>
+            <div style={styles.formSection}>
               <h2 style={styles.sectionTitle}>Languages</h2>
-              <Text UNSAFE_style={{ 
+              <Text UNSAFE_style={{
                 ...TYPOGRAPHY.SECTION_DESCRIPTION,
-                marginBottom: FORM_SPACING.FIELD_GAP 
+                marginBottom: FORM_SPACING.FIELD_GAP
               }}>
                 Select the languages available for events in this cloud.
               </Text>
-              
-              <View UNSAFE_style={styles.localePool}>
+
+              <div style={styles.localePool}>
                 {renderLocales()}
-              </View>
-            </View>
+              </div>
+            </div>
           </>
         )}
 
-        </View>
+        </div>
 
         {/* Action Bar */}
-        <View UNSAFE_style={styles.actionBar}>
+        <div style={styles.actionBar}>
           <Button
             variant="secondary"
             isDisabled={!pendingChanges || !currentCloud}
@@ -410,22 +403,22 @@ export const CloudManagementConsole: React.FC<CloudManagementConsoleProps> = () 
             Cancel
           </Button>
           <Button
-            variant="primary"
+            variant="accent"
             isDisabled={!pendingChanges || !currentCloud || isSaving}
             onPress={handleSave}
             UNSAFE_style={ACTION_BAR_BUTTON_STYLES.PRIMARY}
           >
           {isSaving ? (
             <Flex alignItems="center" gap={FLEX_GAP.TIGHT}>
-              <ProgressCircle size="S" isIndeterminate aria-label="Saving..." />
+              <ProgressCircle isIndeterminate aria-label="Saving..." />
               <span>Saving...</span>
             </Flex>
           ) : (
             'Save'
           )}
           </Button>
-        </View>
-      </View>
+        </div>
+      </div>
 
       <BlurredLoadingOverlay
         visible={isLoading}

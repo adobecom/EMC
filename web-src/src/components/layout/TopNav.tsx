@@ -4,8 +4,8 @@
 
 import React from 'react'
 import { NavLink } from 'react-router-dom'
-import { Flex, View, Button } from '@adobe/react-spectrum'
-import Login from '@spectrum-icons/workflow/Login'
+import { Flex, View } from '@adobe/react-spectrum'
+import { Button, Text } from "@react-spectrum/s2"
 import { IMS } from '../../types'
 import { UserPanel } from '../user'
 import { DevTokenButton } from '../dev'
@@ -80,20 +80,20 @@ const TopNav: React.FC<TopNavProps> = ({ ims }) => {
             end
             to="/"
           >
-            Home
+            <Text>Home</Text>
           </NavLink>
           <NavLink
             className={({ isActive }) => `nav-link ${isActive ? 'is-selected' : ''}`}
             to="/overview"
           >
-            Overview
+            <Text>Overview</Text>
           </NavLink>
           {canReadEvents && (
             <NavLink
               className={({ isActive }) => `nav-link ${isActive ? 'is-selected' : ''}`}
               to="/events"
             >
-              Events
+              <Text>Events</Text>
             </NavLink>
           )}
           {canReadEvents && (
@@ -101,7 +101,7 @@ const TopNav: React.FC<TopNavProps> = ({ ims }) => {
               className={({ isActive }) => `nav-link ${isActive ? 'is-selected' : ''}`}
               to="/registrations"
             >
-              Registrations
+              <Text>Registrations</Text>
             </NavLink>
           )}
           {canReadEvents && (
@@ -109,7 +109,7 @@ const TopNav: React.FC<TopNavProps> = ({ ims }) => {
               className={({ isActive }) => `nav-link ${isActive ? 'is-selected' : ''}`}
               to="/speakers"
             >
-              Speakers
+              <Text>Speakers</Text>
             </NavLink>
           )}
           {canReadSeries && (
@@ -117,7 +117,7 @@ const TopNav: React.FC<TopNavProps> = ({ ims }) => {
               className={({ isActive }) => `nav-link ${isActive ? 'is-selected' : ''}`}
               to="/series"
             >
-              Series
+              <Text>Series</Text>
             </NavLink>
           )}
           {canReadClouds && (
@@ -125,14 +125,14 @@ const TopNav: React.FC<TopNavProps> = ({ ims }) => {
               className={({ isActive }) => `nav-link ${isActive ? 'is-selected' : ''}`}
               to="/clouds"
             >
-              Clouds
+              <Text>Clouds</Text>
             </NavLink>
           )}
           <NavLink
             className={({ isActive }) => `nav-link ${isActive ? 'is-selected' : ''}`}
             to="/about"
           >
-            About
+            <Text>About</Text>
           </NavLink>
         </Flex>
         )}
@@ -144,20 +144,15 @@ const TopNav: React.FC<TopNavProps> = ({ ims }) => {
 
           {showSignIn ? (
             /* Standalone mode, not signed in: show a Sign In button */
-            <Button
-              variant="primary"
-              style="fill"
+            (<Button
+              variant="accent"
               onPress={signIn}
-              UNSAFE_style={{ fontSize: 12, padding: '4px 12px' }}
             >
-              <Login 
-                UNSAFE_style={{ marginRight: 4 }}
-              />
-              <span>Sign In</span>
-            </Button>
+              Sign In
+            </Button>)
           ) : (
             /* Signed in (either mode): show user panel */
-            !isLoading && <UserPanel ims={ims} compact />
+            (!isLoading && <UserPanel ims={ims} compact />)
           )}
         </Flex>
       </Flex>

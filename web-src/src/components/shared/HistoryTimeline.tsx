@@ -1,23 +1,22 @@
-/* 
+/*
 * <license header>
 */
 
 import React, { useState, useEffect, useCallback } from 'react'
 import {
-  View,
-  Flex,
-  Button,
-  Text,
   ProgressCircle,
   ActionButton,
   TooltipTrigger,
-  Tooltip
-} from '@adobe/react-spectrum'
-import Clock from '@spectrum-icons/workflow/Clock'
-import Close from '@spectrum-icons/workflow/Close'
-import Add from '@spectrum-icons/workflow/Add'
-import Edit from '@spectrum-icons/workflow/Edit'
-import Delete from '@spectrum-icons/workflow/Delete'
+  Tooltip,
+  Text,
+  Button
+} from '@react-spectrum/s2'
+import { style } from '@react-spectrum/s2/style' with { type: 'macro' }
+import Clock from '@react-spectrum/s2/icons/Clock'
+import Close from '@react-spectrum/s2/icons/Close'
+import Add from '@react-spectrum/s2/icons/Add'
+import Edit from '@react-spectrum/s2/icons/Edit'
+import Delete from '@react-spectrum/s2/icons/Delete'
 import {
   COLORS,
   Z_INDEX,
@@ -70,7 +69,7 @@ export function formatTimestamp(timestamp: number): string {
  */
 export function getChangeDescription(record: HistoryRecord): string {
   const { changeType, resourceSubtype, diff } = record
-  
+
   // Base change type description
   let description = ''
   switch (changeType) {
@@ -86,7 +85,7 @@ export function getChangeDescription(record: HistoryRecord): string {
     default:
       description = changeType.charAt(0).toUpperCase() + changeType.slice(1)
   }
-  
+
   // Add resource subtype if present
   if (resourceSubtype) {
     const subtypeLabel = resourceSubtype.charAt(0).toUpperCase() + resourceSubtype.slice(1)
@@ -94,11 +93,11 @@ export function getChangeDescription(record: HistoryRecord): string {
   } else {
     description += ' Event'
   }
-  
+
   // Add specific field changes if available
   if (diff) {
     const changedFields: string[] = []
-    
+
     if (diff.updated) {
       const keys = Object.keys(diff.updated)
       // Handle common field names
@@ -113,15 +112,15 @@ export function getChangeDescription(record: HistoryRecord): string {
       const relevantKeys = keys.filter(k => !['modificationTime', 'creationTime'].includes(k))
       changedFields.push(...relevantKeys.slice(0, 3))
     }
-    
+
     if (changedFields.length > 0) {
-      const formattedFields = changedFields.map(f => 
+      const formattedFields = changedFields.map(f =>
         f.replace(/([A-Z])/g, ' $1').trim().toLowerCase()
       ).join(', ')
       description += ` (${formattedFields})`
     }
   }
-  
+
   return description
 }
 
@@ -131,13 +130,13 @@ export function getChangeDescription(record: HistoryRecord): string {
 export function getChangeIcon(changeType: string): React.ReactNode {
   switch (changeType) {
     case 'create':
-      return <Add size="XS" />
+      return <Add />
     case 'update':
-      return <Edit size="XS" />
+      return <Edit />
     case 'delete':
-      return <Delete size="XS" />
+      return <Delete />
     default:
-      return <Edit size="XS" />
+      return <Edit />
   }
 }
 
@@ -221,10 +220,10 @@ export const HistoryTimeline: React.FC<HistoryTimelineProps> = ({
   const [historyRecords, setHistoryRecords] = useState<HistoryRecord[]>([])
   const [hoveredIndex, setHoveredIndex] = useState<number | null>(null)
   const [lockedIndex, setLockedIndex] = useState<number | null>(null)
-  
+
   // Derive labels based on resource type
   const resourceLabel = resourceType === 'series' ? 'Series' : 'Event'
-  
+
   // Use controlled or uncontrolled state
   const isOpen = controlledIsOpen !== undefined ? controlledIsOpen : internalIsOpen
   const setIsOpen = (value: boolean) => {
@@ -233,25 +232,25 @@ export const HistoryTimeline: React.FC<HistoryTimelineProps> = ({
     }
     onOpenChange?.(value)
   }
-  
+
   // Fetch history when panel opens
   const fetchHistory = useCallback(async () => {
     if (!resourceId) return
-    
+
     setIsLoading(true)
     setError(null)
-    
+
     try {
       // Call appropriate API based on resource type
       const response = resourceType === 'series'
         ? await apiService.getSeriesHistory(resourceId)
         : await apiService.getEventHistory(resourceId)
-      
+
       if ('error' in response) {
         setError('Failed to load history')
         return
       }
-      
+
       const historyResponse = response as EventHistoryResponse
       // Sort by timestamp ascending (oldest to newest, left to right)
       const sortedRecords = [...(historyResponse.history || [])].sort(
@@ -265,13 +264,13 @@ export const HistoryTimeline: React.FC<HistoryTimelineProps> = ({
       setIsLoading(false)
     }
   }, [resourceId, resourceType])
-  
+
   useEffect(() => {
     if (isOpen && resourceId) {
       fetchHistory()
     }
   }, [isOpen, resourceId, fetchHistory])
-  
+
   // Close on escape key
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
@@ -279,11 +278,11 @@ export const HistoryTimeline: React.FC<HistoryTimelineProps> = ({
         setIsOpen(false)
       }
     }
-    
+
     document.addEventListener('keydown', handleKeyDown)
     return () => document.removeEventListener('keydown', handleKeyDown)
   }, [isOpen])
-  
+
   const togglePanel = () => {
     setIsOpen(!isOpen)
     if (!isOpen) {
@@ -291,15 +290,15 @@ export const HistoryTimeline: React.FC<HistoryTimelineProps> = ({
       setLockedIndex(null)
     }
   }
-  
+
   const handleCloseOverlay = () => {
     setIsOpen(false)
   }
-  
+
   const handleHover = (index: number | null) => {
     setHoveredIndex(index)
   }
-  
+
   const handleClick = (index: number) => {
     // If clicking the already locked index, unlock it
     if (lockedIndex === index) {
@@ -309,12 +308,12 @@ export const HistoryTimeline: React.FC<HistoryTimelineProps> = ({
       setLockedIndex(index)
     }
   }
-  
+
   // Show locked record if locked, otherwise show hovered record
   const activeIndex = lockedIndex !== null ? lockedIndex : hoveredIndex
   const activeRecord = activeIndex !== null ? historyRecords[activeIndex] : null
   const isLocked = lockedIndex !== null
-  
+
   return (
     <>
       {/* Trigger Button */}
@@ -328,12 +327,12 @@ export const HistoryTimeline: React.FC<HistoryTimelineProps> = ({
             backgroundColor: isOpen ? COLORS.GRAY_200 : 'transparent'
           }}
         >
-          <Clock size="S" />
-          <Text marginStart="size-75">History</Text>
+          <Clock />
+          <Text UNSAFE_style={{ marginInlineStart: '6px' }}>History</Text>
         </ActionButton>
         <Tooltip>View event change history</Tooltip>
       </TooltipTrigger>
-      
+
       {/* Frosted Overlay */}
       {isOpen && (
         <div
@@ -351,7 +350,7 @@ export const HistoryTimeline: React.FC<HistoryTimelineProps> = ({
           }}
         />
       )}
-      
+
       {/* Full-width Panel from Top */}
       <div
         style={{
@@ -372,25 +371,23 @@ export const HistoryTimeline: React.FC<HistoryTimelineProps> = ({
         onClick={(e) => e.stopPropagation()}
       >
         {/* Panel Header */}
-        <Flex
-          direction="row"
-          justifyContent="space-between"
-          alignItems="center"
-          UNSAFE_style={{
+        <div
+          className={style({ display: 'flex', justifyContent: 'space-between', alignItems: 'center' })}
+          style={{
             padding: `${SPACING.MD}px ${SPACING.LG}px`,
             borderBottom: `1px solid ${COLORS.GRAY_200}`,
             backgroundColor: COLORS.GRAY_100,
             flexShrink: 0
           }}
         >
-          <Flex direction="row" gap="size-150" alignItems="center">
-            <Clock size="S" />
+          <div className={style({ display: 'flex', gap: 12, alignItems: 'center' })}>
+            <Clock />
             <Text UNSAFE_style={TYPOGRAPHY.SUBSECTION_HEADING}>
               {resourceLabel} History
             </Text>
             {historyRecords.length > 0 && (
-              <View
-                UNSAFE_style={{ 
+              <div
+                style={{
                   backgroundColor: COLORS.GRAY_300,
                   padding: '2px 10px',
                   borderRadius: '12px',
@@ -400,55 +397,54 @@ export const HistoryTimeline: React.FC<HistoryTimelineProps> = ({
                 <Text UNSAFE_style={{ fontSize: '12px', fontWeight: 500 }}>
                   {historyRecords.length} change{historyRecords.length !== 1 ? 's' : ''}
                 </Text>
-              </View>
+              </div>
             )}
-          </Flex>
+          </div>
           <ActionButton isQuiet onPress={() => setIsOpen(false)} aria-label="Close history panel">
-            <Close size="S" />
+            <Close />
           </ActionButton>
-        </Flex>
-        
+        </div>
+
         {/* Panel Content */}
-        <View
-          UNSAFE_style={{
+        <div
+          style={{
             flex: 1,
             overflow: 'auto',
             padding: `${SPACING.MD}px 0`
           }}
         >
           {isLoading ? (
-            <Flex justifyContent="center" alignItems="center" height="size-2000">
+            <div className={style({ display: 'flex', justifyContent: 'center', alignItems: 'center' })} style={{ height: 'var(--spectrum-global-dimension-size-2000)' }}>
               <ProgressCircle aria-label="Loading history" isIndeterminate size="L" />
-            </Flex>
+            </div>
           ) : error ? (
-            <Flex direction="column" alignItems="center" gap="size-200" UNSAFE_style={{ padding: `${SPACING.XL}px` }}>
+            <div className={style({ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 16 })} style={{ padding: `${SPACING.XL}px` }}>
               <Text UNSAFE_style={{ color: COLORS.RED_600 }}>{error}</Text>
               <Button variant="secondary" onPress={fetchHistory}>
                 Retry
               </Button>
-            </Flex>
+            </div>
           ) : historyRecords.length === 0 ? (
-            <Flex justifyContent="center" alignItems="center" height="size-2000">
+            <div className={style({ display: 'flex', justifyContent: 'center', alignItems: 'center' })} style={{ height: 'var(--spectrum-global-dimension-size-2000)' }}>
               <Text UNSAFE_style={{ color: COLORS.GRAY_600, fontSize: '14px' }}>
                 No history records found for this {resourceType}
               </Text>
-            </Flex>
+            </div>
           ) : (
-            <View>
+            <div>
               {/* Timeline Container */}
-              <View 
-                UNSAFE_style={{ 
+              <div
+                style={{
                   overflowX: 'auto',
                   padding: `0 ${SPACING.LG}px`,
                   marginBottom: `${SPACING.MD}px`
                 }}
               >
                 {/* Timeline with points */}
-                <Flex
-                  direction="row"
-                  alignItems="start"
-                  justifyContent={historyRecords.length <= 8 ? 'center' : 'start'}
-                  UNSAFE_style={{
+                <div
+                  className={style({ display: 'flex', alignItems: 'start' })}
+                  style={{
+                    justifyContent: historyRecords.length <= 8 ? 'center' : 'flex-start',
                     position: 'relative',
                     minWidth: historyRecords.length > 8 ? `${historyRecords.length * 110}px` : 'auto',
                     padding: `${SPACING.SM}px 0`
@@ -465,26 +461,24 @@ export const HistoryTimeline: React.FC<HistoryTimelineProps> = ({
                       onClick={handleClick}
                     />
                   ))}
-                </Flex>
-              </View>
-              
+                </div>
+              </div>
+
               {/* Detail Card - shows selected record details */}
-              <View UNSAFE_style={{ marginTop: `${SPACING.SM}px` }}>
+              <div style={{ marginTop: `${SPACING.SM}px` }}>
                 <DetailCard record={activeRecord} isLocked={isLocked} />
-              </View>
-              
+              </div>
+
               {/* Legend */}
-              <Flex
-                direction="row"
-                gap="size-300"
-                justifyContent="center"
-                UNSAFE_style={{ 
+              <div
+                className={style({ display: 'flex', gap: 24, justifyContent: 'center' })}
+                style={{
                   padding: `${SPACING.MD}px`,
                   borderTop: `1px solid ${COLORS.GRAY_200}`,
                   marginTop: `${SPACING.MD}px`
                 }}
               >
-                <Flex direction="row" gap="size-75" alignItems="center">
+                <div className={style({ display: 'flex', gap: 8, alignItems: 'center' })}>
                   <div
                     style={{
                       width: '10px',
@@ -494,8 +488,8 @@ export const HistoryTimeline: React.FC<HistoryTimelineProps> = ({
                     }}
                   />
                   <Text UNSAFE_style={{ fontSize: '12px', color: COLORS.GRAY_600 }}>Created</Text>
-                </Flex>
-                <Flex direction="row" gap="size-75" alignItems="center">
+                </div>
+                <div className={style({ display: 'flex', gap: 8, alignItems: 'center' })}>
                   <div
                     style={{
                       width: '10px',
@@ -505,8 +499,8 @@ export const HistoryTimeline: React.FC<HistoryTimelineProps> = ({
                     }}
                   />
                   <Text UNSAFE_style={{ fontSize: '12px', color: COLORS.GRAY_600 }}>Updated</Text>
-                </Flex>
-                <Flex direction="row" gap="size-75" alignItems="center">
+                </div>
+                <div className={style({ display: 'flex', gap: 8, alignItems: 'center' })}>
                   <div
                     style={{
                       width: '10px',
@@ -516,11 +510,11 @@ export const HistoryTimeline: React.FC<HistoryTimelineProps> = ({
                     }}
                   />
                   <Text UNSAFE_style={{ fontSize: '12px', color: COLORS.GRAY_600 }}>Deleted</Text>
-                </Flex>
-              </Flex>
-            </View>
+                </div>
+              </div>
+            </div>
           )}
-        </View>
+        </div>
       </div>
     </>
   )
