@@ -1,26 +1,24 @@
-/* 
+/*
 * <license header>
 */
 
 import React, { useState } from 'react'
 import {
-  View,
-  Flex,
-  Heading,
-  Well,
-  Divider,
   ActionButton,
-  Link
-} from '@adobe/react-spectrum'
-import { Text } from '@react-spectrum/s2'
-import ChevronDown from '@spectrum-icons/workflow/ChevronDown'
-import ChevronRight from '@spectrum-icons/workflow/ChevronRight'
-import Code from '@spectrum-icons/workflow/Code'
-import Document from '@spectrum-icons/workflow/Document'
-import Wrench from '@spectrum-icons/workflow/Wrench'
-import Data from '@spectrum-icons/workflow/Data'
-import Key from '@spectrum-icons/workflow/Key'
-import TestABRemove from '@spectrum-icons/workflow/TestABRemove'
+  Divider,
+  Heading,
+  Link,
+  Text
+} from '@react-spectrum/s2'
+import { style } from '@react-spectrum/s2/style' with { type: 'macro' }
+import ChevronDown from '@react-spectrum/s2/icons/ChevronDown'
+import ChevronRight from '@react-spectrum/s2/icons/ChevronRight'
+import Code from '@react-spectrum/s2/icons/Code'
+import FileText from '@react-spectrum/s2/icons/FileText'
+import Tools from '@react-spectrum/s2/icons/Tools'
+import Data from '@react-spectrum/s2/icons/Data'
+import Key from '@react-spectrum/s2/icons/Key'
+import Cancel from '@react-spectrum/s2/icons/Cancel'
 
 /**
  * Documentation section configuration
@@ -42,7 +40,7 @@ interface DocItem {
 const documentationSections: DocSection[] = [
   {
     id: 'getting-started',
-    icon: <Document size="S" />,
+    icon: <FileText />,
     title: 'Getting Started',
     description: 'Essential guides for understanding and running the project',
     docs: [
@@ -65,7 +63,7 @@ const documentationSections: DocSection[] = [
   },
   {
     id: 'frontend',
-    icon: <Code size="S" />,
+    icon: <Code />,
     title: 'Frontend Development',
     description: 'Guides for building and extending the React UI',
     docs: [
@@ -103,7 +101,7 @@ const documentationSections: DocSection[] = [
   },
   {
     id: 'api',
-    icon: <Data size="S" />,
+    icon: <Data />,
     title: 'API & Services',
     description: 'Backend integration and external API documentation',
     docs: [
@@ -121,7 +119,7 @@ const documentationSections: DocSection[] = [
   },
   {
     id: 'dev-token',
-    icon: <Key size="S" />,
+    icon: <Key />,
     title: 'Authentication & Dev Token',
     description: 'How to authenticate and use development tokens',
     docs: [
@@ -144,7 +142,7 @@ const documentationSections: DocSection[] = [
   },
   {
     id: 'testing',
-    icon: <TestABRemove size="S" />,
+    icon: <Cancel />,
     title: 'Testing',
     description: 'Testing strategies and patterns',
     docs: [
@@ -166,29 +164,25 @@ interface DocSectionComponentProps {
   onToggle: () => void
 }
 
-const DocSectionComponent: React.FC<DocSectionComponentProps> = ({ 
-  section, 
-  isExpanded, 
-  onToggle 
+const DocSectionComponent: React.FC<DocSectionComponentProps> = ({
+  section,
+  isExpanded,
+  onToggle
 }) => {
   return (
-    <View marginBottom="size-200">
+    <div style={{ marginBottom: '16px' }}>
       {/* Custom clickable header instead of ActionButton for better alignment control */}
-      <View
-        UNSAFE_style={{
+      <div
+        style={{
           cursor: 'pointer',
           padding: '12px 16px',
           borderRadius: '4px',
           transition: 'background-color 0.15s ease'
         }}
-        UNSAFE_className="doc-section-header"
+        className="doc-section-header"
       >
-        <Flex 
-          direction="row" 
-          alignItems="center" 
-          gap="size-150" 
-          width="100%"
-          UNSAFE_style={{ cursor: 'pointer' }}
+        <div className={style({ display: 'flex', flexDirection: 'row', alignItems: 'center', gap: 12, width: 'full' })}
+          style={{ cursor: 'pointer' }}
         >
           <ActionButton
             onPress={onToggle}
@@ -196,16 +190,16 @@ const DocSectionComponent: React.FC<DocSectionComponentProps> = ({
             aria-label={isExpanded ? 'Collapse section' : 'Expand section'}
             UNSAFE_style={{ flexShrink: 0 }}
           >
-            {isExpanded ? <ChevronDown size="S" /> : <ChevronRight size="S" />}
+            {isExpanded ? <ChevronDown /> : <ChevronRight />}
           </ActionButton>
-          <div 
-            style={{ color: 'var(--spectrum-global-color-gray-700)', flexShrink: 0, cursor: 'pointer' }}
+          <div
+            style={{ color: 'var(--spectrum-gray-700)', flexShrink: 0, cursor: 'pointer' }}
             onClick={onToggle}
           >
             {section.icon}
           </div>
-          <div 
-            style={{ 
+          <div
+            style={{
               display: 'flex',
               flexDirection: 'column',
               gap: '4px',
@@ -217,29 +211,29 @@ const DocSectionComponent: React.FC<DocSectionComponentProps> = ({
             onClick={onToggle}
           >
             <Text UNSAFE_style={{ fontWeight: 600, textAlign: 'left' }}>{section.title}</Text>
-            <Text 
-              UNSAFE_style={{ 
-                fontSize: '12px', 
-                color: 'var(--spectrum-global-color-gray-600)',
+            <Text
+              UNSAFE_style={{
+                fontSize: '12px',
+                color: 'var(--spectrum-gray-600)',
                 textAlign: 'left'
               }}
             >
               {section.description}
             </Text>
           </div>
-        </Flex>
-      </View>
+        </div>
+      </div>
 
       {isExpanded && (
-        <View marginStart="size-400" marginTop="size-100">
-          <Flex direction="column" gap="size-100">
+        <div style={{ marginLeft: '32px', marginTop: '8px' }}>
+          <div className={style({ display: 'flex', flexDirection: 'column', gap: 8 })}>
             {section.docs.map(doc => (
               <DocItemComponent key={doc.file} doc={doc} />
             ))}
-          </Flex>
-        </View>
+          </div>
+        </div>
       )}
-    </View>
+    </div>
   )
 }
 
@@ -263,54 +257,48 @@ const DocItemComponent: React.FC<DocItemComponentProps> = ({ doc }) => {
   // GitHub URL for viewing .md files
   const githubBaseUrl = 'https://github.com/adobecom/EMC/blob/main'
   const docUrl = `${githubBaseUrl}/${docPath}`
-  
+
   return (
-    <View
-      backgroundColor="gray-50"
-      borderRadius="regular"
-      padding="size-200"
-      UNSAFE_style={{
-        borderLeft: '3px solid var(--spectrum-global-color-blue-400)'
+    <div
+      style={{
+        border: '1px solid var(--spectrum-gray-300)',
+        borderRadius: '4px',
+        padding: '16px',
+        backgroundColor: 'var(--spectrum-gray-75)',
+        borderLeft: '3px solid var(--spectrum-blue-400)'
       }}
     >
-      <Flex direction="column" gap="size-100">
-        <Flex direction="row" alignItems="center" justifyContent="space-between" wrap="wrap" gap="size-100">
+      <div className={style({ display: 'flex', flexDirection: 'column', gap: 8 })}>
+        <div className={style({ display: 'flex', flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' })}
+          style={{ flexWrap: 'wrap', gap: '8px' }}
+        >
           <Text UNSAFE_style={{ fontWeight: 600 }}>{doc.title}</Text>
-          <Link>
-            <a 
-              href={docUrl} 
-              target="_blank" 
-              rel="noopener noreferrer"
-              style={{ textDecoration: 'none' }}
+          <Link href={docUrl} target="_blank" rel="noopener noreferrer">
+            <Text
+              UNSAFE_style={{
+                fontSize: '11px',
+                color: 'var(--spectrum-blue-600)',
+                fontFamily: 'monospace',
+                backgroundColor: 'var(--spectrum-blue-100)',
+                padding: '2px 8px',
+                borderRadius: '4px'
+              }}
             >
-              <Flex direction="row" alignItems="center" gap="size-50">
-                <Text 
-                  UNSAFE_style={{ 
-                    fontSize: '11px', 
-                    color: 'var(--spectrum-global-color-blue-600)',
-                    fontFamily: 'monospace',
-                    backgroundColor: 'var(--spectrum-global-color-blue-100)',
-                    padding: '2px 8px',
-                    borderRadius: '4px'
-                  }}
-                >
-                  {doc.file} ↗
-                </Text>
-              </Flex>
-            </a>
+              {doc.file} ↗
+            </Text>
           </Link>
-        </Flex>
-        <Text 
-          UNSAFE_style={{ 
-            fontSize: '13px', 
-            color: 'var(--spectrum-global-color-gray-700)',
+        </div>
+        <Text
+          UNSAFE_style={{
+            fontSize: '13px',
+            color: 'var(--spectrum-gray-700)',
             lineHeight: '1.5'
           }}
         >
           {doc.description}
         </Text>
-      </Flex>
-    </View>
+      </div>
+    </div>
   )
 }
 
@@ -343,25 +331,33 @@ export const About: React.FC = () => {
   }
 
   return (
-    <View padding="size-400" maxWidth="900px" marginX="auto">
+    <div style={{ padding: '32px', maxWidth: '900px', marginLeft: 'auto', marginRight: 'auto' }}>
       {/* Header */}
-      <View marginBottom="size-400">
+      <div style={{ marginBottom: '32px' }}>
         <Heading level={1}>Documentation Hub</Heading>
         <Text
           UNSAFE_style={{
-            color: 'var(--spectrum-global-color-gray-700)',
+            color: 'var(--spectrum-gray-700)',
             fontSize: '16px'
           }}
         >
           Comprehensive guides and references for the Event Management Cloud application.
         </Text>
-      </View>
+      </div>
 
       {/* Quick Reference Card */}
-      <Well marginBottom="size-400">
-        <Heading level={3} marginTop="size-0">Quick Reference</Heading>
-        <View
-          UNSAFE_style={{
+      <div
+        style={{
+          border: '1px solid var(--spectrum-gray-300)',
+          borderRadius: '4px',
+          padding: '16px',
+          backgroundColor: 'var(--spectrum-gray-75)',
+          marginBottom: '32px'
+        }}
+      >
+        <Heading level={3}>Quick Reference</Heading>
+        <div
+          style={{
             display: 'grid',
             gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
             gap: '16px',
@@ -384,26 +380,29 @@ export const About: React.FC = () => {
             label="Start Command"
             value="aio app run"
           />
-        </View>
-      </Well>
+        </div>
+      </div>
 
       {/* Controls */}
-      <Flex direction="row" justifyContent="space-between" alignItems="center" marginBottom="size-200">
-        <Heading level={2} marginBottom="size-0">Documentation</Heading>
-        <Flex direction="row" gap="size-100">
+      <div className={style({ display: 'flex', flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' })}
+        style={{ marginBottom: '16px' }}
+      >
+        <Heading level={2}>Documentation</Heading>
+        <div className={style({ display: 'flex', flexDirection: 'row', gap: 8 })}>
           <ActionButton onPress={expandAll} isQuiet>
             Expand All
           </ActionButton>
           <ActionButton onPress={collapseAll} isQuiet>
             Collapse All
           </ActionButton>
-        </Flex>
-      </Flex>
+        </div>
+      </div>
 
-      <Divider marginBottom="size-300" />
+      <Divider />
+      <div style={{ marginBottom: '24px' }} />
 
       {/* Documentation Sections */}
-      <View>
+      <div>
         {documentationSections.map(section => (
           <DocSectionComponent
             key={section.id}
@@ -412,15 +411,16 @@ export const About: React.FC = () => {
             onToggle={() => toggleSection(section.id)}
           />
         ))}
-      </View>
+      </div>
 
       {/* External Resources */}
-      <View marginTop="size-500">
+      <div style={{ marginTop: '40px' }}>
         <Heading level={2}>External Resources</Heading>
-        <Divider marginBottom="size-300" />
-        
-        <View
-          UNSAFE_style={{
+        <Divider />
+        <div style={{ marginBottom: '24px' }} />
+
+        <div
+          style={{
             display: 'grid',
             gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))',
             gap: '16px'
@@ -446,22 +446,29 @@ export const About: React.FC = () => {
             url="https://www.typescriptlang.org/docs/"
             description="TypeScript language documentation"
           />
-        </View>
-      </View>
+        </div>
+      </div>
 
       {/* API Reference Note */}
-      <View marginTop="size-500">
-        <Well>
-          <Flex direction="row" alignItems="start" gap="size-200">
-            <View UNSAFE_style={{ color: 'var(--spectrum-global-color-blue-600)' }}>
-              <Wrench size="M" />
-            </View>
-            <View>
-              <Heading level={4} marginTop="size-0">Backend API Reference</Heading>
+      <div style={{ marginTop: '40px' }}>
+        <div
+          style={{
+            border: '1px solid var(--spectrum-gray-300)',
+            borderRadius: '4px',
+            padding: '16px',
+            backgroundColor: 'var(--spectrum-gray-75)'
+          }}
+        >
+          <div className={style({ display: 'flex', flexDirection: 'row', alignItems: 'start', gap: 16 })}>
+            <div style={{ color: 'var(--spectrum-blue-600)' }}>
+              <Tools />
+            </div>
+            <div>
+              <Heading level={4}>Backend API Reference</Heading>
               <Text>
                 The backend OpenAPI specification is available at{' '}
-                <code style={{ 
-                  backgroundColor: 'var(--spectrum-global-color-gray-200)',
+                <code style={{
+                  backgroundColor: 'var(--spectrum-gray-200)',
                   padding: '2px 6px',
                   borderRadius: '4px',
                   fontSize: '13px'
@@ -469,11 +476,11 @@ export const About: React.FC = () => {
                   docs/backend-reference/openapi.json
                 </code>
               </Text>
-            </View>
-          </Flex>
-        </Well>
-      </View>
-    </View>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
   )
 }
 
@@ -481,17 +488,19 @@ export const About: React.FC = () => {
  * Quick reference item
  */
 const QuickRefItem: React.FC<{ label: string; value: string }> = ({ label, value }) => (
-  <View
-    backgroundColor="gray-75"
-    padding="size-150"
-    borderRadius="regular"
+  <div
+    style={{
+      backgroundColor: 'var(--spectrum-gray-75)',
+      padding: '12px',
+      borderRadius: '4px'
+    }}
   >
-    <Flex direction="column" gap="size-50">
-      <Text 
-        UNSAFE_style={{ 
-          fontSize: '11px', 
+    <div className={style({ display: 'flex', flexDirection: 'column', gap: 4 })}>
+      <Text
+        UNSAFE_style={{
+          fontSize: '11px',
           fontWeight: 600,
-          color: 'var(--spectrum-global-color-gray-600)',
+          color: 'var(--spectrum-gray-600)',
           textTransform: 'uppercase',
           letterSpacing: '0.5px'
         }}
@@ -499,43 +508,42 @@ const QuickRefItem: React.FC<{ label: string; value: string }> = ({ label, value
         {label}
       </Text>
       <Text UNSAFE_style={{ fontWeight: 500, fontSize: '14px' }}>{value}</Text>
-    </Flex>
-  </View>
+    </div>
+  </div>
 )
 
 /**
  * External link card
  */
-const ExternalLink: React.FC<{ title: string; url: string; description: string }> = ({ 
-  title, 
-  url, 
-  description 
+const ExternalLink: React.FC<{ title: string; url: string; description: string }> = ({
+  title,
+  url,
+  description
 }) => (
-  <View
-    backgroundColor="gray-50"
-    borderRadius="regular"
-    padding="size-200"
-    borderWidth="thin"
-    borderColor="gray-200"
+  <div
+    style={{
+      backgroundColor: 'var(--spectrum-gray-75)',
+      borderRadius: '4px',
+      padding: '16px',
+      border: '1px solid var(--spectrum-gray-200)'
+    }}
   >
-    <Link>
-      <a href={url} target="_blank" rel="noopener noreferrer" style={{ textDecoration: 'none' }}>
-        <Text UNSAFE_style={{ fontWeight: 600, color: 'var(--spectrum-global-color-blue-600)' }}>
-          {title} ↗
-        </Text>
-      </a>
+    <Link href={url} target="_blank" rel="noopener noreferrer">
+      <Text UNSAFE_style={{ fontWeight: 600 }}>
+        {title} ↗
+      </Text>
     </Link>
-    <Text 
-      UNSAFE_style={{ 
-        fontSize: '13px', 
-        color: 'var(--spectrum-global-color-gray-700)',
+    <Text
+      UNSAFE_style={{
+        fontSize: '13px',
+        color: 'var(--spectrum-gray-700)',
         marginTop: '4px',
         display: 'block'
       }}
     >
       {description}
     </Text>
-  </View>
+  </div>
 )
 
 export default About

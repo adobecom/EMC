@@ -40,6 +40,7 @@ import type {
   ScopeChildListResponse,
   ScopeParentRef,
   PermissionsListResponse,
+  ScopeType,
 } from '../types/rbacApi'
 
 // ============================================================================
@@ -671,6 +672,9 @@ class ApiService {
     try {
       const env = getCurrentEnvironment()
       const headers = constructRequestHeaders(token, 'GET')
+      if (this.activeGroupId) {
+        (headers as any)['x-adobe-esp-group-id'] = this.activeGroupId
+      }
       const host = getApiHost('esp', env)
 
       const promises = seriesIds.map(async (seriesId) => {
@@ -719,6 +723,9 @@ class ApiService {
     try {
       const env = getCurrentEnvironment()
       const headers = constructRequestHeaders(token, 'GET')
+      if (this.activeGroupId) {
+        (headers as any)['x-adobe-esp-group-id'] = this.activeGroupId
+      }
       const host = getApiHost('esp', env)
 
       const promises = seriesIds.map(async (seriesId) => {
@@ -859,6 +866,9 @@ class ApiService {
     try {
       const env = getCurrentEnvironment()
       const headers = constructRequestHeaders(token, 'GET')
+      if (this.activeGroupId) {
+        (headers as any)['x-adobe-esp-group-id'] = this.activeGroupId
+      }
       const host = getApiHost('esp', env)
       const url = `${host}/v1/events/${encodeURIComponent(eventId)}`
 
@@ -1000,6 +1010,9 @@ class ApiService {
     try {
       const env = getCurrentEnvironment()
       const headers = constructRequestHeaders(token, 'GET')
+      if (this.activeGroupId) {
+        (headers as any)['x-adobe-esp-group-id'] = this.activeGroupId
+      }
       const host = getApiHost('esp', env)
 
       const promises = eventIds.map(async (eventId) => {
@@ -1048,6 +1061,9 @@ class ApiService {
     try {
       const env = getCurrentEnvironment()
       const headers = constructRequestHeaders(token, 'GET')
+      if (this.activeGroupId) {
+        (headers as any)['x-adobe-esp-group-id'] = this.activeGroupId
+      }
       const host = getApiHost('esp', env)
 
       const promises = eventIds.map(async (eventId) => {
@@ -1095,6 +1111,9 @@ class ApiService {
     try {
       const env = getCurrentEnvironment()
       const headers = constructRequestHeaders(token, 'GET')
+      if (this.activeGroupId) {
+        (headers as any)['x-adobe-esp-group-id'] = this.activeGroupId
+      }
       const host = getApiHost('esp', env)
 
       const promises = eventIds.map(async (eventId) => {
@@ -2047,11 +2066,12 @@ class ApiService {
 
   // --- Roles ---
 
-  async getRoles(): Promise<RBACApiRole[] | ErrorResponse> {
+  async getRoles(scopeType?: ScopeType): Promise<RBACApiRole[] | ErrorResponse> {
     return this.fetchAllPages<RBACApiRole>({
       service: 'esp',
       baseEndpoint: '/v1/roles',
       listKey: 'roles',
+      baseParams: scopeType ? { 'scope-type': scopeType } : undefined,
       operationName: 'getRoles'
     })
   }
