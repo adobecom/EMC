@@ -20,12 +20,12 @@ interface TopNavProps {
 
 const TopNav: React.FC<TopNavProps> = ({ ims }) => {
   const { isAuthenticated, isLoading, signIn, authMode } = useAuth()
-  const { isLoading: isGroupLoading } = useGroup()
+  const { isLoading: isGroupLoading, activeGroup } = useGroup()
   const canReadEvents = useHasPermission('event', 'read')
   const canReadSeries = useHasPermission('series', 'read')
 
-  // Hide all tabs until group/permissions are resolved
-  const showNav = !isGroupLoading
+  // Hide all tabs until a group is selected (loading done and activeGroup set)
+  const showNav = !isGroupLoading && activeGroup !== null
 
   // Only show the standalone sign-in button when:
   //   - Running in standalone mode (not the ExC Shell)
