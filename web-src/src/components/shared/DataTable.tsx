@@ -3,20 +3,17 @@
 */
 
 import React, { useState, useMemo, useCallback } from 'react'
-import {
-  ActionButton,
-  Text
-} from '@adobe/react-spectrum'
+import { ActionButton, Text } from '@react-spectrum/s2'
 import { style } from '@react-spectrum/s2/style' with { type: 'macro' }
 import Sort from "@react-spectrum/s2/icons/Sort"
 import SortUp from "@react-spectrum/s2/icons/SortUp"
 import SortDown from "@react-spectrum/s2/icons/SortDown"
-import Edit from '@spectrum-icons/workflow/Edit'
-import Delete from '@spectrum-icons/workflow/Delete'
-import ViewDetail from '@spectrum-icons/workflow/ViewDetail'
-import ChevronDown from '@spectrum-icons/workflow/ChevronDown'
-import ChevronLeft from '@spectrum-icons/workflow/ChevronLeft'
-import ChevronRight from '@spectrum-icons/workflow/ChevronRight'
+import Edit from '@react-spectrum/s2/icons/Edit'
+import Delete from '@react-spectrum/s2/icons/Delete'
+import Visibility from '@react-spectrum/s2/icons/Visibility'
+import ChevronDown from '@react-spectrum/s2/icons/ChevronDown'
+import ChevronLeft from '@react-spectrum/s2/icons/ChevronLeft'
+import ChevronRight from '@react-spectrum/s2/icons/ChevronRight'
 import { deduplicateBy } from '../../utils/deduplication'
 
 export interface TableColumn<T> {
@@ -50,7 +47,7 @@ interface DataTableProps<T> {
 }
 
 const iconMap = {
-  view: ViewDetail,
+  view: Visibility,
   edit: Edit,
   delete: Delete
 }
