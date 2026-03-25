@@ -8,7 +8,7 @@
  * 3. Access denied when user has no groups
  */
 
-import React, { ReactNode, useState } from 'react'
+import React, { ReactNode, useCallback, useRef, useState } from 'react'
 import {
   Provider,
   defaultTheme,
@@ -22,6 +22,12 @@ import { GateScreen } from './shared/GateScreen'
 import { COLORS, TYPOGRAPHY, SPACING } from '../styles/designSystem'
 const gateBg = new URL('../assets/gate-bg.png', import.meta.url).href
 
+/** Gag: group gate card nudges away from the mouse so it is still catchable (clamped). */
+const GROUP_GATE_DODGE_RADIUS = 200
+const GROUP_GATE_DODGE_STRENGTH = 26
+const GROUP_GATE_DODGE_DECAY = 0.88
+const GROUP_GATE_MAX_OFFSET = 120
+
 interface RBACGateProps {
   children: ReactNode
 }
@@ -33,6 +39,38 @@ interface RBACGateProps {
 const GroupSelectionScreen: React.FC = () => {
   const { groups, setActiveGroup } = useGroup()
   const [selectedId, setSelectedId] = useState<string | null>(null)
+  const cardWrapRef = useRef<HTMLDivElement>(null)
+  const [dodgeOffset, setDodgeOffset] = useState({ x: 0, y: 0 })
+
+  const handleOverlayPointerMove = useCallback((e: React.PointerEvent) => {
+    if (e.pointerType !== 'mouse') return
+    const el = cardWrapRef.current
+    if (!el) return
+    const rect = el.getBoundingClientRect()
+    const cx = rect.left + rect.width / 2
+    const cy = rect.top + rect.height / 2
+    const dx = cx - e.clientX
+    const dy = cy - e.clientY
+    const dist = Math.hypot(dx, dy)
+
+    setDodgeOffset(prev => {
+      let nx = prev.x
+      let ny = prev.y
+      if (dist < GROUP_GATE_DODGE_RADIUS && dist > 0.5) {
+        const pull = (GROUP_GATE_DODGE_RADIUS - dist) / GROUP_GATE_DODGE_RADIUS
+        const ux = dx / dist
+        const uy = dy / dist
+        nx += ux * GROUP_GATE_DODGE_STRENGTH * pull
+        ny += uy * GROUP_GATE_DODGE_STRENGTH * pull
+      } else {
+        nx *= GROUP_GATE_DODGE_DECAY
+        ny *= GROUP_GATE_DODGE_DECAY
+      }
+      const clamp = (v: number) =>
+        Math.max(-GROUP_GATE_MAX_OFFSET, Math.min(GROUP_GATE_MAX_OFFSET, v))
+      return { x: clamp(nx), y: clamp(ny) }
+    })
+  }, [])
 
   // UNSAFE_style needed: fixed fullscreen overlay is not expressible via Spectrum props
   const outerStyle: React.CSSProperties = {
@@ -51,7 +89,17 @@ const GroupSelectionScreen: React.FC = () => {
   }
 
   return (
-    <View UNSAFE_style={outerStyle}>
+    // Plain div: fullscreen gate + pointer tracking (Spectrum View does not forward onPointerMove)
+    <div style={outerStyle} onPointerMove={handleOverlayPointerMove}>
+      <div
+        ref={cardWrapRef}
+        style={{
+          width: 'fit-content',
+          maxWidth: '100%',
+          transform: `translate3d(${dodgeOffset.x}px, ${dodgeOffset.y}px, 0)`,
+          willChange: 'transform',
+        }}
+      >
       <Flex
         direction="column"
         alignItems="center"
@@ -113,7 +161,8 @@ const GroupSelectionScreen: React.FC = () => {
           </Button>
         </Flex>
       </Flex>
-    </View>
+      </div>
+    </div>
   )
 }
 
