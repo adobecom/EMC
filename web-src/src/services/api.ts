@@ -265,20 +265,18 @@ class ApiService {
 
   // Session APIs
 
-  async getSessions(eventId?: string): Promise<any | ErrorResponse> {
-    const endpoint = eventId
-      ? `/v1/sessions?eventId=${encodeURIComponent(eventId)}`
-      : '/v1/sessions'
-    return this.callExternalApi('esp', endpoint, 'GET', undefined, {
-      operationName: 'getSessions',
+  async getAllEventSessions(eventId: string): Promise<any | ErrorResponse> {
+    validateString(eventId, 'event ID')
+    return this.callExternalApi('esp', `/v1/sessions?eventId=${encodeURIComponent(eventId)}`, 'GET', undefined, {
+      operationName: 'getAllEventSessions',
       shouldReturnFullResponse: true,
     })
   }
 
-  async getSession(id: string): Promise<any | ErrorResponse> {
+  async getSingleSession(id: string): Promise<any | ErrorResponse> {
     validateString(id, 'session ID')
     return this.callExternalApi('esp', `/v1/sessions/${encodeURIComponent(id)}`, 'GET', undefined, {
-      operationName: 'getSession',
+      operationName: 'getSingleSession',
       shouldReturnFullResponse: true,
     })
   }

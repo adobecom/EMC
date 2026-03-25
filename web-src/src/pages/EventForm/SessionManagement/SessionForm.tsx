@@ -240,7 +240,7 @@ export const SessionForm: React.FC<SessionFormProps> = ({
     setLoadingDetails(true);
     setDetailError(null);
     Promise.all([
-      apiService.getSession(session.id),
+      apiService.getSingleSession(session.id),
       apiService.getSessionTimes(session.id),
     ]).then(([res, timesRes]) => {
       if (cancelled) return;

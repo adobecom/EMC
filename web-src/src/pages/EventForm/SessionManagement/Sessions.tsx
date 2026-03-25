@@ -194,7 +194,7 @@ export const Sessions: React.FC = () => {
     }
     setLoadError(null);
     try {
-      const response = await apiService.getSessions(eventId);
+      const response = await apiService.getAllEventSessions(eventId);
       if (response && "error" in response) {
         setLoadError(response.error?.message || String(response.error));
         setSessions([]);
