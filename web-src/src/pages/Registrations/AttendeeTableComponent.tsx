@@ -8,7 +8,6 @@ import type { Attendee, AttendeeColumnConfig } from '../../types/attendee'
 import { getAttendeeName } from '../../types/attendee'
 import { DataTable, TableColumn } from '../../components/shared'
 import { COLORS } from '../../styles/designSystem'
-import PeopleGroup from '@react-spectrum/s2/icons/PeopleGroup';
 
 interface AttendeeTableComponentProps {
   attendees: Attendee[]

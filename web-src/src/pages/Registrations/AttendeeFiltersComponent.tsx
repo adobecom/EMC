@@ -176,8 +176,8 @@ const FilterMenu: React.FC<FilterMenuProps> = ({ menu, selectedValues, onToggle 
       <ActionButton
         onPress={() => setIsExpanded(!isExpanded)}
         isQuiet
-        width="100%"
-        UNSAFE_style={{ 
+        UNSAFE_style={{
+          width: '100%',
           justifyContent: 'space-between',
           paddingLeft: 0,
           paddingRight: 0

@@ -3,8 +3,7 @@
 */
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react'
-import { Heading, Tabs, TabList, Tab, TabPanel } from '@react-spectrum/s2'
-import { style } from '@react-spectrum/s2/style' with { type: 'macro' }
+import { Tabs, TabList, Tab, TabPanel } from '@react-spectrum/s2'
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom'
 import type { EventApiResponse } from '../../types/domain'
 import type { Attendee, AttendeeStats, AttendeeColumnConfig } from '../../types/attendee'

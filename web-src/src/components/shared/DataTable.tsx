@@ -327,7 +327,7 @@ export function DataTable<T extends Record<string, any>>({
                           aria-label={isExpanded ? 'Collapse row' : 'Expand row'}
                           UNSAFE_style={{ padding: 0 }}
                         >
-                          {isExpanded ? <ChevronDown size="S" /> : <ChevronRight size="S" />}
+                          {isExpanded ? <ChevronDown /> : <ChevronRight />}
                         </ActionButton>
                       </td>
                     )}

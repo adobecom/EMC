@@ -357,7 +357,7 @@ const StatItem: React.FC<{
   </div>
 )
 
-const EmptyCampaignsState: React.FC<{ onCreateClick: () => void }> = ({ onCreateClick }) => (
+const EmptyCampaignsState: React.FC<{ onCreateClick: () => void }> = ({ onCreateClick: _onCreateClick }) => (
   <div style={{ padding: '48px', textAlign: 'center', border: `2px dashed ${COLORS.GRAY_300}`, borderRadius: '8px' }}>
     <h3 style={{ marginBottom: SPACING.MD }}>
       No campaigns yet
