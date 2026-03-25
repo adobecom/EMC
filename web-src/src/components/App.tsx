@@ -7,7 +7,7 @@ import { Provider, defaultTheme, Grid, View } from '@adobe/react-spectrum'
 // @ts-ignore — Fonts component exists but isn't in the package exports for v0.12.0
 import { Fonts } from '@react-spectrum/s2/dist/Fonts.mjs'
 import { Provider as S2Provider } from '@react-spectrum/s2'
-import { ErrorBoundary } from 'react-error-boundary'
+import { ErrorBoundary, FallbackProps } from 'react-error-boundary'
 import { HashRouter as Router, Routes, Route } from 'react-router-dom'
 import { TopNav } from './layout'
 import { ToastContainer } from './shared'
@@ -64,7 +64,7 @@ const AppContent: React.FC<{ runtime: Runtime }> = ({ runtime }) => {
   }
 
   // component to show if UI fails rendering
-  const fallbackComponent = ({ error }: { error: unknown }) => {
+  const fallbackComponent = ({ error }: FallbackProps) => {
     const message = error instanceof Error ? error.message : String(error)
     return (
       <React.Fragment>
