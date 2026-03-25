@@ -10,6 +10,7 @@ import {
   EventApiResponse,
   SeriesSpeaker,
 } from '../types/domain'
+import { getLanguageKeyFromLocale } from '../config/localeMapping'
 import { fromApiSocialLink } from './socialPlatformDetector'
 
 /**
@@ -125,7 +126,7 @@ export function mapApiResponseToFormData(event: EventApiResponse, locale: string
     urlTitle: event.detailPagePath?.split('/').slice(-5, -4).join('/') || '',
     description: localized.eventDetails || '',
     shortDescription: localized.description || '',
-    language: locale.split('-')[0] || 'en',
+    language: getLanguageKeyFromLocale(locale),
     defaultLocale: locale,
     isPrivate: event.isPrivate || false,
     inviteOnly: event.inviteOnly || false,

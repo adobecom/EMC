@@ -18,12 +18,14 @@ import type {
 import {
   buildTokenContext,
   constructDetailPagePath,
+  normalizeRelativeUrl,
   resolveUrlPattern,
 } from '../utils/urlPatternResolver'
 
 export interface DetailPagePathResult {
   url: string
   collision: EventApiResponse | null
+  relativeUrl: string
 }
 
 export function useCustomDetailPagePath() {
@@ -72,11 +74,12 @@ export function useCustomDetailPagePath() {
     const context = buildTokenContext(formData, series)
     const resolved = resolveUrlPattern(entry.pattern, context)
     const url = constructDetailPagePath(relatedDomain, contentRoot, resolved)
+    const relativeUrl = normalizeRelativeUrl(resolved)
 
     const allEvents: EventApiResponse[] = await cachedApi.getEventsList()
     const collision = allEvents.find((e) => e.detailPagePath === url) || null
 
-    return { url, collision }
+    return { url, collision, relativeUrl }
   }, [])
 
   return { getDetailPagePathForSave }

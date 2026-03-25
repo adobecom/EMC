@@ -64,7 +64,7 @@ export const EventsDashboard: React.FC<EventsDashboardProps> = () => {
       // Transform API response to dashboard items
       const dashboardItems: EventDashboardItem[] = data.map(item => ({
         eventId: item.eventId,
-        eventName: item.enTitle || item.localizations?.['en-US']?.title || item.title || 'Untitled Event',
+        eventName: item.localizations?.[item.defaultLocale || 'en-US']?.title || item.title || item.enTitle || 'Untitled Event',
         seriesId: item.seriesId,
         seriesName: item.seriesId, // TODO: Resolve series name from series ID
         cloudType: item.cloudType,
