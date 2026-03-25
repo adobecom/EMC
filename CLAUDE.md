@@ -23,15 +23,15 @@ npm run check        # lint + type-check together
 
 | Layer | Technology |
 |---|---|
-| Framework | React 16 (hooks + functional components only — no class components) |
+| Framework | React 18 (hooks + functional components only — no class components) |
 | Language | TypeScript (strict, ES2020, bundler module resolution) |
-| UI Library | Adobe React Spectrum **v3** (`@adobe/react-spectrum`) — NOT S2 |
+| UI Library | **React Spectrum 2** (`@react-spectrum/s2`) first; **v3** (`@adobe/react-spectrum`) only when no S2 equivalent |
 | Icons | `@spectrum-icons/workflow` |
 | Routing | React Router 6 with HashRouter |
 | State | React Context + `useReducer` (no Redux/Zustand) |
 | Build | Adobe I/O CLI (`aio`) with Parcel |
 
-**Critical**: Use React Spectrum **v3** only. Do NOT use S2 imports (`@react-spectrum/s2`), S2 style macros, or S2 patterns.
+**Critical**: Prefer React Spectrum **S2** (`@react-spectrum/s2`, style macro, S2 icons). Use **v3** (`@adobe/react-spectrum`) only as a fallback when S2 does not cover the component or pattern. See `.claude/agents/spectrum-ui.md` and `.cursor/rules/react-spectrum/react-spectrum-s2.mdc`.
 
 ## Architecture
 

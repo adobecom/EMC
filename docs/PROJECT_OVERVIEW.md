@@ -74,8 +74,8 @@ Organization (IMS Org)
 ## Technology Stack
 
 ### Frontend
-- **React 16** with **TypeScript**
-- **Adobe React Spectrum** - UI component library
+- **React 18** with **TypeScript**
+- **Adobe React Spectrum 2** - UI component library
 - **React Router** - Client-side routing
 - **@internationalized/date** - Date handling
 

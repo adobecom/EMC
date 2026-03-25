@@ -1,31 +1,34 @@
 ---
-description: React component patterns, hooks, state management, and Spectrum v3 usage for EMC
+description: React component patterns, hooks, state management, and Spectrum 2–first UI for EMC (v3 fallback)
 globs: web-src/**/*.tsx,web-src/**/*.ts
 alwaysApply: false
 ---
 
 # EMC React Component Patterns
 
-## React Spectrum v3 — NOT S2
+## React Spectrum — S2 first, v3 fallback
 
-This project uses `@adobe/react-spectrum` (v3). **Do NOT use S2 imports or patterns.**
+**Prefer** `@react-spectrum/s2` for new and refactored UI. Use `@adobe/react-spectrum` (v3) only when there is no suitable S2 component or you must align with an existing v3-only boundary.
 
 ```tsx
-// CORRECT — v3 imports
-import { Button, TextField, Flex, View, Text, Dialog, DialogTrigger } from '@adobe/react-spectrum'
-import Edit from '@spectrum-icons/workflow/Edit'
+// Preferred — Spectrum 2
+import { Button, TextField } from '@react-spectrum/s2'
+import { style } from '@react-spectrum/s2/style' with { type: 'macro' }
+import Edit from '@react-spectrum/s2/icons/Edit'
 
-// WRONG — S2 imports (not installed)
-// import { Button } from '@react-spectrum/s2'
+// Fallback — v3 (when S2 has no equivalent)
+import { Button, TextField, Flex, View } from '@adobe/react-spectrum'
+import Edit from '@spectrum-icons/workflow/Edit'
 ```
 
-### Spectrum v3 Key Rules
-- Use `onPress` for buttons (not `onClick`) — handles keyboard + pointer
-- Layout: `Flex`, `Grid`, `View` with Spectrum dimension props (`size-*`, `static-size-*`)
-- Spacing: Use Spectrum tokens like `size-100`, `size-200` in `gap`, `margin*`, `padding*`
-- Styling escape hatch: `UNSAFE_style` and `UNSAFE_className` (minimize usage)
-- Theme: `defaultTheme`, `colorScheme='light'`, `scale='medium'` (set in App.tsx)
-- Collections: `<Picker>`, `<ComboBox>`, `<ListView>` use `<Item key={}>` children
+### Spectrum interaction and layout (both stacks)
+- Use `onPress` on Spectrum buttons/links (not `onClick`) unless working with plain DOM
+- **S2:** layout and spacing via `style()` macro and S2 docs; **v3:** `Flex`, `Grid`, `View` with dimension props (`size-*`, `static-size-*`) and token spacing
+- Minimize `UNSAFE_style` / `UNSAFE_className`; comment when required
+- **v3 surfaces:** `defaultTheme`, `Provider`, `colorScheme`, `scale` in App as today
+- **v3 collections:** `<Picker>`, `<ComboBox>`, `<ListView>` use `<Item key={}>` children
+
+See `react-spectrum-s2.mdc` and `react-spectrum-v3.mdc` for stack-specific detail.
 
 ## Component Patterns
 
