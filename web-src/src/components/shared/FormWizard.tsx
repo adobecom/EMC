@@ -7,7 +7,6 @@ import {
   View,
   ProgressBar,
   Heading,
-  ProgressCircle,
 } from '@adobe/react-spectrum'
 import { Button, Text } from '@react-spectrum/s2'
 import { style, iconStyle } from '@react-spectrum/s2/style' with { type: 'macro' }
@@ -303,7 +302,7 @@ export const FormWizard: React.FC<FormWizardProps> = ({
                       background: isActive ? COLORS.ADOBE_RED : COLORS.TRANSPARENT,
                       color: isActive ? COLORS.WHITE : isLocked ? COLORS.GRAY_600 : COLORS.GRAY_800,
                       padding: '8px 12px',
-                      paddingLeft: '32px',
+                      paddingLeft: '40px',
                       textAlign: 'left',
                       cursor: isDisabled ? 'not-allowed' : 'pointer',
                       borderRadius: '4px',

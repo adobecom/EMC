@@ -17,10 +17,6 @@ import React, { useEffect, useState, useMemo, useCallback, useRef } from 'react'
 import {
   Flex,
   View,
-  ActionButton,
-  MenuTrigger,
-  Menu,
-  Item,
   DialogTrigger,
   AlertDialog,
   ProgressCircle,
@@ -28,14 +24,13 @@ import {
   TooltipTrigger,
   Well
 } from '@adobe/react-spectrum'
-import { Badge, Button, ComboBox, ComboBoxItem, Text } from "@react-spectrum/s2"
+import { ActionButton, ActionMenu, MenuItem, Badge, Button, ComboBox, ComboBoxItem, Text } from "@react-spectrum/s2"
 import { style } from "@react-spectrum/s2/style" with { type: "macro" }
-import MoreSmallList from '@spectrum-icons/workflow/MoreSmallList'
-import Edit from '@spectrum-icons/workflow/Edit'
-import Delete from '@spectrum-icons/workflow/Delete'
-import Add from '@spectrum-icons/workflow/Add'
-import Link from '@spectrum-icons/workflow/Link'
-import User from '@spectrum-icons/workflow/User'
+import Edit from '@react-spectrum/s2/icons/Edit'
+import Delete from '@react-spectrum/s2/icons/Delete'
+import Add from '@react-spectrum/s2/icons/Add'
+import Link from '@react-spectrum/s2/icons/Link'
+import User from '@react-spectrum/s2/icons/User'
 import { TableColumn } from '../../components/shared/DataTable'
 import { ResourceDashboardLayout, BlurredLoadingOverlay } from '../../components/shared'
 import { SeriesSpeaker, SeriesApiResponse, EventApiResponse } from '../../types/domain'
@@ -503,25 +498,19 @@ export const SpeakersDashboard: React.FC<SpeakersDashboardProps> = () => {
         
         return (
           <TooltipTrigger delay={0}>
-            <ActionButton 
-              isQuiet 
+            <ActionButton
+              isQuiet
               onPress={() => handleViewConnections(item)}
               isDisabled={eventCount === 0}
             >
-              <Flex alignItems="center" gap="size-100">
-                <Link size="S" />
-                <Text UNSAFE_style={{ 
-                  color: eventCount > 0 
-                    ? 'var(--spectrum-global-color-blue-600)' 
-                    : 'var(--spectrum-global-color-gray-500)'
-                }}>
-                  {eventCount} {eventCount === 1 ? 'event' : 'events'}
-                </Text>
-              </Flex>
+              <Link />
+              <Text>
+                {eventCount} {eventCount === 1 ? 'event' : 'events'}
+              </Text>
             </ActionButton>
             <Tooltip>
-              {eventCount > 0 
-                ? 'Click to view linked events' 
+              {eventCount > 0
+                ? 'Click to view linked events'
                 : 'Not linked to any events'}
             </Tooltip>
           </TooltipTrigger>
@@ -589,28 +578,25 @@ export const SpeakersDashboard: React.FC<SpeakersDashboardProps> = () => {
         const eventCount = item.eventCount ?? 0
         
         return (
-          <MenuTrigger>
-            <ActionButton isQuiet aria-label="Actions menu">
-              <MoreSmallList />
-            </ActionButton>
-            <Menu 
-              onAction={(key) => handleMenuAction(key as string, item)}
-              disabledKeys={eventCount === 0 ? ['view-connections'] : []}
-            >
-              <Item key="edit">
-                <Edit />
-                <Text>Edit Speaker</Text>
-              </Item>
-              <Item key="view-connections">
-                <Link />
-                <Text>View Connections ({eventCount})</Text>
-              </Item>
-              <Item key="delete">
-                <Delete />
-                <Text>Delete Speaker</Text>
-              </Item>
-            </Menu>
-          </MenuTrigger>
+          <ActionMenu
+            isQuiet
+            aria-label="Actions menu"
+            onAction={(key) => handleMenuAction(key as string, item)}
+            disabledKeys={eventCount === 0 ? ['view-connections'] : []}
+          >
+            <MenuItem key="edit">
+              <Edit />
+              <Text>Edit Speaker</Text>
+            </MenuItem>
+            <MenuItem key="view-connections">
+              <Link />
+              <Text>View Connections ({eventCount})</Text>
+            </MenuItem>
+            <MenuItem key="delete">
+              <Delete />
+              <Text>Delete Speaker</Text>
+            </MenuItem>
+          </ActionMenu>
         )
       }
     }
@@ -788,7 +774,7 @@ export const SpeakersDashboard: React.FC<SpeakersDashboardProps> = () => {
             height="size-3000"
             gap="size-200"
           >
-            <User size="XXL" UNSAFE_style={{ color: 'var(--spectrum-global-color-gray-400)' }} />
+            <User aria-hidden />
             <Text UNSAFE_style={{ fontSize: '18px', color: 'var(--spectrum-global-color-gray-600)' }}>
               Select a series to manage speakers
             </Text>

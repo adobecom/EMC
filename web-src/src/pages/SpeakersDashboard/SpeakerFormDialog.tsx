@@ -16,15 +16,14 @@ import React, { useState, useCallback, useEffect } from 'react'
 import {
   Form,
   View,
-  ActionButton,
   ProgressCircle,
   Checkbox
 } from '@adobe/react-spectrum'
-import { Text, Button, ButtonGroup, TextField, Dialog, DialogTrigger, Content, Heading } from '@react-spectrum/s2'
+import { ActionButton, Text, Button, ButtonGroup, TextField, Dialog, DialogTrigger, Content, Heading } from '@react-spectrum/s2'
 import { style } from '@react-spectrum/s2/style' with { type: 'macro' }
-import Add from '@spectrum-icons/workflow/Add'
-import Delete from '@spectrum-icons/workflow/Delete'
-import LinkOut from '@spectrum-icons/workflow/LinkOut'
+import Add from '@react-spectrum/s2/icons/Add'
+import Delete from '@react-spectrum/s2/icons/Delete'
+import OpenIn from '@react-spectrum/s2/icons/OpenIn'
 import { SpeakerDashboardItem } from './SpeakersDashboard'
 import { SocialLinkFormData } from '../../types/domain'
 import { RichTextEditor, ImageUploader } from '../../components/shared'
@@ -277,7 +276,7 @@ export const SpeakerFormDialog: React.FC<SpeakerFormDialogProps> = ({
                                   fontWeight: 'bold'
                                 }}
                               >
-                                {detectedPlatform ? detectedPlatform.icon : <LinkOut />}
+                                {detectedPlatform ? detectedPlatform.icon : <OpenIn />}
                               </View>
 
                               <TextField

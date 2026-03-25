@@ -13,13 +13,12 @@
 
 import React, { useMemo } from 'react'
 import {
-  View,
-  Text
+  View
 } from '@adobe/react-spectrum'
-import { Button, ButtonGroup, Dialog, DialogTrigger, Content, Heading } from '@react-spectrum/s2'
+import { Button, ButtonGroup, Dialog, DialogTrigger, Content, Heading, Text } from '@react-spectrum/s2'
 import { style } from '@react-spectrum/s2/style' with { type: 'macro' }
-import Alert from '@spectrum-icons/workflow/Alert'
-import Link from '@spectrum-icons/workflow/Link'
+import AlertTriangle from '@react-spectrum/s2/icons/AlertTriangle'
+import Link from '@react-spectrum/s2/icons/Link'
 import { SpeakerDashboardItem } from './SpeakersDashboard'
 import { EventApiResponse } from '../../types/domain'
 import { COLORS } from '../../styles/designSystem'
@@ -97,7 +96,7 @@ export const CascadeConfirmDialog: React.FC<CascadeConfirmDialogProps> = ({
                   }}
                 >
                   <div className={style({display: 'flex', alignItems: 'center', gap: 12})}>
-                    <Alert size="S" UNSAFE_style={{ color: 'var(--spectrum-global-color-yellow-600)' }} />
+                    <AlertTriangle aria-hidden />
                     <Text>
                       <strong>{speakerName}</strong> is currently linked to{' '}
                       <strong>{eventCount} {eventCount === 1 ? 'event' : 'events'}</strong>.
@@ -120,7 +119,7 @@ export const CascadeConfirmDialog: React.FC<CascadeConfirmDialogProps> = ({
                   >
                     <div className={style({display: 'flex', flexDirection: 'column', gap: 8})}>
                       <div className={style({display: 'flex', alignItems: 'center', gap: 8})}>
-                        <Link size="S" />
+                        <Link />
                         <Text UNSAFE_style={{ fontWeight: 'bold', fontSize: '14px' }}>
                           Linked Events:
                         </Text>

@@ -13,14 +13,13 @@
 
 import React from 'react'
 import {
-  View,
-  ActionButton
+  View
 } from '@adobe/react-spectrum'
-import { Text, Button, ButtonGroup, Dialog, DialogTrigger, Content, Heading } from '@react-spectrum/s2'
+import { ActionButton, Text, Button, ButtonGroup, Dialog, DialogTrigger, Content, Heading } from '@react-spectrum/s2'
 import { style } from '@react-spectrum/s2/style' with { type: 'macro' }
-import Edit from '@spectrum-icons/workflow/Edit'
-import Calendar from '@spectrum-icons/workflow/Calendar'
-import Link from '@spectrum-icons/workflow/Link'
+import Edit from '@react-spectrum/s2/icons/Edit'
+import Calendar from '@react-spectrum/s2/icons/Calendar'
+import Link from '@react-spectrum/s2/icons/Link'
 import { SpeakerDashboardItem } from './SpeakersDashboard'
 import { EventApiResponse } from '../../types/domain'
 import { StatusBadge } from '../../components/shared'
@@ -117,7 +116,7 @@ export const SpeakerEventConnectionsDialog: React.FC<SpeakerEventConnectionsDial
                     </div>
 
                     <div className={style({display: 'flex', alignItems: 'center', gap: 8})}>
-                      <Link size="S" />
+                      <Link />
                       <Text UNSAFE_style={{ fontWeight: 'bold' }}>
                         {events.length} {events.length === 1 ? 'event' : 'events'}
                       </Text>
@@ -164,7 +163,7 @@ export const SpeakerEventConnectionsDialog: React.FC<SpeakerEventConnectionsDial
                               </Text>
                               <div className={style({display: 'flex', alignItems: 'center', gap: 12})}>
                                 <div className={style({display: 'flex', alignItems: 'center', gap: 8})}>
-                                  <Calendar size="XS" UNSAFE_style={{ color: 'var(--spectrum-global-color-gray-500)' }} />
+                                  <Calendar aria-hidden />
                                   <Text UNSAFE_style={{ fontSize: '12px', color: 'var(--spectrum-global-color-gray-600)' }}>
                                     {formatDate(event.localStartDate)}
                                   </Text>

@@ -65,7 +65,6 @@ export const PartnerPickerDialog: React.FC<PartnerPickerDialogProps> = ({
   const [pendingFile, setPendingFile] = useState<File | null>(null)
   const [isCreating, setIsCreating] = useState(false)
   const [localSponsors, setLocalSponsors] = useState<SeriesSponsor[]>([])
-  const [isLoadingSponsors, setIsLoadingSponsors] = useState(false)
   const toast = useToast()
 
   useEffect(() => {
@@ -82,14 +81,12 @@ export const PartnerPickerDialog: React.FC<PartnerPickerDialogProps> = ({
   // Fetch series sponsors when dialog opens (ensures network call happens when user opens picker)
   useEffect(() => {
     if (isOpen && seriesId) {
-      setIsLoadingSponsors(true)
       fetchSeriesSponsors(seriesId)
         .then((sponsors) => setLocalSponsors(sponsors))
         .catch((err) => {
           console.error('Failed to fetch series sponsors:', err)
           setLocalSponsors([])
         })
-        .finally(() => setIsLoadingSponsors(false))
     } else {
       setLocalSponsors([])
     }
