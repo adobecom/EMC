@@ -3,16 +3,11 @@
 */
 
 import React, { useState, useEffect } from 'react'
-import {
-  View,
-  Flex,
-  Text,
-  Button,
-  DialogContainer,
-  AlertDialog
-} from '@adobe/react-spectrum'
-import Refresh from '@spectrum-icons/workflow/Refresh'
-import LockClosed from '@spectrum-icons/workflow/LockClosed'
+import { View, DialogContainer, AlertDialog } from '@adobe/react-spectrum'
+import { Button, Text } from "@react-spectrum/s2"
+import { style } from "@react-spectrum/s2/style" with { type: "macro" }
+import Refresh from "@react-spectrum/s2/icons/Refresh"
+import Lock from "@react-spectrum/s2/icons/Lock"
 import { cachedApi } from '../../services/api'
 import { HeadingWithTooltip } from '../../components/shared'
 import { SeriesApiResponse } from '../../types/domain'
@@ -122,8 +117,8 @@ export const EventFormatComponent: React.FC = () => {
   // Before format is confirmed (and not in edit mode), show a placeholder
   if (!isFormatConfirmed && !isLocked) {
     return (
-      <Flex direction="column" gap="size-200">
-        <HeadingWithTooltip 
+      <div className={style({display: 'flex', flexDirection: 'column', gap: 16})}>
+        <HeadingWithTooltip
           level={3}
           tooltip="The cloud type and series determine where your event will be published and what metadata it inherits."
         >
@@ -132,12 +127,12 @@ export const EventFormatComponent: React.FC = () => {
         <Text UNSAFE_style={TYPOGRAPHY.SECTION_DESCRIPTION}>
           Select cloud and series to continue.
         </Text>
-      </Flex>
+      </div>
     )
   }
 
   return (
-    <Flex direction="column" gap="size-200">
+    <div className={style({display: 'flex', flexDirection: 'column', gap: 16})}>
       <View>
         <HeadingWithTooltip 
           level={3}
@@ -151,11 +146,10 @@ export const EventFormatComponent: React.FC = () => {
             : 'Cloud and series for this event.'}
         </Text>
       </View>
-
       {/* Read-only display of selections */}
-      <Flex direction="row" gap="size-400" alignItems="center" wrap>
+      <div className={style({display: 'flex', gap: 32, alignItems: 'center', flexWrap: 'wrap'})}>
         {/* Cloud badge */}
-        <Flex direction="column" gap="size-50">
+        <div className={style({display: 'flex', flexDirection: 'column', gap: 4})}>
           <Text UNSAFE_style={{ ...TYPOGRAPHY.FIELD_LABEL, fontSize: '12px' }}>Cloud</Text>
           <View
             borderWidth="thin"
@@ -165,15 +159,15 @@ export const EventFormatComponent: React.FC = () => {
             paddingY="size-100"
             UNSAFE_style={{ backgroundColor: COLORS.GRAY_100 }}
           >
-            <Flex direction="row" gap="size-100" alignItems="center">
-              {isLocked && <LockClosed size="XS" UNSAFE_style={{ color: COLORS.GRAY_600 }} />}
+            <div className={style({display: 'flex', gap: 8, alignItems: 'center'})}>
+              {isLocked && <Lock />}
               <Text UNSAFE_style={{ fontWeight: 500 }}>{cloudLabel}</Text>
-            </Flex>
+            </div>
           </View>
-        </Flex>
+        </div>
 
         {/* Series badge */}
-        <Flex direction="column" gap="size-50">
+        <div className={style({display: 'flex', flexDirection: 'column', gap: 4})}>
           <Text UNSAFE_style={{ ...TYPOGRAPHY.FIELD_LABEL, fontSize: '12px' }}>Series</Text>
           <View
             borderWidth="thin"
@@ -183,30 +177,29 @@ export const EventFormatComponent: React.FC = () => {
             paddingY="size-100"
             UNSAFE_style={{ backgroundColor: COLORS.GRAY_100 }}
           >
-            <Flex direction="row" gap="size-100" alignItems="center">
-              {isLocked && <LockClosed size="XS" UNSAFE_style={{ color: COLORS.GRAY_600 }} />}
+            <div className={style({display: 'flex', gap: 8, alignItems: 'center'})}>
+              {isLocked && <Lock />}
               <Text UNSAFE_style={{ fontWeight: 500 }}>
                 {isLoadingName ? 'Loading...' : (seriesName || 'Not selected')}
               </Text>
-            </Flex>
+            </div>
           </View>
-        </Flex>
+        </div>
 
         {/* Re-select button — only for unsaved new events */}
         {!isLocked && (
           <View UNSAFE_style={{ alignSelf: 'flex-end', marginBottom: `${SPACING.XXS}px` }}>
             <Button
               variant="secondary"
-              style="outline"
+              fillStyle="outline"
               onPress={handleReselectClick}
             >
-              <Refresh size="S" />
+              <Refresh />
               <Text>Re-select</Text>
             </Button>
           </View>
         )}
-      </Flex>
-
+      </div>
       {/* Re-select warning dialog */}
       <DialogContainer onDismiss={handleCancelReselect}>
         {showResetWarning && (
@@ -224,6 +217,6 @@ export const EventFormatComponent: React.FC = () => {
           </AlertDialog>
         )}
       </DialogContainer>
-    </Flex>
+    </div>
   )
 }

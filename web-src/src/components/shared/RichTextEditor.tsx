@@ -113,7 +113,6 @@ export const RichTextEditor: React.FC<RichTextEditorProps> = ({
               theme: 'snow',
               modules: {
                 toolbar: [
-                  [{ 'header': [1, 2, 3, false] }],
                   ['bold', 'italic', 'underline', 'strike'],
                   [{ 'list': 'ordered'}, { 'list': 'bullet' }],
                   [{ 'align': [] }],
@@ -198,14 +197,14 @@ export const RichTextEditor: React.FC<RichTextEditorProps> = ({
         fontWeight: 500,
         color: 'var(--spectrum-global-color-gray-800)'
       }}>
-        {label}{isRequired && <span style={{ color: 'var(--spectrum-global-color-red-600)' }}> *</span>}
+        {label}{isRequired && <span style={{ color: 'rgb(218, 218, 218)' }}> *</span>}
       </Text>
       
       <div 
         className="rte-wrapper"
         style={{
-          border: '1px solid var(--spectrum-global-color-gray-400)',
-          borderRadius: '4px',
+          border: '2px solid rgb(218, 218, 218)',
+          borderRadius: '8px',
           backgroundColor: 'white',
           minHeight: height,
           overflow: 'hidden',

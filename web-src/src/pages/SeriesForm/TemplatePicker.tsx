@@ -4,20 +4,18 @@
 
 import React, { useState, useEffect, useRef, useCallback } from 'react'
 import {
-  View,
-  Flex,
-  Text,
-  Button,
   Heading,
   ActionButton,
-  Divider
-} from '@adobe/react-spectrum'
-import Close from '@spectrum-icons/workflow/Close'
-import ZoomIn from '@spectrum-icons/workflow/ZoomIn'
-import ZoomOut from '@spectrum-icons/workflow/ZoomOut'
-import ChevronRight from '@spectrum-icons/workflow/ChevronRight'
-import ChevronLeft from '@spectrum-icons/workflow/ChevronLeft'
-import Image from '@spectrum-icons/workflow/Image'
+  Divider,
+  Text,
+  Button
+} from '@react-spectrum/s2'
+import Close from '@react-spectrum/s2/icons/Close'
+import ZoomIn from '@react-spectrum/s2/icons/ZoomIn'
+import ZoomOut from '@react-spectrum/s2/icons/ZoomOut'
+import ChevronRight from '@react-spectrum/s2/icons/ChevronRight'
+import ChevronLeft from '@react-spectrum/s2/icons/ChevronLeft'
+import Image from '@react-spectrum/s2/icons/Image'
 import { COLORS } from '../../styles/designSystem'
 
 /**
@@ -46,7 +44,7 @@ const ImagePlaceholder: React.FC<ImagePlaceholderProps> = ({ width, height, isSe
       gap: '8px'
     }}
   >
-    <Image size="XXL" UNSAFE_style={{ color: 'var(--spectrum-global-color-gray-500)' }} />
+    <Image UNSAFE_style={{ color: 'var(--spectrum-global-color-gray-500)' }} />
     <Text UNSAFE_style={{ 
       color: 'var(--spectrum-global-color-gray-600)', 
       fontSize: '11px',
@@ -219,8 +217,8 @@ export const TemplatePicker: React.FC<TemplatePickerProps> = ({
   if (!isOpen) return null
 
   return (
-    <View
-      UNSAFE_style={{
+    <div
+      style={{
         position: 'fixed',
         top: 0,
         left: 0,
@@ -233,8 +231,8 @@ export const TemplatePicker: React.FC<TemplatePickerProps> = ({
         zIndex: 1000
       }}
     >
-      <View
-        UNSAFE_style={{
+      <div
+        style={{
           position: 'relative',
           width: '100%',
           maxWidth: '1000px',
@@ -267,13 +265,13 @@ export const TemplatePicker: React.FC<TemplatePickerProps> = ({
         </Heading>
         
         {/* Preview Section */}
-        <View marginBottom="size-400">
+        <div style={{ marginBottom: '32px' }}>
           <Text UNSAFE_style={{ fontWeight: 700, fontSize: '16px', marginBottom: '12px', display: 'block' }}>
             Preview {previewTemplate?.name || ''}
           </Text>
           
-          <View
-            UNSAFE_style={{
+          <div
+            style={{
               position: 'relative',
               width: '100%',
               height: '450px',
@@ -283,14 +281,15 @@ export const TemplatePicker: React.FC<TemplatePickerProps> = ({
             }}
           >
             {/* Zoom Controls */}
-            <Flex
-              direction="column"
-              gap="size-50"
-              UNSAFE_style={{
+            <div
+              style={{
                 position: 'absolute',
                 top: '12px',
                 left: '12px',
-                zIndex: 5
+                zIndex: 5,
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '4px'
               }}
             >
               <ActionButton
@@ -316,8 +315,8 @@ export const TemplatePicker: React.FC<TemplatePickerProps> = ({
               >
                 <ZoomOut />
               </ActionButton>
-            </Flex>
-            
+            </div>
+
             {/* Preview Image Container */}
             <div
               ref={previewContainerRef}
@@ -360,12 +359,12 @@ export const TemplatePicker: React.FC<TemplatePickerProps> = ({
                 </Text>
               )}
             </div>
-          </View>
-        </View>
-        
+          </div>
+        </div>
+
         {/* Template Carousel */}
-        <View marginBottom="size-400">
-          <Flex direction="row" alignItems="center" gap="size-100">
+        <div style={{ marginBottom: '32px' }}>
+          <div style={{ display: 'flex', flexDirection: 'row', alignItems: 'center', gap: '8px' }}>
             {/* Previous Button */}
             <ActionButton
               isQuiet
@@ -377,8 +376,8 @@ export const TemplatePicker: React.FC<TemplatePickerProps> = ({
             </ActionButton>
             
             {/* Carousel Container */}
-            <View
-              UNSAFE_style={{
+            <div
+              style={{
                 flex: 1,
                 overflow: 'hidden'
               }}
@@ -447,8 +446,8 @@ export const TemplatePicker: React.FC<TemplatePickerProps> = ({
                   )
                 })}
               </div>
-            </View>
-            
+            </div>
+
             {/* Next Button */}
             <ActionButton
               isQuiet
@@ -458,14 +457,14 @@ export const TemplatePicker: React.FC<TemplatePickerProps> = ({
             >
               <ChevronRight />
             </ActionButton>
-          </Flex>
-        </View>
-        
+          </div>
+        </div>
+
         {/* Divider */}
-        <Divider size="S" marginBottom="size-200" />
-        
+        <Divider size="S" UNSAFE_style={{ marginBottom: '16px' }} />
+
         {/* Action Buttons */}
-        <Flex direction="row" justifyContent="end" gap="size-200">
+        <div style={{ display: 'flex', flexDirection: 'row', justifyContent: 'flex-end', gap: '16px' }}>
           <Button
             variant="secondary"
             onPress={handleCancel}
@@ -483,9 +482,9 @@ export const TemplatePicker: React.FC<TemplatePickerProps> = ({
           >
             Save
           </Button>
-        </Flex>
-      </View>
-    </View>
+        </div>
+      </div>
+    </div>
   )
 }
 

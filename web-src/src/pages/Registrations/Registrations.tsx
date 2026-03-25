@@ -3,14 +3,7 @@
 */
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react'
-import {
-  View,
-  Heading,
-  Tabs,
-  TabList,
-  TabPanels,
-  Item
-} from '@adobe/react-spectrum'
+import { Tabs, TabList, Tab, TabPanel } from '@react-spectrum/s2'
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom'
 import type { EventApiResponse } from '../../types/domain'
 import type { Attendee, AttendeeStats, AttendeeColumnConfig } from '../../types/attendee'
@@ -284,7 +277,7 @@ export const Registrations: React.FC<RegistrationsProps> = ({ ims: _ims }) => {
           : 'Loading...'
 
   return (
-    <View width="100%" padding="size-400" UNSAFE_style={{ boxSizing: 'border-box' }}>
+    <div style={{ width: '100%', padding: '32px', boxSizing: 'border-box' }}>
       {/* Header with Back Button and Event Selector */}
       <div style={{
         display: 'flex',
@@ -312,7 +305,7 @@ export const Registrations: React.FC<RegistrationsProps> = ({ ims: _ims }) => {
           <span>Back</span>
         </button>
 
-        <Heading level={1} UNSAFE_style={{ margin: 0, flex: 1 }}>Event report</Heading>
+        <h1 style={{ margin: 0, flex: 1 }}>Event report</h1>
 
         <div style={{ width: '280px' }}>
           <EventSelectorComponent
@@ -327,59 +320,57 @@ export const Registrations: React.FC<RegistrationsProps> = ({ ims: _ims }) => {
 
       {/* Event Info Panel */}
       {selectedEvent && (
-        <View marginBottom="size-300">
+        <div style={{ marginBottom: '24px' }}>
           <EventInfoComponent
             event={selectedEvent}
             stats={stats}
           />
-        </View>
+        </div>
       )}
 
       {/* Tabbed Content Area */}
-      <View marginTop="size-200">
+      <div style={{ marginTop: '16px' }}>
         <Tabs
           aria-label="Registrations Dashboard"
           selectedKey={selectedTab}
           onSelectionChange={(key) => setSelectedTab(String(key))}
         >
           <TabList>
-            <Item key="registrations">Registrations</Item>
-            <Item key="campaigns">Campaigns</Item>
+            <Tab id="registrations">Registrations</Tab>
+            <Tab id="campaigns">Campaigns</Tab>
           </TabList>
-          <TabPanels>
-            <Item key="registrations">
-              <View paddingTop="size-300">
-                <RegistrationsTab
-                  selectedEventId={selectedEventId}
-                  attendees={attendees}
-                  columnConfig={effectiveColumnConfig}
-                  onAttendeesRefresh={handleAttendeesRefresh}
-                  campaigns={campaigns}
-                />
-              </View>
-            </Item>
-            <Item key="campaigns">
-              <View paddingTop="size-300">
-                <CampaignsTab
-                  eventId={selectedEventId}
-                  event={selectedEvent}
-                  campaigns={campaigns}
-                  onCreateCampaign={handleCreateCampaign}
-                  onUpdateCampaign={handleUpdateCampaign}
-                  onDeleteCampaign={handleDeleteCampaign}
-                />
-              </View>
-            </Item>
-          </TabPanels>
+          <TabPanel id="registrations">
+            <div style={{ paddingTop: '24px' }}>
+              <RegistrationsTab
+                selectedEventId={selectedEventId}
+                attendees={attendees}
+                columnConfig={effectiveColumnConfig}
+                onAttendeesRefresh={handleAttendeesRefresh}
+                campaigns={campaigns}
+              />
+            </div>
+          </TabPanel>
+          <TabPanel id="campaigns">
+            <div style={{ paddingTop: '24px' }}>
+              <CampaignsTab
+                eventId={selectedEventId}
+                event={selectedEvent}
+                campaigns={campaigns}
+                onCreateCampaign={handleCreateCampaign}
+                onUpdateCampaign={handleUpdateCampaign}
+                onDeleteCampaign={handleDeleteCampaign}
+              />
+            </div>
+          </TabPanel>
         </Tabs>
-      </View>
+      </div>
 
       <BlurredLoadingOverlay
         visible={isLoading}
         message={loadingMessage}
         ariaLabel={loadingMessage.replace(/\.\.\.$/, '')}
       />
-    </View>
+    </div>
   )
 }
 

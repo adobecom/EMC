@@ -5,11 +5,12 @@
 import 'core-js/stable'
 import 'regenerator-runtime/runtime'
 import React from 'react'
-import ReactDOM from 'react-dom'
+import { createRoot } from 'react-dom/client'
 
 import Runtime, { init } from '@adobe/exc-app'
 
 import App from './components/App'
+import '@react-spectrum/s2/page.css'
 import './index.css'
 import { Runtime as RuntimeType, IMS } from './types'
 import type { AuthMode } from './contexts/AuthContext'
@@ -91,8 +92,6 @@ function bootstrapInExcShell(): void {
 // ============================================================================
 
 function renderApp(runtime: RuntimeType, initialIms: IMS, authMode: AuthMode): void {
-  ReactDOM.render(
-    <App runtime={runtime} ims={initialIms} authMode={authMode} />,
-    document.getElementById('root')
-  )
+  const root = createRoot(document.getElementById('root')!)
+  root.render(<App runtime={runtime} ims={initialIms} authMode={authMode} />)
 }

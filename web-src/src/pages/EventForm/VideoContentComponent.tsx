@@ -4,9 +4,10 @@
 
 import React from 'react'
 import {
-  TextField,
   Flex,
 } from '@adobe/react-spectrum'
+import { TextField } from '@react-spectrum/s2'
+import { style } from "@react-spectrum/s2/style" with { type: "macro" }
 import { HeadingWithTooltip } from '../../components/shared'
 import { useEventFormComponent } from '../../hooks/useEventFormComponent'
 
@@ -40,7 +41,7 @@ export const VideoContentComponent: React.FC = () => {
         placeholder="https://"
         value={videoUrl}
         onChange={handleUrlChange}
-        width="size-6000"
+        styles={style({ width: 480 })}
       />
     </Flex>
   )

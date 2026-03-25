@@ -3,7 +3,7 @@
 */
 
 import React from 'react'
-import { View, Text, ProgressCircle } from '@adobe/react-spectrum'
+import { Text, ProgressCircle } from '@react-spectrum/s2'
 import { Z_INDEX } from '../../styles/designSystem'
 
 interface BlurredLoadingOverlayProps {
@@ -30,13 +30,13 @@ export const BlurredLoadingOverlay: React.FC<BlurredLoadingOverlayProps> = ({
   if (!visible) return null
 
   return (
-    <View
-      position="fixed"
-      top="size-0"
-      left="size-0"
-      right="size-0"
-      bottom="size-0"
-      UNSAFE_style={{
+    <div
+      style={{
+        position: 'fixed',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
         backgroundColor: 'rgba(0, 0, 0, 0.4)',
         backdropFilter: 'blur(2px)',
         zIndex,
@@ -47,11 +47,11 @@ export const BlurredLoadingOverlay: React.FC<BlurredLoadingOverlayProps> = ({
         cursor: 'wait'
       }}
     >
-      <View
-        backgroundColor="gray-50"
-        padding="size-400"
-        borderRadius="medium"
-        UNSAFE_style={{
+      <div
+        style={{
+          backgroundColor: 'var(--spectrum-gray-50)',
+          padding: '32px',
+          borderRadius: '8px',
           boxShadow: '0 8px 32px rgba(0, 0, 0, 0.2)',
           display: 'flex',
           flexDirection: 'column',
@@ -63,7 +63,7 @@ export const BlurredLoadingOverlay: React.FC<BlurredLoadingOverlayProps> = ({
         <Text UNSAFE_style={{ fontSize: '16px', fontWeight: 500 }}>
           {message}
         </Text>
-      </View>
-    </View>
+      </div>
+    </div>
   )
 }

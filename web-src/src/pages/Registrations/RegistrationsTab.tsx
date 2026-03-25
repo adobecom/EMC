@@ -3,13 +3,9 @@
 */
 
 import React, { useState, useCallback, useMemo } from 'react'
-import {
-  SearchField,
-  AlertDialog,
-  DialogTrigger,
-  ActionButton,
-} from '@adobe/react-spectrum'
-import Download from '@spectrum-icons/workflow/Download'
+import { DialogTrigger, SearchField, ActionButton, AlertDialog } from '@react-spectrum/s2'
+import { style } from '@react-spectrum/s2/style' with { type: 'macro' }
+import Download from '@react-spectrum/s2/icons/Download'
 import type { Attendee, AttendeeFilters, AttendeeColumnConfig } from '../../types/attendee'
 import type { Campaign } from '../../types/campaign'
 import { useHasPermission } from '../../hooks/useHasPermission'
@@ -158,8 +154,7 @@ export const RegistrationsTab: React.FC<RegistrationsTabProps> = ({
                   value={searchQuery}
                   onChange={setSearchQuery}
                   onClear={() => setSearchQuery('')}
-                  width="100%"
-                  isQuiet
+                  styles={style({ width: '[100%]' })}
                 />
               </div>
             </div>
@@ -195,29 +190,21 @@ export const RegistrationsTab: React.FC<RegistrationsTabProps> = ({
       </DialogTrigger>
 
       {/* Delete Confirmation Dialog */}
-      <DialogTrigger
-        isOpen={!!itemToDelete}
-        onOpenChange={(isOpen) => !isOpen && setItemToDelete(null)}
-      >
+      <DialogTrigger isOpen={!!itemToDelete} onOpenChange={(isOpen) => !isOpen && setItemToDelete(null)}>
         <div style={{ display: 'none' }} />
-        {(close) => (
-          <AlertDialog
-            title="Remove Attendee"
-            variant="destructive"
-            primaryActionLabel="Remove"
-            secondaryActionLabel="Cancel"
-            onPrimaryAction={() => {
-              if (itemToDelete) {
-                handleDeleteAttendee(itemToDelete)
-              }
-              close()
-            }}
-            onSecondaryAction={close}
-          >
-            Are you sure you want to remove {itemToDelete ? getAttendeeName(itemToDelete) : 'this attendee'}? 
-            This action cannot be undone.
-          </AlertDialog>
-        )}
+        <AlertDialog
+          title="Remove Attendee"
+          variant="destructive"
+          primaryActionLabel="Remove"
+          cancelLabel="Cancel"
+          onPrimaryAction={() => {
+            if (itemToDelete) { handleDeleteAttendee(itemToDelete) }
+          }}
+          onCancel={() => setItemToDelete(null)}
+        >
+          Are you sure you want to remove {itemToDelete ? getAttendeeName(itemToDelete) : 'this attendee'}?
+          This action cannot be undone.
+        </AlertDialog>
       </DialogTrigger>
     </>
   )
