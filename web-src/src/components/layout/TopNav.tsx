@@ -5,7 +5,7 @@
 import React from 'react'
 import { NavLink } from 'react-router-dom'
 import { Flex, View } from '@adobe/react-spectrum'
-import { Button } from "@react-spectrum/s2"
+import { Button, Text } from "@react-spectrum/s2"
 import { IMS } from '../../types'
 import { UserPanel } from '../user'
 import { DevTokenButton } from '../dev'
@@ -80,20 +80,20 @@ const TopNav: React.FC<TopNavProps> = ({ ims }) => {
             end
             to="/"
           >
-            Home
+            <Text>Home</Text>
           </NavLink>
           <NavLink
             className={({ isActive }) => `nav-link ${isActive ? 'is-selected' : ''}`}
             to="/overview"
           >
-            Overview
+            <Text>Overview</Text>
           </NavLink>
           {canReadEvents && (
             <NavLink
               className={({ isActive }) => `nav-link ${isActive ? 'is-selected' : ''}`}
               to="/events"
             >
-              Events
+              <Text>Events</Text>
             </NavLink>
           )}
           {canReadEvents && (
@@ -101,7 +101,7 @@ const TopNav: React.FC<TopNavProps> = ({ ims }) => {
               className={({ isActive }) => `nav-link ${isActive ? 'is-selected' : ''}`}
               to="/registrations"
             >
-              Registrations
+              <Text>Registrations</Text>
             </NavLink>
           )}
           {canReadEvents && (
@@ -109,7 +109,7 @@ const TopNav: React.FC<TopNavProps> = ({ ims }) => {
               className={({ isActive }) => `nav-link ${isActive ? 'is-selected' : ''}`}
               to="/speakers"
             >
-              Speakers
+              <Text>Speakers</Text>
             </NavLink>
           )}
           {canReadSeries && (
@@ -117,7 +117,7 @@ const TopNav: React.FC<TopNavProps> = ({ ims }) => {
               className={({ isActive }) => `nav-link ${isActive ? 'is-selected' : ''}`}
               to="/series"
             >
-              Series
+              <Text>Series</Text>
             </NavLink>
           )}
           {canReadClouds && (
@@ -125,14 +125,14 @@ const TopNav: React.FC<TopNavProps> = ({ ims }) => {
               className={({ isActive }) => `nav-link ${isActive ? 'is-selected' : ''}`}
               to="/clouds"
             >
-              Clouds
+              <Text>Clouds</Text>
             </NavLink>
           )}
           <NavLink
             className={({ isActive }) => `nav-link ${isActive ? 'is-selected' : ''}`}
             to="/about"
           >
-            About
+            <Text>About</Text>
           </NavLink>
         </Flex>
         )}
