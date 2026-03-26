@@ -12,9 +12,6 @@
  */
 
 import React from 'react'
-import {
-  View
-} from '@adobe/react-spectrum'
 import { ActionButton, Text, Button, ButtonGroup, Dialog, DialogTrigger, Content, Heading } from '@react-spectrum/s2'
 import { style } from '@react-spectrum/s2/style' with { type: 'macro' }
 import Edit from '@react-spectrum/s2/icons/Edit'
@@ -67,24 +64,26 @@ export const SpeakerEventConnectionsDialog: React.FC<SpeakerEventConnectionsDial
             <Content>
               <div className={style({display: 'flex', flexDirection: 'column', gap: 24})}>
                 {/* Speaker Info Header */}
-                <View
-                  padding="size-200"
-                  borderRadius="medium"
-                  backgroundColor="gray-100"
+                <div
+                  style={{
+                    padding: 16,
+                    borderRadius: 8,
+                    backgroundColor: 'var(--spectrum-global-color-gray-100)',
+                  }}
                 >
                   <div className={style({display: 'flex', alignItems: 'center', gap: 16})}>
                     {/* Speaker Avatar */}
-                    <View
-                      UNSAFE_style={{
-                        width: '48px',
-                        height: '48px',
+                    <div
+                      style={{
+                        width: 48,
+                        height: 48,
                         borderRadius: '50%',
                         overflow: 'hidden',
                         backgroundColor: 'var(--spectrum-global-color-gray-300)',
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
-                        flexShrink: 0
+                        flexShrink: 0,
                       }}
                     >
                       {speaker?.photo?.imageUrl ? (
@@ -102,7 +101,7 @@ export const SpeakerEventConnectionsDialog: React.FC<SpeakerEventConnectionsDial
                           {speaker?.firstName?.[0]}{speaker?.lastName?.[0]}
                         </Text>
                       )}
-                    </View>
+                    </div>
 
                     <div className={style({display: 'flex', flexDirection: 'column', gap: 4, flexGrow: 1})}>
                       <Text UNSAFE_style={{ fontWeight: 'bold', fontSize: '16px' }}>
@@ -122,38 +121,30 @@ export const SpeakerEventConnectionsDialog: React.FC<SpeakerEventConnectionsDial
                       </Text>
                     </div>
                   </div>
-                </View>
+                </div>
 
                 {/* Events List */}
                 {events.length === 0 ? (
-                  <View
-                    padding="size-400"
-                    UNSAFE_style={{ textAlign: 'center' }}
-                  >
+                  <div style={{ padding: 32, textAlign: 'center' }}>
                     <Text UNSAFE_style={{ color: 'var(--spectrum-global-color-gray-600)' }}>
                       This speaker is not linked to any events.
                     </Text>
-                  </View>
+                  </div>
                 ) : (
-                  <View
-                    maxHeight="size-4600"
-                    UNSAFE_style={{ overflowY: 'auto' }}
-                  >
+                  <div style={{ maxHeight: 368, overflowY: 'auto' }}>
                     <div className={style({display: 'flex', flexDirection: 'column', gap: 8})}>
                       {events.map(event => (
-                        <View
+                        <div
                           key={event.eventId}
-                          padding="size-200"
-                          borderWidth="thin"
-                          borderColor="gray-300"
-                          borderRadius="medium"
-                          UNSAFE_style={{
+                          style={{
+                            padding: 16,
+                            border: '1px solid var(--spectrum-global-color-gray-300)',
+                            borderRadius: 8,
                             transition: 'background-color 0.15s ease',
-                            cursor: 'pointer'
+                            cursor: 'pointer',
                           }}
-                          // @ts-ignore - Spectrum View doesn't expose these but they work
-                          onMouseEnter={(e: any) => e.currentTarget.style.backgroundColor = 'var(--spectrum-global-color-gray-100)'}
-                          onMouseLeave={(e: any) => e.currentTarget.style.backgroundColor = 'transparent'}
+                          onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = 'var(--spectrum-global-color-gray-100)' }}
+                          onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'transparent' }}
                         >
                           <div className={style({display: 'flex', alignItems: 'center', gap: 16})}>
                             {/* Event Info */}
@@ -182,10 +173,10 @@ export const SpeakerEventConnectionsDialog: React.FC<SpeakerEventConnectionsDial
                               <Text>Edit</Text>
                             </ActionButton>
                           </div>
-                        </View>
+                        </div>
                       ))}
                     </div>
-                  </View>
+                  </div>
                 )}
               </div>
             </Content>

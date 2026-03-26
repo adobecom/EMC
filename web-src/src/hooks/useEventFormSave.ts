@@ -333,7 +333,7 @@ export function useEventFormSave() {
     }
     
     return payload
-  }, [locale, seriesId])
+  }, [locale, seriesId, eventId])
   
   /**
    * Validate all registered components

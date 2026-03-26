@@ -9,16 +9,9 @@
  */
 
 import React, { useState, useCallback, useMemo, useEffect } from 'react'
-import {
-  View,
-  DialogTrigger as V3DialogTrigger,
-  AlertDialog,
-  ActionButton,
-} from '@adobe/react-spectrum'
-import { Badge, Button, ButtonGroup, TextField, Picker, PickerItem, ComboBox, ComboBoxItem, Text, DialogTrigger, Dialog, Content, Heading, Switch } from "@react-spectrum/s2"
+import { Badge, Button, ButtonGroup, TextField, Picker, PickerItem, ComboBox, ComboBoxItem, Text, DialogTrigger, Dialog, Content, Heading, Switch, ActionButton, AlertDialog } from "@react-spectrum/s2"
 import { style } from "@react-spectrum/s2/style" with { type: "macro" }
 import EditIcon from "@react-spectrum/s2/icons/Edit"
-import DeleteIcon from "@react-spectrum/s2/icons/Delete"
 import Add from "@react-spectrum/s2/icons/Add"
 import UserAdd from "@react-spectrum/s2/icons/UserAdd"
 import RemoveCircle from "@react-spectrum/s2/icons/RemoveCircle"
@@ -37,6 +30,7 @@ import type {
 } from '../../types/rbacApi'
 import { TableColumn } from '../../components/shared/DataTable'
 import { ResourceDashboardLayout, BlurredLoadingOverlay } from '../../components/shared'
+import FolderSharedIllustration from '@react-spectrum/s2/illustrations/linear/FolderShared'
 import { useHasPermission } from '../../hooks/useHasPermission'
 
 interface ScopeGroupManagementProps {
@@ -377,6 +371,7 @@ export const ScopeGroupManagement: React.FC<ScopeGroupManagementProps> = () => {
         toast.success('Scope created')
       }
       setIsScopeFormOpen(false)
+      setIsSaving(false)
       await loadScopes()
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Failed to save scope')
@@ -396,6 +391,7 @@ export const ScopeGroupManagement: React.FC<ScopeGroupManagementProps> = () => {
       toast.success('Scope deleted')
       setScopeToDelete(null)
       if (selectedScopeId === scope.scopeId) setSelectedScopeId(null)
+      setIsSaving(false)
       await loadScopes()
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Failed to delete scope')
@@ -464,6 +460,7 @@ export const ScopeGroupManagement: React.FC<ScopeGroupManagementProps> = () => {
         toast.success('Group created')
       }
       setIsGroupFormOpen(false)
+      setIsSaving(false)
       await loadGroups()
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Failed to save group')
@@ -496,6 +493,7 @@ export const ScopeGroupManagement: React.FC<ScopeGroupManagementProps> = () => {
         delete next[group.groupId]
         return next
       })
+      setIsSaving(false)
       await loadGroups()
       if (userMemberGroups.some(g => g.groupId === group.groupId)) {
         await refreshGroups()
@@ -555,6 +553,7 @@ export const ScopeGroupManagement: React.FC<ScopeGroupManagementProps> = () => {
       setNewUserFirstName('')
       setNewUserLastName('')
       setNewUserGuid('')
+      setIsSaving(false)
       // Refresh users in the expanded row
       await loadGroupUsersForExpand(selectedGroup.groupId)
       if (addedSelfToGroup) {
@@ -578,6 +577,7 @@ export const ScopeGroupManagement: React.FC<ScopeGroupManagementProps> = () => {
       }
       toast.success('User removed')
       setUserToRemove(null)
+      setIsSaving(false)
       // Refresh users in the expanded row
       await loadGroupUsersForExpand(selectedGroup.groupId)
       const profileEmail = ims.profile?.email?.toLowerCase()
@@ -631,7 +631,7 @@ export const ScopeGroupManagement: React.FC<ScopeGroupManagementProps> = () => {
           )}
           {canDeleteGroup && (
             <ActionButton isQuiet aria-label="Delete group" onPress={() => setGroupToDelete(item)}>
-              <DeleteIcon />
+              <RemoveCircle />
             </ActionButton>
           )}
         </div>
@@ -694,15 +694,15 @@ export const ScopeGroupManagement: React.FC<ScopeGroupManagementProps> = () => {
 
         {/* User cards */}
         {isLoading ? (
-          <View padding="size-300">
+          <div style={{ padding: 24 }}>
             <Text>Loading users...</Text>
-          </View>
+          </div>
         ) : users.length === 0 ? (
-          <View padding="size-300">
+          <div style={{ padding: 24 }}>
             <Text UNSAFE_style={{ color: 'var(--spectrum-global-color-gray-600)' }}>
               No users in this group
             </Text>
-          </View>
+          </div>
         ) : (
           <div className="user-card-list">
             {sortedUsers.map(user => (
@@ -755,17 +755,42 @@ export const ScopeGroupManagement: React.FC<ScopeGroupManagementProps> = () => {
     )
   }, [groupUsersMap, loadingGroupIds, canWriteUser, canDeleteUser, getRoleName, userSortKey])
 
+  const { loadingOverlayVisible, savingOverlayVisible } = useMemo(() => {
+    const isBlockingDialogOpen =
+      isUserFormOpen ||
+      isScopeFormOpen ||
+      isGroupFormOpen ||
+      scopeToDelete != null ||
+      groupToDelete != null ||
+      userToRemove != null
+    return {
+      loadingOverlayVisible: (isLoadingScopes || isLoadingGroups) && !isSaving,
+      savingOverlayVisible:
+        isSaving && !isBlockingDialogOpen && !isLoadingScopes && !isLoadingGroups,
+    }
+  }, [
+    isUserFormOpen,
+    isScopeFormOpen,
+    isGroupFormOpen,
+    scopeToDelete,
+    groupToDelete,
+    userToRemove,
+    isLoadingScopes,
+    isLoadingGroups,
+    isSaving,
+  ])
+
   // ============================================================================
   // RENDER
   // ============================================================================
 
   return (
-    <View padding="size-400" maxWidth="1400px" marginX="auto">
+    <div style={{ padding: 32, maxWidth: 1400, marginLeft: 'auto', marginRight: 'auto' }}>
       <div className={style({display: 'flex', flexDirection: 'column', gap: 32})}>
         <div className={style({display: 'flex', flexDirection: 'row', alignItems: 'center', gap: 24, flexWrap: 'wrap'})}>
           <Heading level={1}>Access Management</Heading>
           <Switch isSelected={myScopesOnly} onChange={setMyScopesOnly}>
-            My
+            Show my scopes only
           </Switch>
         </div>
 
@@ -811,12 +836,12 @@ export const ScopeGroupManagement: React.FC<ScopeGroupManagementProps> = () => {
                       setScopeFilterText('')
                     }}
                   >
-                    <DeleteIcon />
+                    <RemoveCircle />
                     <Text>Clear</Text>
                   </Button>
                   {canDeleteScope && selectedScope.type === 'team' && (
                     <Button size="S" variant="negative" fillStyle="outline" onPress={() => setScopeToDelete(selectedScope)}>
-                      <DeleteIcon />
+                      <RemoveCircle />
                       <Text>Delete Scope</Text>
                     </Button>
                   )}
@@ -849,6 +874,7 @@ export const ScopeGroupManagement: React.FC<ScopeGroupManagementProps> = () => {
               </Button>
             ) : undefined}
             onRefresh={loadGroups}
+            emptyStateIllustration={<FolderSharedIllustration aria-hidden />}
             emptyStateTitle="No Groups"
             emptyStateDescription="Create a group in this scope to manage user access"
             searchPlaceholder="Search groups..."
@@ -858,17 +884,18 @@ export const ScopeGroupManagement: React.FC<ScopeGroupManagementProps> = () => {
             onToggleExpand={handleToggleGroupExpand}
           />
         ) : (
-          <View
-            padding="size-600"
-            borderWidth="thin"
-            borderColor="gray-200"
-            borderRadius="medium"
-            backgroundColor="gray-50"
+          <div
+            style={{
+              padding: 48,
+              border: '1px solid var(--spectrum-global-color-gray-200)',
+              borderRadius: 8,
+              backgroundColor: 'var(--spectrum-global-color-gray-50)',
+            }}
           >
             <Text UNSAFE_style={{ textAlign: 'center', color: 'var(--spectrum-global-color-gray-600)' }}>
               Select a scope above to manage its groups and users.
             </Text>
-          </View>
+          </div>
         )}
 
       </div>
@@ -947,28 +974,25 @@ export const ScopeGroupManagement: React.FC<ScopeGroupManagementProps> = () => {
       </DialogTrigger>
 
       {/* Scope Delete Confirmation */}
-      <V3DialogTrigger
+      <DialogTrigger
         isOpen={!!scopeToDelete}
         onOpenChange={(open) => !open && setScopeToDelete(null)}
       >
         <div style={{ display: 'none' }} />
-        {(close) => (
-          <AlertDialog
-            title="Delete Scope"
-            variant="destructive"
-            primaryActionLabel="Delete"
-            secondaryActionLabel="Cancel"
-            onPrimaryAction={() => {
-              if (scopeToDelete) handleDeleteScope(scopeToDelete)
-              close()
-            }}
-            onSecondaryAction={close}
-            isPrimaryActionDisabled={isSaving}
-          >
-            Delete scope <strong>{scopeToDelete?.name}</strong>? This action cannot be undone.
-          </AlertDialog>
-        )}
-      </V3DialogTrigger>
+        <AlertDialog
+          title="Delete Scope"
+          variant="destructive"
+          primaryActionLabel="Delete"
+          cancelLabel="Cancel"
+          onPrimaryAction={() => {
+            if (scopeToDelete) handleDeleteScope(scopeToDelete)
+          }}
+          onCancel={() => setScopeToDelete(null)}
+          isPrimaryActionDisabled={isSaving}
+        >
+          Delete scope <strong>{scopeToDelete?.name}</strong>? This action cannot be undone.
+        </AlertDialog>
+      </DialogTrigger>
 
       {/* Group Create/Edit Dialog */}
       <DialogTrigger isOpen={isGroupFormOpen} onOpenChange={setIsGroupFormOpen}>
@@ -1022,28 +1046,25 @@ export const ScopeGroupManagement: React.FC<ScopeGroupManagementProps> = () => {
       </DialogTrigger>
 
       {/* Group Delete Confirmation */}
-      <V3DialogTrigger
+      <DialogTrigger
         isOpen={!!groupToDelete}
         onOpenChange={(open) => !open && setGroupToDelete(null)}
       >
         <div style={{ display: 'none' }} />
-        {(close) => (
-          <AlertDialog
-            title="Delete Group"
-            variant="destructive"
-            primaryActionLabel="Delete"
-            secondaryActionLabel="Cancel"
-            onPrimaryAction={() => {
-              if (groupToDelete) handleDeleteGroup(groupToDelete)
-              close()
-            }}
-            onSecondaryAction={close}
-            isPrimaryActionDisabled={isSaving}
-          >
-            Delete group <strong>{groupToDelete?.name}</strong>? All users in this group will lose access.
-          </AlertDialog>
-        )}
-      </V3DialogTrigger>
+        <AlertDialog
+          title="Delete Group"
+          variant="destructive"
+          primaryActionLabel="Delete"
+          cancelLabel="Cancel"
+          onPrimaryAction={() => {
+            if (groupToDelete) handleDeleteGroup(groupToDelete)
+          }}
+          onCancel={() => setGroupToDelete(null)}
+          isPrimaryActionDisabled={isSaving}
+        >
+          Delete group <strong>{groupToDelete?.name}</strong>? All users in this group will lose access.
+        </AlertDialog>
+      </DialogTrigger>
 
       {/* Add/Edit User Dialog */}
       <DialogTrigger isOpen={isUserFormOpen} onOpenChange={(open) => { if (!open) { setIsUserFormOpen(false); setEditingUser(null) } }}>
@@ -1104,40 +1125,37 @@ export const ScopeGroupManagement: React.FC<ScopeGroupManagementProps> = () => {
       </DialogTrigger>
 
       {/* Remove User Confirmation */}
-      <V3DialogTrigger
+      <DialogTrigger
         isOpen={!!userToRemove}
         onOpenChange={(open) => !open && setUserToRemove(null)}
       >
         <div style={{ display: 'none' }} />
-        {(close) => (
-          <AlertDialog
-            title="Remove User"
-            variant="destructive"
-            primaryActionLabel="Remove"
-            secondaryActionLabel="Cancel"
-            onPrimaryAction={() => {
-              if (userToRemove) handleRemoveUser(userToRemove)
-              close()
-            }}
-            onSecondaryAction={close}
-            isPrimaryActionDisabled={isSaving}
-          >
-            Remove <strong>{userToRemove?.email}</strong> from this group?
-          </AlertDialog>
-        )}
-      </V3DialogTrigger>
+        <AlertDialog
+          title="Remove User"
+          variant="destructive"
+          primaryActionLabel="Remove"
+          cancelLabel="Cancel"
+          onPrimaryAction={() => {
+            if (userToRemove) handleRemoveUser(userToRemove)
+          }}
+          onCancel={() => setUserToRemove(null)}
+          isPrimaryActionDisabled={isSaving}
+        >
+          Remove <strong>{userToRemove?.email}</strong> from this group?
+        </AlertDialog>
+      </DialogTrigger>
 
       <BlurredLoadingOverlay
-        visible={isLoadingScopes || isLoadingGroups}
+        visible={loadingOverlayVisible}
         message="Loading..."
         ariaLabel="Loading"
       />
       <BlurredLoadingOverlay
-        visible={isSaving}
+        visible={savingOverlayVisible}
         message="Saving..."
         ariaLabel="Saving"
       />
-    </View>
+    </div>
   )
 }
 

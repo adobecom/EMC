@@ -4,15 +4,21 @@
 
 import React, { useState, useEffect } from 'react'
 import {
-  View,
+  ComboBox,
+  ComboBoxItem,
+  TextField,
+  TextArea,
+  Picker,
+  PickerItem,
+  Text,
+  DatePicker,
   Switch,
   TooltipTrigger,
   Tooltip,
   DialogTrigger,
   AlertDialog,
-} from '@adobe/react-spectrum'
-import { ComboBox, ComboBoxItem, TextField, TextArea, Picker, PickerItem, Text, DatePicker } from "@react-spectrum/s2"
-import { ActionButton } from "@react-spectrum/s2"
+  ActionButton,
+} from '@react-spectrum/s2'
 // S2 style macro for type-safe Spectrum token styling
 import {style} from '@react-spectrum/s2/style' with {type: 'macro'}
 import { parseDateTime, CalendarDateTime } from '@internationalized/date'
@@ -271,7 +277,7 @@ export const EventInfoComponent: React.FC = () => {
               >
                 <InfoCircle />
               </ActionButton>
-              <Tooltip variant="info">By setting this to private, your event won't be publicly found online or published to the events hub.</Tooltip>
+              <Tooltip>By setting this to private, your event won&apos;t be publicly found online or published to the events hub.</Tooltip>
             </TooltipTrigger>
           </div>
           <div className={style({display: 'flex', alignItems: 'center', gap: 8})}>
@@ -288,7 +294,7 @@ export const EventInfoComponent: React.FC = () => {
               >
                 <InfoCircle />
               </ActionButton>
-              <Tooltip variant="info">If set to true, users can only RSVP with a campaign link.</Tooltip>
+              <Tooltip>If set to true, users can only RSVP with a campaign link.</Tooltip>
             </TooltipTrigger>
           </div>
         </div>
@@ -310,21 +316,18 @@ export const EventInfoComponent: React.FC = () => {
         onOpenChange={(isOpen) => !isOpen && setPendingLocale(null)}
       >
         <div style={{ display: 'none' }} />
-        {(close) => (
-          <AlertDialog
-            title="Switch language?"
-            variant="confirmation"
-            primaryActionLabel="Switch"
-            secondaryActionLabel="Cancel"
-            onPrimaryAction={() => {
-              handleConfirmLocaleSwitch()
-              close()
-            }}
-            onSecondaryAction={close}
-          >
-            You have unsaved changes. Switching language will load the content for the selected language. Continue?
-          </AlertDialog>
-        )}
+        <AlertDialog
+          title="Switch language?"
+          variant="confirmation"
+          primaryActionLabel="Switch"
+          cancelLabel="Cancel"
+          onPrimaryAction={() => {
+            handleConfirmLocaleSwitch()
+          }}
+          onCancel={() => setPendingLocale(null)}
+        >
+          You have unsaved changes. Switching language will load the content for the selected language. Continue?
+        </AlertDialog>
       </DialogTrigger>
       <TextField
         label="Event Title"
@@ -335,7 +338,7 @@ export const EventInfoComponent: React.FC = () => {
         description="80 characters max"
         styles={style({ width: '[100%]' })}
       />
-      <View width="100%">
+      <div style={{ width: '100%' }}>
         <div className={style({display: 'flex', gap: 8, alignItems: 'center', marginBottom: 8})}>
           <Text>English title for page URL</Text>
           <TooltipTrigger delay={0}>
@@ -344,7 +347,7 @@ export const EventInfoComponent: React.FC = () => {
             >
               <InfoCircle />
             </ActionButton>
-            <Tooltip variant="info">SEO friendly title</Tooltip>
+            <Tooltip>SEO friendly title</Tooltip>
           </TooltipTrigger>
         </div>
         <TextField
@@ -353,12 +356,12 @@ export const EventInfoComponent: React.FC = () => {
           onChange={(value) => updateFormData({ enTitle: value })}
           styles={style({ width: '[100%]' })}
         />
-      </View>
-      <View width="100%">
+      </div>
+      <div style={{ width: '100%' }}>
         <HeadingWithTooltip 
           level={4}
           tooltip="Add rich text to your event description. This will be the copy displayed on the event page."
-          marginBottom="size-100"
+          marginBottomPx={8}
         >
           Event Details
         </HeadingWithTooltip>
@@ -368,7 +371,7 @@ export const EventInfoComponent: React.FC = () => {
           onChange={(value) => updateFormData({ description: value })}
           height="400px"
         />
-      </View>
+      </div>
       <TextArea
         label="Event Description for Events Hub and SEO"
         isRequired
@@ -409,14 +412,14 @@ export const EventInfoComponent: React.FC = () => {
           {(item) => <ComboBoxItem id={item.id}>{item.name}</ComboBoxItem>}
         </ComboBox>
       </div>
-      <View UNSAFE_style={{ display: 'inline-block' }}>
+      <div style={{ display: 'inline-block' }}>
         <Switch
           isSelected={hasSecondaryLink}
           onChange={handleSecondaryLinkToggle}
         >
           Add secondary link
         </Switch>
-      </View>
+      </div>
       {hasSecondaryLink && (
         <>
           <TextField

@@ -10,9 +10,9 @@ import {
   DialogTrigger,
   Text
 } from '@react-spectrum/s2'
-import { style, iconStyle } from '@react-spectrum/s2/style' with { type: 'macro' }
-import Delete from '@react-spectrum/s2/icons/Delete'
-import ImageAdd from '@react-spectrum/s2/icons/ImageAdd';
+import { style } from '@react-spectrum/s2/style' with { type: 'macro' }
+import RemoveCircle from '@react-spectrum/s2/icons/RemoveCircle'
+import DropToUpload from '@react-spectrum/s2/illustrations/linear/DropToUpload'
 import { uploadImage, UploadTracker } from '../../services/requestHelpers'
 import { getCurrentEnvironment, getApiHost } from '../../config/constants'
 import { apiService } from '../../services/api'
@@ -354,7 +354,7 @@ export const ImageUploader: React.FC<ImageUploaderProps> = ({
       {imageUrl || previewUrl ? (
         // Show uploaded image or pending file preview
         <div
-          style={{ position: 'relative', overflow: 'hidden', border: '1px solid var(--spectrum-gray-400)', borderRadius: '4px' }}
+          style={{ position: 'relative', overflow: 'hidden', border: '1px solid var(--spectrum-global-color-gray-400)', borderRadius: '4px' }}
         >
           <img
             src={imageUrl || previewUrl || ''}
@@ -396,7 +396,7 @@ export const ImageUploader: React.FC<ImageUploaderProps> = ({
                 borderRadius: '4px'
               }}
             >
-              <Delete />
+              <RemoveCircle />
             </ActionButton>
           )}
           {isDeleting && (
@@ -449,7 +449,7 @@ export const ImageUploader: React.FC<ImageUploaderProps> = ({
             </div>
           ) : (
             <div className={style({ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12 })}>
-              <ImageAdd styles={iconStyle({ size: 'XL', color: 'gray'})} aria-hidden />
+              <DropToUpload aria-hidden />
               <Text UNSAFE_style={{ fontSize: '14px', color: '#4B4B4B' }}>
                 {dropzoneTitle || 'Drop image here or click to browse'}
               </Text>

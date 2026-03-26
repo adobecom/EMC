@@ -1,5 +1,5 @@
 import React, { useEffect, useRef } from 'react'
-import { View, Text } from '@adobe/react-spectrum'
+import { Text } from '@react-spectrum/s2'
 import 'quill/dist/quill.snow.css'
 
 interface RichTextEditorProps {
@@ -189,14 +189,16 @@ export const RichTextEditor: React.FC<RichTextEditorProps> = ({
   }, [])
 
   return (
-    <View marginBottom="size-200">
-      <Text UNSAFE_style={{ 
-        display: 'block', 
-        marginBottom: '8px',
-        fontSize: '14px',
-        fontWeight: 500,
-        color: 'var(--spectrum-global-color-gray-800)'
-      }}>
+    <div style={{ marginBottom: 16 }}>
+      <Text
+        UNSAFE_style={{
+          display: 'block',
+          marginBottom: 8,
+          fontSize: 14,
+          fontWeight: 500,
+          color: 'var(--spectrum-global-color-gray-800)',
+        }}
+      >
         {label}{isRequired && <span style={{ color: 'rgb(218, 218, 218)' }}> *</span>}
       </Text>
       
@@ -215,16 +217,18 @@ export const RichTextEditor: React.FC<RichTextEditorProps> = ({
       </div>
       
       {description && (
-        <Text UNSAFE_style={{ 
-          display: 'block',
-          marginTop: '4px',
-          fontSize: '12px',
-          color: 'var(--spectrum-global-color-gray-700)'
-        }}>
+        <Text
+          UNSAFE_style={{
+            display: 'block',
+            marginTop: 4,
+            fontSize: 12,
+            color: 'var(--spectrum-global-color-gray-700)',
+          }}
+        >
           {description}
         </Text>
       )}
-    </View>
+    </div>
   )
 }
 

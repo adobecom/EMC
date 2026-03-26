@@ -8,7 +8,7 @@
 import React, { useState, useCallback, useMemo, useEffect } from 'react'
 import { Badge, Button, ButtonGroup, Text, TextField, Picker, PickerItem, DialogTrigger, Dialog, Content, Heading, ActionButton, AlertDialog } from '@react-spectrum/s2'
 import { style } from "@react-spectrum/s2/style" with { type: "macro" }
-import Delete from '@react-spectrum/s2/icons/Delete'
+import RemoveCircle from '@react-spectrum/s2/icons/RemoveCircle'
 import Edit from '@react-spectrum/s2/icons/Edit'
 import Key from "@react-spectrum/s2/icons/Key"
 import { useNavigate } from 'react-router-dom'
@@ -19,6 +19,7 @@ import { IMS } from '../../types'
 import type { RBACUser, UserRole } from '../../types/rbac'
 import { TableColumn } from '../../components/shared/DataTable'
 import { ResourceDashboardLayout, BlurredLoadingOverlay } from '../../components/shared'
+import UserGroupIllustration from '@react-spectrum/s2/illustrations/linear/UserGroup'
 import * as githubService from '../../services/githubService'
 
 interface UserManagementProps {
@@ -275,7 +276,7 @@ export const UserManagement: React.FC<UserManagementProps> = () => {
             <Edit />
           </ActionButton>
           <ActionButton isQuiet aria-label="Delete user" onPress={() => setUserToDelete(item)}>
-            <Delete />
+            <RemoveCircle />
           </ActionButton>
         </div>
       ),
@@ -356,7 +357,7 @@ export const UserManagement: React.FC<UserManagementProps> = () => {
         </div>
 
         {!isConnected && (
-          <div style={{ border: '1px solid var(--spectrum-gray-300)', borderRadius: '4px', padding: '16px', backgroundColor: 'var(--spectrum-gray-75)' }}>
+          <div style={{ border: '1px solid var(--spectrum-global-color-gray-300)', borderRadius: '4px', padding: '16px', backgroundColor: 'var(--spectrum-global-color-gray-75)' }}>
             <Text>Connect a GitHub PAT to add, edit, or remove users. Changes create a pull request.</Text>
           </div>
         )}
@@ -372,6 +373,7 @@ export const UserManagement: React.FC<UserManagementProps> = () => {
           onCreate={openAddDialog}
           createLabel="Add User"
           onRefresh={refreshUsers}
+          emptyStateIllustration={<UserGroupIllustration aria-hidden />}
           emptyStateTitle="No Users"
           emptyStateDescription="Add users to control access to EMC"
           searchPlaceholder="Search users..."

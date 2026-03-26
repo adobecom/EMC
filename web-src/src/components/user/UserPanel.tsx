@@ -4,20 +4,20 @@
 
 import React from 'react'
 import { useNavigate } from 'react-router-dom'
-import {
-  View,
-  Avatar,
-  ActionButton,
-} from '@adobe/react-spectrum'
 import { style } from '@react-spectrum/s2/style' with { type: 'macro' }
 import {
+  ActionButton,
+  Avatar,
+  Badge,
   MenuTrigger,
   Menu,
   MenuItem,
   MenuSection,
   Header,
   Heading,
-  Text
+  Text,
+  Tooltip,
+  TooltipTrigger
 } from '@react-spectrum/s2'
 import User from "@react-spectrum/s2/icons/User"
 import InfoCircle from "@react-spectrum/s2/icons/InfoCircle"
@@ -78,140 +78,188 @@ export const UserPanel: React.FC<UserPanelProps> = ({ ims, compact = false }) =>
   }
 
   // If no IMS profile, show minimal panel
+  const panelShell = (children: React.ReactNode) => (
+    <div
+      className={compact ? 'user-panel-compact' : ''}
+      style={{
+        background: compact ? 'transparent' : 'var(--spectrum-global-color-gray-100)',
+        padding: compact ? 8 : 16,
+        borderRadius: 8,
+        marginBottom: compact ? 0 : 24,
+      }}
+    >
+      {children}
+    </div>
+  )
+
   if (!ims.profile) {
-    return (
-      <View
-        backgroundColor={compact ? 'transparent' : 'gray-100'}
-        padding={compact ? 'size-100' : 'size-200'}
-        borderRadius="medium"
-        marginBottom={compact ? 'size-0' : 'size-300'}
-      >
-        <div className={style({ display: 'flex', alignItems: 'center', gap: 12 })}>
-          <View
-            backgroundColor="blue-600"
-            width="size-400"
-            height="size-400"
-            borderRadius="medium"
-            UNSAFE_className="user-avatar"
-          >
-            <Text UNSAFE_className="user-initials-compact">GU</Text>
-          </View>
-          <Text UNSAFE_className="user-name">Guest User</Text>
+    return panelShell(
+      <div className={style({ display: 'flex', alignItems: 'center', gap: 12 })}>
+        <div
+          className="user-avatar"
+          style={{
+            background: 'var(--spectrum-global-color-blue-600)',
+            width: 32,
+            height: 32,
+            borderRadius: 8,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+          }}
+        >
+          <Text UNSAFE_className="user-initials-compact">GU</Text>
         </div>
-      </View>
+        <Text UNSAFE_className="user-name">Guest User</Text>
+      </div>
     )
   }
 
-  return (
-    <View
-      backgroundColor={compact ? 'transparent' : 'gray-100'}
-      padding={compact ? 'size-100' : 'size-200'}
-      borderRadius="medium"
-      marginBottom={compact ? 'size-0' : 'size-300'}
-      UNSAFE_className={compact ? 'user-panel-compact' : ''}
-    >
-      <MenuTrigger>
-        <ActionButton
-          isQuiet
-          UNSAFE_className={compact ? 'user-panel-button-compact' : 'user-panel-button'}
+  let compactGroupIndicator: React.ReactNode = null
+  if (compact && activeGroup) {
+    const badge = (
+      <div className={style({ flexShrink: 0 })}>
+        <Badge
+          variant="informative"
+          fillStyle="subtle"
+          size="S"
+          aria-label={`Active group: ${activeGroup.name}`}
+          UNSAFE_style={{ whiteSpace: 'nowrap' }}
         >
-          <div className={style({ display: 'flex', alignItems: 'center', gap: 12, width: '[100%]' })}>
-            {/* Avatar: image when available, else initials */}
-            {avatarUrl ? (
-              <Avatar
-                size={compact ? 'avatar-size-400' : 'avatar-size-500'}
-                src={avatarUrl}
-                alt={userName}
-              />
-            ) : (
-              <View
-                backgroundColor="blue-600"
-                width={compact ? 'size-400' : 'size-500'}
-                height={compact ? 'size-400' : 'size-500'}
-                borderRadius="medium"
-                UNSAFE_className="user-avatar"
-              >
-                <Text UNSAFE_className={compact ? 'user-initials-compact' : 'user-initials'}>
-                  {getInitials(userName)}
-                </Text>
-              </View>
-            )}
+          <UserGroup />
+          <Text UNSAFE_style={{ whiteSpace: 'nowrap' }}>{activeGroup.name}</Text>
+        </Badge>
+      </div>
+    )
+    compactGroupIndicator = activeGroup.scopeName ? (
+      <TooltipTrigger delay={0}>
+        {badge}
+        <Tooltip>
+          <Text>{activeGroup.scopeName}</Text>
+        </Tooltip>
+      </TooltipTrigger>
+    ) : (
+      badge
+    )
+  }
 
-            {/* User info - only show name in compact mode */}
-            <div className={`${style({ display: 'flex', flexDirection: 'column', gap: 2, flexGrow: 1 })} user-info-container`}>
-              <Text UNSAFE_className="user-name">
-                {userName}
-              </Text>
-              {!compact && userEmail && (
-                <Text UNSAFE_className="user-email">
-                  {userEmail}
-                </Text>
-              )}
-            </div>
-          </div>
-        </ActionButton>
-
-        <Menu onAction={handleMenuAction} UNSAFE_style={{ minWidth: '240px' }}>
-          <MenuSection>
-            <MenuItem id="profile" textValue="View Profile">
-              <User />
-              <Text slot="label">View Profile</Text>
-            </MenuItem>
-          </MenuSection>
-          {groups.length > 0 ? (
-            <MenuSection>
-              <Header>
-                <Heading>Group</Heading>
-              </Header>
-              {groups.map(group => (
-                <MenuItem
-                  key={`group_${group.groupId}`}
-                  id={`group_${group.groupId}`}
-                  textValue={group.name}
+  return panelShell(
+    <>
+      <div
+        className={
+          compact
+            ? style({ display: 'flex', flexDirection: 'row', alignItems: 'center', gap: 8 })
+            : style({ display: 'flex', flexDirection: 'row', alignItems: 'center', gap: 12 })
+        }
+      >
+        {compactGroupIndicator}
+        <MenuTrigger>
+          <ActionButton
+            isQuiet
+            UNSAFE_className={compact ? 'user-panel-button-compact' : 'user-panel-button'}
+          >
+            <div className={style({ display: 'flex', alignItems: 'center', gap: 12, width: '[100%]' })}>
+              {/* Avatar: image when available, else initials */}
+              {avatarUrl ? (
+                <Avatar
+                  size={compact ? 32 : 40}
+                  src={avatarUrl}
+                  alt={userName}
+                />
+              ) : (
+                <div
+                  className="user-avatar"
+                  style={{
+                    background: 'var(--spectrum-global-color-blue-600)',
+                    width: compact ? 32 : 40,
+                    height: compact ? 32 : 40,
+                    borderRadius: 8,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                  }}
                 >
-                  {activeGroup?.groupId === group.groupId ? <Checkmark /> : <UserGroup />}
-                  <Text slot="label">{group.name}</Text>
-                  {group.scopeName && <Text slot="description">{group.scopeName}</Text>}
-                </MenuItem>
-              ))}
-            </MenuSection>
-          ) : null}
-          {showAdminSection ? (
+                  <Text UNSAFE_className={compact ? 'user-initials-compact' : 'user-initials'}>
+                    {getInitials(userName)}
+                  </Text>
+                </div>
+              )}
+
+              {/* User info - only show name in compact mode */}
+              <div className={`${style({ display: 'flex', flexDirection: 'column', gap: 2, flexGrow: 1 })} user-info-container`}>
+                <Text UNSAFE_className="user-name">
+                  {userName}
+                </Text>
+                {!compact && userEmail && (
+                  <Text UNSAFE_className="user-email">
+                    {userEmail}
+                  </Text>
+                )}
+              </div>
+            </div>
+          </ActionButton>
+
+          <Menu onAction={handleMenuAction} UNSAFE_style={{ minWidth: '240px' }}>
             <MenuSection>
-              <Header>
-                <Heading>Administration</Heading>
-              </Header>
-              {canManageAccess ? (
-                <MenuItem id="access" textValue="Access Management">
-                  <UserSettings />
-                  <Text slot="label">Access Management</Text>
-                </MenuItem>
-              ) : null}
-              {canManageRoles ? (
-                <MenuItem id="roles" textValue="Roles">
-                  <UserLock />
-                  <Text slot="label">Roles</Text>
-                </MenuItem>
-              ) : null}
-            </MenuSection>
-          ) : null}
-          {authMode === 'standalone' ? (
-            <MenuSection>
-              <MenuItem id="signout" textValue="Sign Out">
-                <Leave />
-                <Text slot="label">Sign Out</Text>
+              <MenuItem id="profile" textValue="View Profile">
+                <User />
+                <Text slot="label">View Profile</Text>
               </MenuItem>
             </MenuSection>
-          ) : (
-            <MenuSection aria-label="shell-mode">
-              <MenuItem id="shell-info" textValue="Managed by Experience Cloud">
-                <InfoCircle />
-                <Text slot="label">Sign out via Experience Cloud</Text>
-              </MenuItem>
-            </MenuSection>
-          )}
-        </Menu>
-      </MenuTrigger>
+            {groups.length > 0 ? (
+              <MenuSection>
+                <Header>
+                  <Heading>Group</Heading>
+                </Header>
+                {groups.map(group => (
+                  <MenuItem
+                    key={`group_${group.groupId}`}
+                    id={`group_${group.groupId}`}
+                    textValue={group.name}
+                  >
+                    {activeGroup?.groupId === group.groupId ? <Checkmark /> : <UserGroup />}
+                    <Text slot="label">{group.name}</Text>
+                    {group.scopeName && <Text slot="description">{group.scopeName}</Text>}
+                  </MenuItem>
+                ))}
+              </MenuSection>
+            ) : null}
+            {showAdminSection ? (
+              <MenuSection>
+                <Header>
+                  <Heading>Administration</Heading>
+                </Header>
+                {canManageAccess ? (
+                  <MenuItem id="access" textValue="Access Management">
+                    <UserSettings />
+                    <Text slot="label">Access Management</Text>
+                  </MenuItem>
+                ) : null}
+                {canManageRoles ? (
+                  <MenuItem id="roles" textValue="Roles">
+                    <UserLock />
+                    <Text slot="label">Roles</Text>
+                  </MenuItem>
+                ) : null}
+              </MenuSection>
+            ) : null}
+            {authMode === 'standalone' ? (
+              <MenuSection>
+                <MenuItem id="signout" textValue="Sign Out">
+                  <Leave />
+                  <Text slot="label">Sign Out</Text>
+                </MenuItem>
+              </MenuSection>
+            ) : (
+              <MenuSection aria-label="shell-mode">
+                <MenuItem id="shell-info" textValue="Managed by Experience Cloud">
+                  <InfoCircle />
+                  <Text slot="label">Sign out via Experience Cloud</Text>
+                </MenuItem>
+              </MenuSection>
+            )}
+          </Menu>
+        </MenuTrigger>
+      </div>
 
       {/* Organization indicator - only show in full mode */}
       {!compact && ims.org && (
@@ -224,6 +272,6 @@ export const UserPanel: React.FC<UserPanelProps> = ({ ims, compact = false }) =>
           </Text>
         </div>
       )}
-    </View>
+    </>
   )
 }

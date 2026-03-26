@@ -3,7 +3,7 @@
 */
 
 import React, { useEffect, useCallback, useRef } from 'react'
-import { View, Flex, Divider } from '@adobe/react-spectrum'
+import { Divider } from '@react-spectrum/s2'
 import { useNavigate, useParams } from 'react-router-dom'
 import { SeriesApiResponse } from '../../types/domain'
 import { apiService, cachedApi } from '../../services/api'
@@ -322,9 +322,16 @@ const SeriesFormInner: React.FC<SeriesFormInnerProps> = ({ ims: _ims }) => {
   }
 
   return (
-    <View 
-      UNSAFE_style={{
+    <div
+      style={{
         backgroundColor: 'var(--spectrum-global-color-gray-100)',
+        display: 'flex',
+        flexDirection: 'column',
+        flex: 1,
+        minHeight: 0,
+        height: '100%',
+        alignSelf: 'stretch',
+        overflow: 'hidden',
       }}
     >
       <SingleStepFormLayout
@@ -343,21 +350,21 @@ const SeriesFormInner: React.FC<SeriesFormInnerProps> = ({ ims: _ims }) => {
         publishLabel="Publish series"
         headerActions={renderHeaderActions()}
       >
-        <Flex direction="column" gap="size-0">
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
           <FormCard>
             <SeriesDetailsComponent />
           </FormCard>
 
           <FormCard>
-            <Flex direction="column" gap="size-400">
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 32 }}>
               <SeriesAdditionalInfoComponent />
               <Divider size="M" />
               <SeriesTemplateComponent />
-            </Flex>
+            </div>
           </FormCard>
-        </Flex>
+        </div>
       </SingleStepFormLayout>
-    </View>
+    </div>
   )
 }
 

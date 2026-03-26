@@ -3,14 +3,11 @@
 */
 
 import React, { useState, useMemo, useCallback, useEffect } from 'react'
-import {
-  ProgressCircle,
-} from '@adobe/react-spectrum'
-import { Button, Dialog, DialogContainer, Heading, TextField, Text, SearchField, Content } from '@react-spectrum/s2'
+import { Button, Dialog, DialogContainer, Heading, TextField, Text, SearchField, Content, ProgressCircle } from '@react-spectrum/s2'
 import { style, iconStyle } from '@react-spectrum/s2/style' with { type: 'macro' }
 import Add from '@react-spectrum/s2/icons/Add'
 import AlertTriangle from '@react-spectrum/s2/icons/AlertTriangle'
-import Delete from '@react-spectrum/s2/icons/Delete'
+import RemoveCircle from '@react-spectrum/s2/icons/RemoveCircle'
 import OpenIn from '@react-spectrum/s2/icons/OpenIn'
 import { SeriesSpeaker, SocialLinkFormData } from '../../types/domain'
 import { speakerHasLocalization } from '../../utils/eventFormMappers'
@@ -421,7 +418,7 @@ export const SpeakerPickerDialog: React.FC<SpeakerPickerDialogProps> = ({
                         gap: '6px',
                         marginTop: '2px',
                         fontSize: '11px',
-                        color: COLORS.ADOBE_RED,
+                        color: COLORS.RED_600,
                         lineHeight: '16px',
                       }}
                     >
@@ -651,7 +648,7 @@ export const SpeakerPickerDialog: React.FC<SpeakerPickerDialogProps> = ({
                       />
 
                       <Button variant="secondary" size="S" onPress={() => handleRemoveSocialLink(index)} aria-label="Remove link">
-                        <Delete />
+                        <RemoveCircle />
                       </Button>
                     </div>
                   )

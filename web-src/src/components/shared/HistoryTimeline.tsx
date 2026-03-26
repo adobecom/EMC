@@ -16,7 +16,7 @@ import Clock from '@react-spectrum/s2/icons/Clock'
 import Close from '@react-spectrum/s2/icons/Close'
 import Add from '@react-spectrum/s2/icons/Add'
 import Edit from '@react-spectrum/s2/icons/Edit'
-import Delete from '@react-spectrum/s2/icons/Delete'
+import RemoveCircle from '@react-spectrum/s2/icons/RemoveCircle'
 import {
   COLORS,
   Z_INDEX,
@@ -134,7 +134,7 @@ export function getChangeIcon(changeType: string): React.ReactNode {
     case 'update':
       return <Edit />
     case 'delete':
-      return <Delete />
+      return <RemoveCircle />
     default:
       return <Edit />
   }

@@ -3,9 +3,7 @@
 */
 
 import React, { useState, useMemo, useCallback, useEffect } from 'react'
-import {
-  ProgressCircle,
-} from '@adobe/react-spectrum'
+import { ProgressCircle } from '@react-spectrum/s2'
 import { Button, Dialog, DialogContainer, TextField, Text, SearchField, Content, Heading } from '@react-spectrum/s2'
 import { style } from '@react-spectrum/s2/style' with { type: 'macro' }
 import Add from '@react-spectrum/s2/icons/Add'

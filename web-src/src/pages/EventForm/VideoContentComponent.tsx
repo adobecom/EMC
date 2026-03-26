@@ -3,9 +3,6 @@
 */
 
 import React from 'react'
-import {
-  Flex,
-} from '@adobe/react-spectrum'
 import { TextField } from '@react-spectrum/s2'
 import { style } from "@react-spectrum/s2/style" with { type: "macro" }
 import { HeadingWithTooltip } from '../../components/shared'
@@ -28,7 +25,7 @@ export const VideoContentComponent: React.FC = () => {
   }
 
   return (
-    <Flex direction="column" gap="size-200">
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
       <HeadingWithTooltip
         level={3}
         tooltip="Add a link to an external video to display on your event page."
@@ -43,6 +40,6 @@ export const VideoContentComponent: React.FC = () => {
         onChange={handleUrlChange}
         styles={style({ width: 480 })}
       />
-    </Flex>
+    </div>
   )
 }

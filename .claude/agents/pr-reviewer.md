@@ -1,6 +1,6 @@
 ---
 name: pr-reviewer
-description: Use this agent before opening a pull request, or when asked to review code changes. Audits diffs against EMC-specific conventions: Spectrum 2 first (v3 fallback only), API layer rules, TypeScript requirements, file organization, and security checks.
+description: Use this agent before opening a pull request, or when asked to review code changes. Audits diffs against EMC-specific conventions: React Spectrum S2 only, API layer rules, TypeScript requirements, file organization, and security checks.
 tools: Read, Grep, Glob, Bash
 ---
 
@@ -17,8 +17,8 @@ You are a code reviewer for the EMC codebase. Your job is to catch convention vi
 
 **React Spectrum**
 - `onClick` used on a Spectrum component instead of `onPress`
-- **New or refactored UI** imports from `@adobe/react-spectrum` when an equivalent exists in `@react-spectrum/s2` (prefer S2; document intentional v3 fallback)
-- Raw CSS flexbox (`display: flex`) used instead of Spectrum layout primitives (`Flex`/`Grid` or S2 `style()` layout) where the stack provides them
+- **UI** imports from `@adobe/react-spectrum` or `@spectrum-icons/workflow` (removed from the project — use `@react-spectrum/s2` and S2 icons only)
+- Ad-hoc layout that ignores established S2 patterns (`style()` macro, shared layouts) without justification
 - Raw `<input>`, `<select>`, `<button>` where a Spectrum component exists for that stack
 
 **API layer**

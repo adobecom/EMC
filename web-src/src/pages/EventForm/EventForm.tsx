@@ -4,21 +4,23 @@
 
 import React, { useEffect, useCallback, useRef, useState } from 'react'
 import {
-  View,
+  Button,
+  Picker,
+  PickerItem,
+  Text,
   Heading,
   Divider,
   ProgressCircle,
   Dialog,
   DialogTrigger,
   Content,
-  ButtonGroup
-} from '@adobe/react-spectrum'
-import { Button, Picker, PickerItem, Text } from '@react-spectrum/s2'
+  ButtonGroup,
+} from '@react-spectrum/s2'
 import { style } from "@react-spectrum/s2/style" with { type: "macro" }
 import { useNavigate, useParams } from 'react-router-dom'
 import ChevronRight from "@react-spectrum/s2/icons/ChevronRight"
 import ChevronLeft from "@react-spectrum/s2/icons/ChevronLeft"
-import Alert from '@spectrum-icons/workflow/Alert'
+import AlertTriangle from '@react-spectrum/s2/icons/AlertTriangle'
 import {
   EventApiResponse,
   SeriesApiResponse,
@@ -246,12 +248,12 @@ const FormatSelectionOverlay: React.FC<{
         justifyContent: 'center',
       }}
     >
-      <View
-        backgroundColor="gray-50"
-        borderRadius="medium"
-        padding="size-500"
-        width="520px"
-        UNSAFE_style={{
+      <div
+        style={{
+          backgroundColor: 'var(--spectrum-global-color-gray-50)',
+          borderRadius: 8,
+          padding: 40,
+          width: 520,
           zIndex: Z_INDEX.MODAL,
           boxShadow: '0 8px 32px rgba(0, 0, 0, 0.18)',
           maxWidth: '90vw',
@@ -279,7 +281,7 @@ const FormatSelectionOverlay: React.FC<{
           </Text>
         </div>
 
-        <Divider size="S" marginBottom="size-300" />
+        <Divider size="S" styles={style({ marginBottom: 24 })} />
 
         {/* Content */}
         {isLoading ? (
@@ -290,14 +292,16 @@ const FormatSelectionOverlay: React.FC<{
             </Text>
           </div>
         ) : error ? (
-          <View
-            padding="size-200"
-            backgroundColor="negative"
-            borderRadius="medium"
-            marginBottom="size-300"
+          <div
+            style={{
+              padding: 16,
+              background: 'var(--spectrum-semantic-negative-color-default, #d7373f)',
+              borderRadius: 8,
+              marginBottom: 24,
+            }}
           >
             <Text UNSAFE_style={{ color: 'white' }}>Error: {error}</Text>
-          </View>
+          </div>
         ) : (
           <div className={style({display: 'flex', flexDirection: 'column', gap: 24, marginBottom: 32})}>
             <Picker
@@ -337,21 +341,23 @@ const FormatSelectionOverlay: React.FC<{
             </Picker>
 
             {selectedCloud && filteredSeries.length === 0 && (
-              <View
-                padding="size-150"
-                backgroundColor="notice"
-                borderRadius="medium"
+              <div
+                style={{
+                  padding: 12,
+                  backgroundColor: 'rgba(230, 134, 25, 0.15)',
+                  borderRadius: 8,
+                }}
               >
                 <Text UNSAFE_style={{ fontSize: '13px' }}>
                   No event series available for this cloud and event type combination. 
                   Please create a series first or contact your administrator.
                 </Text>
-              </View>
+              </div>
             )}
           </div>
         )}
 
-        <Divider size="S" marginBottom="size-300" />
+        <Divider size="S" styles={style({ marginBottom: 24 })} />
 
         {/* Actions */}
         <div className={style({display: 'flex', justifyContent: 'end', gap: 16})}>
@@ -371,7 +377,7 @@ const FormatSelectionOverlay: React.FC<{
             <ChevronRight />
           </Button>
         </div>
-      </View>
+      </div>
     </div>
   )
 }
@@ -624,30 +630,7 @@ const EventFormInner: React.FC<EventFormInnerProps> = ({ ims: _ims }) => {
   }, [checkUrlPatternBeforeSave, saveDraft, persistToStorage, toast, isEditMode])
   
   /**
-   * Handle Next Step button click - saves to API + sessionStorage then advances
-   * Returns true on success (so FormWizard can advance), false on failure
-   */
-  const handleNextStep = useCallback(async (): Promise<boolean> => {
-    const { proceed, extraPayload } = await checkUrlPatternBeforeSave('save')
-    if (!proceed) return false
-
-    persistToStorage()
-    
-    const result = await saveDraft({
-      extraPayload,
-      onSuccess: () => {
-        toast.success('Progress saved', { duration: 2000 })
-      },
-      onError: (error) => {
-        console.error('Failed to save event:', error)
-      }
-    })
-    
-    return result.success
-  }, [checkUrlPatternBeforeSave, saveDraft, persistToStorage, toast])
-  
-  /**
-   * Handle Publish/Re-publish button click (last step completion)
+   * Handle Publish/Re-publish button click
    */
   const handleComplete = useCallback(async () => {
     const { proceed, extraPayload } = await checkUrlPatternBeforeSave('publish')
@@ -880,16 +863,23 @@ const EventFormInner: React.FC<EventFormInnerProps> = ({ ims: _ims }) => {
   const showFormatOverlay = !isFormatConfirmed && !isEditMode
 
   return (
-    <View 
-      UNSAFE_style={{
+    <div
+      style={{
         backgroundColor: '#F5F5F5',
+        display: 'flex',
+        flexDirection: 'column',
+        flex: 1,
+        minHeight: 0,
+        width: '100%',
+        height: '100%',
+        alignSelf: 'stretch',
+        overflow: 'hidden',
       }}
     >
       <FormWizard
         steps={steps}
         onComplete={handleComplete}
         onSave={handleSave}
-        onNextStep={handleNextStep}
         onCancel={handleCancel}
         onPreview={handlePreview}
         isSubmitting={isSaving}
@@ -918,24 +908,28 @@ const EventFormInner: React.FC<EventFormInnerProps> = ({ ims: _ims }) => {
       >
         <div style={{ display: 'none' }} />
         <Dialog size="M">
-          <Heading>{urlDialogState?.collision ? 'URL Conflict Detected' : 'Confirm Event URL'}</Heading>
+          <Heading slot="title">{urlDialogState?.collision ? 'URL Conflict Detected' : 'Confirm Event URL'}</Heading>
           <Divider />
           <Content>
             <div className={style({display: 'flex', flexDirection: 'column', gap: 16})}>
               <Text>The following detail page URL will be assigned to this event:</Text>
-              <View
-                backgroundColor="gray-75"
-                padding="size-150"
-                borderRadius="regular"
-                UNSAFE_style={{ wordBreak: 'break-all', fontFamily: 'monospace', fontSize: '13px' }}
+              <div
+                style={{
+                  background: 'var(--spectrum-global-color-gray-75)',
+                  padding: 12,
+                  borderRadius: 4,
+                  wordBreak: 'break-all',
+                  fontFamily: 'monospace',
+                  fontSize: 13,
+                }}
               >
                 <Text>{urlDialogState?.url}</Text>
-              </View>
+              </div>
 
               {urlDialogState?.collision && (
                 <div className={style({display: 'flex', flexDirection: 'column', gap: 8})}>
                   <div className={style({display: 'flex', alignItems: 'center', gap: 8})}>
-                    <Alert size="S" color="negative" />
+                    <AlertTriangle />
                     <Text UNSAFE_style={{ color: COLORS.RED_600, fontWeight: 600 }}>
                       This URL is already in use by another event.
                     </Text>
@@ -976,7 +970,7 @@ const EventFormInner: React.FC<EventFormInnerProps> = ({ ims: _ims }) => {
       {isCheckingUrl && (
         <BlurredLoadingOverlay visible={true} message="Checking URL pattern..." ariaLabel="Checking URL" />
       )}
-    </View>
+    </div>
   )
 }
 

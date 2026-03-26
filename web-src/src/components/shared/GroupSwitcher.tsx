@@ -7,7 +7,7 @@
  */
 
 import React from 'react'
-import { Picker, Item, Text, Divider } from '@adobe/react-spectrum'
+import { Picker, PickerItem, Text } from '@react-spectrum/s2'
 import { style } from '@react-spectrum/s2/style' with { type: 'macro' }
 import { useGroup } from '../../contexts/GroupContext'
 
@@ -19,20 +19,24 @@ export const GroupSwitcher: React.FC = () => {
 
   return (
     <div className={style({ display: 'flex', alignItems: 'center', gap: 12 })}>
-      <Divider orientation="vertical" size="S" UNSAFE_style={{ height: 24 }} />
+      <div
+        className={style({ width: 1, height: 24, flexShrink: 0, backgroundColor: 'gray-300' })}
+        role="separator"
+        aria-orientation="vertical"
+      />
       <Picker
         label="Group"
         labelPosition="side"
         selectedKey={activeGroup.groupId}
         onSelectionChange={(key) => setActiveGroup(key as string)}
-        width="size-3000"
+        styles={style({ width: 240 })}
         isDisabled={groups.length === 1}
       >
         {groups.map(group => (
-          <Item key={group.groupId} textValue={group.name}>
+          <PickerItem key={group.groupId} id={group.groupId} textValue={group.name}>
             <Text>{group.name}</Text>
-            {group.scopeName && <Text slot="description">{group.scopeName}</Text>}
-          </Item>
+            {group.scopeName ? <Text slot="description">{group.scopeName}</Text> : null}
+          </PickerItem>
         ))}
       </Picker>
     </div>

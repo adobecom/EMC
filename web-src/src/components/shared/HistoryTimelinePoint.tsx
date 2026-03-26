@@ -3,7 +3,7 @@
 */
 
 import React from 'react'
-import { Text } from '@adobe/react-spectrum'
+import { Text } from '@react-spectrum/s2'
 import { COLORS, SPACING } from '../../styles/designSystem'
 import { HistoryRecord } from '../../types/domain'
 import { getChangeColor } from './HistoryTimeline'

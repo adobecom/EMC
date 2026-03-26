@@ -215,10 +215,10 @@ const PartnerCard: React.FC<PartnerCardProps> = ({
   return (
     <div
       style={{
-        border: '1px solid var(--spectrum-gray-700)',
+        border: '1px solid var(--spectrum-global-color-gray-700)',
         borderRadius: '4px',
         padding: '16px',
-        backgroundColor: 'var(--spectrum-gray-50)',
+        backgroundColor: 'var(--spectrum-global-color-gray-50)',
       }}
     >
       <div className={style({display: 'flex', alignItems: 'center', gap: 16})}>
@@ -228,7 +228,7 @@ const PartnerCard: React.FC<PartnerCardProps> = ({
             width: '64px',
             height: '48px',
             borderRadius: '2px',
-            border: '1px solid var(--spectrum-gray-300)',
+            border: '1px solid var(--spectrum-global-color-gray-300)',
             backgroundColor: 'white',
             flexShrink: 0,
             display: 'flex',
@@ -279,7 +279,7 @@ const PartnerCard: React.FC<PartnerCardProps> = ({
                 alignItems: 'center',
                 gap: `${SPACING.XS}px`,
                 padding: `0 ${SPACING.XS}px`,
-                border: '1px solid var(--spectrum-gray-300)',
+                border: '1px solid var(--spectrum-global-color-gray-300)',
                 borderRadius: '2px',
                 backgroundColor: 'white',
                 cursor: 'pointer',
@@ -744,7 +744,7 @@ export const SponsorsComponent: React.FC = () => {
       </Text>
 
       {sponsors.length === 0 && (
-        <div style={{ padding: '32px', backgroundColor: 'var(--spectrum-gray-100)', borderRadius: '4px', textAlign: 'center' }}>
+        <div style={{ padding: '32px', backgroundColor: 'var(--spectrum-global-color-gray-100)', borderRadius: '4px', textAlign: 'center' }}>
           <div className={style({display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 16})}>
             <Text>Add partners to your event using the button below.</Text>
             <Button variant="secondary" onPress={() => setPickerOpen(true)}>

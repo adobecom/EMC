@@ -6,6 +6,10 @@ import React, { useState, useCallback, useMemo } from 'react'
 import { DialogTrigger, SearchField, ActionButton, AlertDialog } from '@react-spectrum/s2'
 import { style } from '@react-spectrum/s2/style' with { type: 'macro' }
 import Download from '@react-spectrum/s2/icons/Download'
+import CalendarIllustration from '@react-spectrum/s2/illustrations/linear/Calendar'
+import NoSearchResults from '@react-spectrum/s2/illustrations/linear/NoSearchResults'
+import UserGroupIllustration from '@react-spectrum/s2/illustrations/linear/UserGroup'
+import { ResourceEmptyState } from '../../components/shared'
 import type { Attendee, AttendeeFilters, AttendeeColumnConfig } from '../../types/attendee'
 import type { Campaign } from '../../types/campaign'
 import { useHasPermission } from '../../hooks/useHasPermission'
@@ -111,6 +115,40 @@ export const RegistrationsTab: React.FC<RegistrationsTabProps> = ({
     setSearchQuery('')
   }, [selectedEventId])
 
+  const hasActiveFilters =
+    searchQuery.trim().length > 0 || Object.values(filters).some(v => v.length > 0)
+
+  const attendeeEmptyState = useMemo(() => {
+    if (!selectedEventId) {
+      return (
+        <ResourceEmptyState
+          fillContainer
+          illustration={<CalendarIllustration aria-hidden />}
+          title="Select an event"
+          description="Choose an event to load registrations and manage attendees for that event."
+        />
+      )
+    }
+    if (hasActiveFilters && filteredAttendees.length === 0) {
+      return (
+        <ResourceEmptyState
+          fillContainer
+          illustration={<NoSearchResults aria-hidden />}
+          title="No matching attendees"
+          description="Try adjusting your search or filters, or pick another event."
+        />
+      )
+    }
+    return (
+      <ResourceEmptyState
+        fillContainer
+        illustration={<UserGroupIllustration aria-hidden />}
+        title="No attendees yet"
+        description="No one has registered for this event yet. Registrations will appear here as people sign up."
+      />
+    )
+  }, [selectedEventId, hasActiveFilters, filteredAttendees.length])
+
   return (
     <>
       {/* Main Content Area */}
@@ -167,13 +205,7 @@ export const RegistrationsTab: React.FC<RegistrationsTabProps> = ({
             selectedIds={selectedIds}
             onSelectionChange={setSelectedIds}
             onAttendeeAction={handleAttendeeAction}
-            emptyMessage={
-              !selectedEventId 
-                ? 'Select an event to view attendees'
-                : searchQuery || Object.values(filters).some(v => v.length > 0)
-                  ? 'No attendees match your search/filters'
-                  : 'No attendees registered for this event'
-            }
+            emptyState={attendeeEmptyState}
           />
         </div>
       </div>

@@ -9,12 +9,14 @@ import Sort from "@react-spectrum/s2/icons/Sort"
 import SortUp from "@react-spectrum/s2/icons/SortUp"
 import SortDown from "@react-spectrum/s2/icons/SortDown"
 import Edit from '@react-spectrum/s2/icons/Edit'
-import Delete from '@react-spectrum/s2/icons/Delete'
+import RemoveCircle from '@react-spectrum/s2/icons/RemoveCircle'
 import Visibility from '@react-spectrum/s2/icons/Visibility'
 import ChevronDown from '@react-spectrum/s2/icons/ChevronDown'
 import ChevronLeft from '@react-spectrum/s2/icons/ChevronLeft'
 import ChevronRight from '@react-spectrum/s2/icons/ChevronRight'
 import { deduplicateBy } from '../../utils/deduplication'
+import BuildTable from '@react-spectrum/s2/illustrations/linear/BuildTable'
+import { ResourceEmptyState, RESOURCE_EMPTY_STATE_MIN_HEIGHT_PX } from './ResourceEmptyState'
 
 export interface TableColumn<T> {
   key: string
@@ -24,6 +26,8 @@ export interface TableColumn<T> {
   sortable?: boolean
   sortFn?: (a: T, b: T) => number
   isSticky?: boolean
+  /** Keep cell on one line (e.g. actions); default is wrap-friendly for stable column widths */
+  cellNoWrap?: boolean
 }
 
 export interface TableAction<T> {
@@ -49,7 +53,7 @@ interface DataTableProps<T> {
 const iconMap = {
   view: Visibility,
   edit: Edit,
-  delete: Delete
+  delete: RemoveCircle
 }
 
 export function DataTable<T extends Record<string, any>>({
@@ -221,7 +225,7 @@ export function DataTable<T extends Record<string, any>>({
   const allColumns = React.useMemo(() => {
     const cols = [...columns]
     if (actions && actions.length > 0) {
-      cols.push({ key: 'actions', name: 'Actions', sortable: false })
+      cols.push({ key: 'actions', name: 'Actions', sortable: false, cellNoWrap: true })
     }
     return cols
   }, [columns, actions])
@@ -248,8 +252,23 @@ export function DataTable<T extends Record<string, any>>({
   // Empty state check AFTER all hooks are defined
   if (data.length === 0 && !isLoading) {
     return (
-      <div style={{ width: '100%', minHeight: '400px' }}>
-        {emptyState || <Text>No data available</Text>}
+      <div
+        className={style({
+          display: 'flex',
+          flexDirection: 'column',
+          width: '[100%]',
+          flex: 1,
+        })}
+        style={{ minHeight: RESOURCE_EMPTY_STATE_MIN_HEIGHT_PX }}
+      >
+        {emptyState ?? (
+          <ResourceEmptyState
+            fillContainer
+            illustration={<BuildTable aria-hidden />}
+            title="No data to show"
+            description="There is nothing in this list yet. Add or import items elsewhere in the app to see them here."
+          />
+        )}
       </div>
     )
   }
@@ -320,7 +339,7 @@ export function DataTable<T extends Record<string, any>>({
                 <React.Fragment key={itemKey}>
                   <tr className={isExpanded ? 'expanded-parent' : ''}>
                     {isExpandable && (
-                      <td style={{ width: '40px', minWidth: '40px', padding: '0 8px', verticalAlign: 'middle' }}>
+                      <td className="data-table-td-nowrap" style={{ width: '40px', minWidth: '40px', padding: '0 8px', verticalAlign: 'middle' }}>
                         <ActionButton
                           isQuiet
                           onPress={() => handleToggleExpand(itemKey)}
@@ -334,10 +353,12 @@ export function DataTable<T extends Record<string, any>>({
                     {allColumns.map((column) => {
                       const minWidth = Math.max(column.width || 100, 100)
                       const stickyClass = column.isSticky ? getStickyClass(column.key) : ''
+                      const nowrapClass = column.cellNoWrap ? 'data-table-td-nowrap' : ''
+                      const cellClass = [stickyClass, nowrapClass].filter(Boolean).join(' ')
                       return (
                       <td
                         key={column.key}
-                        className={stickyClass}
+                        className={cellClass || undefined}
                         style={{
                           textAlign: column.key === 'actions' ? 'right' : 'left',
                           minWidth: `${minWidth}px`,

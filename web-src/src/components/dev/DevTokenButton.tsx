@@ -4,8 +4,7 @@
 */
 
 import React, { useState, useEffect } from 'react'
-import { Text, Tooltip, TooltipTrigger } from '@adobe/react-spectrum'
-import { ActionButton, Badge } from "@react-spectrum/s2"
+import { ActionButton, Badge, Text, Tooltip, TooltipTrigger } from '@react-spectrum/s2'
 import { style } from "@react-spectrum/s2/style" with { type: "macro" }
 import Key from "@react-spectrum/s2/icons/Key"
 import { tokenStorage } from '../../services/tokenStorage'
@@ -85,7 +84,7 @@ export const DevTokenButton: React.FC<DevTokenButtonProps> = ({ onTokenChange })
             </Badge>
           </div>
         </ActionButton>
-        <Tooltip variant="info">
+        <Tooltip>
           {hasValidToken && expirationInfo ? (
             <div>
               <strong>Token Active</strong>

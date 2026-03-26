@@ -1,39 +1,36 @@
 ---
-description: React component patterns, hooks, state management, and Spectrum 2–first UI for EMC (v3 fallback)
+description: React component patterns, hooks, state management, and React Spectrum S2 UI for EMC
 globs: web-src/**/*.tsx,web-src/**/*.ts
 alwaysApply: false
 ---
 
 # EMC React Component Patterns
 
-## React Spectrum — S2 first, v3 fallback
+## React Spectrum — S2 only
 
-**Prefer** `@react-spectrum/s2` for new and refactored UI. Use `@adobe/react-spectrum` (v3) only when there is no suitable S2 component or you must align with an existing v3-only boundary.
+Use **`@react-spectrum/s2`** for all Spectrum UI. The app shell uses `S2Provider` and `Fonts` from S2; `@adobe/react-spectrum` is not a project dependency.
 
 ```tsx
-// Preferred — Spectrum 2
-import { Button, TextField } from '@react-spectrum/s2'
+import { Button, TextField, Heading } from '@react-spectrum/s2'
 import { style } from '@react-spectrum/s2/style' with { type: 'macro' }
 import Edit from '@react-spectrum/s2/icons/Edit'
-
-// Fallback — v3 (when S2 has no equivalent)
-import { Button, TextField, Flex, View } from '@adobe/react-spectrum'
-import Edit from '@spectrum-icons/workflow/Edit'
 ```
 
-### Spectrum interaction and layout (both stacks)
+### Spectrum interaction and layout
 - Use `onPress` on Spectrum buttons/links (not `onClick`) unless working with plain DOM
-- **S2:** layout and spacing via `style()` macro and S2 docs; **v3:** `Flex`, `Grid`, `View` with dimension props (`size-*`, `static-size-*`) and token spacing
+- Layout and spacing via the `style()` macro, plain `div`/`span` where appropriate, and S2 docs — avoid v3-only layout props
+- **`style()` macro:** only **literals** inside `style({ ... })` — no `SPACING.*` / `designSystem` imports (build error: *Could not statically evaluate macro argument*). See `react-spectrum-style-macro-s2.mdc` → *Static evaluation*.
 - Minimize `UNSAFE_style` / `UNSAFE_className`; comment when required
-- **v3 surfaces:** `defaultTheme`, `Provider`, `colorScheme`, `scale` in App as today
-- **v3 collections:** `<Picker>`, `<ComboBox>`, `<ListView>` use `<Item key={}>` children
+- **S2 collections:** `<Picker>` / `<ComboBox>` use `<PickerItem id={}>` / `<ComboBoxItem>` per S2 APIs
 
-See `react-spectrum-s2.mdc` and `react-spectrum-v3.mdc` for stack-specific detail.
+See `react-spectrum-s2.mdc` for S2 detail. `react-spectrum-v3.mdc` is historical reference only.
 
 ## Component Patterns
 
 ### Functional Components Only
 ```tsx
+import { style } from '@react-spectrum/s2/style' with { type: 'macro' }
+
 // Standard pattern — React.FC with typed props
 interface MyComponentProps {
   ims: IMS
@@ -45,7 +42,7 @@ const MyComponent: React.FC<MyComponentProps> = ({ ims, data }) => {
   const { apiService } = useApi()
   const { showToast } = useToast()
   
-  return <View>...</View>
+  return <div className={style({ display: 'flex', flexDirection: 'column', gap: 16 })}>...</div>
 }
 
 export default MyComponent
