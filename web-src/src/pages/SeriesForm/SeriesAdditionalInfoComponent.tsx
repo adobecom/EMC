@@ -4,13 +4,15 @@
 
 import React from 'react'
 import {
-  TextField,
   Flex,
   Text
 } from '@adobe/react-spectrum'
+import { TextField } from '@react-spectrum/s2'
+import { style } from '@react-spectrum/s2/style' with { type: 'macro' }
 import { HeadingWithTooltip } from '../../components/shared'
 import { FLEX_GAP } from '../../styles/designSystem'
 import { useSeriesFormComponent } from '../../hooks/useSeriesFormComponent'
+import { normalizeRelatedDomain, normalizeContentRoot } from '../../utils/seriesFormAutoCorrect'
 
 /**
  * SeriesAdditionalInfoComponent - Manages additional series settings
@@ -63,7 +65,7 @@ export const SeriesAdditionalInfoComponent: React.FC = () => {
             placeholder="Add path"
             value={susiContextId}
             onChange={(value) => updateFormData({ susiContextId: value })}
-            width="100%"
+            styles={style({ width: '[100%]' })}
           />
         </Flex>
         
@@ -76,7 +78,13 @@ export const SeriesAdditionalInfoComponent: React.FC = () => {
             placeholder="Add related domain"
             value={relatedDomain}
             onChange={(value) => updateFormData({ relatedDomain: value })}
-            width="100%"
+            onBlur={() => {
+              const normalized = normalizeRelatedDomain(relatedDomain)
+              if (normalized !== relatedDomain) {
+                updateFormData({ relatedDomain: normalized })
+              }
+            }}
+            styles={style({ width: '[100%]' })}
           />
         </Flex>
         
@@ -89,7 +97,13 @@ export const SeriesAdditionalInfoComponent: React.FC = () => {
             placeholder="Add content root"
             value={contentRoot}
             onChange={(value) => updateFormData({ contentRoot: value })}
-            width="100%"
+            onBlur={() => {
+              const normalized = normalizeContentRoot(contentRoot)
+              if (normalized !== contentRoot) {
+                updateFormData({ contentRoot: normalized })
+              }
+            }}
+            styles={style({ width: '[100%]' })}
           />
         </Flex>
         
@@ -102,7 +116,7 @@ export const SeriesAdditionalInfoComponent: React.FC = () => {
             placeholder="Add external theme ID"
             value={externalThemeId}
             onChange={(value) => updateFormData({ externalThemeId: value })}
-            width="100%"
+            styles={style({ width: '[100%]' })}
           />
         </Flex>
       </Flex>

@@ -183,6 +183,7 @@ export interface EventHistoryResponse {
 // Agenda item from API
 export interface AgendaDataItem {
   startTime: string
+  endTime?: string
   description?: string
   title?: string
 }
@@ -248,6 +249,7 @@ export interface EventApiResponse {
   waitlistAttendeeCount?: number
   hostEmail?: string
   isPrivate?: boolean
+  inviteOnly?: boolean
   allowWaitlisting?: boolean
   allowGuestRegistration?: boolean
   tags?: string
@@ -569,7 +571,8 @@ export interface EventFormData {
   language: string
   defaultLocale?: string
   isPrivate: boolean
-  
+  inviteOnly: boolean
+
   // Step 2: Tags & Topics
   tags?: EventTag[]
   topics?: string[]
@@ -713,5 +716,22 @@ export interface PublishingProfileFormData {
   description?: string
   metadata?: Record<string, string>
   status?: string
+}
+
+// URL Pattern types (for custom detailPagePath construction)
+export interface UrlPatternEntry {
+  seriesId: string
+  pattern: string
+}
+
+export interface UrlPatternsSheetData {
+  total: number
+  offset: number
+  limit: number
+  data: UrlPatternEntry[]
+}
+
+export interface UrlPatternsConfig {
+  [sheetKey: string]: UrlPatternsSheetData | number | string[] | string
 }
 

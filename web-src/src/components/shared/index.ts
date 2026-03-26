@@ -22,4 +22,6 @@ export { SingleStepFormLayout } from './SingleStepFormLayout'
 export type { FormStatus } from './SingleStepFormLayout'
 export { HistoryTimeline } from './HistoryTimeline'
 export type { HistoryResourceType } from './HistoryTimeline'
+export { RequirePermission } from './RequirePermission'
+export { GroupSwitcher } from './GroupSwitcher'
 

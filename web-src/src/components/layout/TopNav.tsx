@@ -4,13 +4,15 @@
 
 import React from 'react'
 import { NavLink } from 'react-router-dom'
-import { Flex, View, Button } from '@adobe/react-spectrum'
-import Login from '@spectrum-icons/workflow/Login'
+import { Flex, View } from '@adobe/react-spectrum'
+import { Button, Text } from "@react-spectrum/s2"
 import { IMS } from '../../types'
 import { UserPanel } from '../user'
 import { DevTokenButton } from '../dev'
 import { STICKY_GNAV_STYLES } from '../../styles/designSystem'
 import { useAuth } from '../../contexts/AuthContext'
+import { useHasPermission } from '../../hooks'
+import { useGroup } from '../../contexts/GroupContext'
 
 interface TopNavProps {
   ims: IMS
@@ -18,6 +20,12 @@ interface TopNavProps {
 
 const TopNav: React.FC<TopNavProps> = ({ ims }) => {
   const { isAuthenticated, isLoading, signIn, authMode } = useAuth()
+  const { isLoading: isGroupLoading, activeGroup } = useGroup()
+  const canReadEvents = useHasPermission('event', 'read')
+  const canReadSeries = useHasPermission('series', 'read')
+
+  // Hide all tabs until a group is selected (loading done and activeGroup set)
+  const showNav = !isGroupLoading && activeGroup !== null
 
   // Only show the standalone sign-in button when:
   //   - Running in standalone mode (not the ExC Shell)
@@ -58,10 +66,11 @@ const TopNav: React.FC<TopNavProps> = ({ ims }) => {
           </a>
         </View>
 
-        {/* Center: Navigation Links */}
-        <Flex 
-          direction="row" 
-          alignItems="center" 
+        {/* Center: Navigation Links — hidden until access is resolved */}
+        {showNav && (
+        <Flex
+          direction="row"
+          alignItems="center"
           gap="size-0"
           UNSAFE_className="nav-links"
         >
@@ -70,51 +79,54 @@ const TopNav: React.FC<TopNavProps> = ({ ims }) => {
             end
             to="/"
           >
-            Home
+            <Text>Home</Text>
           </NavLink>
           <NavLink
             className={({ isActive }) => `nav-link ${isActive ? 'is-selected' : ''}`}
             to="/overview"
           >
-            Overview
+            <Text>Overview</Text>
           </NavLink>
-          <NavLink
-            className={({ isActive }) => `nav-link ${isActive ? 'is-selected' : ''}`}
-            to="/events"
-          >
-            Events
-          </NavLink>
-          <NavLink
-            className={({ isActive }) => `nav-link ${isActive ? 'is-selected' : ''}`}
-            to="/registrations"
-          >
-            Registrations
-          </NavLink>
-          <NavLink
-            className={({ isActive }) => `nav-link ${isActive ? 'is-selected' : ''}`}
-            to="/speakers"
-          >
-            Speakers
-          </NavLink>
-          <NavLink
-            className={({ isActive }) => `nav-link ${isActive ? 'is-selected' : ''}`}
-            to="/series"
-          >
-            Series
-          </NavLink>
-          <NavLink
-            className={({ isActive }) => `nav-link ${isActive ? 'is-selected' : ''}`}
-            to="/clouds"
-          >
-            Clouds
-          </NavLink>
+          {canReadEvents && (
+            <NavLink
+              className={({ isActive }) => `nav-link ${isActive ? 'is-selected' : ''}`}
+              to="/events"
+            >
+              <Text>Events</Text>
+            </NavLink>
+          )}
+          {canReadEvents && (
+            <NavLink
+              className={({ isActive }) => `nav-link ${isActive ? 'is-selected' : ''}`}
+              to="/registrations"
+            >
+              <Text>Registrations</Text>
+            </NavLink>
+          )}
+          {canReadEvents && (
+            <NavLink
+              className={({ isActive }) => `nav-link ${isActive ? 'is-selected' : ''}`}
+              to="/speakers"
+            >
+              <Text>Speakers</Text>
+            </NavLink>
+          )}
+          {canReadSeries && (
+            <NavLink
+              className={({ isActive }) => `nav-link ${isActive ? 'is-selected' : ''}`}
+              to="/series"
+            >
+              <Text>Series</Text>
+            </NavLink>
+          )}
           <NavLink
             className={({ isActive }) => `nav-link ${isActive ? 'is-selected' : ''}`}
             to="/about"
           >
-            About
+            <Text>About</Text>
           </NavLink>
         </Flex>
+        )}
 
         {/* Right: Auth controls + User Panel */}
         <Flex direction="row" alignItems="center" gap="size-100">
@@ -123,20 +135,15 @@ const TopNav: React.FC<TopNavProps> = ({ ims }) => {
 
           {showSignIn ? (
             /* Standalone mode, not signed in: show a Sign In button */
-            <Button
-              variant="primary"
-              style="fill"
+            (<Button
+              variant="accent"
               onPress={signIn}
-              UNSAFE_style={{ fontSize: 12, padding: '4px 12px' }}
             >
-              <Login 
-                UNSAFE_style={{ marginRight: 4 }}
-              />
-              <span>Sign In</span>
-            </Button>
+              Sign In
+            </Button>)
           ) : (
             /* Signed in (either mode): show user panel */
-            !isLoading && <UserPanel ims={ims} compact />
+            (!isLoading && <UserPanel ims={ims} compact />)
           )}
         </Flex>
       </Flex>

@@ -3,11 +3,7 @@
 */
 
 import React, { useMemo } from 'react'
-import {
-  View,
-  Text,
-  Heading
-} from '@adobe/react-spectrum'
+import { Text } from '@react-spectrum/s2'
 import type { Attendee, AttendeeColumnConfig } from '../../types/attendee'
 import { getAttendeeName } from '../../types/attendee'
 import { DataTable, TableColumn } from '../../components/shared'
@@ -44,31 +40,11 @@ const EmptyAttendeeState: React.FC<{ message: string }> = ({ message }) => {
       justifyContent: 'center',
       padding: '60px 20px',
       textAlign: 'center'
-    }}>
-      {/* Icon - Document/List Icon */}
-      <div style={{
-        marginBottom: '32px'
-      }}>
-        <svg width="264" height="200" viewBox="0 0 264 200" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <rect x="70" y="20" width="124" height="160" rx="8" stroke={COLORS.GRAY_400} strokeWidth="4" fill="none"/>
-          <circle cx="90" cy="60" r="8" stroke={COLORS.GRAY_400} strokeWidth="3" fill="none"/>
-          <line x1="106" y1="60" x2="160" y2="60" stroke={COLORS.GRAY_400} strokeWidth="3" strokeLinecap="round"/>
-          <circle cx="90" cy="90" r="8" stroke={COLORS.GRAY_400} strokeWidth="3" fill="none"/>
-          <line x1="106" y1="90" x2="160" y2="90" stroke={COLORS.GRAY_400} strokeWidth="3" strokeLinecap="round"/>
-          <circle cx="90" cy="120" r="8" stroke={COLORS.GRAY_400} strokeWidth="3" fill="none"/>
-          <line x1="106" y1="120" x2="160" y2="120" stroke={COLORS.GRAY_400} strokeWidth="3" strokeLinecap="round"/>
-        </svg>
-      </div>
-      
+    }}>      
       {/* Heading */}
-      <Heading level={2} UNSAFE_style={{ 
-        fontSize: '28px',
-        fontWeight: 700,
-        color: COLORS.BLACK,
-        marginBottom: '16px'
-      }}>
+      <h2 style={{ fontSize: '28px', fontWeight: 700, color: COLORS.BLACK, marginBottom: '16px' }}>
         No attendees found for this event
-      </Heading>
+      </h2>
       
       {/* Subtext */}
       <Text UNSAFE_style={{
@@ -154,7 +130,7 @@ export const AttendeeTableComponent: React.FC<AttendeeTableComponentProps> = ({
   }, [columnConfig])
 
   return (
-    <View width="100%" UNSAFE_style={{ maxWidth: '100%', overflow: 'hidden' }}>
+    <div style={{ width: '100%', maxWidth: '100%', overflow: 'hidden' }}>
       {/* Data Table */}
       <DataTable
         columns={columns}
@@ -164,7 +140,7 @@ export const AttendeeTableComponent: React.FC<AttendeeTableComponentProps> = ({
         pageSize={20}
         emptyState={<EmptyAttendeeState message={emptyMessage} />}
       />
-    </View>
+    </div>
   )
 }
 

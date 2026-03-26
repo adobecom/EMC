@@ -14,9 +14,6 @@ export { About } from './About'
 // User pages
 export { UserProfile } from './UserProfile'
 
-// Management pages
-export { CloudManagementConsole } from './CloudManagementConsole'
-
 // Dashboard pages
 export { EventsDashboard } from './EventsDashboard'
 export { SeriesDashboard } from './SeriesDashboard'
@@ -27,3 +24,8 @@ export { OverviewDashboard } from './OverviewDashboard'
 // Form pages
 export { EventForm } from './EventForm'
 export { SeriesForm } from './SeriesForm'
+
+// Admin pages
+export { UserManagement } from './UserManagement'
+export { ScopeGroupManagement } from './ScopeGroupManagement'
+export { RoleManagement } from './RoleManagement'

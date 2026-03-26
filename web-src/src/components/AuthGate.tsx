@@ -18,17 +18,32 @@ interface AuthGateProps {
  * - Standalone: gates until IMS init completes, user has a token, and ESP ping succeeds.
  */
 export const AuthGate: React.FC<AuthGateProps> = ({ children }) => {
-  const { isLoading, isAuthenticated, isApiReady, signIn } = useAuth()
+  const { isLoading, isAuthenticated, isApiReady, pingError, signIn, retryPing } = useAuth()
 
   const showGate = isLoading || !isAuthenticated || !isApiReady
-  const isCheckingAccess = isLoading || (isAuthenticated && !isApiReady)
+  const isCheckingAccess = isLoading || (isAuthenticated && !isApiReady && !pingError)
 
   if (showGate) {
+    let message: string | undefined
+    let actionLabel: string | undefined
+    let onAction = signIn
+
+    if (pingError === 'auth') {
+      message = 'Your session has expired or your account does not have access. Please sign in again.'
+      actionLabel = 'Sign In'
+    } else if (pingError === 'network') {
+      message = 'Unable to reach the server. Please check your connection and try again.'
+      actionLabel = 'Retry'
+      onAction = retryPing
+    }
+
     return (
       <Provider theme={defaultTheme} colorScheme="light" scale="medium">
         <GateScreen
-          onRequestAccess={signIn}
+          onRequestAccess={onAction}
           isLoading={isCheckingAccess}
+          message={message}
+          actionLabel={actionLabel}
         />
       </Provider>
     )

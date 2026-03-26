@@ -3,34 +3,18 @@
 */
 
 import React, { useState, useCallback, useMemo } from 'react'
-import {
-  View,
-  Flex,
-  Text,
-  Button,
-  ActionButton,
-  DialogTrigger,
-  Dialog,
-  Heading,
-  Content,
-  ButtonGroup,
-  TextField,
-  NumberField,
-  Switch,
-  AlertDialog,
-  Divider,
-  Picker,
-  Item
-} from '@adobe/react-spectrum'
-import Add from '@spectrum-icons/workflow/Add'
-import Edit from '@spectrum-icons/workflow/Edit'
-import Delete from '@spectrum-icons/workflow/Delete'
-import Copy from '@spectrum-icons/workflow/Copy'
+import { Button, ButtonGroup, TextField, Picker, PickerItem, DialogTrigger, Dialog, Content, Heading, Text, ActionButton, NumberField, Switch, AlertDialog } from '@react-spectrum/s2'
+import { style } from "@react-spectrum/s2/style" with { type: "macro" }
+import Add from '@react-spectrum/s2/icons/Add'
+import Edit from '@react-spectrum/s2/icons/Edit'
+import Delete from '@react-spectrum/s2/icons/Delete'
+import Copy from '@react-spectrum/s2/icons/Copy'
 import type { EventApiResponse } from '../../types/domain'
 import type { Campaign, CampaignFormData, CampaignStatus } from '../../types/campaign'
 import { calculateCampaignStats } from '../../types/campaign'
 import { DataTable, TableColumn } from '../../components/shared'
 import { COLORS, SPACING } from '../../styles/designSystem'
+import { useHasPermission } from '../../hooks/useHasPermission'
 
 interface CampaignsTabProps {
   eventId: string
@@ -49,6 +33,8 @@ export const CampaignsTab: React.FC<CampaignsTabProps> = ({
   onUpdateCampaign,
   onDeleteCampaign,
 }) => {
+  const canWriteEvent = useHasPermission('event', 'write')
+  const canDeleteEvent = useHasPermission('event', 'delete')
   const [isFormOpen, setIsFormOpen] = useState(false)
   const [editingCampaign, setEditingCampaign] = useState<Campaign | null>(null)
   const [campaignToDelete, setCampaignToDelete] = useState<Campaign | null>(null)
@@ -133,7 +119,7 @@ export const CampaignsTab: React.FC<CampaignsTabProps> = ({
       name: 'URL',
       width: 200,
       render: (campaign) => (
-        <Flex alignItems="center" gap="size-100">
+        <div className={style({display: 'flex', alignItems: 'center', gap: 8})}>
           <Text UNSAFE_style={{ fontFamily: 'monospace', fontSize: '13px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
             {campaign.url}
           </Text>
@@ -144,7 +130,7 @@ export const CampaignsTab: React.FC<CampaignsTabProps> = ({
                 onPress={() => handleCopyUrl(campaign)}
                 aria-label="Copy URL"
               >
-                <Copy size="S" />
+                <Copy />
               </ActionButton>
               {copiedId === campaign.campaignId && (
                 <Text UNSAFE_style={{ fontSize: '11px', color: COLORS.STATUS_DRAFT }}>
@@ -153,7 +139,7 @@ export const CampaignsTab: React.FC<CampaignsTabProps> = ({
               )}
             </>
           )}
-        </Flex>
+        </div>
       )
     },
     {
@@ -185,21 +171,19 @@ export const CampaignsTab: React.FC<CampaignsTabProps> = ({
       width: 100,
       sortable: true,
       render: (campaign) => (
-        <View
-          UNSAFE_style={{
-            display: 'inline-block',
-            padding: '4px 12px',
-            borderRadius: '16px',
-            backgroundColor: campaign.status === 'Active'
-              ? 'rgba(45, 157, 146, 0.15)'
-              : 'rgba(102, 102, 102, 0.15)',
-            color: campaign.status === 'Active' ? COLORS.STATUS_DRAFT : COLORS.STATUS_ARCHIVED
-          }}
-        >
+        <div style={{
+          display: 'inline-block',
+          padding: '4px 12px',
+          borderRadius: '16px',
+          backgroundColor: campaign.status === 'Active'
+            ? 'rgba(45, 157, 146, 0.15)'
+            : 'rgba(102, 102, 102, 0.15)',
+          color: campaign.status === 'Active' ? COLORS.STATUS_DRAFT : COLORS.STATUS_ARCHIVED
+        }}>
           <Text UNSAFE_style={{ fontSize: '12px', fontWeight: 600 }}>
             {campaign.status}
           </Text>
-        </View>
+        </div>
       )
     },
     {
@@ -208,70 +192,67 @@ export const CampaignsTab: React.FC<CampaignsTabProps> = ({
       width: 100,
       isSticky: true,
       render: (campaign) => (
-        <Flex gap="size-100" justifyContent="end">
-          {campaign.status === 'Active' && (
+        <div className={style({display: 'flex', gap: 8, justifyContent: 'end'})}>
+          {canWriteEvent && campaign.status === 'Active' && (
             <ActionButton
               isQuiet
               onPress={() => handleEditClick(campaign)}
               aria-label="Edit campaign"
             >
-              <Edit size="S" />
+              <Edit />
             </ActionButton>
           )}
-          <ActionButton
-            isQuiet
-            isDisabled={campaign.attendeeCount > 0}
-            onPress={() => setCampaignToDelete(campaign)}
-            aria-label="Delete campaign"
-          >
-            <Delete size="S" />
-          </ActionButton>
-        </Flex>
+          {canDeleteEvent && (
+            <ActionButton
+              isQuiet
+              isDisabled={campaign.attendeeCount > 0}
+              onPress={() => setCampaignToDelete(campaign)}
+              aria-label="Delete campaign"
+            >
+              <Delete />
+            </ActionButton>
+          )}
+        </div>
       )
     }
-  ], [handleCopyUrl, handleEditClick, copiedId])
+  ], [handleCopyUrl, handleEditClick, copiedId, canWriteEvent, canDeleteEvent])
 
   if (!eventId) {
     return (
-      <View padding="size-400">
+      <div style={{ padding: '32px' }}>
         <Text UNSAFE_style={{ color: COLORS.GRAY_600 }}>
           Select an event to manage campaigns
         </Text>
-      </View>
+      </div>
     )
   }
 
   return (
-    <View>
+    <div>
       {/* Stats Bar */}
-      <View
-        backgroundColor="gray-100"
-        padding="size-300"
-        borderRadius="medium"
-        marginBottom="size-300"
-      >
-        <Flex gap="size-600" wrap>
+      <div style={{ backgroundColor: 'var(--spectrum-gray-100)', padding: '24px', borderRadius: '8px', marginBottom: '24px' }}>
+        <div className={style({display: 'flex', gap: 48, flexWrap: 'wrap'})}>
           <StatItem label="Total Campaigns" value={stats.totalCampaigns} />
           <StatItem label="Active" value={stats.activeCampaigns} />
           <StatItem label="Registrations" value={stats.totalRegistrations} />
           <StatItem label="Waitlisted" value={stats.totalWaitlisted} />
-        </Flex>
-      </View>
+        </div>
+      </div>
 
       {/* Header with Add Button */}
-      <Flex
-        justifyContent="space-between"
-        alignItems="center"
-        marginBottom="size-200"
-      >
-        <Button
-          variant="accent"
-          onPress={handleCreateClick}
+      {canWriteEvent && (
+        <div
+          className={style({display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16})}
         >
-          <Add size="S" />
-          <Text>Add Campaign</Text>
-        </Button>
-      </Flex>
+          <Button
+            variant="accent"
+            onPress={handleCreateClick}
+          >
+            <Add />
+            <Text>Add Campaign</Text>
+          </Button>
+        </div>
+      )}
 
       {/* Campaigns Table */}
       {campaigns.length > 0 ? (
@@ -297,82 +278,58 @@ export const CampaignsTab: React.FC<CampaignsTabProps> = ({
         }}
       >
         <div style={{ display: 'none' }} />
-        {(close) => (
-          <CampaignFormDialog
-            campaign={editingCampaign}
-            eventCapacity={event?.attendeeLimit}
-            isSaving={isSaving}
-            onSave={(data) => {
-              handleSaveCampaign(data)
-            }}
-            onCancel={close}
-          />
-        )}
+        <Dialog size="M">
+          {({close}) => (
+            <CampaignFormDialogContent
+              campaign={editingCampaign}
+              eventCapacity={event?.attendeeLimit}
+              isSaving={isSaving}
+              onSave={(data) => {
+                handleSaveCampaign(data)
+              }}
+              onCancel={close}
+            />
+          )}
+        </Dialog>
       </DialogTrigger>
 
       {/* Delete Confirmation Dialog */}
-      <DialogTrigger
-        isOpen={!!campaignToDelete}
-        onOpenChange={(isOpen) => !isOpen && setCampaignToDelete(null)}
-      >
+      <DialogTrigger isOpen={!!campaignToDelete} onOpenChange={(isOpen) => !isOpen && setCampaignToDelete(null)}>
         <div style={{ display: 'none' }} />
-        {(close) => (
-          <AlertDialog
-            title="Delete Campaign"
-            variant="destructive"
-            primaryActionLabel="Delete"
-            secondaryActionLabel="Cancel"
-            onPrimaryAction={() => {
-              handleDeleteCampaign()
-              close()
-            }}
-            onSecondaryAction={close}
-          >
-            Are you sure you want to delete the campaign &ldquo;{campaignToDelete?.name}&rdquo;?
-            The campaign URL will stop working.
-          </AlertDialog>
-        )}
+        <AlertDialog title="Delete Campaign" variant="destructive" primaryActionLabel="Delete" cancelLabel="Cancel"
+          onPrimaryAction={handleDeleteCampaign}
+          onCancel={() => setCampaignToDelete(null)}
+        >
+          Are you sure you want to delete the campaign &ldquo;{campaignToDelete?.name}&rdquo;?
+          The campaign URL will stop working.
+        </AlertDialog>
       </DialogTrigger>
 
       {/* Archive Campaign Confirmation Dialog */}
-      <DialogTrigger
-        isOpen={!!pendingArchiveSave}
-        onOpenChange={(isOpen) => !isOpen && setPendingArchiveSave(null)}
-      >
+      <DialogTrigger isOpen={!!pendingArchiveSave} onOpenChange={(isOpen) => !isOpen && setPendingArchiveSave(null)}>
         <div style={{ display: 'none' }} />
-        {(close) => (
-          <AlertDialog
-            title="Archive Campaign"
-            variant="warning"
-            primaryActionLabel="Archive campaign"
-            secondaryActionLabel="Cancel"
-            onPrimaryAction={() => {
-              if (pendingArchiveSave) {
-                performSaveCampaign(pendingArchiveSave.campaign, pendingArchiveSave.formData)
-              }
-              close()
-            }}
-            onSecondaryAction={close}
-          >
-            <Text>
-              You are about to archive the campaign &ldquo;{pendingArchiveSave?.campaign.name}&rdquo;.
-              This action is <strong>permanent and cannot be undone</strong>.
-            </Text>
-            <Text UNSAFE_style={{ marginTop: '12px', display: 'block' }}>
-              Once archived:
-            </Text>
-            <ul style={{ marginTop: '8px', paddingLeft: '20px' }}>
-              <li>The campaign cannot be reactivated</li>
-              <li>The campaign cannot be edited</li>
-              <li>Existing registrations will remain, but no new registrations will be accepted through this campaign</li>
-            </ul>
-            <Text UNSAFE_style={{ marginTop: '12px', display: 'block' }}>
-              Are you sure you want to archive this campaign?
-            </Text>
-          </AlertDialog>
-        )}
+        <AlertDialog title="Archive Campaign" variant="warning" primaryActionLabel="Archive campaign" cancelLabel="Cancel"
+          onPrimaryAction={() => { if (pendingArchiveSave) { performSaveCampaign(pendingArchiveSave.campaign, pendingArchiveSave.formData) } }}
+          onCancel={() => setPendingArchiveSave(null)}
+        >
+          <Text>
+            You are about to archive the campaign &ldquo;{pendingArchiveSave?.campaign.name}&rdquo;.
+            This action is <strong>permanent and cannot be undone</strong>.
+          </Text>
+          <Text UNSAFE_style={{ marginTop: '12px', display: 'block' }}>
+            Once archived:
+          </Text>
+          <ul style={{ marginTop: '8px', paddingLeft: '20px' }}>
+            <li>The campaign cannot be reactivated</li>
+            <li>The campaign cannot be edited</li>
+            <li>Existing registrations will remain, but no new registrations will be accepted through this campaign</li>
+          </ul>
+          <Text UNSAFE_style={{ marginTop: '12px', display: 'block' }}>
+            Are you sure you want to archive this campaign?
+          </Text>
+        </AlertDialog>
       </DialogTrigger>
-    </View>
+    </div>
   )
 }
 
@@ -381,7 +338,7 @@ const StatItem: React.FC<{
   value: number
   subtext?: string
 }> = ({ label, value, subtext }) => (
-  <Flex direction="column" gap="size-50">
+  <div className={style({display: 'flex', flexDirection: 'column', gap: 4})}>
     <Text UNSAFE_style={{
       fontSize: '12px',
       fontWeight: 600,
@@ -390,7 +347,7 @@ const StatItem: React.FC<{
     }}>
       {label}
     </Text>
-    <Flex alignItems="baseline" gap="size-75">
+    <div className={style({display: 'flex', alignItems: 'baseline', gap: 8})}>
       <Text UNSAFE_style={{
         fontSize: '24px',
         fontWeight: 700,
@@ -403,22 +360,15 @@ const StatItem: React.FC<{
           {subtext}
         </Text>
       )}
-    </Flex>
-  </Flex>
+    </div>
+  </div>
 )
 
-const EmptyCampaignsState: React.FC<{ onCreateClick: () => void }> = ({ onCreateClick }) => (
-  <View
-    padding="size-600"
-    UNSAFE_style={{
-      textAlign: 'center',
-      border: `2px dashed ${COLORS.GRAY_300}`,
-      borderRadius: '8px'
-    }}
-  >
-    <Heading level={3} UNSAFE_style={{ marginBottom: SPACING.MD }}>
+const EmptyCampaignsState: React.FC<{ onCreateClick: () => void }> = ({ onCreateClick: _onCreateClick }) => (
+  <div style={{ padding: '48px', textAlign: 'center', border: `2px dashed ${COLORS.GRAY_300}`, borderRadius: '8px' }}>
+    <h3 style={{ marginBottom: SPACING.MD }}>
       No campaigns yet
-    </Heading>
+    </h3>
     <Text UNSAFE_style={{
       color: COLORS.GRAY_600,
       marginBottom: SPACING.LG,
@@ -426,14 +376,10 @@ const EmptyCampaignsState: React.FC<{ onCreateClick: () => void }> = ({ onCreate
     }}>
       Create campaigns to track registrations from different sources like email, social media, or partner promotions.
     </Text>
-    <Button variant="accent" onPress={onCreateClick}>
-      <Add size="S" />
-      <Text>Create Your First Campaign</Text>
-    </Button>
-  </View>
+  </div>
 )
 
-interface CampaignFormDialogProps {
+interface CampaignFormDialogContentProps {
   campaign: Campaign | null
   eventCapacity?: number
   isSaving: boolean
@@ -441,7 +387,7 @@ interface CampaignFormDialogProps {
   onCancel: () => void
 }
 
-const CampaignFormDialog: React.FC<CampaignFormDialogProps> = ({
+const CampaignFormDialogContent: React.FC<CampaignFormDialogContentProps> = ({
   campaign,
   eventCapacity,
   isSaving,
@@ -473,11 +419,10 @@ const CampaignFormDialog: React.FC<CampaignFormDialogProps> = ({
   const isValid = name.trim().length > 0 && hasValidLimit
 
   return (
-    <Dialog size="M">
-      <Heading>{campaign ? 'Edit Campaign' : 'Create Campaign'}</Heading>
-      <Divider />
+    <>
+      <Heading slot="title">{campaign ? 'Edit Campaign' : 'Create Campaign'}</Heading>
       <Content>
-        <Flex direction="column" gap="size-300">
+        <div className={style({display: 'flex', flexDirection: 'column', gap: 24})}>
           {/* Name Field */}
           <TextField
             label="Name"
@@ -485,7 +430,7 @@ const CampaignFormDialog: React.FC<CampaignFormDialogProps> = ({
             onChange={setName}
             isRequired
             autoFocus
-            width="100%"
+            styles={style({ width: '[100%]' })}
           />
 
           {/* Campaign URL (read-only, only shown when editing) */}
@@ -494,20 +439,19 @@ const CampaignFormDialog: React.FC<CampaignFormDialogProps> = ({
               label="Campaign URL"
               value={campaign.url}
               isReadOnly
-              width="100%"
+              styles={style({ width: '[100%]' })}
               description="Auto-generated from the event URL"
             />
           )}
 
           {/* Attendee Limit (only on create) */}
           {!campaign && (
-            <Flex direction="column" gap="size-200">
+            <div className={style({display: 'flex', flexDirection: 'column', gap: 16})}>
               <NumberField
                 label="Attendee limit"
                 value={noCapacityLimit && eventCapacity != null ? eventCapacity : (attendeeLimit ?? NaN)}
                 onChange={(value) => setAttendeeLimit(value)}
                 minValue={1}
-                width="100%"
                 isDisabled={noCapacityLimit}
               />
               <Switch
@@ -522,7 +466,7 @@ const CampaignFormDialog: React.FC<CampaignFormDialogProps> = ({
                   Event has no capacity limit set
                 </Text>
               )}
-            </Flex>
+            </div>
           )}
 
           {/* Status Picker (only when editing; create always uses Active) */}
@@ -531,20 +475,20 @@ const CampaignFormDialog: React.FC<CampaignFormDialogProps> = ({
               label="Status"
               selectedKey={status}
               onSelectionChange={(key) => setStatus(key as CampaignStatus)}
-              width="100%"
+              styles={style({ width: '[100%]' })}
             >
-              <Item key="Active">Active</Item>
-              <Item key="Archived">Archived</Item>
+              <PickerItem id="Active">Active</PickerItem>
+              <PickerItem id="Archived">Archived</PickerItem>
             </Picker>
           )}
-        </Flex>
+        </div>
       </Content>
       <ButtonGroup>
         <Button variant="secondary" onPress={onCancel}>
           Cancel
         </Button>
         <Button
-          variant="cta"
+          variant="accent"
           onPress={handleSave}
           isDisabled={!isValid || isSaving}
           UNSAFE_style={{
@@ -555,7 +499,7 @@ const CampaignFormDialog: React.FC<CampaignFormDialogProps> = ({
           {isSaving ? 'Saving...' : 'Save'}
         </Button>
       </ButtonGroup>
-    </Dialog>
+    </>
   )
 }
 

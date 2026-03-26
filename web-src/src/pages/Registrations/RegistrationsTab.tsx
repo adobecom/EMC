@@ -3,12 +3,13 @@
 */
 
 import React, { useState, useCallback, useMemo } from 'react'
-import {
-  SearchField,
-  AlertDialog,
-  DialogTrigger
-} from '@adobe/react-spectrum'
+import { DialogTrigger, SearchField, ActionButton, AlertDialog } from '@react-spectrum/s2'
+import { style } from '@react-spectrum/s2/style' with { type: 'macro' }
+import Download from '@react-spectrum/s2/icons/Download'
 import type { Attendee, AttendeeFilters, AttendeeColumnConfig } from '../../types/attendee'
+import type { Campaign } from '../../types/campaign'
+import { useHasPermission } from '../../hooks/useHasPermission'
+import { ExportDialog } from './ExportDialog'
 import { getAttendeeName } from '../../types/attendee'
 import { apiService } from '../../services/api'
 import {
@@ -21,6 +22,7 @@ interface RegistrationsTabProps {
   attendees: Attendee[]
   columnConfig: AttendeeColumnConfig[]
   onAttendeesRefresh: () => Promise<void>
+  campaigns?: Campaign[]
 }
 
 /**
@@ -35,8 +37,12 @@ interface RegistrationsTabProps {
 export const RegistrationsTab: React.FC<RegistrationsTabProps> = ({
   selectedEventId,
   attendees,
-  columnConfig
+  columnConfig,
+  campaigns = [],
 }) => {
+  const isAdmin = useHasPermission('user', 'read')
+  const [isExportOpen, setIsExportOpen] = useState(false)
+
   // State
   const [filters, setFilters] = useState<AttendeeFilters>({})
   const [searchQuery, setSearchQuery] = useState('')
@@ -127,13 +133,20 @@ export const RegistrationsTab: React.FC<RegistrationsTabProps> = ({
 
         {/* Main Table Area */}
         <div style={{ minWidth: 0 }}>
-          {/* Search */}
+          {/* Search + Export */}
           {selectedEventId && (
-            <div style={{ 
+            <div style={{
               display: 'flex',
               justifyContent: 'flex-end',
+              gap: '12px',
+              alignItems: 'flex-end',
               marginBottom: '16px'
             }}>
+              {isAdmin && filteredAttendees.length > 0 && (
+                <ActionButton onPress={() => setIsExportOpen(true)}>
+                  <Download />
+                </ActionButton>
+              )}
               <div style={{ width: '240px' }}>
                 <SearchField
                   label="Search attendees"
@@ -141,8 +154,7 @@ export const RegistrationsTab: React.FC<RegistrationsTabProps> = ({
                   value={searchQuery}
                   onChange={setSearchQuery}
                   onClear={() => setSearchQuery('')}
-                  width="100%"
-                  isQuiet
+                  styles={style({ width: '[100%]' })}
                 />
               </div>
             </div>
@@ -166,30 +178,33 @@ export const RegistrationsTab: React.FC<RegistrationsTabProps> = ({
         </div>
       </div>
 
-      {/* Delete Confirmation Dialog */}
-      <DialogTrigger
-        isOpen={!!itemToDelete}
-        onOpenChange={(isOpen) => !isOpen && setItemToDelete(null)}
-      >
+      {/* Export Dialog */}
+      <DialogTrigger isOpen={isExportOpen} onOpenChange={setIsExportOpen}>
         <div style={{ display: 'none' }} />
-        {(close) => (
-          <AlertDialog
-            title="Remove Attendee"
-            variant="destructive"
-            primaryActionLabel="Remove"
-            secondaryActionLabel="Cancel"
-            onPrimaryAction={() => {
-              if (itemToDelete) {
-                handleDeleteAttendee(itemToDelete)
-              }
-              close()
-            }}
-            onSecondaryAction={close}
-          >
-            Are you sure you want to remove {itemToDelete ? getAttendeeName(itemToDelete) : 'this attendee'}? 
-            This action cannot be undone.
-          </AlertDialog>
-        )}
+        <ExportDialog
+          attendees={filteredAttendees}
+          columnConfig={columnConfig}
+          campaigns={campaigns}
+          onClose={() => setIsExportOpen(false)}
+        />
+      </DialogTrigger>
+
+      {/* Delete Confirmation Dialog */}
+      <DialogTrigger isOpen={!!itemToDelete} onOpenChange={(isOpen) => !isOpen && setItemToDelete(null)}>
+        <div style={{ display: 'none' }} />
+        <AlertDialog
+          title="Remove Attendee"
+          variant="destructive"
+          primaryActionLabel="Remove"
+          cancelLabel="Cancel"
+          onPrimaryAction={() => {
+            if (itemToDelete) { handleDeleteAttendee(itemToDelete) }
+          }}
+          onCancel={() => setItemToDelete(null)}
+        >
+          Are you sure you want to remove {itemToDelete ? getAttendeeName(itemToDelete) : 'this attendee'}?
+          This action cannot be undone.
+        </AlertDialog>
       </DialogTrigger>
     </>
   )
