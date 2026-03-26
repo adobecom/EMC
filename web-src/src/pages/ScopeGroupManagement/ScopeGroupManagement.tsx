@@ -790,7 +790,7 @@ export const ScopeGroupManagement: React.FC<ScopeGroupManagementProps> = () => {
         <div className={style({display: 'flex', flexDirection: 'row', alignItems: 'center', gap: 24, flexWrap: 'wrap'})}>
           <Heading level={1}>Access Management</Heading>
           <Switch isSelected={myScopesOnly} onChange={setMyScopesOnly}>
-            My
+            Show my scopes only
           </Switch>
         </div>
 
