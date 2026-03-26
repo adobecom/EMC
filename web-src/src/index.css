@@ -4,6 +4,7 @@
 
 /** Canonical sans stack (S2 variable font + fallbacks). Single source: keep TS `FONT_FAMILY_SANS` in sync. **/
 :root {
+  color-scheme: light;
   --emc-font-sans: adobe-clean-spectrum-vf, adobe-clean-variable, adobe-clean, ui-sans-serif, system-ui, sans-serif;
 
   /**
@@ -66,6 +67,7 @@ body {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   background-color: #FFFFFF;
+  color: var(--spectrum-global-color-gray-800);
 }
 
 #root {
