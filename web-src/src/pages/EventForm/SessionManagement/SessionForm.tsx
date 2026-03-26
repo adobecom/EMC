@@ -4,21 +4,19 @@
 
 import React, { useState, useEffect, useCallback } from "react";
 import {
-  Flex,
   Heading,
   Text,
-  View,
   Button,
   TextField,
   DatePicker,
   TimeField,
-  ActionGroup,
-  Item,
   Checkbox,
   ProgressCircle,
   SearchField,
   Form,
-} from "@adobe/react-spectrum";
+  SegmentedControl,
+  SegmentedControlItem,
+} from "@react-spectrum/s2"
 import {
   CalendarDate,
   Time,
@@ -312,7 +310,7 @@ export const SessionForm: React.FC<SessionFormProps> = ({
   }, [session?.id]);
 
   const handleSave = async () => {
-    if (!date || !startTime || !endTime || !name.trim()) return;
+    if (!date || !startTime || !endTime || !name.trim() || !description.trim()) return;
     setSaveError(null);
     setSaving(true);
     const startDateTime = dateAndTimeToISO(date, startTime);
@@ -396,23 +394,20 @@ export const SessionForm: React.FC<SessionFormProps> = ({
   );
 
   const canSave = Boolean(
-    name.trim() && date && startTime && endTime &&
+    name.trim() && description.trim() && date && startTime && endTime &&
     !isDateOutOfRange && !isEndTimeInvalid &&
     !isStartTimeBeforeEventStart && !isEndTimeAfterEventEnd,
   );
 
   const renderSpeakers = () => (
-    <Flex direction="column" gap="size-100">
-      <Flex alignItems="center" gap="size-150">
-        <Text>Speakers</Text>
-        {isLoadingSpeakers && (
-          <ProgressCircle
-            size="S"
-            isIndeterminate
-            aria-label="Loading speakers"
-          />
-        )}
-      </Flex>
+    <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+      {isLoadingSpeakers && (
+        <ProgressCircle
+          size="S"
+          isIndeterminate
+          aria-label="Loading speakers"
+        />
+      )}
 
       <div
         onClick={() => setPickerOpen(true)}
@@ -420,16 +415,16 @@ export const SessionForm: React.FC<SessionFormProps> = ({
         style={{ cursor: "pointer" }}
       >
         <SearchField
-          labelPosition="side"
+          label="Speakers"
           placeholder="Search or select session speakers"
-          width="100%"
+          UNSAFE_style={{ width: "100%" }}
           isReadOnly
           aria-label="Open speaker picker"
         />
       </div>
 
       {selectedSpeakers.length > 0 && (
-        <Flex direction="row" gap="size-150" wrap>
+        <div style={{ display: "flex", flexDirection: "row", gap: "12px", flexWrap: "wrap" }}>
           {selectedSpeakers.map((speaker) => (
             <div
               key={speaker.speakerId}
@@ -497,7 +492,7 @@ export const SessionForm: React.FC<SessionFormProps> = ({
               </button>
             </div>
           ))}
-        </Flex>
+        </div>
       )}
 
       <SpeakerPickerDialog
@@ -510,44 +505,44 @@ export const SessionForm: React.FC<SessionFormProps> = ({
         locale={locale}
         onSpeakersRefresh={refreshSeriesSpeakers}
       />
-    </Flex>
+    </div>
   );
 
   const renderTags = () => (
-    <Flex direction="column" gap="size-100">
-      <Text>Tags</Text>
+    <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
       <TagSelector selectedTags={selectedTags} onChange={setSelectedTags} />
-    </Flex>
+    </div>
   );
 
   if (loadingDetails) {
     return (
-      <View padding="size-200">
+      <div style={{ padding: "16px" }}>
         <Text>Loading session details…</Text>
-      </View>
+      </div>
     );
   }
 
   return (
-    <View
-      paddingTop="size-200"
-      paddingBottom="size-200"
-      paddingStart="size-200"
-      paddingEnd="size-200"
-      borderWidth="thin"
-      borderColor="gray-300"
-      borderRadius="medium"
-      marginTop="size-150"
+    <div
+      style={{
+        padding: "16px",
+        border: "1px solid var(--spectrum-global-color-gray-300)",
+        borderRadius: "4px",
+        marginTop: "12px",
+      }}
     >
-      <Flex
-        justifyContent="space-between"
-        alignItems="center"
-        marginBottom="size-200"
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          marginBottom: "16px",
+        }}
       >
-        <Heading level={3} margin="size-0">
+        <Heading level={3} UNSAFE_style={{ margin: 0 }}>
           {isEditMode ? "Edit Session" : "Session Details"}
         </Heading>
-        <Flex gap="size-100">
+        <div style={{ display: "flex", gap: "8px" }}>
           <Button variant="secondary" onPress={onCancel} isDisabled={saving}>
             Cancel
           </Button>
@@ -558,79 +553,78 @@ export const SessionForm: React.FC<SessionFormProps> = ({
           >
             {saving ? "Saving…" : "Save"}
           </Button>
-        </Flex>
-      </Flex>
+        </div>
+      </div>
 
       {detailError && (
-        <Flex direction="column" gap="size-100" marginBottom="size-200">
-          <Text
-            UNSAFE_style={{ color: "var(--spectrum-global-color-red-600)" }}
-          >
+        <div style={{ display: "flex", flexDirection: "column", gap: "8px", marginBottom: "16px" }}>
+          <Text UNSAFE_style={{ color: "var(--spectrum-global-color-red-600)" }}>
             {detailError}
           </Text>
           <Text>Showing cached data. You can still edit and save.</Text>
-        </Flex>
+        </div>
       )}
 
-      <Form UNSAFE_style={{ display: "flex", flexDirection: "column", gap: "24px" }}>
+      <Form unsafe_style={{ display: "flex", flexDirection: "column", gap: "24px" }}>
         <TextField
           label="Title"
           isRequired
-          width="100%"
+          UNSAFE_style={{ width: "100%" }}
           value={name}
           onChange={setName}
         />
 
         <RichTextEditor
           label="Description"
+          isRequired
           value={description}
           onChange={setDescription}
           height="280px"
         />
 
-        <Flex direction="row" gap="size-200" alignItems="start">
-          <Flex direction="column" flex={1} gap="size-50">
+        <div style={{ display: "flex", flexDirection: "row", gap: "16px", alignItems: "start" }}>
+          <div style={{ display: "flex", flexDirection: "column", flex: 1, gap: "4px" }}>
             <DatePicker
               label="Date"
               isRequired
-              width="100%"
+              UNSAFE_style={{ width: "100%" }}
               value={date ?? undefined}
               onChange={(v) => setDate(v ?? null)}
               minValue={minDate}
               maxValue={maxDate}
-              validationState={isDateOutOfRange ? "invalid" : undefined}
+              isInvalid={isDateOutOfRange}
             />
             {isDateOutOfRange && (
               <Text UNSAFE_style={{ color: "var(--spectrum-global-color-red-600)", fontSize: "12px" }}>
                 {dateErrorMessage}
               </Text>
             )}
-          </Flex>
-          <Flex direction="column" flex={1} gap="size-50">
+          </div>
+          <div style={{ display: "flex", flexDirection: "column", flex: 1, gap: "4px" }}>
             <TimeField
               label="Start Time"
               isRequired
               hourCycle={12}
-              width="100%"
+              UNSAFE_style={{ width: "100%" }}
               value={startTime ?? undefined}
               onChange={(v) => setStartTime(v ?? null)}
-              validationState={isStartTimeBeforeEventStart ? "invalid" : undefined}
+              isInvalid={isStartTimeBeforeEventStart}
             />
             {isStartTimeBeforeEventStart && (
               <Text UNSAFE_style={{ color: "var(--spectrum-global-color-red-600)", fontSize: "12px" }}>
                 Start time cannot be before the event start time
               </Text>
             )}
-          </Flex>
-          <Flex direction="column" flex={1} gap="size-50">
+          </div>
+          <div style={{ display: "flex", flexDirection: "column", flex: 1, gap: "4px" }}>
             <TimeField
               label="End Time"
               isRequired
               hourCycle={12}
-              width="100%"
+              UNSAFE_style={{ width: "100%" }}
               value={endTime ?? undefined}
               onChange={(v) => setEndTime(v ?? null)}
-              validationState={isEndTimeInvalid || isEndTimeAfterEventEnd ? "invalid" : undefined}
+              isInvalid={isEndTimeInvalid || isEndTimeAfterEventEnd}
             />
             {isEndTimeInvalid && (
               <Text UNSAFE_style={{ color: "var(--spectrum-global-color-red-600)", fontSize: "12px" }}>
@@ -642,42 +636,38 @@ export const SessionForm: React.FC<SessionFormProps> = ({
                 End time cannot be after the event end time
               </Text>
             )}
-          </Flex>
-        </Flex>
+          </div>
+        </div>
 
-        <Flex direction="column" gap="size-100">
-          <Text>Session registration</Text>
-          <Flex direction="row" gap="size-200" alignItems="center" wrap>
-            <ActionGroup
-              selectionMode="single"
-              selectedKeys={
-                isAutoRegistrationEnabled ? ["automatic"] : ["registration"]
-              }
-              onAction={(key) =>
-                setIsAutoRegistrationEnabled(key !== "registration")
-              }
+        <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+          <Text UNSAFE_style={{ fontSize: "14px", color: "#717171" }}>Session registration</Text>
+          <div style={{ display: "flex", flexDirection: "row", gap: "16px", alignItems: "center", flexWrap: "wrap" }}>
+            <SegmentedControl
+              selectedKey={isAutoRegistrationEnabled ? "automatic" : "registration"}
+              onSelectionChange={(key) => setIsAutoRegistrationEnabled(key !== "registration")}
+              isDisabled
             >
-              <Item key="automatic">Automatic</Item>
-              <Item key="registration">Registration required</Item>
-            </ActionGroup>
+              <SegmentedControlItem id="automatic">Automatic</SegmentedControlItem>
+              <SegmentedControlItem id="registration">Registration required</SegmentedControlItem>
+            </SegmentedControl>
             <Checkbox
               isSelected={attendeeLimitEnabled}
               onChange={setAttendeeLimitEnabled}
-              isDisabled={isAutoRegistrationEnabled}
+              isDisabled={true}
             >
               Set capacity limit
             </Checkbox>
             <TextField
               aria-label="Capacity"
               isRequired={attendeeLimitEnabled}
-              isDisabled={isAutoRegistrationEnabled || !attendeeLimitEnabled}
+              isDisabled={true}
               type="number"
-              width="size-1200"
+              UNSAFE_style={{ width: "96px" }}
               value={attendeeLimit}
               onChange={setAttendeeLimit}
             />
-          </Flex>
-        </Flex>
+          </div>
+        </div>
 
         {renderSpeakers()}
         {renderTags()}
@@ -693,7 +683,7 @@ export const SessionForm: React.FC<SessionFormProps> = ({
           {saveError}
         </Text>
       )}
-    </View>
+    </div>
   );
 };
 

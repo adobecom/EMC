@@ -1,14 +1,8 @@
 import React, { useState, useEffect, useCallback } from "react";
-import {
-  Flex,
-  Heading,
-  Text,
-  Well,
-  View,
-  Button,
-} from "@adobe/react-spectrum";
+import { Well } from "@adobe/react-spectrum";
+import { ProgressCircle, Button, Heading, Text, InlineAlert } from "@react-spectrum/s2";
+import AddCircle from "@react-spectrum/s2/icons/AddCircle";
 import { Session } from "../../../types/sessions";
-import { AddIcon } from "../../../components/icons/add";
 import { SessionsList } from "./SessionList";
 import type { SessionFormData } from "./SessionForm";
 import { useEventFormContext } from "../../../contexts";
@@ -185,6 +179,7 @@ export const Sessions: React.FC = () => {
   const { eventId } = useEventFormContext();
   const [sessions, setSessions] = useState<Session[]>([]);
   const [loadError, setLoadError] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
   const [isAddingNew, setIsAddingNew] = useState(false);
 
   const loadSessions = useCallback(async () => {
@@ -193,6 +188,7 @@ export const Sessions: React.FC = () => {
       return;
     }
     setLoadError(null);
+    setIsLoading(true);
     try {
       const response = await apiService.getAllEventSessions(eventId);
       if (response && "error" in response) {
@@ -212,6 +208,8 @@ export const Sessions: React.FC = () => {
         err instanceof Error ? err.message : "Failed to load sessions";
       setLoadError(message);
       setSessions([]);
+    } finally {
+      setIsLoading(false);
     }
   }, [eventId]);
 
@@ -314,30 +312,32 @@ export const Sessions: React.FC = () => {
   };
 
   return (
-    <View>
-      <Flex justifyContent="space-between" alignItems="center">
-        <Flex direction="column" gap="size-100">
+    <div>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+        <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
           <Heading level={2}>Sessions</Heading>
           <Text>Breakdown your event into sessions and add details</Text>
-        </Flex>
-        <View>
-          <Button
-            variant="secondary"
-            style="fill"
-            aria-label="Add new session"
-            onPress={() => setIsAddingNew(true)}
-            isDisabled={isAddingNew}
-          >
-            <AddIcon />
-            <Text>Add new session</Text>
-          </Button>
-        </View>
-      </Flex>
+        </div>
+        <Button
+          variant="secondary"
+          aria-label="Add new session"
+          onPress={() => setIsAddingNew(true)}
+          isDisabled={isAddingNew}
+        >
+          <AddCircle />
+          <Text>Add new session</Text>
+        </Button>
+      </div>
 
       {loadError ? (
-        <Well UNSAFE_style={{ textAlign: "center", marginTop: "28px" }}>
+        <InlineAlert variant="negative" UNSAFE_style={{ marginTop: "28px" }}>
           <Text>{loadError}</Text>
-        </Well>
+        </InlineAlert>
+      ) : isLoading ? (
+        <div style={{ display: "flex", justifyContent: "center", alignItems: "center", gap: "12px", marginTop: "32px" }}>
+          <ProgressCircle isIndeterminate aria-label="Loading sessions" />
+          <Text>Loading sessions</Text>
+        </div>
       ) : sessions.length === 0 && !isAddingNew ? (
         <Well UNSAFE_style={{ textAlign: "center", marginTop: "28px" }}>
           No sessions have been created yet for this event
@@ -352,7 +352,7 @@ export const Sessions: React.FC = () => {
           onSave={handleUpdateSession}
         />
       )}
-    </View>
+    </div>
   );
 };
 

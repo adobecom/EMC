@@ -197,7 +197,7 @@ export const RichTextEditor: React.FC<RichTextEditorProps> = ({
         fontWeight: 500,
         color: 'var(--spectrum-global-color-gray-800)'
       }}>
-        {label}{isRequired && <span style={{ color: 'rgb(218, 218, 218)' }}> *</span>}
+        {label}{isRequired && <span style={{ color: 'var(--spectrum-global-color-gray-700)' }}> *</span>}
       </Text>
       
       <div 
