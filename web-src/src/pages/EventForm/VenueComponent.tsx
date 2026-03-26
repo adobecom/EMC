@@ -598,11 +598,9 @@ export const VenueComponent: React.FC = () => {
             width: '100%',
             padding: '10px 12px',
             fontSize: '14px',
-            border: showVenueNameError
-              ? `2px solid ${COLORS.RED_600}` 
-              : '1px solid #B8B8B8',
-            borderRadius: '4px',
-            backgroundColor: '#FFFFFF',
+            border: '2px solid rgb(218, 218, 218)',
+            borderRadius: '8px',
+            backgroundColor: COLORS.WHITE,
             color: COLORS.GRAY_800,
             boxSizing: 'border-box'
           }}

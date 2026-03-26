@@ -445,12 +445,11 @@ export const FormWizard: React.FC<FormWizardProps> = ({
             <Button
               variant="accent"
               fillStyle="fill"
-              staticColor="white"
               onPress={handlePublish}
               isDisabled={isActionDisabled || pendingAction === 'publish'}
             >
               <Text>{getPublishLabel()}</Text>
-              <RocketQuickActions styles={iconStyle({ color: 'white'})} aria-hidden />
+              <RocketQuickActions aria-hidden />
             </Button>
           </div>
         </div>

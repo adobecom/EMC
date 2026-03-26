@@ -265,7 +265,6 @@ export const SingleStepFormLayout: React.FC<SingleStepFormLayoutProps> = ({
             <Button
               variant="accent"
               fillStyle="fill"
-              staticColor="white"
               onPress={handlePublish}
               isDisabled={isActionDisabled}
             >
