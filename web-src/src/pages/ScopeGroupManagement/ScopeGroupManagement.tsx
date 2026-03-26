@@ -371,6 +371,7 @@ export const ScopeGroupManagement: React.FC<ScopeGroupManagementProps> = () => {
         toast.success('Scope created')
       }
       setIsScopeFormOpen(false)
+      setIsSaving(false)
       await loadScopes()
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Failed to save scope')
@@ -390,6 +391,7 @@ export const ScopeGroupManagement: React.FC<ScopeGroupManagementProps> = () => {
       toast.success('Scope deleted')
       setScopeToDelete(null)
       if (selectedScopeId === scope.scopeId) setSelectedScopeId(null)
+      setIsSaving(false)
       await loadScopes()
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Failed to delete scope')
@@ -458,6 +460,7 @@ export const ScopeGroupManagement: React.FC<ScopeGroupManagementProps> = () => {
         toast.success('Group created')
       }
       setIsGroupFormOpen(false)
+      setIsSaving(false)
       await loadGroups()
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Failed to save group')
@@ -490,6 +493,7 @@ export const ScopeGroupManagement: React.FC<ScopeGroupManagementProps> = () => {
         delete next[group.groupId]
         return next
       })
+      setIsSaving(false)
       await loadGroups()
       if (userMemberGroups.some(g => g.groupId === group.groupId)) {
         await refreshGroups()
@@ -549,6 +553,7 @@ export const ScopeGroupManagement: React.FC<ScopeGroupManagementProps> = () => {
       setNewUserFirstName('')
       setNewUserLastName('')
       setNewUserGuid('')
+      setIsSaving(false)
       // Refresh users in the expanded row
       await loadGroupUsersForExpand(selectedGroup.groupId)
       if (addedSelfToGroup) {
@@ -572,6 +577,7 @@ export const ScopeGroupManagement: React.FC<ScopeGroupManagementProps> = () => {
       }
       toast.success('User removed')
       setUserToRemove(null)
+      setIsSaving(false)
       // Refresh users in the expanded row
       await loadGroupUsersForExpand(selectedGroup.groupId)
       const profileEmail = ims.profile?.email?.toLowerCase()
@@ -748,6 +754,31 @@ export const ScopeGroupManagement: React.FC<ScopeGroupManagementProps> = () => {
       </div>
     )
   }, [groupUsersMap, loadingGroupIds, canWriteUser, canDeleteUser, getRoleName, userSortKey])
+
+  const { loadingOverlayVisible, savingOverlayVisible } = useMemo(() => {
+    const isBlockingDialogOpen =
+      isUserFormOpen ||
+      isScopeFormOpen ||
+      isGroupFormOpen ||
+      scopeToDelete != null ||
+      groupToDelete != null ||
+      userToRemove != null
+    return {
+      loadingOverlayVisible: (isLoadingScopes || isLoadingGroups) && !isSaving,
+      savingOverlayVisible:
+        isSaving && !isBlockingDialogOpen && !isLoadingScopes && !isLoadingGroups,
+    }
+  }, [
+    isUserFormOpen,
+    isScopeFormOpen,
+    isGroupFormOpen,
+    scopeToDelete,
+    groupToDelete,
+    userToRemove,
+    isLoadingScopes,
+    isLoadingGroups,
+    isSaving,
+  ])
 
   // ============================================================================
   // RENDER
@@ -1115,12 +1146,12 @@ export const ScopeGroupManagement: React.FC<ScopeGroupManagementProps> = () => {
       </DialogTrigger>
 
       <BlurredLoadingOverlay
-        visible={isLoadingScopes || isLoadingGroups}
+        visible={loadingOverlayVisible}
         message="Loading..."
         ariaLabel="Loading"
       />
       <BlurredLoadingOverlay
-        visible={isSaving}
+        visible={savingOverlayVisible}
         message="Saving..."
         ariaLabel="Saving"
       />

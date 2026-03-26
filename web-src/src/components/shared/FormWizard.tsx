@@ -7,6 +7,7 @@ import { Button, Text, ProgressBar, Heading } from '@react-spectrum/s2'
 import { style, iconStyle } from '@react-spectrum/s2/style' with { type: 'macro' }
 import { useNavigate } from 'react-router-dom'
 import ChevronLeft from '@react-spectrum/s2/icons/ChevronLeft'
+import ChevronRight from '@react-spectrum/s2/icons/ChevronRight'
 import RocketQuickActions from '@react-spectrum/s2/icons/RocketQuickActions'
 import WebPage from '@react-spectrum/s2/icons/WebPage'
 import FileText from '@react-spectrum/s2/icons/FileText'
@@ -88,7 +89,7 @@ export const FormWizard: React.FC<FormWizardProps> = ({
 }) => {
   const [currentStepIndex, setCurrentStepIndex] = useState(0)
   const [isNavigating, setIsNavigating] = useState(false)
-  const [pendingAction, setPendingAction] = useState<'save' | 'publish' | null>(null)
+  const [pendingAction, setPendingAction] = useState<'save' | 'publish' | 'next' | null>(null)
   const [sideNavStepHoverIndex, setSideNavStepHoverIndex] = useState<number | null>(null)
   const navigate = useNavigate()
 
@@ -112,26 +113,48 @@ export const FormWizard: React.FC<FormWizardProps> = ({
     }
   }
 
-  const handleSave = async () => {
-    if (isSubmitting || isNavigating || !onSave) return
+  const runSave = useCallback(
+    async (action: 'save' | 'next') => {
+      if (isSubmitting || isNavigating || !onSave) return
 
-    setPendingAction('save')
-    setIsNavigating(true)
-    try {
-      const result = await onSave()
-      const ok = result !== false
-      if (ok && onMaxStepChange) {
-        const capped = steps.length - 1
-        const nextMax = Math.min(capped, Math.max(maxStepReached, currentStepIndex + 1))
-        if (nextMax > maxStepReached) {
-          onMaxStepChange(nextMax)
+      setPendingAction(action)
+      setIsNavigating(true)
+      try {
+        const result = await onSave()
+        const ok = result !== false
+        if (ok && onMaxStepChange) {
+          const capped = steps.length - 1
+          const nextMax = Math.min(capped, Math.max(maxStepReached, currentStepIndex + 1))
+          if (nextMax > maxStepReached) {
+            onMaxStepChange(nextMax)
+          }
         }
+        if (ok && action === 'next') {
+          setCurrentStepIndex((i) => (i < steps.length - 1 ? i + 1 : i))
+        }
+      } finally {
+        setIsNavigating(false)
+        setPendingAction(null)
       }
-    } finally {
-      setIsNavigating(false)
-      setPendingAction(null)
-    }
-  }
+    },
+    [
+      isSubmitting,
+      isNavigating,
+      onSave,
+      onMaxStepChange,
+      maxStepReached,
+      currentStepIndex,
+      steps.length
+    ]
+  )
+
+  const handleSave = useCallback(() => {
+    void runSave('save')
+  }, [runSave])
+
+  const handleNext = useCallback(() => {
+    void runSave('next')
+  }, [runSave])
 
   const handleBack = () => {
     if (!isFirstStep && !isSubmitting && !isNavigating) {
@@ -319,7 +342,7 @@ export const FormWizard: React.FC<FormWizardProps> = ({
         </div>
       </div>
 
-      <div style={{ padding: 24, flexShrink: 0 }}>
+      <div style={{ padding: '24px 24px 85px 24px', flexShrink: 0 }}>
         <div className={style({ display: 'flex', flexDirection: 'column', gap: 8 })}>
           <Text UNSAFE_style={{ fontSize: '12px' }}>
             Step {currentStepIndex + 1} of {steps.length}
@@ -352,7 +375,9 @@ export const FormWizard: React.FC<FormWizardProps> = ({
   }
 
   const isActionDisabled = currentStep.isValid === false || isSubmitting || isNavigating
+  const isLastStep = currentStepIndex >= steps.length - 1
   const saveLabel = pendingAction === 'save' ? 'Saving...' : 'Save'
+  const nextLabel = pendingAction === 'next' ? 'Saving...' : 'Next'
 
   const actionBarRowStyle: React.CSSProperties = {
     display: 'flex',
@@ -434,15 +459,6 @@ export const FormWizard: React.FC<FormWizardProps> = ({
 
           <div className={style({ display: 'flex', gap: 8, alignItems: 'center' })}>
             <Button
-              variant="secondary"
-              fillStyle="outline"
-              staticColor="white"
-              onPress={handleSave}
-              isDisabled={isActionDisabled || !onSave}
-            >
-              {saveLabel}
-            </Button>
-            <Button
               variant="accent"
               fillStyle="fill"
               onPress={handlePublish}
@@ -451,6 +467,26 @@ export const FormWizard: React.FC<FormWizardProps> = ({
               <Text>{getPublishLabel()}</Text>
               <RocketQuickActions aria-hidden />
             </Button>
+            <Button
+              variant="secondary"
+              fillStyle="outline"
+              staticColor="white"
+              onPress={handleSave}
+              isDisabled={isActionDisabled || !onSave}
+            >
+              {saveLabel}
+            </Button>
+            {!isLastStep && (
+              <Button
+                variant="accent"
+                fillStyle="fill"
+                onPress={handleNext}
+                isDisabled={isActionDisabled || !onSave || pendingAction === 'next'}
+              >
+                <Text>{nextLabel}</Text>
+                <ChevronRight aria-hidden />
+              </Button>
+            )}
           </div>
         </div>
       </div>

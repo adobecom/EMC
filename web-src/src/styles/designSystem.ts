@@ -194,6 +194,8 @@ export const GRADIENT_BACKGROUND =
  * Pair with a parent flex column + scrollable main so heights need no calc(100vh).
  */
 export const FORM_WIZARD_FOOTER_STYLES = {
+  position: 'fixed' as const,
+  bottom: 0,
   display: 'flex' as const,
   alignItems: 'center' as const,
   flexShrink: 0,
