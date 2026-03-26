@@ -3,12 +3,7 @@
  */
 
 import React, { useState, useCallback, useMemo, useEffect } from 'react'
-import {
-  View,
-  DialogTrigger as V3DialogTrigger,
-  AlertDialog,
-} from '@adobe/react-spectrum'
-import { Badge, Button, ButtonGroup, Text, TextField, DialogTrigger, Dialog, Content, Heading, Checkbox } from '@react-spectrum/s2'
+import { Badge, Button, ButtonGroup, Text, TextField, DialogTrigger, Dialog, Content, Heading, Checkbox, AlertDialog } from '@react-spectrum/s2'
 import { style } from '@react-spectrum/s2/style' with { type: 'macro' }
 import EditS2 from "@react-spectrum/s2/icons/Edit"
 import DeleteS2 from "@react-spectrum/s2/icons/Delete"
@@ -250,7 +245,7 @@ export const RoleManagement: React.FC<RoleManagementProps> = () => {
   ], [canWrite, canDelete, openEditDialog])
 
   return (
-    <View padding="size-400" maxWidth="1400px" marginX="auto">
+    <div style={{ padding: 32, maxWidth: 1400, marginLeft: 'auto', marginRight: 'auto' }}>
       <div className={style({display: 'flex', flexDirection: 'column', gap: 32})}>
         <ResourceDashboardLayout
           title="Roles"
@@ -288,7 +283,7 @@ export const RoleManagement: React.FC<RoleManagementProps> = () => {
                     autoFocus
                   />
                   <Heading level={4}>Permissions ({formPermissions.size} selected)</Heading>
-                  <View maxHeight="size-6000" overflow="auto">
+                  <div className={style({ maxHeight: 480, overflow: 'auto' })}>
                     <div className={style({display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16})}>
                       {Array.from(groupedPermissions.entries()).map(([resource, perms]) => (
                         <div key={resource} className={style({
@@ -315,7 +310,7 @@ export const RoleManagement: React.FC<RoleManagementProps> = () => {
                         </div>
                       ))}
                     </div>
-                  </View>
+                  </div>
                 </div>
               </Content>
               <ButtonGroup>
@@ -334,29 +329,26 @@ export const RoleManagement: React.FC<RoleManagementProps> = () => {
       </DialogTrigger>
 
       {/* Delete Confirmation */}
-      <V3DialogTrigger
+      <DialogTrigger
         isOpen={!!roleToDelete}
         onOpenChange={(open) => !open && setRoleToDelete(null)}
       >
         <div style={{ display: 'none' }} />
-        {(close) => (
-          <AlertDialog
-            title="Delete Role"
-            variant="destructive"
-            primaryActionLabel="Delete"
-            secondaryActionLabel="Cancel"
-            onPrimaryAction={() => {
-              if (roleToDelete) handleDeleteRole(roleToDelete)
-              close()
-            }}
-            onSecondaryAction={close}
-            isPrimaryActionDisabled={isSaving}
-          >
-            Delete role <strong>{roleToDelete?.name}</strong>?
-            This will fail if any groups are using this role.
-          </AlertDialog>
-        )}
-      </V3DialogTrigger>
+        <AlertDialog
+          title="Delete Role"
+          variant="destructive"
+          primaryActionLabel="Delete"
+          cancelLabel="Cancel"
+          onPrimaryAction={() => {
+            if (roleToDelete) handleDeleteRole(roleToDelete)
+          }}
+          onCancel={() => setRoleToDelete(null)}
+          isPrimaryActionDisabled={isSaving}
+        >
+          Delete role <strong>{roleToDelete?.name}</strong>?
+          This will fail if any groups are using this role.
+        </AlertDialog>
+      </DialogTrigger>
 
       <BlurredLoadingOverlay
         visible={isLoading}
@@ -368,7 +360,7 @@ export const RoleManagement: React.FC<RoleManagementProps> = () => {
         message="Saving..."
         ariaLabel="Saving role"
       />
-    </View>
+    </div>
   )
 }
 

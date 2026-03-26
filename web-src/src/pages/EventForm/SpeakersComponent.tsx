@@ -12,7 +12,7 @@ import { speakerHasLocalization } from '../../utils/eventFormMappers'
 import Add from '@react-spectrum/s2/icons/Add'
 import AlertTriangle from '@react-spectrum/s2/icons/AlertTriangle'
 import Delete from '@react-spectrum/s2/icons/Delete'
-import DragHandle from '@spectrum-icons/workflow/DragHandle'
+import Move from '@react-spectrum/s2/icons/Move'
 import { apiService, cachedApi } from '../../services/api'
 import { useToast } from '../../contexts'
 import { useEventFormComponent } from '../../hooks/useEventFormComponent'
@@ -421,7 +421,9 @@ export const SpeakersComponent: React.FC = () => {
             }}
           >
             <div className={style({display: 'flex', alignItems: 'center', gap: 16})}>
-              <DragHandle UNSAFE_style={{ flexShrink: 0, cursor: 'grab' }} />
+              <span style={{ flexShrink: 0, cursor: 'grab', display: 'flex' }} aria-hidden>
+                <Move />
+              </span>
 
               {profile.imageUrl ? (
                 <img

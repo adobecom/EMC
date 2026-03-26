@@ -3,12 +3,11 @@
 */
 
 import React, { useState, useEffect } from 'react'
-import { TextField, RadioGroup, Radio, Text } from '@react-spectrum/s2'
-import { Switch } from '@adobe/react-spectrum'
+import { TextField, RadioGroup, Radio, Text, Switch } from '@react-spectrum/s2'
 import { style } from "@react-spectrum/s2/style" with { type: "macro" }
 import { HeadingWithTooltip } from '../../components/shared'
 import OpenIn from '@react-spectrum/s2/icons/OpenIn'
-import DragHandle from '@spectrum-icons/workflow/DragHandle'
+import Move from '@react-spectrum/s2/icons/Move'
 
 /**
  * Configuration field structure from the JSON configs
@@ -418,7 +417,7 @@ export const RegistrationFieldsComponent: React.FC<RegistrationFieldsComponentPr
                       opacity: canDrag ? 1 : 0.3
                     }}
                   >
-                    <DragHandle />
+                    <Move />
                   </div>
                 </div>
               )

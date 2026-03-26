@@ -3,8 +3,7 @@
 */
 
 import React, { useState, useEffect } from 'react'
-import { Button, Text, TextField, DatePicker, TimeField, ActionButton, Heading } from '@react-spectrum/s2'
-import { Switch } from '@adobe/react-spectrum'
+import { Button, Text, TextField, DatePicker, TimeField, ActionButton, Heading, Switch } from '@react-spectrum/s2'
 import { style } from '@react-spectrum/s2/style' with { type: 'macro' }
 import { Time } from '@internationalized/date'
 import { parseDateTime, CalendarDateTime } from '@internationalized/date'
@@ -12,7 +11,7 @@ import Add from "@react-spectrum/s2/icons/Add"
 import Delete from '@react-spectrum/s2/icons/Delete'
 import Edit from '@react-spectrum/s2/icons/Edit'
 import Cancel from '@react-spectrum/s2/icons/Cancel'
-import DragHandle from '@spectrum-icons/workflow/DragHandle'
+import Move from '@react-spectrum/s2/icons/Move'
 import ChevronDown from '@react-spectrum/s2/icons/ChevronDown'
 // @ts-ignore - uuid types not installed
 import { v4 as uuidv4 } from 'uuid'
@@ -564,7 +563,7 @@ export const AgendaComponent: React.FC = () => {
                   </ActionButton>
                   {/* Drag Handle - only show when not auto-ordering */}
                   {!orderByTime && (
-                    <DragHandle />
+                    <Move />
                   )}
                 </div>
               </div>

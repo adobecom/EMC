@@ -464,26 +464,26 @@ const basicEventData = {
 }
 ```
 
-### Adobe Spectrum Components Used
+### Adobe React Spectrum S2 components used
+
+Imports from `@react-spectrum/s2` (and the `style()` macro for layout) include:
 
 - **TextField** - Single-line text inputs
 - **TextArea** - Multi-line text inputs
-- **Picker** - Dropdown selectors
+- **Picker** / **PickerItem** - Dropdown selectors
 - **DatePicker** - Date/time selection with granularity
 - **NumberField** - Numeric inputs with min/max
 - **Switch** - Boolean toggles
 - **Checkbox** - Individual checkboxes
 - **Button** - Action buttons
 - **ActionButton** - Toggle-style buttons for tags
-- **Flex** - Layout container
-- **View** - Generic container with styling
 - **Heading** - Section titles
 - **Text** - Text content
 - **Divider** - Visual separators
 
 ### Icons
-- `@spectrum-icons/workflow/Add` - Add profile button
-- `@spectrum-icons/workflow/Delete` - Remove profile button
+- `@react-spectrum/s2/icons/Add` - Add profile button
+- `@react-spectrum/s2/icons/Delete` - Remove profile button
 
 ## Validation
 

@@ -4,7 +4,7 @@
 
 import React, { useEffect, useRef, useState, useCallback } from 'react'
 import { TextField, Text, Heading, ActionButton } from '@react-spectrum/s2'
-import { Switch } from '@adobe/react-spectrum'
+import { Switch } from '@react-spectrum/s2'
 import { style } from "@react-spectrum/s2/style" with { type: "macro" }
 import Add from '@react-spectrum/s2/icons/Add'
 import Cancel from '@react-spectrum/s2/icons/Cancel'

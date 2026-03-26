@@ -16,8 +16,7 @@ interface ${ARGUMENTS}Props {
 
 const $ARGUMENTS: FC<${ARGUMENTS}Props> = ({ /* destructure */ }) => {
   return (
-    // JSX: prefer React Spectrum 2 components and the style() macro
-    // Fallback to @adobe/react-spectrum only if no S2 equivalent exists
+    // JSX: React Spectrum 2 components and the style() macro
     // Use onPress not onClick on Spectrum components
     // Use styles/designSystem.ts where it complements S2 tokens
   )
@@ -37,5 +36,5 @@ export type { ${ARGUMENTS}Props } from './$ARGUMENTS'
 Conventions:
 - No semicolons
 - No class components
-- Import icons from `@react-spectrum/s2/icons/...` (S2); use `@spectrum-icons/workflow` only in v3 fallback code
+- Import icons from `@react-spectrum/s2/icons/...`
 - Use `UNSAFE_style` / `UNSAFE_className` sparingly, prefer design tokens

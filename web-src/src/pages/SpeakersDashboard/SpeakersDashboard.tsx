@@ -15,16 +15,20 @@
 
 import React, { useEffect, useState, useMemo, useCallback, useRef } from 'react'
 import {
-  Flex,
-  View,
+  ActionButton,
+  ActionMenu,
+  MenuItem,
+  Badge,
+  Button,
+  ComboBox,
+  ComboBoxItem,
+  Text,
   DialogTrigger,
   AlertDialog,
   ProgressCircle,
   Tooltip,
   TooltipTrigger,
-  Well
-} from '@adobe/react-spectrum'
-import { ActionButton, ActionMenu, MenuItem, Badge, Button, ComboBox, ComboBoxItem, Text } from "@react-spectrum/s2"
+} from '@react-spectrum/s2'
 import { style } from "@react-spectrum/s2/style" with { type: "macro" }
 import Edit from '@react-spectrum/s2/icons/Edit'
 import Delete from '@react-spectrum/s2/icons/Delete'
@@ -428,16 +432,16 @@ export const SpeakersDashboard: React.FC<SpeakersDashboardProps> = () => {
         const initials = `${item.firstName?.[0] || ''}${item.lastName?.[0] || ''}`
         
         return (
-          <View
-            UNSAFE_style={{
-              width: '44px',
-              height: '44px',
+          <div
+            style={{
+              width: 44,
+              height: 44,
               borderRadius: '50%',
               overflow: 'hidden',
               backgroundColor: 'var(--spectrum-global-color-gray-300)',
               display: 'flex',
               alignItems: 'center',
-              justifyContent: 'center'
+              justifyContent: 'center',
             }}
           >
             {photoUrl ? (
@@ -459,7 +463,7 @@ export const SpeakersDashboard: React.FC<SpeakersDashboardProps> = () => {
                 {initials}
               </Text>
             )}
-          </View>
+          </div>
         )
       }
     },
@@ -474,7 +478,7 @@ export const SpeakersDashboard: React.FC<SpeakersDashboardProps> = () => {
         return aName.localeCompare(bName)
       },
       render: (item) => (
-        <Flex direction="column" gap="size-50">
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
           <Text UNSAFE_style={{ fontWeight: 'bold' }}>
             {item.firstName} {item.lastName}
           </Text>
@@ -483,7 +487,7 @@ export const SpeakersDashboard: React.FC<SpeakersDashboardProps> = () => {
               {item.title.length > 40 ? `${item.title.substring(0, 40)}...` : item.title}
             </Text>
           )}
-        </Flex>
+        </div>
       )
     },
     {
@@ -668,15 +672,23 @@ export const SpeakersDashboard: React.FC<SpeakersDashboardProps> = () => {
 
   // Series selector header with searchable ComboBox
   const seriesSelectorHeader = useMemo(() => (
-    <Well UNSAFE_style={{ marginBottom: '16px', padding: '20px' }}>
-      <Flex justifyContent="space-between" alignItems="center" gap="size-200">
+    <div
+      style={{
+        marginBottom: 16,
+        padding: 20,
+        background: 'var(--spectrum-global-color-gray-75)',
+        borderRadius: 8,
+        border: '1px solid var(--spectrum-global-color-gray-200)',
+      }}
+    >
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 16 }}>
         {/* ComboBox Row */}
-        <Flex alignItems="end" gap="size-200">
+        <div style={{ display: 'flex', alignItems: 'flex-end', gap: 16 }}>
           {isLoadingSeries ? (
-            <Flex alignItems="center" gap="size-200">
+            <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
               <Text UNSAFE_style={{ fontWeight: 600 }}>Loading series...</Text>
               <ProgressCircle size="S" isIndeterminate aria-label="Loading series" />
-            </Flex>
+            </div>
           ) : (
             <ComboBox
               label="Select Series"
@@ -709,21 +721,21 @@ export const SpeakersDashboard: React.FC<SpeakersDashboardProps> = () => {
               {seriesList.length} series available
             </Text>
           )}
-        </Flex>
-        
+        </div>
+
         {/* Selected Series Info Card */}
         {selectedSeries && (
-          <View
-            backgroundColor="gray-50"
-            borderRadius="medium"
-            padding="size-200"
-            UNSAFE_style={{
+          <div
+            style={{
+              backgroundColor: 'var(--spectrum-global-color-gray-50)',
+              borderRadius: 8,
+              padding: 16,
               border: '1px solid var(--spectrum-global-color-gray-300)',
-              marginTop: '8px'
+              marginTop: 8,
             }}
           >
-            <Flex direction="column" gap="size-100">
-              <Flex alignItems="center" gap="size-150">
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
                 <Badge 
                   variant={selectedSeries.cloudType === 'CreativeCloud' ? 'positive' : 'informative'}
                 >
@@ -739,7 +751,7 @@ export const SpeakersDashboard: React.FC<SpeakersDashboardProps> = () => {
                 }}>
                   {speakers.length} speaker{speakers.length !== 1 ? 's' : ''} in this series
                 </Text>
-              </Flex>
+              </div>
               {selectedSeries.seriesDescription && (
                 <Text UNSAFE_style={{ 
                   fontSize: '13px', 
@@ -749,11 +761,11 @@ export const SpeakersDashboard: React.FC<SpeakersDashboardProps> = () => {
                   {selectedSeries.seriesDescription}
                 </Text>
               )}
-            </Flex>
-          </View>
+            </div>
+          </div>
         )}
-      </Flex>
-    </Well>
+      </div>
+    </div>
   ), [isLoadingSeries, selectedSeriesId, handleSeriesComboBoxChange, seriesList, filteredSeriesItems, selectedSeries, speakers.length])
   
   // Custom create button — only shown when user has event:write
@@ -772,28 +784,31 @@ export const SpeakersDashboard: React.FC<SpeakersDashboardProps> = () => {
   }, [canWriteEvent, handleCreateSpeaker, selectedSeriesId])
   
   return (
-    <View>
+    <div>
       {/* Series Selector */}
-      <View paddingX="size-400" paddingTop="size-400">
+      <div style={{ paddingLeft: 32, paddingRight: 32, paddingTop: 32 }}>
         {seriesSelectorHeader}
-      </View>
-      
+      </div>
+
       {/* Speakers Table */}
       {!selectedSeriesId ? (
-        <View padding="size-400">
-          <Flex
-            direction="column"
-            alignItems="center"
-            justifyContent="center"
-            height="size-3000"
-            gap="size-200"
+        <div style={{ padding: 32 }}>
+          <div
+            style={{
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              justifyContent: 'center',
+              minHeight: 240,
+              gap: 16,
+            }}
           >
             <User aria-hidden />
             <Text UNSAFE_style={{ fontSize: '18px', color: 'var(--spectrum-global-color-gray-600)' }}>
               Select a series to manage speakers
             </Text>
-          </Flex>
-        </View>
+          </div>
+        </div>
       ) : (
         <ResourceDashboardLayout
           title="Speakers"
@@ -850,23 +865,20 @@ export const SpeakersDashboard: React.FC<SpeakersDashboardProps> = () => {
         onOpenChange={(isOpen) => !isOpen && setSpeakerToDelete(null)}
       >
         <div style={{ display: 'none' }} />
-        {(close) => (
-          <AlertDialog
-            title="Delete Speaker"
-            variant="destructive"
-            primaryActionLabel="Delete"
-            secondaryActionLabel="Cancel"
-            onPrimaryAction={() => {
-              handleConfirmDelete(false)
-              close()
-            }}
-            onSecondaryAction={close}
-            isPrimaryActionDisabled={!!actionInProgress}
-          >
-            Are you sure you want to delete <strong>{speakerToDelete?.firstName} {speakerToDelete?.lastName}</strong>?
-            This action cannot be undone.
-          </AlertDialog>
-        )}
+        <AlertDialog
+          title="Delete Speaker"
+          variant="destructive"
+          primaryActionLabel="Delete"
+          cancelLabel="Cancel"
+          onPrimaryAction={() => {
+            handleConfirmDelete(false)
+          }}
+          onCancel={() => setSpeakerToDelete(null)}
+          isPrimaryActionDisabled={!!actionInProgress}
+        >
+          Are you sure you want to delete <strong>{speakerToDelete?.firstName} {speakerToDelete?.lastName}</strong>?
+          This action cannot be undone.
+        </AlertDialog>
       </DialogTrigger>
       
       {/* Cascade Delete Confirmation */}
@@ -875,34 +887,31 @@ export const SpeakersDashboard: React.FC<SpeakersDashboardProps> = () => {
         onOpenChange={(isOpen) => !isOpen && setSpeakerToDelete(null)}
       >
         <div style={{ display: 'none' }} />
-        {(close) => (
-          <AlertDialog
-            title="Delete Speaker & Remove from Events"
-            variant="destructive"
-            primaryActionLabel="Delete & Remove from Events"
-            secondaryActionLabel="Cancel"
-            onPrimaryAction={() => {
-              handleConfirmDelete(true)
-              close()
-            }}
-            onSecondaryAction={close}
-            isPrimaryActionDisabled={!!actionInProgress}
-          >
-            <Flex direction="column" gap="size-200">
-              <Text>
-                <strong>{speakerToDelete?.firstName} {speakerToDelete?.lastName}</strong> is linked to {
-                  eventConnections.get(speakerToDelete?.speakerId || '')?.length || 0
-                } events.
-              </Text>
-              <Text>
-                This will permanently delete the speaker from the series AND remove them from all linked events.
-              </Text>
-              <Text UNSAFE_style={{ color: COLORS.RED_600, fontWeight: 'bold' }}>
-                This action cannot be undone.
-              </Text>
-            </Flex>
-          </AlertDialog>
-        )}
+        <AlertDialog
+          title="Delete Speaker & Remove from Events"
+          variant="destructive"
+          primaryActionLabel="Delete & Remove from Events"
+          cancelLabel="Cancel"
+          onPrimaryAction={() => {
+            handleConfirmDelete(true)
+          }}
+          onCancel={() => setSpeakerToDelete(null)}
+          isPrimaryActionDisabled={!!actionInProgress}
+        >
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+            <Text>
+              <strong>{speakerToDelete?.firstName} {speakerToDelete?.lastName}</strong> is linked to {
+                eventConnections.get(speakerToDelete?.speakerId || '')?.length || 0
+              } events.
+            </Text>
+            <Text>
+              This will permanently delete the speaker from the series AND remove them from all linked events.
+            </Text>
+            <Text UNSAFE_style={{ color: COLORS.RED_600, fontWeight: 'bold' }}>
+              This action cannot be undone.
+            </Text>
+          </div>
+        </AlertDialog>
       </DialogTrigger>
       
       {/* Event Connections Dialog */}
@@ -924,6 +933,6 @@ export const SpeakersDashboard: React.FC<SpeakersDashboardProps> = () => {
         ariaLabel="Processing"
         zIndex={9999}
       />
-    </View>
+    </div>
   )
 }

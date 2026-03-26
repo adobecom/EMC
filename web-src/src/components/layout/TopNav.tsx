@@ -4,8 +4,8 @@
 
 import React from 'react'
 import { NavLink } from 'react-router-dom'
-import { Flex, View } from '@adobe/react-spectrum'
-import { Button, Text } from "@react-spectrum/s2"
+import { Button, Text } from '@react-spectrum/s2'
+import { style } from '@react-spectrum/s2/style' with { type: 'macro' }
 import { IMS } from '../../types'
 import { UserPanel } from '../user'
 import { DevTokenButton } from '../dev'
@@ -33,23 +33,30 @@ const TopNav: React.FC<TopNavProps> = ({ ims }) => {
   //   - Not in the middle of initializing auth
   const showSignIn = authMode === 'standalone' && !isAuthenticated && !isLoading
 
+  const barClass = style({
+    backgroundColor: 'gray-100',
+    paddingX: 24,
+    borderBottomWidth: 1,
+    borderBottomStyle: 'solid',
+    borderColor: 'gray-300',
+  })
+
   return (
-    <View 
-      backgroundColor="gray-100"
-      borderBottomWidth="thin" 
-      borderBottomColor="gray-300"
-      UNSAFE_className="top-nav"
-      paddingX="size-300"
-      UNSAFE_style={STICKY_GNAV_STYLES}
+    <div
+      className={`${barClass} top-nav`}
+      style={STICKY_GNAV_STYLES}
     >
-      <Flex 
-        direction="row" 
-        alignItems="center" 
-        justifyContent="space-between"
-        height="size-700"
+      <div
+        className={style({
+          display: 'flex',
+          flexDirection: 'row',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          height: 56,
+        })}
       >
         {/* Left: Brand/Logo */}
-        <View>
+        <div>
           <a href="/">
             <svg 
               xmlns="http://www.w3.org/2000/svg" 
@@ -64,15 +71,12 @@ const TopNav: React.FC<TopNavProps> = ({ ims }) => {
               />
             </svg>
           </a>
-        </View>
+        </div>
 
         {/* Center: Navigation Links — hidden until access is resolved */}
         {showNav && (
-        <Flex
-          direction="row"
-          alignItems="center"
-          gap="size-0"
-          UNSAFE_className="nav-links"
+        <div
+          className={`${style({ display: 'flex', flexDirection: 'row', alignItems: 'center', gap: 0 })} nav-links`}
         >
           <NavLink
             className={({ isActive }) => `nav-link ${isActive ? 'is-selected' : ''}`}
@@ -125,11 +129,11 @@ const TopNav: React.FC<TopNavProps> = ({ ims }) => {
           >
             <Text>About</Text>
           </NavLink>
-        </Flex>
+        </div>
         )}
 
         {/* Right: Auth controls + User Panel */}
-        <Flex direction="row" alignItems="center" gap="size-100">
+        <div className={style({ display: 'flex', flexDirection: 'row', alignItems: 'center', gap: 12 })}>
           {/* Dev token fallback — localhost only */}
           <DevTokenButton />
 
@@ -145,9 +149,9 @@ const TopNav: React.FC<TopNavProps> = ({ ims }) => {
             /* Signed in (either mode): show user panel */
             (!isLoading && <UserPanel ims={ims} compact />)
           )}
-        </Flex>
-      </Flex>
-    </View>
+        </div>
+      </div>
+    </div>
   )
 }
 

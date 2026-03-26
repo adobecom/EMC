@@ -4,13 +4,10 @@
 
 import React from 'react'
 import { useNavigate } from 'react-router-dom'
-import {
-  View,
-  Avatar,
-  ActionButton,
-} from '@adobe/react-spectrum'
 import { style } from '@react-spectrum/s2/style' with { type: 'macro' }
 import {
+  ActionButton,
+  Avatar,
   MenuTrigger,
   Menu,
   MenuItem,
@@ -78,38 +75,44 @@ export const UserPanel: React.FC<UserPanelProps> = ({ ims, compact = false }) =>
   }
 
   // If no IMS profile, show minimal panel
+  const panelShell = (children: React.ReactNode) => (
+    <div
+      className={compact ? 'user-panel-compact' : ''}
+      style={{
+        background: compact ? 'transparent' : 'var(--spectrum-global-color-gray-100)',
+        padding: compact ? 8 : 16,
+        borderRadius: 8,
+        marginBottom: compact ? 0 : 24,
+      }}
+    >
+      {children}
+    </div>
+  )
+
   if (!ims.profile) {
-    return (
-      <View
-        backgroundColor={compact ? 'transparent' : 'gray-100'}
-        padding={compact ? 'size-100' : 'size-200'}
-        borderRadius="medium"
-        marginBottom={compact ? 'size-0' : 'size-300'}
-      >
-        <div className={style({ display: 'flex', alignItems: 'center', gap: 12 })}>
-          <View
-            backgroundColor="blue-600"
-            width="size-400"
-            height="size-400"
-            borderRadius="medium"
-            UNSAFE_className="user-avatar"
-          >
-            <Text UNSAFE_className="user-initials-compact">GU</Text>
-          </View>
-          <Text UNSAFE_className="user-name">Guest User</Text>
+    return panelShell(
+      <div className={style({ display: 'flex', alignItems: 'center', gap: 12 })}>
+        <div
+          className="user-avatar"
+          style={{
+            background: 'var(--spectrum-global-color-blue-600)',
+            width: 32,
+            height: 32,
+            borderRadius: 8,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+          }}
+        >
+          <Text UNSAFE_className="user-initials-compact">GU</Text>
         </div>
-      </View>
+        <Text UNSAFE_className="user-name">Guest User</Text>
+      </div>
     )
   }
 
-  return (
-    <View
-      backgroundColor={compact ? 'transparent' : 'gray-100'}
-      padding={compact ? 'size-100' : 'size-200'}
-      borderRadius="medium"
-      marginBottom={compact ? 'size-0' : 'size-300'}
-      UNSAFE_className={compact ? 'user-panel-compact' : ''}
-    >
+  return panelShell(
+    <>
       <MenuTrigger>
         <ActionButton
           isQuiet
@@ -119,22 +122,27 @@ export const UserPanel: React.FC<UserPanelProps> = ({ ims, compact = false }) =>
             {/* Avatar: image when available, else initials */}
             {avatarUrl ? (
               <Avatar
-                size={compact ? 'avatar-size-400' : 'avatar-size-500'}
+                size={compact ? 32 : 40}
                 src={avatarUrl}
                 alt={userName}
               />
             ) : (
-              <View
-                backgroundColor="blue-600"
-                width={compact ? 'size-400' : 'size-500'}
-                height={compact ? 'size-400' : 'size-500'}
-                borderRadius="medium"
-                UNSAFE_className="user-avatar"
+              <div
+                className="user-avatar"
+                style={{
+                  background: 'var(--spectrum-global-color-blue-600)',
+                  width: compact ? 32 : 40,
+                  height: compact ? 32 : 40,
+                  borderRadius: 8,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}
               >
                 <Text UNSAFE_className={compact ? 'user-initials-compact' : 'user-initials'}>
                   {getInitials(userName)}
                 </Text>
-              </View>
+              </div>
             )}
 
             {/* User info - only show name in compact mode */}
@@ -224,6 +232,6 @@ export const UserPanel: React.FC<UserPanelProps> = ({ ims, compact = false }) =>
           </Text>
         </div>
       )}
-    </View>
+    </>
   )
 }

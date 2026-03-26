@@ -3,12 +3,7 @@
 */
 
 import React, { useState, useCallback } from 'react'
-import {
-  View,
-  ProgressBar,
-  Heading,
-} from '@adobe/react-spectrum'
-import { Button, Text } from '@react-spectrum/s2'
+import { Button, Text, ProgressBar, Heading } from '@react-spectrum/s2'
 import { style, iconStyle } from '@react-spectrum/s2/style' with { type: 'macro' }
 import { useNavigate } from 'react-router-dom'
 import ChevronLeft from '@react-spectrum/s2/icons/ChevronLeft';
@@ -193,13 +188,16 @@ export const FormWizard: React.FC<FormWizardProps> = ({
   }
 
   const renderSideNav = () => (
-    <View
-      width="size-3000"
-      borderEndWidth="thin"
-      borderEndColor="gray-300"
-      UNSAFE_style={SIDE_NAV_STICKY_STYLES}
+    <div
+      style={{
+        width: 240,
+        borderRightWidth: 1,
+        borderRightStyle: 'solid',
+        borderRightColor: 'var(--spectrum-global-color-gray-300)',
+        ...SIDE_NAV_STICKY_STYLES,
+      }}
     >
-      <View padding="size-300" flex={1}>
+      <div style={{ padding: 24, flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
         <Text UNSAFE_style={{
           fontSize: '12px',
           fontWeight: 500,
@@ -260,7 +258,7 @@ export const FormWizard: React.FC<FormWizardProps> = ({
           </button>
 
           {/* Add Content Section */}
-          <View>
+          <div>
             <button
               disabled
               style={{
@@ -361,12 +359,12 @@ export const FormWizard: React.FC<FormWizardProps> = ({
                 )
               })}
             </div>
-          </View>
+          </div>
         </div>
-      </View>
+      </div>
 
       {/* Progress indicator at bottom */}
-      <View padding="size-300">
+      <div style={{ padding: 24 }}>
         <div className={style({ display: 'flex', flexDirection: 'column', gap: 8 })}>
           <div className={style({ display: 'flex', justifyContent: 'space-between' })}>
             <Text UNSAFE_style={{ fontSize: '12px' }}>
@@ -377,7 +375,6 @@ export const FormWizard: React.FC<FormWizardProps> = ({
           <ProgressBar
             label="Progress"
             value={progress}
-            showValueLabel={false}
             size="S"
           />
           {!hasEventId && currentStepIndex === 0 && (
@@ -391,8 +388,8 @@ export const FormWizard: React.FC<FormWizardProps> = ({
             </Text>
           )}
         </div>
-      </View>
-    </View>
+      </div>
+    </div>
   )
 
   const renderActionBar = () => {
@@ -419,8 +416,8 @@ export const FormWizard: React.FC<FormWizardProps> = ({
     const isActionDisabled = currentStep.isValid === false || isSubmitting || isNavigating
 
     return (
-      <View
-        UNSAFE_style={{
+      <div
+        style={{
           ...FIXED_ACTION_BAR_STYLES,
           backgroundColor: COLORS.ADOBE_RED,
         }}
@@ -430,7 +427,7 @@ export const FormWizard: React.FC<FormWizardProps> = ({
           style={{ marginInlineStart: 'var(--spectrum-global-dimension-size-400)', marginInlineEnd: 'var(--spectrum-global-dimension-size-400)' }}
         >
           {/* Left: Back button */}
-          <View>
+          <div>
             <Button
               variant="secondary"
               fillStyle="outline"
@@ -440,7 +437,7 @@ export const FormWizard: React.FC<FormWizardProps> = ({
             >
               <ChevronLeft />
             </Button>
-          </View>
+          </div>
 
           {/* Right: Action buttons */}
           <div className={style({ display: 'flex', alignItems: 'center' })}>
@@ -470,14 +467,14 @@ export const FormWizard: React.FC<FormWizardProps> = ({
 
             {/* Vertical Divider */}
             {hasEventId && (
-              <View
-                UNSAFE_style={{
-                  width: '1px',
-                  height: '32px',
+              <div
+                style={{
+                  width: 1,
+                  height: 32,
                   backgroundColor: COLORS.WHITE,
                   opacity: 0.3,
-                  marginLeft: '80px',
-                  marginRight: '80px'
+                  marginLeft: 80,
+                  marginRight: 80,
                 }}
               />
             )}
@@ -506,7 +503,7 @@ export const FormWizard: React.FC<FormWizardProps> = ({
             </div>
           </div>
         </div>
-      </View>
+      </div>
     )
   }
 
@@ -548,9 +545,9 @@ export const FormWizard: React.FC<FormWizardProps> = ({
   const statusLabel = displayStatus.charAt(0).toUpperCase() + displayStatus.slice(1).toLowerCase()
 
   const mainContent = (
-    <View>
+    <div>
       {/* Step title */}
-      <View marginBottom="size-300">
+      <div style={{ marginBottom: 24 }}>
         {/* Event type label */}
         {eventTypeLabel && (
           <Text
@@ -571,15 +568,15 @@ export const FormWizard: React.FC<FormWizardProps> = ({
           <Heading level={2} UNSAFE_style={TYPOGRAPHY.STEP_HEADING}>{currentStep.title}</Heading>
 
           {/* Status badge */}
-          <View
-            UNSAFE_style={{
+          <div
+            style={{
               display: 'inline-flex',
               alignItems: 'center',
-              gap: '8px',
+              gap: 8,
               padding: '0 8px',
-              borderRadius: '4px',
+              borderRadius: 4,
               backgroundColor: statusStyles.bgColor,
-              flexShrink: 0
+              flexShrink: 0,
             }}
           >
             {/* Status dot */}
@@ -601,19 +598,19 @@ export const FormWizard: React.FC<FormWizardProps> = ({
             >
               {statusLabel}
             </Text>
-          </View>
+          </div>
 
           {/* Spacer to push header actions to the right */}
-          {headerActions && <View flex={1} />}
+          {headerActions ? <div style={{ flex: 1 }} /> : null}
 
           {/* Optional header actions (e.g., history button) */}
           {headerActions}
         </div>
-      </View>
+      </div>
 
       {/* Step content */}
-      <View marginTop="size-300" marginBottom="size-400">{currentStep.component}</View>
-    </View>
+      <div style={{ marginTop: 24, marginBottom: 32 }}>{currentStep.component}</div>
+    </div>
   )
 
   if (showSideNav) {
@@ -621,9 +618,15 @@ export const FormWizard: React.FC<FormWizardProps> = ({
       <>
         <div className={style({ display: 'flex', gap: 0 })}>
           {renderSideNav()}
-          <View UNSAFE_style={SCROLLABLE_CONTENT_STYLES} flex={1} padding="size-400">
+          <div
+            style={{
+              ...SCROLLABLE_CONTENT_STYLES,
+              flex: 1,
+              padding: 32,
+            }}
+          >
             {mainContent}
-          </View>
+          </div>
         </div>
         {renderActionBar()}
       </>
@@ -632,7 +635,7 @@ export const FormWizard: React.FC<FormWizardProps> = ({
 
   return (
     <>
-      <View UNSAFE_style={SCROLLABLE_CONTENT_STYLES}>{mainContent}</View>
+      <div style={SCROLLABLE_CONTENT_STYLES}>{mainContent}</div>
       {renderActionBar()}
     </>
   )

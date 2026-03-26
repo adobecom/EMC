@@ -9,13 +9,9 @@
  */
 
 import React, { ReactNode, useState } from 'react'
-import {
-  Provider,
-  defaultTheme,
-  View,
-  Flex,
-} from '@adobe/react-spectrum'
-import { Text, Button, Picker, PickerItem } from '@react-spectrum/s2'
+// @ts-ignore — Fonts not in package exports for v0.12.0
+import { Fonts } from '@react-spectrum/s2/dist/Fonts.mjs'
+import { Provider as S2Provider, Text, Button, Picker, PickerItem } from '@react-spectrum/s2'
 import { style } from '@react-spectrum/s2/style' with { type: 'macro' }
 import { useGroup } from '../contexts/GroupContext'
 import { GateScreen } from './shared/GateScreen'
@@ -50,23 +46,23 @@ const GroupSelectionScreen: React.FC = () => {
     justifyContent: 'center'
   }
 
+  const cardStyle: React.CSSProperties = {
+    background: 'rgba(255, 255, 255, 0.90)',
+    backdropFilter: 'blur(10px)',
+    boxShadow: '0 8px 32px rgba(0, 0, 0, 0.8)',
+    minWidth: `${SPACING.HUGE * 3}px`,
+    maxWidth: '520px',
+    padding: `${SPACING.HUGE}px`,
+    borderRadius: `${SPACING.XS}px`,
+    display: 'flex',
+    flexDirection: 'column',
+    alignItems: 'center',
+    gap: 16,
+  }
+
   return (
-    <View UNSAFE_style={outerStyle}>
-      <Flex
-        direction="column"
-        alignItems="center"
-        gap="size-200"
-        UNSAFE_style={{
-          // UNSAFE_style needed: backdrop blur, rgba background, and box-shadow not available via Spectrum props
-          background: 'rgba(255, 255, 255, 0.90)',
-          backdropFilter: 'blur(10px)',
-          boxShadow: '0 8px 32px rgba(0, 0, 0, 0.8)',
-          minWidth: `${SPACING.HUGE * 3}px`,
-          maxWidth: '520px',
-          padding: `${SPACING.HUGE}px`,
-          borderRadius: `${SPACING.XS}px`,
-        }}
-      >
+    <div style={outerStyle}>
+      <div style={cardStyle}>
         <Text
           UNSAFE_style={{
             ...TYPOGRAPHY.COMPONENT_HEADING,
@@ -87,7 +83,7 @@ const GroupSelectionScreen: React.FC = () => {
           You belong to multiple groups. Select a group to continue.
         </Text>
 
-        <View width="100%" UNSAFE_style={{ margin: SPACING.MD }}>
+        <div style={{ width: '100%', margin: SPACING.MD }}>
           <Picker
             label="Group"
             selectedKey={selectedId}
@@ -101,9 +97,9 @@ const GroupSelectionScreen: React.FC = () => {
               </PickerItem>
             ))}
           </Picker>
-        </View>
+        </div>
 
-        <Flex gap="size-200">
+        <div style={{ display: 'flex', gap: 16 }}>
           <Button
             variant="accent"
             onPress={() => selectedId && setActiveGroup(selectedId)}
@@ -111,9 +107,9 @@ const GroupSelectionScreen: React.FC = () => {
           >
             Continue
           </Button>
-        </Flex>
-      </Flex>
-    </View>
+        </div>
+      </div>
+    </div>
   )
 }
 
@@ -122,29 +118,32 @@ export const RBACGate: React.FC<RBACGateProps> = ({ children }) => {
 
   if (isLoading) {
     return (
-      <Provider theme={defaultTheme} colorScheme="light" scale="medium">
+      <S2Provider colorScheme="light">
+        <Fonts />
         <GateScreen onRequestAccess={() => {}} isLoading />
-      </Provider>
+      </S2Provider>
     )
   }
 
   if (error || groups.length === 0) {
     return (
-      <Provider theme={defaultTheme} colorScheme="light" scale="medium">
+      <S2Provider colorScheme="light">
+        <Fonts />
         <GateScreen
           onRequestAccess={() => refreshGroups()}
           message="You don't have access to the Events Management Console. Contact your administrator to be added to a group."
           actionLabel="Retry"
         />
-      </Provider>
+      </S2Provider>
     )
   }
 
   if (needsGroupSelection) {
     return (
-      <Provider theme={defaultTheme} colorScheme="light" scale="medium">
+      <S2Provider colorScheme="light">
+        <Fonts />
         <GroupSelectionScreen />
-      </Provider>
+      </S2Provider>
     )
   }
 

@@ -5,7 +5,7 @@ alwaysApply: false
 ---
 # React Spectrum (with Spectrum 2)
 
-When implementing UI components in React, **prefer** the React Spectrum (S2) library from `@react-spectrum/s2` for accessibility and Spectrum 2. Use the older `@adobe/react-spectrum` package (React Spectrum v3) **only** when there is no suitable S2 component or documented pattern yet, or when you must stay consistent with a surrounding v3-only boundary (prefer migrating that boundary to S2 over time).
+When implementing UI in EMC, use the React Spectrum (S2) library from `@react-spectrum/s2` for accessibility and Spectrum 2. The app is S2-only (`S2Provider` + `Fonts`); do not import `@adobe/react-spectrum` (it is not a dependency).
 If you are able to browse the web, the full docs for React Spectrum (S2) are available at [https://react-spectrum.adobe.com/s2/](mdc:https:/react-spectrum.adobe.com/s2).
 
 ## Configuring your bundler

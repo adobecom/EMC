@@ -15,8 +15,8 @@ the frontend calls external Adobe APIs (ESP and ESL) directly.
 | ------------------ | -------------------------------------------------- |
 | Framework          | React 18 (hooks + functional components; no class components — required for Spectrum 2) |
 | Language           | TypeScript (strict, target ES2020, bundler module)  |
-| UI Library         | **React Spectrum 2** (`@react-spectrum/s2`) first; **v3** (`@adobe/react-spectrum`) only when no S2 equivalent |
-| Icons              | S2: `@react-spectrum/s2/icons/...` — v3 fallback: `@spectrum-icons/workflow` |
+| UI Library         | **React Spectrum 2** (`@react-spectrum/s2`) only |
+| Icons              | `@react-spectrum/s2/icons/...` |
 | Routing            | React Router 6 (`react-router-dom`, HashRouter)    |
 | State Management   | React Context + `useReducer` (no Redux/Zustand)    |
 | Rich Text          | Quill 2                                            |
@@ -29,7 +29,7 @@ the frontend calls external Adobe APIs (ESP and ESL) directly.
 
 ### Important: React Spectrum version
 
-**Prefer React Spectrum 2** from `@react-spectrum/s2` (style macro, S2 icons, S2 docs). Use **React Spectrum v3** from `@adobe/react-spectrum` only when a needed component or workflow is **not** available in S2. The codebase still contains v3 screens; new and refactored UI should standardize on S2. Cursor rules: prioritize `react-spectrum-s2.mdc`; use `react-spectrum-v3.mdc` for fallback and legacy alignment.
+**Use React Spectrum 2** from `@react-spectrum/s2` (style macro, S2 icons, S2 docs). `@adobe/react-spectrum` is not a dependency. Cursor rules: prioritize `react-spectrum-s2.mdc`; `react-spectrum-v3.mdc` is historical reference for migration terminology.
 
 ---
 

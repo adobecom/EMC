@@ -3,10 +3,7 @@
 */
 
 import React, { useState, useEffect, useRef, useCallback } from 'react'
-import {
-  Heading,
-} from '@adobe/react-spectrum'
-import { Picker, PickerItem, Text } from '@react-spectrum/s2'
+import { Picker, PickerItem, Text, Heading } from '@react-spectrum/s2'
 import { style } from '@react-spectrum/s2/style' with { type: 'macro' }
 import { TYPOGRAPHY } from '../../styles/designSystem'
 import { useEventFormComponent } from '../../hooks/useEventFormComponent'

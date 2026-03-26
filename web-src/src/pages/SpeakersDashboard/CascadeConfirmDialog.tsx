@@ -12,9 +12,6 @@
  */
 
 import React, { useMemo } from 'react'
-import {
-  View
-} from '@adobe/react-spectrum'
 import { Button, ButtonGroup, Dialog, DialogTrigger, Content, Heading, Text } from '@react-spectrum/s2'
 import { style } from '@react-spectrum/s2/style' with { type: 'macro' }
 import AlertTriangle from '@react-spectrum/s2/icons/AlertTriangle'
@@ -87,12 +84,12 @@ export const CascadeConfirmDialog: React.FC<CascadeConfirmDialogProps> = ({
             <Content>
               <div className={style({display: 'flex', flexDirection: 'column', gap: 24})}>
                 {/* Warning Header */}
-                <View
-                  padding="size-200"
-                  borderRadius="medium"
-                  UNSAFE_style={{
+                <div
+                  style={{
+                    padding: 16,
+                    borderRadius: 8,
                     backgroundColor: 'var(--spectrum-global-color-yellow-100)',
-                    border: '1px solid var(--spectrum-global-color-yellow-400)'
+                    border: '1px solid var(--spectrum-global-color-yellow-400)',
                   }}
                 >
                   <div className={style({display: 'flex', alignItems: 'center', gap: 12})}>
@@ -102,20 +99,21 @@ export const CascadeConfirmDialog: React.FC<CascadeConfirmDialogProps> = ({
                       <strong>{eventCount} {eventCount === 1 ? 'event' : 'events'}</strong>.
                     </Text>
                   </div>
-                </View>
+                </div>
 
                 <Text>{actionText.description}</Text>
 
                 {/* Linked Events Preview */}
                 {eventCount > 0 && (
-                  <View
-                    padding="size-200"
-                    borderWidth="thin"
-                    borderColor="gray-300"
-                    borderRadius="medium"
-                    backgroundColor="gray-50"
-                    maxHeight="size-2000"
-                    UNSAFE_style={{ overflowY: 'auto' }}
+                  <div
+                    style={{
+                      padding: 16,
+                      border: '1px solid var(--spectrum-global-color-gray-300)',
+                      borderRadius: 8,
+                      backgroundColor: 'var(--spectrum-global-color-gray-50)',
+                      maxHeight: 160,
+                      overflowY: 'auto',
+                    }}
                   >
                     <div className={style({display: 'flex', flexDirection: 'column', gap: 8})}>
                       <div className={style({display: 'flex', alignItems: 'center', gap: 8})}>
@@ -137,7 +135,7 @@ export const CascadeConfirmDialog: React.FC<CascadeConfirmDialogProps> = ({
                         )}
                       </div>
                     </div>
-                  </View>
+                  </div>
                 )}
 
                 {/* Action Options */}

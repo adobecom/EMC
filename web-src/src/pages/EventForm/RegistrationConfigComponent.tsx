@@ -3,8 +3,15 @@
 */
 
 import React, { useState, useEffect } from 'react'
-import { View, TextField, NumberField, Switch, Text, TooltipTrigger, Tooltip } from '@adobe/react-spectrum'
-import { ActionButton } from "@react-spectrum/s2"
+import {
+  TextField,
+  NumberField,
+  Switch,
+  Text,
+  TooltipTrigger,
+  Tooltip,
+  ActionButton,
+} from '@react-spectrum/s2'
 // S2 style macro for type-safe Spectrum token styling
 import {style} from '@react-spectrum/s2/style' with {type: 'macro'}
 import { HeadingWithTooltip, RichTextEditor } from '../../components/shared'
@@ -126,7 +133,7 @@ export const RegistrationConfigComponent: React.FC = () => {
       </HeadingWithTooltip>
       <div className={style({display: 'flex', gap: 32, alignItems: 'start'})}>
         {/* Left: Attendee Limit Input */}
-        <View>
+        <div>
           <div className={style({display: 'flex', gap: 8, alignItems: 'center', marginBottom: 8})}>
             <Text UNSAFE_style={{ fontWeight: 'bold' }}>Attendee limit</Text>
             <TooltipTrigger delay={0}>
@@ -135,7 +142,7 @@ export const RegistrationConfigComponent: React.FC = () => {
               >
                 <InfoCircle />
               </ActionButton>
-              <Tooltip variant="info">When no limit is set, all users will be admitted into event.</Tooltip>
+              <Tooltip>When no limit is set, all users will be admitted into event.</Tooltip>
             </TooltipTrigger>
           </div>
           <NumberField
@@ -143,9 +150,9 @@ export const RegistrationConfigComponent: React.FC = () => {
             onChange={handleAttendeeLimitChange}
             minValue={0}
             hideStepper
-            width="size-2000"
+            styles={style({ width: 160 })}
           />
-        </View>
+        </div>
 
         {/* Right: All Toggles Container */}
         <div className={style({display: 'flex', flexDirection: 'column', gap: 12, flexGrow: 1})}>
@@ -163,7 +170,7 @@ export const RegistrationConfigComponent: React.FC = () => {
               >
                 <InfoCircle />
               </ActionButton>
-              <Tooltip variant="info">
+              <Tooltip>
                 When selected, disable registration button when limit is reached.
               </Tooltip>
             </TooltipTrigger>
@@ -185,7 +192,7 @@ export const RegistrationConfigComponent: React.FC = () => {
                 >
                   <InfoCircle />
                 </ActionButton>
-                <Tooltip variant="info">
+                <Tooltip>
                   When selected, users can register for events without logging in.
                 </Tooltip>
               </TooltipTrigger>
@@ -209,7 +216,7 @@ export const RegistrationConfigComponent: React.FC = () => {
                   >
                     <InfoCircle />
                   </ActionButton>
-                  <Tooltip variant="info">
+                  <Tooltip>
                     Contact host is optional.
                   </Tooltip>
                 </TooltipTrigger>
@@ -228,7 +235,7 @@ export const RegistrationConfigComponent: React.FC = () => {
         </div>
       </div>
       {/* RSVP Description */}
-      <View width="100%" marginTop="size-200">
+      <div style={{ width: '100%', marginTop: 16 }}>
         <RichTextEditor
           label="RSVP Description (Optional)"
           value={rsvpDescription}
@@ -236,9 +243,9 @@ export const RegistrationConfigComponent: React.FC = () => {
           height="200px"
           description="Add additional information about the RSVP process"
         />
-      </View>
+      </div>
       {/* Registration Fields Configuration */}
-      <View width="100%" marginTop="size-400">
+      <div style={{ width: '100%', marginTop: 32 }}>
         <RegistrationFieldsComponent
           cloudType={cloudType}
           eventType={isWebinar ? 'Virtual' : 'InPerson'}
@@ -251,7 +258,7 @@ export const RegistrationConfigComponent: React.FC = () => {
           onRegistrationTypeChange={handleRegistrationTypeChange}
           onMarketoFormUrlChange={handleMarketoFormUrlChange}
         />
-      </View>
+      </div>
     </div>
   )
 }

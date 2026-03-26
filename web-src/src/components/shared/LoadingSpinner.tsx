@@ -3,7 +3,7 @@
 */
 
 import React from 'react'
-import { Flex, ProgressCircle, Text } from '@adobe/react-spectrum'
+import { ProgressCircle, Text } from '@react-spectrum/s2'
 
 interface LoadingSpinnerProps {
   message?: string
@@ -15,17 +15,20 @@ export const LoadingSpinner: React.FC<LoadingSpinnerProps> = ({
   size = 'M'
 }) => {
   return (
-    <Flex
-      direction="column"
-      gap="size-200"
-      justifyContent="center"
-      alignItems="center"
-      height="100%"
-      minHeight="size-3000"
+    <div
+      style={{
+        display: 'flex',
+        flexDirection: 'column',
+        gap: 16,
+        justifyContent: 'center',
+        alignItems: 'center',
+        height: '100%',
+        minHeight: 240,
+      }}
     >
       <ProgressCircle size={size} aria-label="Loading" isIndeterminate />
       <Text>{message}</Text>
-    </Flex>
+    </div>
   )
 }
 
