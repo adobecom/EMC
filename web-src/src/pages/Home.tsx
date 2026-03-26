@@ -8,7 +8,6 @@ import {
   Heading,
   Text
 } from '@react-spectrum/s2'
-import { style } from '@react-spectrum/s2/style' with { type: 'macro' }
 import GraphBarChart from '@react-spectrum/s2/illustrations/gradient/generic1/GraphBarChart'
 import CalendarIllustration from '@react-spectrum/s2/illustrations/gradient/generic1/Calendar'
 import UserGroupIllustration from '@react-spectrum/s2/illustrations/gradient/generic1/UserGroup'

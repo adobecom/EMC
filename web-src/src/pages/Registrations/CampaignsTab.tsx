@@ -268,14 +268,6 @@ export const CampaignsTab: React.FC<CampaignsTabProps> = ({
               illustration={<ChannelIllustration aria-hidden />}
               title="No campaigns yet"
               description="Create campaigns to track registrations from different sources like email, social media, or partner promotions."
-              actions={
-                canWriteEvent ? (
-                  <Button variant="accent" onPress={handleCreateClick}>
-                    <Add />
-                    <Text>Add Campaign</Text>
-                  </Button>
-                ) : undefined
-              }
             />
           }
         />

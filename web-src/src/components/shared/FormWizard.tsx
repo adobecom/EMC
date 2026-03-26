@@ -10,8 +10,6 @@ import ChevronLeft from '@react-spectrum/s2/icons/ChevronLeft'
 import RocketQuickActions from '@react-spectrum/s2/icons/RocketQuickActions'
 import WebPage from '@react-spectrum/s2/icons/WebPage'
 import FileText from '@react-spectrum/s2/icons/FileText'
-import CheckmarkCircle from '@react-spectrum/s2/icons/CheckmarkCircle'
-import Lock from '@react-spectrum/s2/icons/Lock'
 import {
   LAYOUT_DIMENSIONS,
   FORM_WIZARD_FOOTER_STYLES,
@@ -60,9 +58,17 @@ interface FormWizardProps {
   headerActions?: React.ReactNode
 }
 
-/** Side nav: selected step background (Spectrum) */
-const SIDE_NAV_SELECTED_BG = 'var(--spectrum-global-color-blue-100)'
+/** Side nav: Dashboard row hover */
 const SIDE_NAV_HOVER_BG = 'var(--spectrum-global-color-gray-200)'
+
+/** Step row: 2px left pipe (active / hover); label inset always reserves this gutter */
+const SIDE_NAV_PIPE_WIDTH = 2
+const SIDE_NAV_PIPE_GAP = 8
+const SIDE_NAV_PIPE_LEFT = 12
+const SIDE_NAV_STEP_LABEL_INSET =
+  SIDE_NAV_PIPE_LEFT + SIDE_NAV_PIPE_WIDTH + SIDE_NAV_PIPE_GAP
+const SIDE_NAV_PIPE_HOVER = 'var(--spectrum-global-color-gray-400)'
+const SIDE_NAV_PIPE_ACTIVE = '#000000'
 
 export const FormWizard: React.FC<FormWizardProps> = ({
   steps,
@@ -83,6 +89,7 @@ export const FormWizard: React.FC<FormWizardProps> = ({
   const [currentStepIndex, setCurrentStepIndex] = useState(0)
   const [isNavigating, setIsNavigating] = useState(false)
   const [pendingAction, setPendingAction] = useState<'save' | 'publish' | null>(null)
+  const [sideNavStepHoverIndex, setSideNavStepHoverIndex] = useState<number | null>(null)
   const navigate = useNavigate()
 
   const currentStep = steps[currentStepIndex]
@@ -153,8 +160,7 @@ export const FormWizard: React.FC<FormWizardProps> = ({
     }
   }
 
-  const getStepStatus = (index: number): 'completed' | 'active' | 'locked' | 'available' => {
-    if (index < currentStepIndex && hasEventId) return 'completed'
+  const getStepStatus = (index: number): 'active' | 'locked' | 'available' => {
     if (index === currentStepIndex) return 'active'
     if (!isStepAccessible(index)) return 'locked'
     return 'available'
@@ -175,14 +181,7 @@ export const FormWizard: React.FC<FormWizardProps> = ({
         backgroundColor: COLORS.GRAY_100,
       }}
     >
-      {/* Top: header + Dashboard + Add Content — does not scroll */}
-      <div
-        style={{
-          flexShrink: 0,
-          padding: '24px 24px 8px 24px',
-          backgroundColor: COLORS.GRAY_100,
-        }}
-      >
+      <div style={{ padding: 24, flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0, overflow: 'auto' }}>
         <Text UNSAFE_style={{
           fontSize: '12px',
           fontWeight: 500,
@@ -228,117 +227,102 @@ export const FormWizard: React.FC<FormWizardProps> = ({
             </div>
           </button>
 
-          <button
-            type="button"
-            disabled
-            style={{
-              border: 'none',
-              background: COLORS.TRANSPARENT,
-              color: COLORS.GRAY_800,
-              padding: '8px 12px',
-              textAlign: 'left',
-              cursor: 'default',
-              borderRadius: '4px',
-              fontSize: '14px',
-              fontWeight: 400,
-              width: '100%',
-              marginBottom: 0,
-            }}
-          >
-            <div className={style({ display: 'flex', gap: 8, alignItems: 'center' })}>
-              <FileText styles={iconStyle({ color: 'gray'})} aria-hidden />
-              <Text>Add Content</Text>
+          <div>
+            <button
+              type="button"
+              disabled
+              style={{
+                border: 'none',
+                background: COLORS.TRANSPARENT,
+                color: COLORS.GRAY_800,
+                padding: '8px 12px',
+                textAlign: 'left',
+                cursor: 'default',
+                borderRadius: '4px',
+                fontSize: '14px',
+                fontWeight: 400,
+                width: '100%',
+                marginBottom: '8px'
+              }}
+            >
+              <div className={style({ display: 'flex', gap: 8, alignItems: 'center' })}>
+                <FileText styles={iconStyle({ color: 'gray'})} aria-hidden />
+                <Text>Add Content</Text>
+              </div>
+            </button>
+
+            <div className={style({ display: 'flex', flexDirection: 'column', gap: 4 })}>
+              {steps.map((step, index) => {
+                const status = getStepStatus(index)
+                const isActive = status === 'active'
+                const isLocked = status === 'locked'
+                const isDisabled = isLocked || isSubmitting || isNavigating
+                const showPipe =
+                  isActive || (!isDisabled && sideNavStepHoverIndex === index)
+                const pipeColor = isActive ? SIDE_NAV_PIPE_ACTIVE : SIDE_NAV_PIPE_HOVER
+
+                return (
+                  <button
+                    type="button"
+                    key={step.id}
+                    onClick={() => handleStepClick(index)}
+                    disabled={isDisabled}
+                    style={{
+                      border: 'none',
+                      background: COLORS.TRANSPARENT,
+                      color: isLocked ? COLORS.GRAY_600 : isActive ? COLORS.BLACK : COLORS.GRAY_800,
+                      padding: '8px 12px',
+                      paddingLeft: SIDE_NAV_PIPE_LEFT,
+                      textAlign: 'left',
+                      cursor: isDisabled ? 'not-allowed' : 'pointer',
+                      borderRadius: '4px',
+                      fontSize: '14px',
+                      fontWeight: isActive ? 700 : 400,
+                      opacity: isLocked ? 0.55 : 1,
+                      fontStyle: 'normal',
+                      width: '100%',
+                      position: 'relative',
+                      gap: 8,
+                    }}
+                    onMouseEnter={() => {
+                      if (!isDisabled) setSideNavStepHoverIndex(index)
+                    }}
+                    onMouseLeave={() => {
+                      setSideNavStepHoverIndex((prev) => (prev === index ? null : prev))
+                    }}
+                  >
+                    {showPipe && (
+                      <span
+                        aria-hidden
+                        style={{
+                          position: 'absolute',
+                          left: SIDE_NAV_PIPE_LEFT,
+                          top: '50%',
+                          transform: 'translateY(-50%)',
+                          width: SIDE_NAV_PIPE_WIDTH,
+                          height: '1em',
+                          backgroundColor: pipeColor,
+                          borderRadius: 0,
+                        }}
+                      />
+                    )}
+                    <span
+                      style={{
+                        display: 'block',
+                        paddingLeft: SIDE_NAV_STEP_LABEL_INSET,
+                      }}
+                    >
+                      <Text>{step.title}</Text>
+                    </span>
+                  </button>
+                )
+              })}
             </div>
-          </button>
+          </div>
         </div>
       </div>
 
-      {/* Middle: step list only — scrolls */}
-      <div
-        style={{
-          flex: 1,
-          minHeight: 0,
-          overflowY: 'auto',
-          padding: '0 24px 24px 24px',
-        }}
-      >
-        <div className={style({ display: 'flex', flexDirection: 'column', gap: 4 })}>
-          {steps.map((step, index) => {
-            const status = getStepStatus(index)
-            const isActive = status === 'active'
-            const isLocked = status === 'locked'
-            const isCompleted = status === 'completed'
-            const isDisabled = isLocked || isSubmitting || isNavigating
-
-            return (
-              <button
-                type="button"
-                key={step.id}
-                onClick={() => handleStepClick(index)}
-                disabled={isDisabled}
-                style={{
-                  border: 'none',
-                  background: isActive ? SIDE_NAV_SELECTED_BG : COLORS.TRANSPARENT,
-                  color: isLocked ? COLORS.GRAY_600 : COLORS.GRAY_800,
-                  padding: '8px 12px',
-                  paddingLeft: '40px',
-                  textAlign: 'left',
-                  cursor: isDisabled ? 'not-allowed' : 'pointer',
-                  borderRadius: '4px',
-                  fontSize: '14px',
-                  fontWeight: isActive ? 600 : 400,
-                  opacity: isLocked ? 0.6 : 1,
-                  transition: 'background-color 0.15s ease',
-                  width: '100%',
-                  position: 'relative',
-                  gap: 8,
-                }}
-                onMouseEnter={(e) => {
-                  if (!isActive && !isDisabled) {
-                    e.currentTarget.style.backgroundColor = SIDE_NAV_HOVER_BG
-                  }
-                }}
-                onMouseLeave={(e) => {
-                  if (!isActive) {
-                    e.currentTarget.style.backgroundColor = COLORS.TRANSPARENT
-                  } else {
-                    e.currentTarget.style.backgroundColor = SIDE_NAV_SELECTED_BG
-                  }
-                }}
-              >
-                <span style={{
-                  position: 'absolute',
-                  left: '12px',
-                  top: '50%',
-                  transform: 'translateY(-50%)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                }}>
-                  {isCompleted && (
-                    <CheckmarkCircle
-                      styles={iconStyle({ color: 'positive' })} aria-hidden />
-                  )}
-                  {isLocked && (
-                    <Lock
-                      styles={iconStyle({ color: 'gray'})} aria-hidden />
-                  )}
-                </span>
-                <Text>{step.title}</Text>
-              </button>
-            )
-          })}
-        </div>
-      </div>
-
-      {/* Bottom: progress — does not scroll */}
-      <div
-        style={{
-          flexShrink: 0,
-          padding: 24,
-          backgroundColor: COLORS.GRAY_100,
-        }}
-      >
+      <div style={{ padding: 24, flexShrink: 0 }}>
         <div className={style({ display: 'flex', flexDirection: 'column', gap: 8 })}>
           <Text UNSAFE_style={{ fontSize: '12px' }}>
             Step {currentStepIndex + 1} of {steps.length}

@@ -123,13 +123,13 @@ select {
 
 .nav-link:hover {
   color: var(--spectrum-global-color-gray-900);
-  background-color: var(--spectrum-global-color-gray-200);
+  background-color: var(--spectrum-global-color-gray-100);
 }
 
 .nav-link.is-selected {
-  color: var(--spectrum-global-color-blue-600);
-  border-bottom-color: var(--spectrum-global-color-blue-600);
-  background-color: var(--spectrum-global-color-gray-75);
+  color: var(--spectrum-global-color-gray-900);
+  border-bottom-color: #000000;
+  background-color: transparent;
 }
 
 /** Main scroll region below TopNav **/
