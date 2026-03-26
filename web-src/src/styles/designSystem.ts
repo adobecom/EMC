@@ -186,7 +186,7 @@ export const COLORS = {
 /**
  * Home page background: layered gradient over white (Figma)
  */
-export const HOME_PAGE_BACKGROUND =
+export const GRADIENT_BACKGROUND =
   'linear-gradient(180deg, rgba(252, 125, 1, 0.20) -36.63%, rgba(171, 162, 239, 0.20) 36.41%, rgba(236, 67, 71, 0.20) 85.8%), #FFF'
 
 /**

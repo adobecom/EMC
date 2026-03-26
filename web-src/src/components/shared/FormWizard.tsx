@@ -63,7 +63,7 @@ const SIDE_NAV_HOVER_BG = 'var(--spectrum-global-color-gray-200)'
 
 /** Step row: 2px left pipe (active / hover); label inset always reserves this gutter */
 const SIDE_NAV_PIPE_WIDTH = 2
-const SIDE_NAV_PIPE_GAP = 8
+const SIDE_NAV_PIPE_GAP = 14
 const SIDE_NAV_PIPE_LEFT = 12
 const SIDE_NAV_STEP_LABEL_INSET =
   SIDE_NAV_PIPE_LEFT + SIDE_NAV_PIPE_WIDTH + SIDE_NAV_PIPE_GAP
@@ -170,9 +170,6 @@ export const FormWizard: React.FC<FormWizardProps> = ({
     <div
       style={{
         width: LAYOUT_DIMENSIONS.SIDE_NAV_WIDTH,
-        borderRightWidth: 1,
-        borderRightStyle: 'solid',
-        borderRightColor: 'var(--spectrum-global-color-gray-300)',
         display: 'flex',
         flexDirection: 'column',
         minHeight: 0,

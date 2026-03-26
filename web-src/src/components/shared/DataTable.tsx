@@ -26,6 +26,8 @@ export interface TableColumn<T> {
   sortable?: boolean
   sortFn?: (a: T, b: T) => number
   isSticky?: boolean
+  /** Keep cell on one line (e.g. actions); default is wrap-friendly for stable column widths */
+  cellNoWrap?: boolean
 }
 
 export interface TableAction<T> {
@@ -223,7 +225,7 @@ export function DataTable<T extends Record<string, any>>({
   const allColumns = React.useMemo(() => {
     const cols = [...columns]
     if (actions && actions.length > 0) {
-      cols.push({ key: 'actions', name: 'Actions', sortable: false })
+      cols.push({ key: 'actions', name: 'Actions', sortable: false, cellNoWrap: true })
     }
     return cols
   }, [columns, actions])
@@ -337,7 +339,7 @@ export function DataTable<T extends Record<string, any>>({
                 <React.Fragment key={itemKey}>
                   <tr className={isExpanded ? 'expanded-parent' : ''}>
                     {isExpandable && (
-                      <td style={{ width: '40px', minWidth: '40px', padding: '0 8px', verticalAlign: 'middle' }}>
+                      <td className="data-table-td-nowrap" style={{ width: '40px', minWidth: '40px', padding: '0 8px', verticalAlign: 'middle' }}>
                         <ActionButton
                           isQuiet
                           onPress={() => handleToggleExpand(itemKey)}
@@ -351,10 +353,12 @@ export function DataTable<T extends Record<string, any>>({
                     {allColumns.map((column) => {
                       const minWidth = Math.max(column.width || 100, 100)
                       const stickyClass = column.isSticky ? getStickyClass(column.key) : ''
+                      const nowrapClass = column.cellNoWrap ? 'data-table-td-nowrap' : ''
+                      const cellClass = [stickyClass, nowrapClass].filter(Boolean).join(' ')
                       return (
                       <td
                         key={column.key}
-                        className={stickyClass}
+                        className={cellClass || undefined}
                         style={{
                           textAlign: column.key === 'actions' ? 'right' : 'left',
                           minWidth: `${minWidth}px`,

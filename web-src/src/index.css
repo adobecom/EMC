@@ -150,7 +150,7 @@ select {
   width: 100%;
   border-collapse: collapse;
   background-color: #FFFFFF;
-  table-layout: auto;
+  table-layout: fixed;
 }
 
 .custom-data-table thead tr {
@@ -186,7 +186,13 @@ select {
   padding: 16px;
   vertical-align: middle;
   background-color: #FFFFFF;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
+.custom-data-table td.data-table-td-nowrap {
   white-space: nowrap;
+  vertical-align: middle;
 }
 
 .custom-data-table th {

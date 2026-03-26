@@ -15,7 +15,7 @@ import Data from '@react-spectrum/s2/icons/Data'
 import { cachedApi } from '../../services/api'
 import { BlurredLoadingOverlay } from '../../components/shared'
 import { EventApiResponse, SeriesApiResponse } from '../../types/domain'
-import { COLORS, SPACING, TYPOGRAPHY } from '../../styles/designSystem'
+import { COLORS, GRADIENT_BACKGROUND, SPACING, TYPOGRAPHY } from '../../styles/designSystem'
 import { IMS } from '../../types'
 import { useSafeState, useRBACFilter, useHasPermission } from '../../hooks'
 import { useGroup } from '../../contexts/GroupContext'
@@ -418,8 +418,8 @@ export const OverviewDashboard: React.FC<OverviewDashboardProps> = () => {
   }
 
   return (
-    <div style={{ padding: 32, maxWidth: '1400px', margin: '0 auto' }}>
-      <div className={style({ display: 'flex', flexDirection: 'column', gap: 32 })}>
+    <div style={{ padding: 32, background: GRADIENT_BACKGROUND }}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 32, maxWidth: '1400px', margin: '0 auto' }}>
         {/* Header */}
         <div className={style({ display: 'flex', justifyContent: 'space-between', alignItems: 'center' })}>
           <div>

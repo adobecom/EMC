@@ -14,7 +14,7 @@ import UserGroupIllustration from '@react-spectrum/s2/illustrations/gradient/gen
 import MicrophoneIllustration from '@react-spectrum/s2/illustrations/gradient/generic1/Microphone'
 import LayersIllustration from '@react-spectrum/s2/illustrations/gradient/generic1/Layers'
 import DocumentIllustration from '@react-spectrum/s2/illustrations/gradient/generic1/Document'
-import { HOME_PAGE_BACKGROUND, LAYOUT_DIMENSIONS, SPACING } from '../styles/designSystem'
+import { GRADIENT_BACKGROUND, LAYOUT_DIMENSIONS, SPACING } from '../styles/designSystem'
 import { checkPermission } from '../hooks/useHasPermission'
 import { useGroup } from '../contexts/GroupContext'
 
@@ -135,7 +135,7 @@ export const Home: React.FC = () => {
     <div
       style={{
         minHeight: `calc(100vh - ${LAYOUT_DIMENSIONS.GNAV_HEIGHT}px)`,
-        background: HOME_PAGE_BACKGROUND,
+        background: GRADIENT_BACKGROUND,
         padding: `${SPACING.XL}px`,
         marginLeft: 'auto',
         marginRight: 'auto',
@@ -151,15 +151,6 @@ export const Home: React.FC = () => {
       }}>
         <div>
           <Heading level={1}>Event Management Console</Heading>
-          <Text
-            UNSAFE_style={{
-              color: 'var(--spectrum-global-color-gray-700)',
-              fontSize: 14,
-              marginTop: SPACING.XS,
-            }}
-          >
-            Adobe Experience Cloud application for managing events, series, and attendees.
-          </Text>
         </div>
 
         <div

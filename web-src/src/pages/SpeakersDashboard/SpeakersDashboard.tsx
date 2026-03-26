@@ -34,10 +34,10 @@ import Edit from '@react-spectrum/s2/icons/Edit'
 import RemoveCircle from '@react-spectrum/s2/icons/RemoveCircle'
 import Add from '@react-spectrum/s2/icons/Add'
 import Link from '@react-spectrum/s2/icons/Link'
-import User from '@react-spectrum/s2/icons/User'
 import { TableColumn } from '../../components/shared/DataTable'
-import { ResourceDashboardLayout, BlurredLoadingOverlay } from '../../components/shared'
+import { ResourceDashboardLayout, BlurredLoadingOverlay, ResourceEmptyState } from '../../components/shared'
 import MicrophoneIllustration from '@react-spectrum/s2/illustrations/linear/Microphone'
+import LayersIllustration from '@react-spectrum/s2/illustrations/linear/Layers'
 import { SeriesSpeaker, SeriesApiResponse, EventApiResponse } from '../../types/domain'
 import { apiService, cachedApi } from '../../services/api'
 import { IMS } from '../../types'
@@ -790,24 +790,16 @@ export const SpeakersDashboard: React.FC<SpeakersDashboardProps> = () => {
         {seriesSelectorHeader}
       </div>
 
-      {/* Speakers Table */}
-      {!selectedSeriesId ? (
+      {/* Speakers Table — avoid legacy empty UI under BlurredLoadingOverlay while series list loads */}
+      {isLoadingSeries ? (
+        <div style={{ minHeight: 480 }} aria-hidden />
+      ) : !selectedSeriesId ? (
         <div style={{ padding: 32 }}>
-          <div
-            style={{
-              display: 'flex',
-              flexDirection: 'column',
-              alignItems: 'center',
-              justifyContent: 'center',
-              minHeight: 240,
-              gap: 16,
-            }}
-          >
-            <User aria-hidden />
-            <Text UNSAFE_style={{ fontSize: '18px', color: 'var(--spectrum-global-color-gray-600)' }}>
-              Select a series to manage speakers
-            </Text>
-          </div>
+          <ResourceEmptyState
+            illustration={<LayersIllustration aria-hidden />}
+            title="No series available"
+            description="Create a series first, then you can add and manage speakers for it here."
+          />
         </div>
       ) : (
         <ResourceDashboardLayout

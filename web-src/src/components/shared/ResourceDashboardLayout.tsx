@@ -12,6 +12,7 @@ import { DataTable, TableColumn, TableAction } from './DataTable'
 import { ResourceEmptyState } from './ResourceEmptyState'
 import { LoadingSpinner } from './LoadingSpinner'
 import { debounceCancellable } from '../../services/cacheUtils'
+import { SPACING } from '../../styles/designSystem'
 
 interface ResourceDashboardLayoutProps<T> {
   // Header props
@@ -48,6 +49,9 @@ interface ResourceDashboardLayoutProps<T> {
   searchKeys?: (keyof T)[] | string[]
   searchFilter?: (item: T, query: string) => boolean
 
+  /** Shown after Refresh/Create, preceded by a vertical divider (e.g. filter trigger) */
+  toolbarEnd?: React.ReactNode
+
   // Expandable row support
   renderExpandedContent?: (item: T) => React.ReactNode
   expandedKeys?: Set<string>
@@ -75,6 +79,7 @@ export function ResourceDashboardLayout<T extends Record<string, any>>({
   searchPlaceholder = 'Search...',
   searchKeys = [],
   searchFilter,
+  toolbarEnd,
   renderExpandedContent,
   expandedKeys,
   onToggleExpand,
@@ -206,6 +211,23 @@ export function ResourceDashboardLayout<T extends Record<string, any>>({
                 <Button onPress={onCreate} variant="accent">
                   {createLabel}
                 </Button>
+              )}
+              {toolbarEnd && (
+                <>
+                  <div
+                    aria-hidden
+                    className={style({ flexShrink: 0 })}
+                    style={{
+                      width: 1,
+                      height: 28,
+                      marginLeft: SPACING.XS,
+                      marginRight: SPACING.XS,
+                      backgroundColor: 'var(--spectrum-global-color-gray-300)',
+                      alignSelf: 'center',
+                    }}
+                  />
+                  <div className={style({ display: 'flex', alignItems: 'center' })}>{toolbarEnd}</div>
+                </>
               )}
             </div>
           </div>

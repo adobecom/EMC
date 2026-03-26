@@ -199,7 +199,7 @@ CI/CD sets this at build time: `ENVIRONMENT: stage` in `deploy_stage.yml`, `ENVI
 - **TypeScript** for all new code — types in `types/` directory
 - **React Spectrum 2 first** — Follow `.cursor/rules/react-spectrum/react-spectrum-s2.mdc`; use `react-spectrum-v3.mdc` only when S2 has no equivalent
 - **UNSAFE_style** / **UNSAFE_className** for non-Spectrum styling (use sparingly)
-- **Design tokens** from `styles/designSystem.ts` — prefer over magic numbers
+- **Design tokens** from `styles/designSystem.ts` — prefer over magic numbers (exception: S2 `style()` macro needs literals only — see `react-spectrum-style-macro-s2.mdc` *Static evaluation*)
 - **Barrel exports** (`index.ts`) in every module directory
 - **No semicolons** in TypeScript files (project convention)
 

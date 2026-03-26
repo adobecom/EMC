@@ -82,7 +82,7 @@ Set by build-time `ENVIRONMENT` variable (not hostname-based). Values: `dev` (de
 - **Barrel exports** (`index.ts`) in every module directory
 - React Spectrum layout via `Flex`/`Grid`; use `onPress` not `onClick`
 - `UNSAFE_style` / `UNSAFE_className` for non-Spectrum styling (use sparingly)
-- Design tokens from `styles/designSystem.ts` — prefer over magic numbers
+- Design tokens from `styles/designSystem.ts` — prefer over magic numbers **except** in the S2 **`style()` macro**, which requires literals only (otherwise Parcel: *Could not statically evaluate macro argument* — see `.cursor/rules/react-spectrum/react-spectrum-style-macro-s2.mdc`)
 - Naming: PascalCase components, `use` prefix for hooks, UPPER_SNAKE_CASE for constants
 
 ## Routes

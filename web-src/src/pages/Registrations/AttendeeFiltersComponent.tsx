@@ -172,15 +172,14 @@ const FilterMenu: React.FC<FilterMenuProps> = ({ menu, selectedValues, onToggle 
   const [isExpanded, setIsExpanded] = React.useState(true)
 
   return (
-    <div>
+    <div className={style({ paddingInline: 12 })}>
       <ActionButton
         onPress={() => setIsExpanded(!isExpanded)}
         isQuiet
         UNSAFE_style={{
           width: '100%',
           justifyContent: 'space-between',
-          paddingLeft: 0,
-          paddingRight: 0
+          paddingInline: 0
         }}
       >
         <Text UNSAFE_style={{ fontWeight: 600, fontSize: '12px' }}>

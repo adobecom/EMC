@@ -19,6 +19,7 @@ import Edit from '@react-spectrum/s2/icons/Edit'
 ### Spectrum interaction and layout
 - Use `onPress` on Spectrum buttons/links (not `onClick`) unless working with plain DOM
 - Layout and spacing via the `style()` macro, plain `div`/`span` where appropriate, and S2 docs — avoid v3-only layout props
+- **`style()` macro:** only **literals** inside `style({ ... })` — no `SPACING.*` / `designSystem` imports (build error: *Could not statically evaluate macro argument*). See `react-spectrum-style-macro-s2.mdc` → *Static evaluation*.
 - Minimize `UNSAFE_style` / `UNSAFE_className`; comment when required
 - **S2 collections:** `<Picker>` / `<ComboBox>` use `<PickerItem id={}>` / `<ComboBoxItem>` per S2 APIs
 
