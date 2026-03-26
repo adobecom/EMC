@@ -325,6 +325,13 @@ const SeriesFormInner: React.FC<SeriesFormInnerProps> = ({ ims: _ims }) => {
     <div
       style={{
         backgroundColor: 'var(--spectrum-global-color-gray-100)',
+        display: 'flex',
+        flexDirection: 'column',
+        flex: 1,
+        minHeight: 0,
+        height: '100%',
+        alignSelf: 'stretch',
+        overflow: 'hidden',
       }}
     >
       <SingleStepFormLayout

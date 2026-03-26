@@ -4,7 +4,7 @@
 
 import React from 'react'
 import { Text, ProgressCircle } from '@react-spectrum/s2'
-import { Z_INDEX } from '../../styles/designSystem'
+import { COLORS, Z_INDEX } from '../../styles/designSystem'
 
 interface BlurredLoadingOverlayProps {
   /** When true, the overlay is visible */
@@ -49,7 +49,7 @@ export const BlurredLoadingOverlay: React.FC<BlurredLoadingOverlayProps> = ({
     >
       <div
         style={{
-          backgroundColor: 'var(--spectrum-gray-50)',
+          backgroundColor: `var(--spectrum-global-color-gray-50, ${COLORS.WHITE})`,
           padding: '32px',
           borderRadius: '8px',
           boxShadow: '0 8px 32px rgba(0, 0, 0, 0.2)',

@@ -7,7 +7,7 @@ import { TextField, Text, Heading, ActionButton } from '@react-spectrum/s2'
 import { Switch } from '@react-spectrum/s2'
 import { style } from "@react-spectrum/s2/style" with { type: "macro" }
 import Add from '@react-spectrum/s2/icons/Add'
-import Cancel from '@react-spectrum/s2/icons/Cancel'
+import RemoveCircle from '@react-spectrum/s2/icons/RemoveCircle'
 import { ImageUploader, RichTextEditor } from '../../components/shared'
 import { TYPOGRAPHY, COLORS } from '../../styles/designSystem'
 import { VenueData, EventApiResponse } from '../../types/domain'
@@ -552,7 +552,7 @@ export const VenueComponent: React.FC = () => {
     <div className={style({display: 'flex', flexDirection: 'column', gap: 24})}>
       {/* Section Heading */}
       <Heading level={3} UNSAFE_style={TYPOGRAPHY.COMPONENT_HEADING}>
-        Venue information<span style={{ color: COLORS.ADOBE_RED }}>*</span>
+        Venue information<span style={{ color: COLORS.RED_600 }}>*</span>
       </Heading>
 
       {/* Post-event visibility toggle */}
@@ -599,7 +599,7 @@ export const VenueComponent: React.FC = () => {
             padding: '10px 12px',
             fontSize: '14px',
             border: showVenueNameError
-              ? `2px solid ${COLORS.ADOBE_RED}` 
+              ? `2px solid ${COLORS.RED_600}` 
               : '1px solid #B8B8B8',
             borderRadius: '4px',
             backgroundColor: '#FFFFFF',
@@ -613,7 +613,7 @@ export const VenueComponent: React.FC = () => {
             id="venue-name-error"
             UNSAFE_style={{ 
               fontSize: '12px', 
-              color: COLORS.ADOBE_RED,
+              color: COLORS.RED_600,
               marginTop: '4px',
               display: 'block'
             }}
@@ -625,7 +625,7 @@ export const VenueComponent: React.FC = () => {
         {placesApiError && (
           <Text UNSAFE_style={{
             fontSize: '12px',
-            color: COLORS.ADOBE_RED,
+            color: COLORS.RED_600,
             marginTop: '4px',
             display: 'block'
           }}>
@@ -645,7 +645,7 @@ export const VenueComponent: React.FC = () => {
             marginLeft: '-8px'
           }}
         >
-          {showAlternativeNameField ? <Cancel /> : <Add />}
+          {showAlternativeNameField ? <RemoveCircle /> : <Add />}
           <Text UNSAFE_style={{ marginLeft: '4px', color: COLORS.GRAY_800 }}>
             {showAlternativeNameField 
               ? 'Remove alternative venue name' 

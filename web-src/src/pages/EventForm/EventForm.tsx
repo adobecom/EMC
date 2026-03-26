@@ -630,30 +630,7 @@ const EventFormInner: React.FC<EventFormInnerProps> = ({ ims: _ims }) => {
   }, [checkUrlPatternBeforeSave, saveDraft, persistToStorage, toast, isEditMode])
   
   /**
-   * Handle Next Step button click - saves to API + sessionStorage then advances
-   * Returns true on success (so FormWizard can advance), false on failure
-   */
-  const handleNextStep = useCallback(async (): Promise<boolean> => {
-    const { proceed, extraPayload } = await checkUrlPatternBeforeSave('save')
-    if (!proceed) return false
-
-    persistToStorage()
-    
-    const result = await saveDraft({
-      extraPayload,
-      onSuccess: () => {
-        toast.success('Progress saved', { duration: 2000 })
-      },
-      onError: (error) => {
-        console.error('Failed to save event:', error)
-      }
-    })
-    
-    return result.success
-  }, [checkUrlPatternBeforeSave, saveDraft, persistToStorage, toast])
-  
-  /**
-   * Handle Publish/Re-publish button click (last step completion)
+   * Handle Publish/Re-publish button click
    */
   const handleComplete = useCallback(async () => {
     const { proceed, extraPayload } = await checkUrlPatternBeforeSave('publish')
@@ -886,12 +863,22 @@ const EventFormInner: React.FC<EventFormInnerProps> = ({ ims: _ims }) => {
   const showFormatOverlay = !isFormatConfirmed && !isEditMode
 
   return (
-    <div style={{ backgroundColor: '#F5F5F5' }}>
+    <div
+      style={{
+        backgroundColor: '#F5F5F5',
+        display: 'flex',
+        flexDirection: 'column',
+        flex: 1,
+        minHeight: 0,
+        height: '100%',
+        alignSelf: 'stretch',
+        overflow: 'hidden',
+      }}
+    >
       <FormWizard
         steps={steps}
         onComplete={handleComplete}
         onSave={handleSave}
-        onNextStep={handleNextStep}
         onCancel={handleCancel}
         onPreview={handlePreview}
         isSubmitting={isSaving}

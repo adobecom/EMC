@@ -31,7 +31,7 @@ import {
 } from '@react-spectrum/s2'
 import { style } from "@react-spectrum/s2/style" with { type: "macro" }
 import Edit from '@react-spectrum/s2/icons/Edit'
-import Delete from '@react-spectrum/s2/icons/Delete'
+import RemoveCircle from '@react-spectrum/s2/icons/RemoveCircle'
 import Add from '@react-spectrum/s2/icons/Add'
 import Link from '@react-spectrum/s2/icons/Link'
 import User from '@react-spectrum/s2/icons/User'
@@ -607,7 +607,7 @@ export const SpeakersDashboard: React.FC<SpeakersDashboardProps> = () => {
             </MenuItem>
             {canDeleteEvent && (
               <MenuItem key="delete">
-                <Delete />
+                <RemoveCircle />
                 <Text>Delete Speaker</Text>
               </MenuItem>
             )}

@@ -11,7 +11,7 @@ import { TYPOGRAPHY, COLORS } from '../../styles/designSystem'
 import { speakerHasLocalization } from '../../utils/eventFormMappers'
 import Add from '@react-spectrum/s2/icons/Add'
 import AlertTriangle from '@react-spectrum/s2/icons/AlertTriangle'
-import Delete from '@react-spectrum/s2/icons/Delete'
+import RemoveCircle from '@react-spectrum/s2/icons/RemoveCircle'
 import Move from '@react-spectrum/s2/icons/Move'
 import { apiService, cachedApi } from '../../services/api'
 import { useToast } from '../../contexts'
@@ -465,7 +465,7 @@ export const SpeakersComponent: React.FC = () => {
                     <TooltipTrigger delay={0}>
                       <ActionButton isQuiet aria-label={`Missing ${locale} content`}>
                         <AlertTriangle
-                          UNSAFE_style={{ color: COLORS.ADOBE_RED }}
+                          UNSAFE_style={{ color: COLORS.RED_600 }}
                         />
                       </ActionButton>
                       <Tooltip>
@@ -508,7 +508,7 @@ export const SpeakersComponent: React.FC = () => {
               </Picker>
 
               <ActionButton onPress={() => removeProfile(index)} isQuiet aria-label="Remove speaker">
-                <Delete />
+                <RemoveCircle />
               </ActionButton>
             </div>
           </div>

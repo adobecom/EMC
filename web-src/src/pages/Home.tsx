@@ -3,7 +3,7 @@
 */
 
 import React from 'react'
-import { useNavigate } from 'react-router-dom'
+import { Link } from 'react-router-dom'
 import {
   Heading,
   Text
@@ -15,7 +15,7 @@ import UserGroupIllustration from '@react-spectrum/s2/illustrations/gradient/gen
 import MicrophoneIllustration from '@react-spectrum/s2/illustrations/gradient/generic1/Microphone'
 import LayersIllustration from '@react-spectrum/s2/illustrations/gradient/generic1/Layers'
 import DocumentIllustration from '@react-spectrum/s2/illustrations/gradient/generic1/Document'
-import { SPACING } from '../styles/designSystem'
+import { HOME_PAGE_BACKGROUND, LAYOUT_DIMENSIONS, SPACING } from '../styles/designSystem'
 import { checkPermission } from '../hooks/useHasPermission'
 import { useGroup } from '../contexts/GroupContext'
 
@@ -81,56 +81,44 @@ const destinations: NavDestination[] = [
 ]
 
 /**
- * Navigation card component
+ * Navigation card — horizontal layout: 48px illustration, title 16px bold, body 14px regular
  */
 interface NavCardProps {
   destination: NavDestination
-  onClick: () => void
 }
 
-const NavCard: React.FC<NavCardProps> = ({ destination, onClick }) => {
+const NavCard: React.FC<NavCardProps> = ({ destination }) => {
   return (
-    <div
-      style={{
-        backgroundColor: 'var(--spectrum-gray-75)',
-        border: '1px solid var(--spectrum-gray-200)',
-        borderRadius: '8px',
-        padding: '24px',
-        cursor: 'pointer',
-        transition: 'all 0.2s ease',
-        minHeight: '160px',
-        position: 'relative',
-        overflow: 'hidden'
-      }}
-      className="nav-card"
-    >
-      <div onClick={onClick} style={{ height: '100%' }}>
-        <div className={style({ display: 'flex', flexDirection: 'column', gap: 16 })}
-          style={{ height: '100%' }}
-        >
-          {/* Icon */}
-          <div style={{ color: 'var(--spectrum-gray-700)' }}>
-            {destination.icon}
-          </div>
-
-          {/* Title */}
-          <Heading level={3}>
-            {destination.title}
-          </Heading>
-
-          {/* Description */}
-          <Text
-            UNSAFE_style={{
-              color: 'var(--spectrum-gray-700)',
-              fontSize: '14px',
-              lineHeight: '1.5'
-            }}
-          >
-            {destination.description}
-          </Text>
-        </div>
+    <Link to={destination.path} className="nav-card">
+      <div className="home-nav-card-icon">
+        {destination.icon}
       </div>
-    </div>
+      <div className="home-nav-card-body">
+        <Heading
+          level={3}
+          UNSAFE_style={{
+            fontSize: 16,
+            fontWeight: 700,
+            lineHeight: 1.25,
+            margin: 0,
+            color: 'var(--spectrum-global-color-gray-900)',
+          }}
+        >
+          {destination.title}
+        </Heading>
+        <Text
+          UNSAFE_style={{
+            fontSize: 14,
+            fontWeight: 400,
+            lineHeight: 1.5,
+            margin: 0,
+            color: 'var(--spectrum-global-color-gray-700)',
+          }}
+        >
+          {destination.description}
+        </Text>
+      </div>
+    </Link>
   )
 }
 
@@ -138,7 +126,6 @@ const NavCard: React.FC<NavCardProps> = ({ destination, onClick }) => {
  * Home page - Card-based navigation hub
  */
 export const Home: React.FC = () => {
-  const navigate = useNavigate()
   const { permissions } = useGroup()
 
   const visibleDestinations = destinations.filter(dest =>
@@ -146,34 +133,47 @@ export const Home: React.FC = () => {
   )
 
   return (
-    <div style={{ padding: '32px', maxWidth: '1400px', marginLeft: 'auto', marginRight: 'auto' }}>
-      <div className={style({ display: 'flex', flexDirection: 'column', gap: 32 })}>
-        {/* Header */}
+    <div
+      style={{
+        minHeight: `calc(100vh - ${LAYOUT_DIMENSIONS.GNAV_HEIGHT}px)`,
+        background: HOME_PAGE_BACKGROUND,
+        padding: `${SPACING.XL}px`,
+        marginLeft: 'auto',
+        marginRight: 'auto',
+        boxSizing: 'border-box',
+      }}
+    >
+      <div style={{
+        display: 'flex',
+        flexDirection: 'column',
+        gap: 32,
+        maxWidth: 1400,
+        margin: '0 auto',
+      }}>
         <div>
-          <Heading level={1}>Event Management Cloud</Heading>
+          <Heading level={1}>Event Management Console</Heading>
           <Text
             UNSAFE_style={{
-              color: 'var(--spectrum-gray-700)',
-              fontSize: '14px'
+              color: 'var(--spectrum-global-color-gray-700)',
+              fontSize: 14,
+              marginTop: SPACING.XS,
             }}
           >
             Adobe Experience Cloud application for managing events, series, and attendees.
           </Text>
         </div>
 
-        {/* Navigation Cards Grid */}
         <div
           style={{
             display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))',
-            gap: `${SPACING.MD}px`
+            gridTemplateColumns: 'repeat(auto-fill, minmax(min(100%, 400px), 1fr))',
+            gap: `${SPACING.MD}px`,
           }}
         >
           {visibleDestinations.map(dest => (
             <NavCard
               key={dest.id}
               destination={dest}
-              onClick={() => navigate(dest.path)}
             />
           ))}
         </div>

@@ -112,49 +112,8 @@ export const LAYOUT_DIMENSIONS = {
 } as const
 
 // ============================================================
-// Calculated Heights
-// ============================================================
-
-/**
- * Safe area height for form layouts
- * Accounts for global nav (56px) + form action bar (60px) + padding (5px)
- */
-export const SAFE_AREA_HEIGHT = LAYOUT_DIMENSIONS.GNAV_HEIGHT + LAYOUT_DIMENSIONS.ACTION_BAR_HEIGHT + 5 // 121px
-
-/**
- * Content area height for pages with both gnav and action bar
- */
-export const FORM_CONTENT_HEIGHT = `calc(100vh - ${SAFE_AREA_HEIGHT}px)`
-
-/**
- * Full viewport height minus just the gnav
- */
-export const CONTENT_HEIGHT_NO_ACTION_BAR = `calc(100vh - ${LAYOUT_DIMENSIONS.GNAV_HEIGHT}px)`
-
-// ============================================================
 // Common Style Objects
 // ============================================================
-
-/**
- * Sticky positioning for side navigation
- */
-export const SIDE_NAV_STICKY_STYLES = {
-  alignSelf: 'flex-start' as const,
-  display: 'flex' as const,
-  flexDirection: 'column' as const,
-  overflow: 'auto' as const,
-  minHeight: FORM_CONTENT_HEIGHT,
-  maxHeight: FORM_CONTENT_HEIGHT,
-}
-
-/**
- * Scrollable content area with safe height
- */
-export const SCROLLABLE_CONTENT_STYLES = {
-  minHeight: FORM_CONTENT_HEIGHT,
-  maxHeight: FORM_CONTENT_HEIGHT,
-  overflow: 'auto' as const,
-}
 
 /**
  * Sticky global navigation
@@ -163,19 +122,6 @@ export const STICKY_GNAV_STYLES = {
   position: 'sticky' as const,
   top: 0,
   zIndex: 1000,
-}
-
-/**
- * Fixed action bar at bottom
- */
-export const FIXED_ACTION_BAR_STYLES = {
-  position: 'fixed' as const,
-  bottom: 0,
-  left: 0,
-  right: 0,
-  height: `${LAYOUT_DIMENSIONS.ACTION_BAR_HEIGHT}px`,
-  zIndex: 100,
-  boxShadow: '0 -2px 8px rgba(0, 0, 0, 0.15)',
 }
 
 // ============================================================
@@ -204,8 +150,6 @@ export const Z_INDEX = {
  * Adobe brand colors and semantic colors
  */
 export const COLORS = {
-  ADOBE_RED: '#EB1000',
-  
   // Grays
   GRAY_100: 'var(--spectrum-global-color-gray-100)',
   GRAY_200: 'var(--spectrum-global-color-gray-200)',
@@ -239,6 +183,27 @@ export const COLORS = {
   STATUS_CANCELLED: '#D7373F',
 } as const
 
+/**
+ * Home page background: layered gradient over white (Figma)
+ */
+export const HOME_PAGE_BACKGROUND =
+  'linear-gradient(180deg, rgba(252, 125, 1, 0.20) -36.63%, rgba(171, 162, 239, 0.20) 36.41%, rgba(236, 67, 71, 0.20) 85.8%), #FFF'
+
+/**
+ * Form wizard footer: flex child at bottom of column layout (not fixed).
+ * Pair with a parent flex column + scrollable main so heights need no calc(100vh).
+ */
+export const FORM_WIZARD_FOOTER_STYLES = {
+  display: 'flex' as const,
+  alignItems: 'center' as const,
+  flexShrink: 0,
+  width: '100%' as const,
+  minHeight: `${LAYOUT_DIMENSIONS.ACTION_BAR_HEIGHT}px`,
+  backgroundColor: COLORS.BLACK,
+  boxShadow: '0 -2px 8px rgba(0, 0, 0, 0.15)',
+  zIndex: Z_INDEX.ACTION_BAR,
+}
+
 // ============================================================
 // Typography
 // ============================================================
@@ -258,7 +223,7 @@ export const TYPOGRAPHY = {
    * Used in FormWizard for step titles like "Add Content", "Additional Info"
    */
   STEP_HEADING: {
-    color: COLORS.ADOBE_RED,
+    color: COLORS.GRAY_800,
     fontFamily: FONT_FAMILY_SANS,
     fontSize: '24px',
     lineHeight: '30px',

@@ -19,7 +19,7 @@
 
 ## Overview
 
-The Event Form is a comprehensive, production-ready multi-step wizard for creating and editing events in the EMC (Event Management Cloud) application. Built with React, TypeScript, and Adobe Spectrum components, it provides a modern, type-safe alternative to the v1 reference HTML implementation.
+The Event Form is a comprehensive, production-ready multi-step wizard for creating and editing events in the EMC (Event Management Console) application. Built with React, TypeScript, and Adobe Spectrum components, it provides a modern, type-safe alternative to the v1 reference HTML implementation.
 
 ### Key Features
 

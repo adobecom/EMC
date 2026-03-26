@@ -109,7 +109,7 @@ export const AttendeeFiltersComponent: React.FC<AttendeeFiltersComponentProps> =
   }, [filterMenus, onFiltersChange])
 
   return (
-    <div style={{ backgroundColor: 'var(--spectrum-gray-100)', borderRadius: '8px', padding: '16px', minWidth: '200px', maxWidth: '220px', alignSelf: 'flex-start' }}>
+    <div style={{ backgroundColor: 'var(--spectrum-global-color-gray-100)', borderRadius: '8px', padding: '16px', minWidth: '200px', maxWidth: '220px', alignSelf: 'flex-start' }}>
       <div className={style({display: 'flex', flexDirection: 'column', gap: 16})}>
         {/* Back Button */}
         {onBackClick && backLabel && (

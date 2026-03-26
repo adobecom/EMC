@@ -6,17 +6,15 @@ import React, { useState, useCallback } from 'react'
 import { Button, Text, ProgressBar, Heading } from '@react-spectrum/s2'
 import { style, iconStyle } from '@react-spectrum/s2/style' with { type: 'macro' }
 import { useNavigate } from 'react-router-dom'
-import ChevronLeft from '@react-spectrum/s2/icons/ChevronLeft';
-import ChevronRight from '@react-spectrum/s2/icons/ChevronRight';
-import RocketQuickActions from '@react-spectrum/s2/icons/RocketQuickActions';
-import WebPage from '@react-spectrum/s2/icons/WebPage';
-import FileText from '@react-spectrum/s2/icons/FileText';
-import CheckmarkCircle from '@react-spectrum/s2/icons/CheckmarkCircle';
-import Lock from '@react-spectrum/s2/icons/Lock';
+import ChevronLeft from '@react-spectrum/s2/icons/ChevronLeft'
+import RocketQuickActions from '@react-spectrum/s2/icons/RocketQuickActions'
+import WebPage from '@react-spectrum/s2/icons/WebPage'
+import FileText from '@react-spectrum/s2/icons/FileText'
+import CheckmarkCircle from '@react-spectrum/s2/icons/CheckmarkCircle'
+import Lock from '@react-spectrum/s2/icons/Lock'
 import {
-  SIDE_NAV_STICKY_STYLES,
-  SCROLLABLE_CONTENT_STYLES,
-  FIXED_ACTION_BAR_STYLES,
+  LAYOUT_DIMENSIONS,
+  FORM_WIZARD_FOOTER_STYLES,
   COLORS,
   TYPOGRAPHY
 } from '../../styles/designSystem'
@@ -37,12 +35,10 @@ export type EventStatus = 'draft' | 'published' | 'archived' | 'cancelled' | str
 
 interface FormWizardProps {
   steps: WizardStep[]
-  /** Called when the final publish/re-publish button is clicked */
+  /** Called when Publish / Re-publish is clicked */
   onComplete: () => Promise<void> | void
   /** Called when Save button is clicked - should save without advancing */
   onSave?: () => Promise<boolean> | boolean
-  /** Called when navigating to next step - should save before advancing */
-  onNextStep?: () => Promise<boolean> | boolean
   onCancel?: () => void
   /** Called when a preview is requested */
   onPreview?: (previewType: 'pre-event' | 'post-event') => void
@@ -64,11 +60,14 @@ interface FormWizardProps {
   headerActions?: React.ReactNode
 }
 
+/** Side nav: selected step background (Spectrum) */
+const SIDE_NAV_SELECTED_BG = 'var(--spectrum-global-color-blue-100)'
+const SIDE_NAV_HOVER_BG = 'var(--spectrum-global-color-gray-200)'
+
 export const FormWizard: React.FC<FormWizardProps> = ({
   steps,
   onComplete,
   onSave,
-  onNextStep,
   onCancel,
   onPreview,
   isSubmitting = false,
@@ -83,66 +82,47 @@ export const FormWizard: React.FC<FormWizardProps> = ({
 }) => {
   const [currentStepIndex, setCurrentStepIndex] = useState(0)
   const [isNavigating, setIsNavigating] = useState(false)
+  const [pendingAction, setPendingAction] = useState<'save' | 'publish' | null>(null)
   const navigate = useNavigate()
 
   const currentStep = steps[currentStepIndex]
   const isFirstStep = currentStepIndex === 0
-  const isLastStep = currentStepIndex === steps.length - 1
   const progress = ((currentStepIndex + 1) / steps.length) * 100
 
   // Determine if a step is accessible
   const isStepAccessible = useCallback((stepIndex: number): boolean => {
-    // Step 0 is always accessible
     if (stepIndex === 0) return true
-
-    // Other steps require an eventId (saved at least once) and having reached that step
     return hasEventId && stepIndex <= maxStepReached
   }, [hasEventId, maxStepReached])
 
-  // Update max step reached when advancing
-  const updateMaxStep = useCallback((newStepIndex: number) => {
-    if (newStepIndex > maxStepReached) {
-      onMaxStepChange?.(newStepIndex)
-    }
-  }, [maxStepReached, onMaxStepChange])
-
-  const handleNext = async () => {
-    if (isSubmitting || isNavigating) return
-
-    if (!isLastStep) {
-      // For non-last steps: save and advance
-      setIsNavigating(true)
-      try {
-        if (onNextStep) {
-          const success = await onNextStep()
-          if (success) {
-            const nextStep = currentStepIndex + 1
-            setCurrentStepIndex(nextStep)
-            updateMaxStep(nextStep)
-          }
-        } else {
-          // No save callback, just advance
-          const nextStep = currentStepIndex + 1
-          setCurrentStepIndex(nextStep)
-          updateMaxStep(nextStep)
-        }
-      } finally {
-        setIsNavigating(false)
-      }
-    } else {
-      // Last step: publish/re-publish
-      onComplete()
+  const handlePublish = async () => {
+    if (isSubmitting || isNavigating || currentStep.isValid === false) return
+    setPendingAction('publish')
+    try {
+      await Promise.resolve(onComplete())
+    } finally {
+      setPendingAction(null)
     }
   }
 
   const handleSave = async () => {
     if (isSubmitting || isNavigating || !onSave) return
 
+    setPendingAction('save')
     setIsNavigating(true)
     try {
-      await onSave()
+      const result = await onSave()
+      const ok = result !== false
+      if (ok && onMaxStepChange) {
+        const capped = steps.length - 1
+        const nextMax = Math.min(capped, Math.max(maxStepReached, currentStepIndex + 1))
+        if (nextMax > maxStepReached) {
+          onMaxStepChange(nextMax)
+        }
+      }
     } finally {
       setIsNavigating(false)
+      setPendingAction(null)
     }
   }
 
@@ -154,16 +134,12 @@ export const FormWizard: React.FC<FormWizardProps> = ({
 
   const handleStepClick = (stepIndex: number) => {
     if (isSubmitting || isNavigating) return
-
-    // Check if step is accessible
     if (!isStepAccessible(stepIndex)) return
-
     setCurrentStepIndex(stepIndex)
   }
 
   const handleDashboardClick = () => {
     if (isSubmitting || isNavigating) return
-
     if (onCancel) {
       onCancel()
     } else {
@@ -174,12 +150,9 @@ export const FormWizard: React.FC<FormWizardProps> = ({
   const handlePreviewClick = (type: 'pre-event' | 'post-event') => {
     if (onPreview) {
       onPreview(type)
-    } else {
-      console.log(`Preview ${type}`)
     }
   }
 
-  // Determine step status for side nav
   const getStepStatus = (index: number): 'completed' | 'active' | 'locked' | 'available' => {
     if (index < currentStepIndex && hasEventId) return 'completed'
     if (index === currentStepIndex) return 'active'
@@ -190,14 +163,26 @@ export const FormWizard: React.FC<FormWizardProps> = ({
   const renderSideNav = () => (
     <div
       style={{
-        width: 240,
+        width: LAYOUT_DIMENSIONS.SIDE_NAV_WIDTH,
         borderRightWidth: 1,
         borderRightStyle: 'solid',
         borderRightColor: 'var(--spectrum-global-color-gray-300)',
-        ...SIDE_NAV_STICKY_STYLES,
+        display: 'flex',
+        flexDirection: 'column',
+        minHeight: 0,
+        height: '100%',
+        overflow: 'hidden',
+        backgroundColor: COLORS.GRAY_100,
       }}
     >
-      <div style={{ padding: 24, flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
+      {/* Top: header + Dashboard + Add Content — does not scroll */}
+      <div
+        style={{
+          flexShrink: 0,
+          padding: '24px 24px 8px 24px',
+          backgroundColor: COLORS.GRAY_100,
+        }}
+      >
         <Text UNSAFE_style={{
           fontSize: '12px',
           fontWeight: 500,
@@ -210,8 +195,8 @@ export const FormWizard: React.FC<FormWizardProps> = ({
         </Text>
 
         <div className={style({ display: 'flex', flexDirection: 'column', gap: 8 })}>
-          {/* Dashboard Link */}
           <button
+            type="button"
             onClick={handleDashboardClick}
             disabled={isSubmitting || isNavigating}
             style={{
@@ -225,30 +210,16 @@ export const FormWizard: React.FC<FormWizardProps> = ({
               fontSize: '14px',
               fontWeight: 400,
               opacity: (isSubmitting || isNavigating) ? 0.5 : 1,
-              transition: 'all 0.2s ease',
+              transition: 'background-color 0.15s ease',
               width: '100%',
             }}
             onMouseEnter={(e) => {
               if (!isSubmitting && !isNavigating) {
-                e.currentTarget.style.backgroundColor = 'rgba(235, 16, 0, 0.1)'
-                e.currentTarget.style.color = COLORS.ADOBE_RED
+                e.currentTarget.style.backgroundColor = SIDE_NAV_HOVER_BG
               }
             }}
             onMouseLeave={(e) => {
-              if (!isSubmitting && !isNavigating) {
-                e.currentTarget.style.backgroundColor = COLORS.TRANSPARENT
-                e.currentTarget.style.color = COLORS.GRAY_800
-              }
-            }}
-            onMouseDown={(e) => {
-              if (!isSubmitting && !isNavigating) {
-                e.currentTarget.style.backgroundColor = 'rgba(235, 16, 0, 0.2)'
-              }
-            }}
-            onMouseUp={(e) => {
-              if (!isSubmitting && !isNavigating) {
-                e.currentTarget.style.backgroundColor = 'rgba(235, 16, 0, 0.1)'
-              }
+              e.currentTarget.style.backgroundColor = COLORS.TRANSPARENT
             }}
           >
             <div className={style({ display: 'flex', gap: 8, alignItems: 'center' })}>
@@ -257,121 +228,121 @@ export const FormWizard: React.FC<FormWizardProps> = ({
             </div>
           </button>
 
-          {/* Add Content Section */}
-          <div>
-            <button
-              disabled
-              style={{
-                border: 'none',
-                background: COLORS.TRANSPARENT,
-                color: COLORS.GRAY_800,
-                padding: '8px 12px',
-                textAlign: 'left',
-                cursor: 'default',
-                borderRadius: '4px',
-                fontSize: '14px',
-                fontWeight: 400,
-                transition: 'all 0.2s ease',
-                width: '100%',
-                marginBottom: '8px'
-              }}
-            >
-              <div className={style({ display: 'flex', gap: 8, alignItems: 'center' })}>
-                <FileText styles={iconStyle({ color: 'gray'})} aria-hidden />
-                <Text>Add Content</Text>
-              </div>
-            </button>
-
-            <div className={style({ display: 'flex', flexDirection: 'column', gap: 4 })}>
-              {steps.map((step, index) => {
-                const status = getStepStatus(index)
-                const isActive = status === 'active'
-                const isLocked = status === 'locked'
-                const isCompleted = status === 'completed'
-                const isDisabled = isLocked || isSubmitting || isNavigating
-
-                return (
-                  <button
-                    key={step.id}
-                    onClick={() => handleStepClick(index)}
-                    disabled={isDisabled}
-                    style={{
-                      border: 'none',
-                      background: isActive ? COLORS.ADOBE_RED : COLORS.TRANSPARENT,
-                      color: isActive ? COLORS.WHITE : isLocked ? COLORS.GRAY_600 : COLORS.GRAY_800,
-                      padding: '8px 12px',
-                      paddingLeft: '40px',
-                      textAlign: 'left',
-                      cursor: isDisabled ? 'not-allowed' : 'pointer',
-                      borderRadius: '4px',
-                      fontSize: '14px',
-                      fontWeight: isActive ? 500 : 400,
-                      opacity: isLocked ? 0.6 : 1,
-                      transition: 'all 0.2s ease',
-                      width: '100%',
-                      position: 'relative',
-                      gap: 8,
-                    }}
-                    onMouseEnter={(e) => {
-                      if (!isActive && !isDisabled) {
-                        e.currentTarget.style.backgroundColor = 'rgba(235, 16, 0, 0.1)'
-                        e.currentTarget.style.color = COLORS.ADOBE_RED
-                      }
-                    }}
-                    onMouseLeave={(e) => {
-                      if (!isActive) {
-                        e.currentTarget.style.backgroundColor = COLORS.TRANSPARENT
-                        e.currentTarget.style.color = isLocked ? COLORS.GRAY_600 : COLORS.GRAY_800
-                      }
-                    }}
-                    onMouseDown={(e) => {
-                      if (!isActive && !isDisabled) {
-                        e.currentTarget.style.backgroundColor = 'rgba(235, 16, 0, 0.2)'
-                      }
-                    }}
-                    onMouseUp={(e) => {
-                      if (!isActive && !isDisabled) {
-                        e.currentTarget.style.backgroundColor = 'rgba(235, 16, 0, 0.1)'
-                      }
-                    }}
-                  >
-                    {/* Status indicator */}
-                    <span style={{
-                      position: 'absolute',
-                      left: '12px',
-                      top: '50%',
-                      transform: 'translateY(-50%)',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                    }}>
-                      {isCompleted && (
-                        <CheckmarkCircle
-                          styles={iconStyle({ color: 'positive' })} aria-hidden />
-                      )}
-                      {isLocked && (
-                        <Lock
-                          styles={iconStyle({ color: 'gray'})} aria-hidden />
-                      )}
-                    </span>
-                    <Text>{step.title}</Text>
-                  </button>
-                )
-              })}
+          <button
+            type="button"
+            disabled
+            style={{
+              border: 'none',
+              background: COLORS.TRANSPARENT,
+              color: COLORS.GRAY_800,
+              padding: '8px 12px',
+              textAlign: 'left',
+              cursor: 'default',
+              borderRadius: '4px',
+              fontSize: '14px',
+              fontWeight: 400,
+              width: '100%',
+              marginBottom: 0,
+            }}
+          >
+            <div className={style({ display: 'flex', gap: 8, alignItems: 'center' })}>
+              <FileText styles={iconStyle({ color: 'gray'})} aria-hidden />
+              <Text>Add Content</Text>
             </div>
-          </div>
+          </button>
         </div>
       </div>
 
-      {/* Progress indicator at bottom */}
-      <div style={{ padding: 24 }}>
+      {/* Middle: step list only — scrolls */}
+      <div
+        style={{
+          flex: 1,
+          minHeight: 0,
+          overflowY: 'auto',
+          padding: '0 24px 24px 24px',
+        }}
+      >
+        <div className={style({ display: 'flex', flexDirection: 'column', gap: 4 })}>
+          {steps.map((step, index) => {
+            const status = getStepStatus(index)
+            const isActive = status === 'active'
+            const isLocked = status === 'locked'
+            const isCompleted = status === 'completed'
+            const isDisabled = isLocked || isSubmitting || isNavigating
+
+            return (
+              <button
+                type="button"
+                key={step.id}
+                onClick={() => handleStepClick(index)}
+                disabled={isDisabled}
+                style={{
+                  border: 'none',
+                  background: isActive ? SIDE_NAV_SELECTED_BG : COLORS.TRANSPARENT,
+                  color: isLocked ? COLORS.GRAY_600 : COLORS.GRAY_800,
+                  padding: '8px 12px',
+                  paddingLeft: '40px',
+                  textAlign: 'left',
+                  cursor: isDisabled ? 'not-allowed' : 'pointer',
+                  borderRadius: '4px',
+                  fontSize: '14px',
+                  fontWeight: isActive ? 600 : 400,
+                  opacity: isLocked ? 0.6 : 1,
+                  transition: 'background-color 0.15s ease',
+                  width: '100%',
+                  position: 'relative',
+                  gap: 8,
+                }}
+                onMouseEnter={(e) => {
+                  if (!isActive && !isDisabled) {
+                    e.currentTarget.style.backgroundColor = SIDE_NAV_HOVER_BG
+                  }
+                }}
+                onMouseLeave={(e) => {
+                  if (!isActive) {
+                    e.currentTarget.style.backgroundColor = COLORS.TRANSPARENT
+                  } else {
+                    e.currentTarget.style.backgroundColor = SIDE_NAV_SELECTED_BG
+                  }
+                }}
+              >
+                <span style={{
+                  position: 'absolute',
+                  left: '12px',
+                  top: '50%',
+                  transform: 'translateY(-50%)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}>
+                  {isCompleted && (
+                    <CheckmarkCircle
+                      styles={iconStyle({ color: 'positive' })} aria-hidden />
+                  )}
+                  {isLocked && (
+                    <Lock
+                      styles={iconStyle({ color: 'gray'})} aria-hidden />
+                  )}
+                </span>
+                <Text>{step.title}</Text>
+              </button>
+            )
+          })}
+        </div>
+      </div>
+
+      {/* Bottom: progress — does not scroll */}
+      <div
+        style={{
+          flexShrink: 0,
+          padding: 24,
+          backgroundColor: COLORS.GRAY_100,
+        }}
+      >
         <div className={style({ display: 'flex', flexDirection: 'column', gap: 8 })}>
-          <div className={style({ display: 'flex', justifyContent: 'space-between' })}>
-            <Text UNSAFE_style={{ fontSize: '12px' }}>
-              Step {currentStepIndex + 1} of {steps.length}
-            </Text>
-            <Text UNSAFE_style={{ fontSize: '12px' }}>{Math.round(progress)}%</Text>
-          </div>
+          <Text UNSAFE_style={{ fontSize: '12px' }}>
+            Step {currentStepIndex + 1} of {steps.length}
+          </Text>
           <ProgressBar
             label="Progress"
             value={progress}
@@ -392,61 +363,64 @@ export const FormWizard: React.FC<FormWizardProps> = ({
     </div>
   )
 
-  const renderActionBar = () => {
-    const getNextButtonIcon = () => {
-      if (isLastStep) {
-        return <RocketQuickActions styles={iconStyle({ color: 'white'})} aria-hidden />
-      }
-      return <ChevronRight styles={iconStyle({ color: 'white'})} aria-hidden />
+  const getPublishLabel = () => {
+    if (pendingAction === 'publish') {
+      return isPublished ? 'Re-publishing...' : 'Publishing...'
     }
+    return isPublished ? 'Re-publish event' : 'Publish event'
+  }
 
-    const getNextButtonText = () => {
-      if (isSubmitting) {
-        return isLastStep ? 'Publishing...' : 'Saving...'
-      }
-      if (isNavigating) {
-        return 'Saving...'
-      }
-      if (isLastStep) {
-        return isPublished ? 'Re-publish event' : 'Publish event'
-      }
-      return 'Next step'
-    }
+  const isActionDisabled = currentStep.isValid === false || isSubmitting || isNavigating
+  const saveLabel = pendingAction === 'save' ? 'Saving...' : 'Save'
 
-    const isActionDisabled = currentStep.isValid === false || isSubmitting || isNavigating
+  const actionBarRowStyle: React.CSSProperties = {
+    display: 'flex',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    width: '100%',
+    minWidth: 0,
+    flex: 1,
+    boxSizing: 'border-box',
+    marginInlineStart: 'var(--spectrum-global-dimension-size-400)',
+    marginInlineEnd: 'var(--spectrum-global-dimension-size-400)',
+  }
 
-    return (
-      <div
-        style={{
-          ...FIXED_ACTION_BAR_STYLES,
-          backgroundColor: COLORS.ADOBE_RED,
-        }}
-      >
+  const renderActionBar = () => (
+    <div style={FORM_WIZARD_FOOTER_STYLES}>
+      <div style={actionBarRowStyle}>
+        <div style={{ flexShrink: 0 }}>
+          <Button
+            variant="secondary"
+            fillStyle="outline"
+            staticColor="white"
+            onPress={handleBack}
+            isDisabled={isFirstStep || isSubmitting || isNavigating}
+          >
+            <ChevronLeft />
+          </Button>
+        </div>
+
         <div
-          className={style({ display: 'flex', justifyContent: 'space-between', alignItems: 'center', height: '[100%]' })}
-          style={{ marginInlineStart: 'var(--spectrum-global-dimension-size-400)', marginInlineEnd: 'var(--spectrum-global-dimension-size-400)' }}
+          className={style({ display: 'flex', alignItems: 'center' })}
+          style={{
+            justifyContent: 'flex-end',
+            flexWrap: 'wrap',
+            gap: 'var(--spectrum-global-dimension-size-200)',
+            minWidth: 0,
+            flexShrink: 1,
+          }}
         >
-          {/* Left: Back button */}
-          <div>
-            <Button
-              variant="secondary"
-              fillStyle="outline"
-              staticColor="white"
-              onPress={handleBack}
-              isDisabled={isFirstStep || isSubmitting || isNavigating}
-            >
-              <ChevronLeft />
-            </Button>
-          </div>
-
-          {/* Right: Action buttons */}
-          <div className={style({ display: 'flex', alignItems: 'center' })}>
-            {/* Preview buttons - only show if event has been saved */}
-            {hasEventId && (
-              <div className={style({ display: 'flex', gap: 8, alignItems: 'center' })}>
+          {hasEventId && (
+            <>
+              <div
+                className={style({ display: 'flex', gap: 8, alignItems: 'center' })}
+                style={{ flexWrap: 'wrap' }}
+              >
                 <Button
                   variant="secondary"
                   fillStyle="fill"
+                  staticColor="white"
                   onPress={() => handlePreviewClick('pre-event')}
                   isDisabled={isSubmitting || isNavigating}
                 >
@@ -456,6 +430,7 @@ export const FormWizard: React.FC<FormWizardProps> = ({
                 <Button
                   variant="secondary"
                   fillStyle="fill"
+                  staticColor="white"
                   onPress={() => handlePreviewClick('post-event')}
                   isDisabled={isSubmitting || isNavigating}
                 >
@@ -463,54 +438,47 @@ export const FormWizard: React.FC<FormWizardProps> = ({
                   <Text>Post-event</Text>
                 </Button>
               </div>
-            )}
-
-            {/* Vertical Divider */}
-            {hasEventId && (
               <div
                 style={{
                   width: 1,
                   height: 32,
                   backgroundColor: COLORS.WHITE,
                   opacity: 0.3,
-                  marginLeft: 80,
-                  marginRight: 80,
+                  flexShrink: 0,
                 }}
+                aria-hidden
               />
-            )}
+            </>
+          )}
 
-            {/* Save and Next buttons */}
-            <div className={style({ display: 'flex', gap: 8, alignItems: 'center' })}>
-              <Button
-                variant="secondary"
-                fillStyle="outline"
-                staticColor="white"
-                onPress={handleSave}
-                isDisabled={isActionDisabled || !onSave}
-              >
-                Save
-              </Button>
-              <Button
-                variant="primary"
-                fillStyle="fill"
-                staticColor="black"
-                onPress={handleNext}
-                isDisabled={isActionDisabled}
-              >
-                <Text>{getNextButtonText()}</Text>
-                {getNextButtonIcon()}
-              </Button>
-            </div>
+          <div className={style({ display: 'flex', gap: 8, alignItems: 'center' })}>
+            <Button
+              variant="secondary"
+              fillStyle="outline"
+              staticColor="white"
+              onPress={handleSave}
+              isDisabled={isActionDisabled || !onSave}
+            >
+              {saveLabel}
+            </Button>
+            <Button
+              variant="accent"
+              fillStyle="fill"
+              staticColor="white"
+              onPress={handlePublish}
+              isDisabled={isActionDisabled || pendingAction === 'publish'}
+            >
+              <Text>{getPublishLabel()}</Text>
+              <RocketQuickActions styles={iconStyle({ color: 'white'})} aria-hidden />
+            </Button>
           </div>
         </div>
       </div>
-    )
-  }
+    </div>
+  )
 
-  // Determine the display status - use provided status, or derive from isPublished
   const displayStatus = eventStatus || (isPublished ? 'published' : 'draft')
 
-  // Status badge styling based on status
   const getStatusBadgeStyles = (status: string): { dotColor: string; textColor: string; bgColor: string; borderColor: string } => {
     const statusStyles: Record<string, { dotColor: string; textColor: string; bgColor: string; borderColor: string }> = {
       draft: {
@@ -546,9 +514,7 @@ export const FormWizard: React.FC<FormWizardProps> = ({
 
   const mainContent = (
     <div>
-      {/* Step title */}
       <div style={{ marginBottom: 24 }}>
-        {/* Event type label */}
         {eventTypeLabel && (
           <Text
             UNSAFE_style={{
@@ -563,11 +529,9 @@ export const FormWizard: React.FC<FormWizardProps> = ({
           </Text>
         )}
 
-        {/* Heading row with status badge and optional header actions */}
         <div className={style({ display: 'flex', alignItems: 'center', gap: 32 })}>
           <Heading level={2} UNSAFE_style={TYPOGRAPHY.STEP_HEADING}>{currentStep.title}</Heading>
 
-          {/* Status badge */}
           <div
             style={{
               display: 'inline-flex',
@@ -579,7 +543,6 @@ export const FormWizard: React.FC<FormWizardProps> = ({
               flexShrink: 0,
             }}
           >
-            {/* Status dot */}
             <span
               style={{
                 width: '10px',
@@ -600,43 +563,59 @@ export const FormWizard: React.FC<FormWizardProps> = ({
             </Text>
           </div>
 
-          {/* Spacer to push header actions to the right */}
           {headerActions ? <div style={{ flex: 1 }} /> : null}
-
-          {/* Optional header actions (e.g., history button) */}
           {headerActions}
         </div>
       </div>
 
-      {/* Step content */}
       <div style={{ marginTop: 24, marginBottom: 32 }}>{currentStep.component}</div>
     </div>
   )
 
+  const shellStyle: React.CSSProperties = {
+    display: 'flex',
+    flexDirection: 'column',
+    flex: 1,
+    minHeight: 0,
+    height: '100%',
+    width: '100%',
+    alignSelf: 'stretch',
+  }
+
+  const bodyRowStyle: React.CSSProperties = {
+    display: 'flex',
+    flex: 1,
+    minHeight: 0,
+    overflow: 'hidden',
+  }
+
+  const mainColumnStyle: React.CSSProperties = {
+    flex: 1,
+    minHeight: 0,
+    overflow: 'auto',
+    padding: 32,
+  }
+
   if (showSideNav) {
     return (
-      <>
-        <div className={style({ display: 'flex', gap: 0 })}>
+      <div style={shellStyle}>
+        <div style={bodyRowStyle}>
           {renderSideNav()}
-          <div
-            style={{
-              ...SCROLLABLE_CONTENT_STYLES,
-              flex: 1,
-              padding: 32,
-            }}
-          >
+          <div style={mainColumnStyle}>
             {mainContent}
           </div>
         </div>
         {renderActionBar()}
-      </>
+      </div>
     )
   }
 
   return (
-    <>
-      <div style={SCROLLABLE_CONTENT_STYLES}>{mainContent}</div>
+    <div style={shellStyle}>
+      <div style={{ ...bodyRowStyle, flexDirection: 'column' }}>
+        <div style={{ ...mainColumnStyle, flex: 1 }}>{mainContent}</div>
+      </div>
       {renderActionBar()}
-    </>
+    </div>
   )
 }

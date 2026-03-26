@@ -12,7 +12,6 @@ import React, { useState, useCallback, useMemo, useEffect } from 'react'
 import { Badge, Button, ButtonGroup, TextField, Picker, PickerItem, ComboBox, ComboBoxItem, Text, DialogTrigger, Dialog, Content, Heading, Switch, ActionButton, AlertDialog } from "@react-spectrum/s2"
 import { style } from "@react-spectrum/s2/style" with { type: "macro" }
 import EditIcon from "@react-spectrum/s2/icons/Edit"
-import DeleteIcon from "@react-spectrum/s2/icons/Delete"
 import Add from "@react-spectrum/s2/icons/Add"
 import UserAdd from "@react-spectrum/s2/icons/UserAdd"
 import RemoveCircle from "@react-spectrum/s2/icons/RemoveCircle"
@@ -626,7 +625,7 @@ export const ScopeGroupManagement: React.FC<ScopeGroupManagementProps> = () => {
           )}
           {canDeleteGroup && (
             <ActionButton isQuiet aria-label="Delete group" onPress={() => setGroupToDelete(item)}>
-              <DeleteIcon />
+              <RemoveCircle />
             </ActionButton>
           )}
         </div>
@@ -806,12 +805,12 @@ export const ScopeGroupManagement: React.FC<ScopeGroupManagementProps> = () => {
                       setScopeFilterText('')
                     }}
                   >
-                    <DeleteIcon />
+                    <RemoveCircle />
                     <Text>Clear</Text>
                   </Button>
                   {canDeleteScope && selectedScope.type === 'team' && (
                     <Button size="S" variant="negative" fillStyle="outline" onPress={() => setScopeToDelete(selectedScope)}>
-                      <DeleteIcon />
+                      <RemoveCircle />
                       <Text>Delete Scope</Text>
                     </Button>
                   )}

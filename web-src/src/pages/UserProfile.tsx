@@ -35,7 +35,7 @@ interface InfoItemProps {
 const InfoItem: React.FC<InfoItemProps> = ({ label, value, isMonospace = false }) => (
   <div
     style={{
-      backgroundColor: 'var(--spectrum-gray-75)',
+      backgroundColor: 'var(--spectrum-global-color-gray-75)',
       padding: '12px',
       borderRadius: '4px'
     }}
@@ -45,7 +45,7 @@ const InfoItem: React.FC<InfoItemProps> = ({ label, value, isMonospace = false }
         UNSAFE_style={{
           fontSize: '11px',
           fontWeight: 600,
-          color: 'var(--spectrum-gray-600)',
+          color: 'var(--spectrum-global-color-gray-600)',
           textTransform: 'uppercase',
           letterSpacing: '0.5px'
         }}
@@ -79,8 +79,8 @@ interface SectionCardProps {
 const SectionCard: React.FC<SectionCardProps> = ({ icon, title, description, children }) => (
   <div
     style={{
-      backgroundColor: 'var(--spectrum-gray-75)',
-      border: '1px solid var(--spectrum-gray-200)',
+      backgroundColor: 'var(--spectrum-global-color-gray-75)',
+      border: '1px solid var(--spectrum-global-color-gray-200)',
       borderRadius: '8px',
       padding: '24px',
       marginBottom: '24px'
@@ -127,10 +127,10 @@ interface RoleData {
 const RoleItem: React.FC<{ role: RoleData; index: number }> = ({ role, index }) => (
   <div
     style={{
-      backgroundColor: 'var(--spectrum-gray-75)',
+      backgroundColor: 'var(--spectrum-global-color-gray-75)',
       borderRadius: '4px',
       padding: '16px',
-      borderLeft: '3px solid var(--spectrum-blue-400)'
+      borderLeft: '3px solid var(--spectrum-global-color-blue-400)'
     }}
   >
     <div className={style({ display: 'flex', flexDirection: 'column', gap: 8 })}>
@@ -144,9 +144,9 @@ const RoleItem: React.FC<{ role: RoleData; index: number }> = ({ role, index }) 
           <Text
             UNSAFE_style={{
               fontSize: '11px',
-              color: 'var(--spectrum-blue-600)',
+              color: 'var(--spectrum-global-color-blue-600)',
               fontFamily: 'monospace',
-              backgroundColor: 'var(--spectrum-blue-100)',
+              backgroundColor: 'var(--spectrum-global-color-blue-100)',
               padding: '2px 8px',
               borderRadius: '4px'
             }}
@@ -159,7 +159,7 @@ const RoleItem: React.FC<{ role: RoleData; index: number }> = ({ role, index }) 
         <Text
           UNSAFE_style={{
             fontSize: '13px',
-            color: 'var(--spectrum-gray-700)',
+            color: 'var(--spectrum-global-color-gray-700)',
             lineHeight: '1.5'
           }}
         >
@@ -192,10 +192,10 @@ const ProductContextItem: React.FC<{ context: ProductContext; index: number }> =
   return (
     <div
       style={{
-        backgroundColor: 'var(--spectrum-gray-75)',
+        backgroundColor: 'var(--spectrum-global-color-gray-75)',
         borderRadius: '4px',
         padding: '16px',
-        borderLeft: `3px solid ${ctx.statusCode === 'ACTIVE' ? 'var(--spectrum-green-500)' : 'var(--spectrum-gray-400)'}`
+        borderLeft: `3px solid ${ctx.statusCode === 'ACTIVE' ? 'var(--spectrum-global-color-green-500)' : 'var(--spectrum-global-color-gray-400)'}`
       }}
     >
       <div className={style({ display: 'flex', flexDirection: 'column', gap: 8 })}>
@@ -210,12 +210,12 @@ const ProductContextItem: React.FC<{ context: ProductContext; index: number }> =
               UNSAFE_style={{
                 fontSize: '11px',
                 color: ctx.statusCode === 'ACTIVE'
-                  ? 'var(--spectrum-green-700)'
-                  : 'var(--spectrum-gray-600)',
+                  ? 'var(--spectrum-global-color-green-700)'
+                  : 'var(--spectrum-global-color-gray-600)',
                 fontFamily: 'monospace',
                 backgroundColor: ctx.statusCode === 'ACTIVE'
-                  ? 'var(--spectrum-green-100)'
-                  : 'var(--spectrum-gray-200)',
+                  ? 'var(--spectrum-global-color-green-100)'
+                  : 'var(--spectrum-global-color-gray-200)',
                 padding: '2px 8px',
                 borderRadius: '4px'
               }}
@@ -231,7 +231,7 @@ const ProductContextItem: React.FC<{ context: ProductContext; index: number }> =
             <Text
               UNSAFE_style={{
                 fontSize: '12px',
-                color: 'var(--spectrum-gray-600)',
+                color: 'var(--spectrum-global-color-gray-600)',
                 fontFamily: 'monospace'
               }}
             >
@@ -239,12 +239,12 @@ const ProductContextItem: React.FC<{ context: ProductContext; index: number }> =
             </Text>
           )}
           {ctx.serviceLevel && (
-            <Text UNSAFE_style={{ fontSize: '12px', color: 'var(--spectrum-gray-600)' }}>
+            <Text UNSAFE_style={{ fontSize: '12px', color: 'var(--spectrum-global-color-gray-600)' }}>
               Level: {ctx.serviceLevel}
             </Text>
           )}
           {ctx.geo && (
-            <Text UNSAFE_style={{ fontSize: '12px', color: 'var(--spectrum-gray-600)' }}>
+            <Text UNSAFE_style={{ fontSize: '12px', color: 'var(--spectrum-global-color-gray-600)' }}>
               Region: {ctx.geo}
             </Text>
           )}
@@ -260,7 +260,7 @@ const ProductContextItem: React.FC<{ context: ProductContext; index: number }> =
 const TagBadge: React.FC<{ tag: string }> = ({ tag }) => (
   <div
     style={{
-      backgroundColor: 'var(--spectrum-gray-200)',
+      backgroundColor: 'var(--spectrum-global-color-gray-200)',
       borderRadius: '4px',
       padding: '4px 8px'
     }}
@@ -334,7 +334,7 @@ export const UserProfile: React.FC<UserProfileProps> = ({ ims }) => {
         <Heading level={1}>User Profile</Heading>
         <Text
           UNSAFE_style={{
-            color: 'var(--spectrum-gray-700)',
+            color: 'var(--spectrum-global-color-gray-700)',
             fontSize: '16px'
           }}
         >
@@ -345,8 +345,8 @@ export const UserProfile: React.FC<UserProfileProps> = ({ ims }) => {
       {/* Profile Header Card with Avatar */}
       <div
         style={{
-          backgroundColor: 'var(--spectrum-gray-75)',
-          border: '1px solid var(--spectrum-gray-200)',
+          backgroundColor: 'var(--spectrum-global-color-gray-75)',
+          border: '1px solid var(--spectrum-global-color-gray-200)',
           borderRadius: '8px',
           padding: '32px',
           marginBottom: '24px'
@@ -366,7 +366,7 @@ export const UserProfile: React.FC<UserProfileProps> = ({ ims }) => {
                   height: '80px',
                   borderRadius: '50%',
                   objectFit: 'cover',
-                  border: '3px solid var(--spectrum-gray-300)'
+                  border: '3px solid var(--spectrum-global-color-gray-300)'
                 }}
               />
             ) : (
@@ -374,7 +374,7 @@ export const UserProfile: React.FC<UserProfileProps> = ({ ims }) => {
                 style={{
                   width: '80px',
                   height: '80px',
-                  backgroundColor: 'var(--spectrum-gray-300)',
+                  backgroundColor: 'var(--spectrum-global-color-gray-300)',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
@@ -394,12 +394,12 @@ export const UserProfile: React.FC<UserProfileProps> = ({ ims }) => {
               {profile.displayName || profile.name || 'Unknown User'}
             </Heading>
             {profile.email && (
-              <Text UNSAFE_style={{ fontSize: '16px', color: 'var(--spectrum-gray-700)' }}>
+              <Text UNSAFE_style={{ fontSize: '16px', color: 'var(--spectrum-global-color-gray-700)' }}>
                 {profile.email}
               </Text>
             )}
             {(profile.first_name || profile.last_name) && profile.displayName !== `${profile.first_name} ${profile.last_name}` && (
-              <Text UNSAFE_style={{ fontSize: '14px', color: 'var(--spectrum-gray-600)' }}>
+              <Text UNSAFE_style={{ fontSize: '14px', color: 'var(--spectrum-global-color-gray-600)' }}>
                 {profile.first_name} {profile.last_name}
               </Text>
             )}
@@ -407,9 +407,9 @@ export const UserProfile: React.FC<UserProfileProps> = ({ ims }) => {
               <Text
                 UNSAFE_style={{
                   fontSize: '12px',
-                  color: 'var(--spectrum-gray-600)',
+                  color: 'var(--spectrum-global-color-gray-600)',
                   fontFamily: 'monospace',
-                  backgroundColor: 'var(--spectrum-gray-200)',
+                  backgroundColor: 'var(--spectrum-global-color-gray-200)',
                   padding: '2px 8px',
                   borderRadius: '4px',
                   width: 'fit-content'
@@ -528,15 +528,15 @@ export const UserProfile: React.FC<UserProfileProps> = ({ ims }) => {
       {/* Footer Note */}
       <div
         style={{
-          border: '1px solid var(--spectrum-gray-300)',
+          border: '1px solid var(--spectrum-global-color-gray-300)',
           borderRadius: '4px',
           padding: '16px',
-          backgroundColor: 'var(--spectrum-gray-75)',
+          backgroundColor: 'var(--spectrum-global-color-gray-75)',
           marginTop: '24px'
         }}
       >
         <div className={style({ display: 'flex', flexDirection: 'row', alignItems: 'start', gap: 16 })}>
-          <div style={{ color: 'var(--spectrum-blue-600)', flexShrink: 0, marginTop: '2px' }}>
+          <div style={{ color: 'var(--spectrum-global-color-blue-600)', flexShrink: 0, marginTop: '2px' }}>
             <Key />
           </div>
           <div>

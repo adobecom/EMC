@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-EMC (Event Management Cloud) is an **Adobe Experience Cloud (ExC) Shell** SPA built on **Adobe App Builder**. It manages events, series, speakers, sponsors, venues, and attendees. **There is no backend in this repo** — the frontend calls external Adobe APIs (ESP and ESL) directly.
+EMC (Event Management Console) is an **Adobe Experience Cloud (ExC) Shell** SPA built on **Adobe App Builder**. It manages events, series, speakers, sponsors, venues, and attendees. **There is no backend in this repo** — the frontend calls external Adobe APIs (ESP and ESL) directly.
 
 ## Commands
 

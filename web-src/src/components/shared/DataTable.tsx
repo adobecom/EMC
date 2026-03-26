@@ -9,7 +9,7 @@ import Sort from "@react-spectrum/s2/icons/Sort"
 import SortUp from "@react-spectrum/s2/icons/SortUp"
 import SortDown from "@react-spectrum/s2/icons/SortDown"
 import Edit from '@react-spectrum/s2/icons/Edit'
-import Delete from '@react-spectrum/s2/icons/Delete'
+import RemoveCircle from '@react-spectrum/s2/icons/RemoveCircle'
 import Visibility from '@react-spectrum/s2/icons/Visibility'
 import ChevronDown from '@react-spectrum/s2/icons/ChevronDown'
 import ChevronLeft from '@react-spectrum/s2/icons/ChevronLeft'
@@ -51,7 +51,7 @@ interface DataTableProps<T> {
 const iconMap = {
   view: Visibility,
   edit: Edit,
-  delete: Delete
+  delete: RemoveCircle
 }
 
 export function DataTable<T extends Record<string, any>>({

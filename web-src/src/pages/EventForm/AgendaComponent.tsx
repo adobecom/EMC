@@ -8,9 +8,8 @@ import { style } from '@react-spectrum/s2/style' with { type: 'macro' }
 import { Time } from '@internationalized/date'
 import { parseDateTime, CalendarDateTime } from '@internationalized/date'
 import Add from "@react-spectrum/s2/icons/Add"
-import Delete from '@react-spectrum/s2/icons/Delete'
 import Edit from '@react-spectrum/s2/icons/Edit'
-import Cancel from '@react-spectrum/s2/icons/Cancel'
+import RemoveCircle from '@react-spectrum/s2/icons/RemoveCircle'
 import Move from '@react-spectrum/s2/icons/Move'
 import ChevronDown from '@react-spectrum/s2/icons/ChevronDown'
 // @ts-ignore - uuid types not installed
@@ -459,7 +458,7 @@ export const AgendaComponent: React.FC = () => {
 
       {/* Agenda Items - Empty State */}
       {agendaItems.length === 0 && (
-        <div style={{ padding: '32px', backgroundColor: 'var(--spectrum-gray-100)', borderRadius: '4px', textAlign: 'center' }}>
+        <div style={{ padding: '32px', backgroundColor: 'var(--spectrum-global-color-gray-100)', borderRadius: '4px', textAlign: 'center' }}>
           <div className={style({display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 16})}>
             <Text>Create a new time slot to add to your agenda</Text>
             <Button
@@ -552,7 +551,7 @@ export const AgendaComponent: React.FC = () => {
                     isQuiet
                     aria-label="Remove"
                   >
-                    <Cancel />
+                    <RemoveCircle />
                   </ActionButton>
                   <ActionButton
                     onPress={() => handleToggleEdit(index)}
@@ -609,7 +608,7 @@ export const AgendaComponent: React.FC = () => {
                 onPress={() => removeAgendaItem(index)}
                 aria-label="Delete"
               >
-                <Delete />
+                <RemoveCircle />
               </ActionButton>
             </div>
 
@@ -704,9 +703,9 @@ export const AgendaComponent: React.FC = () => {
           onPress={addAgendaItem}
           styles={style({ width: '[100%]' })}
           UNSAFE_style={{
-            backgroundColor: 'var(--spectrum-gray-200)',
+            backgroundColor: 'var(--spectrum-global-color-gray-200)',
             border: 'none',
-            color: 'var(--spectrum-gray-800)',
+            color: 'var(--spectrum-global-color-gray-800)',
             justifyContent: 'start',
             paddingLeft: 16,
           }}

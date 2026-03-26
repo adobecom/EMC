@@ -13,7 +13,7 @@ import Preview from "@react-spectrum/s2/icons/Preview"
 import Copy from "@react-spectrum/s2/icons/Copy"
 import Edit from "@react-spectrum/s2/icons/Edit"
 import Duplicate from "@react-spectrum/s2/icons/Duplicate"
-import Delete from "@react-spectrum/s2/icons/Delete"
+import RemoveCircle from "@react-spectrum/s2/icons/RemoveCircle"
 import GlobeGrid from "@react-spectrum/s2/icons/GlobeGrid"
 import Location from "@react-spectrum/s2/icons/Location"
 import { getEventTypeOptions, EventType } from '../../config/eventTypeConfig'
@@ -853,7 +853,7 @@ export const EventsDashboard: React.FC<EventsDashboardProps> = () => {
             )}
             {canDeleteEvent && (
               <MenuItem id="delete" textValue="Delete">
-                <Delete />
+                <RemoveCircle />
                 <Text slot="label">Delete</Text>
               </MenuItem>
             )}

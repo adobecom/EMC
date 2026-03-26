@@ -6,7 +6,7 @@ import React, { useState, useCallback, useMemo, useEffect } from 'react'
 import { Badge, Button, ButtonGroup, Text, TextField, DialogTrigger, Dialog, Content, Heading, Checkbox, AlertDialog } from '@react-spectrum/s2'
 import { style } from '@react-spectrum/s2/style' with { type: 'macro' }
 import EditS2 from "@react-spectrum/s2/icons/Edit"
-import DeleteS2 from "@react-spectrum/s2/icons/Delete"
+import RemoveCircle from "@react-spectrum/s2/icons/RemoveCircle"
 import { useApi } from '../../contexts/ApiContext'
 import { useToast } from '../../contexts'
 import { IMS } from '../../types'
@@ -235,7 +235,7 @@ export const RoleManagement: React.FC<RoleManagementProps> = () => {
           )}
           {canDelete && (
             <Button size="S" variant="negative" fillStyle="outline" onPress={() => setRoleToDelete(item)}>
-              <DeleteS2 />
+              <RemoveCircle />
               <Text>Delete</Text>
             </Button>
           )}

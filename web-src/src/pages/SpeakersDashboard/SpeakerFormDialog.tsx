@@ -29,7 +29,7 @@ import {
 } from '@react-spectrum/s2'
 import { style } from '@react-spectrum/s2/style' with { type: 'macro' }
 import Add from '@react-spectrum/s2/icons/Add'
-import Delete from '@react-spectrum/s2/icons/Delete'
+import RemoveCircle from '@react-spectrum/s2/icons/RemoveCircle'
 import OpenIn from '@react-spectrum/s2/icons/OpenIn'
 import { SpeakerDashboardItem } from './SpeakersDashboard'
 import { SocialLinkFormData } from '../../types/domain'
@@ -295,7 +295,7 @@ export const SpeakerFormDialog: React.FC<SpeakerFormDialogProps> = ({
                               />
 
                               <ActionButton onPress={() => handleRemoveSocialLink(index)} isQuiet>
-                                <Delete />
+                                <RemoveCircle />
                               </ActionButton>
                             </div>
                           )

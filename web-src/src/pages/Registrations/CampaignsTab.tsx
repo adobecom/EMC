@@ -7,7 +7,7 @@ import { Button, ButtonGroup, TextField, Picker, PickerItem, DialogTrigger, Dial
 import { style } from "@react-spectrum/s2/style" with { type: "macro" }
 import Add from '@react-spectrum/s2/icons/Add'
 import Edit from '@react-spectrum/s2/icons/Edit'
-import Delete from '@react-spectrum/s2/icons/Delete'
+import RemoveCircle from '@react-spectrum/s2/icons/RemoveCircle'
 import Copy from '@react-spectrum/s2/icons/Copy'
 import type { EventApiResponse } from '../../types/domain'
 import type { Campaign, CampaignFormData, CampaignStatus } from '../../types/campaign'
@@ -210,7 +210,7 @@ export const CampaignsTab: React.FC<CampaignsTabProps> = ({
               onPress={() => setCampaignToDelete(campaign)}
               aria-label="Delete campaign"
             >
-              <Delete />
+              <RemoveCircle />
             </ActionButton>
           )}
         </div>
@@ -231,7 +231,7 @@ export const CampaignsTab: React.FC<CampaignsTabProps> = ({
   return (
     <div>
       {/* Stats Bar */}
-      <div style={{ backgroundColor: 'var(--spectrum-gray-100)', padding: '24px', borderRadius: '8px', marginBottom: '24px' }}>
+      <div style={{ backgroundColor: 'var(--spectrum-global-color-gray-100)', padding: '24px', borderRadius: '8px', marginBottom: '24px' }}>
         <div className={style({display: 'flex', gap: 48, flexWrap: 'wrap'})}>
           <StatItem label="Total Campaigns" value={stats.totalCampaigns} />
           <StatItem label="Active" value={stats.activeCampaigns} />

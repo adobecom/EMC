@@ -18,7 +18,7 @@ import FileText from '@react-spectrum/s2/icons/FileText'
 import Tools from '@react-spectrum/s2/icons/Tools'
 import Data from '@react-spectrum/s2/icons/Data'
 import Key from '@react-spectrum/s2/icons/Key'
-import Cancel from '@react-spectrum/s2/icons/Cancel'
+import Checkmark from '@react-spectrum/s2/icons/Checkmark'
 
 /**
  * Documentation section configuration
@@ -142,7 +142,7 @@ const documentationSections: DocSection[] = [
   },
   {
     id: 'testing',
-    icon: <Cancel />,
+    icon: <Checkmark />,
     title: 'Testing',
     description: 'Testing strategies and patterns',
     docs: [
@@ -193,7 +193,7 @@ const DocSectionComponent: React.FC<DocSectionComponentProps> = ({
             {isExpanded ? <ChevronDown /> : <ChevronRight />}
           </ActionButton>
           <div
-            style={{ color: 'var(--spectrum-gray-700)', flexShrink: 0, cursor: 'pointer' }}
+            style={{ color: 'var(--spectrum-global-color-gray-700)', flexShrink: 0, cursor: 'pointer' }}
             onClick={onToggle}
           >
             {section.icon}
@@ -214,7 +214,7 @@ const DocSectionComponent: React.FC<DocSectionComponentProps> = ({
             <Text
               UNSAFE_style={{
                 fontSize: '12px',
-                color: 'var(--spectrum-gray-600)',
+                color: 'var(--spectrum-global-color-gray-600)',
                 textAlign: 'left'
               }}
             >
@@ -261,11 +261,11 @@ const DocItemComponent: React.FC<DocItemComponentProps> = ({ doc }) => {
   return (
     <div
       style={{
-        border: '1px solid var(--spectrum-gray-300)',
+        border: '1px solid var(--spectrum-global-color-gray-300)',
         borderRadius: '4px',
         padding: '16px',
-        backgroundColor: 'var(--spectrum-gray-75)',
-        borderLeft: '3px solid var(--spectrum-blue-400)'
+        backgroundColor: 'var(--spectrum-global-color-gray-75)',
+        borderLeft: '3px solid var(--spectrum-global-color-blue-400)'
       }}
     >
       <div className={style({ display: 'flex', flexDirection: 'column', gap: 8 })}>
@@ -277,9 +277,9 @@ const DocItemComponent: React.FC<DocItemComponentProps> = ({ doc }) => {
             <Text
               UNSAFE_style={{
                 fontSize: '11px',
-                color: 'var(--spectrum-blue-600)',
+                color: 'var(--spectrum-global-color-blue-600)',
                 fontFamily: 'monospace',
-                backgroundColor: 'var(--spectrum-blue-100)',
+                backgroundColor: 'var(--spectrum-global-color-blue-100)',
                 padding: '2px 8px',
                 borderRadius: '4px'
               }}
@@ -291,7 +291,7 @@ const DocItemComponent: React.FC<DocItemComponentProps> = ({ doc }) => {
         <Text
           UNSAFE_style={{
             fontSize: '13px',
-            color: 'var(--spectrum-gray-700)',
+            color: 'var(--spectrum-global-color-gray-700)',
             lineHeight: '1.5'
           }}
         >
@@ -337,21 +337,21 @@ export const About: React.FC = () => {
         <Heading level={1}>Documentation Hub</Heading>
         <Text
           UNSAFE_style={{
-            color: 'var(--spectrum-gray-700)',
+            color: 'var(--spectrum-global-color-gray-700)',
             fontSize: '16px'
           }}
         >
-          Comprehensive guides and references for the Event Management Cloud application.
+          Comprehensive guides and references for the Event Management Console application.
         </Text>
       </div>
 
       {/* Quick Reference Card */}
       <div
         style={{
-          border: '1px solid var(--spectrum-gray-300)',
+          border: '1px solid var(--spectrum-global-color-gray-300)',
           borderRadius: '4px',
           padding: '16px',
-          backgroundColor: 'var(--spectrum-gray-75)',
+          backgroundColor: 'var(--spectrum-global-color-gray-75)',
           marginBottom: '32px'
         }}
       >
@@ -453,14 +453,14 @@ export const About: React.FC = () => {
       <div style={{ marginTop: '40px' }}>
         <div
           style={{
-            border: '1px solid var(--spectrum-gray-300)',
+            border: '1px solid var(--spectrum-global-color-gray-300)',
             borderRadius: '4px',
             padding: '16px',
-            backgroundColor: 'var(--spectrum-gray-75)'
+            backgroundColor: 'var(--spectrum-global-color-gray-75)'
           }}
         >
           <div className={style({ display: 'flex', flexDirection: 'row', alignItems: 'start', gap: 16 })}>
-            <div style={{ color: 'var(--spectrum-blue-600)' }}>
+            <div style={{ color: 'var(--spectrum-global-color-blue-600)' }}>
               <Tools />
             </div>
             <div>
@@ -468,7 +468,7 @@ export const About: React.FC = () => {
               <Text>
                 The backend OpenAPI specification is available at{' '}
                 <code style={{
-                  backgroundColor: 'var(--spectrum-gray-200)',
+                  backgroundColor: 'var(--spectrum-global-color-gray-200)',
                   padding: '2px 6px',
                   borderRadius: '4px',
                   fontSize: '13px'
@@ -490,7 +490,7 @@ export const About: React.FC = () => {
 const QuickRefItem: React.FC<{ label: string; value: string }> = ({ label, value }) => (
   <div
     style={{
-      backgroundColor: 'var(--spectrum-gray-75)',
+      backgroundColor: 'var(--spectrum-global-color-gray-75)',
       padding: '12px',
       borderRadius: '4px'
     }}
@@ -500,7 +500,7 @@ const QuickRefItem: React.FC<{ label: string; value: string }> = ({ label, value
         UNSAFE_style={{
           fontSize: '11px',
           fontWeight: 600,
-          color: 'var(--spectrum-gray-600)',
+          color: 'var(--spectrum-global-color-gray-600)',
           textTransform: 'uppercase',
           letterSpacing: '0.5px'
         }}
@@ -522,10 +522,10 @@ const ExternalLink: React.FC<{ title: string; url: string; description: string }
 }) => (
   <div
     style={{
-      backgroundColor: 'var(--spectrum-gray-75)',
+      backgroundColor: 'var(--spectrum-global-color-gray-75)',
       borderRadius: '4px',
       padding: '16px',
-      border: '1px solid var(--spectrum-gray-200)'
+      border: '1px solid var(--spectrum-global-color-gray-200)'
     }}
   >
     <Link href={url} target="_blank" rel="noopener noreferrer">
@@ -536,7 +536,7 @@ const ExternalLink: React.FC<{ title: string; url: string; description: string }
     <Text
       UNSAFE_style={{
         fontSize: '13px',
-        color: 'var(--spectrum-gray-700)',
+        color: 'var(--spectrum-global-color-gray-700)',
         marginTop: '4px',
         display: 'block'
       }}

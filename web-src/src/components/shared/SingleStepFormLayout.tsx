@@ -10,12 +10,15 @@ import ChevronLeft from '@react-spectrum/s2/icons/ChevronLeft'
 import ChevronRight from '@react-spectrum/s2/icons/ChevronRight'
 import FileText from '@react-spectrum/s2/icons/FileText'
 import {
-  SIDE_NAV_STICKY_STYLES,
-  SCROLLABLE_CONTENT_STYLES,
-  FIXED_ACTION_BAR_STYLES,
+  LAYOUT_DIMENSIONS,
+  FORM_WIZARD_FOOTER_STYLES,
   COLORS,
   TYPOGRAPHY
 } from '../../styles/designSystem'
+
+/** Side nav: selected / hover (Spectrum) */
+const SIDE_NAV_SELECTED_BG = 'var(--spectrum-global-color-blue-100)'
+const SIDE_NAV_HOVER_BG = 'var(--spectrum-global-color-gray-200)'
 
 /** Form status for the status badge */
 export type FormStatus = 'draft' | 'published' | 'archived' | string
@@ -95,7 +98,6 @@ export const SingleStepFormLayout: React.FC<SingleStepFormLayoutProps> = ({
     await onPublish()
   }
 
-  // Status badge styling
   const getStatusBadgeStyles = (statusValue: string): { dotColor: string; textColor: string } => {
     const statusStyles: Record<string, { dotColor: string; textColor: string }> = {
       draft: {
@@ -118,12 +120,19 @@ export const SingleStepFormLayout: React.FC<SingleStepFormLayoutProps> = ({
   const statusLabel = status.charAt(0).toUpperCase() + status.slice(1).toLowerCase()
 
   const renderSideNav = () => (
-    <div style={{
-      width: 240,
-      borderRight: '1px solid var(--spectrum-global-color-gray-300)',
-      ...SIDE_NAV_STICKY_STYLES,
-    }}>
-      <div style={{ padding: 24, flex: 1 }}>
+    <div
+      style={{
+        width: LAYOUT_DIMENSIONS.SIDE_NAV_WIDTH,
+        borderRight: '1px solid var(--spectrum-global-color-gray-300)',
+        display: 'flex',
+        flexDirection: 'column',
+        minHeight: 0,
+        height: '100%',
+        overflow: 'hidden',
+        backgroundColor: COLORS.GRAY_100,
+      }}
+    >
+      <div style={{ padding: 24, flex: 1, minHeight: 0, overflow: 'auto' }}>
         <Text UNSAFE_style={{
           fontSize: '12px',
           fontWeight: 500,
@@ -136,8 +145,8 @@ export const SingleStepFormLayout: React.FC<SingleStepFormLayoutProps> = ({
         </Text>
 
         <div className={style({ display: 'flex', flexDirection: 'column', gap: 8 })}>
-          {/* Dashboard Link */}
           <button
+            type="button"
             onClick={handleDashboardClick}
             disabled={isSaving}
             style={{
@@ -151,20 +160,16 @@ export const SingleStepFormLayout: React.FC<SingleStepFormLayoutProps> = ({
               fontSize: '14px',
               fontWeight: 400,
               opacity: isSaving ? 0.5 : 1,
-              transition: 'all 0.2s ease',
+              transition: 'background-color 0.15s ease',
               width: '100%',
             }}
             onMouseEnter={(e) => {
               if (!isSaving) {
-                e.currentTarget.style.backgroundColor = 'rgba(235, 16, 0, 0.1)'
-                e.currentTarget.style.color = COLORS.ADOBE_RED
+                e.currentTarget.style.backgroundColor = SIDE_NAV_HOVER_BG
               }
             }}
             onMouseLeave={(e) => {
-              if (!isSaving) {
-                e.currentTarget.style.backgroundColor = COLORS.TRANSPARENT
-                e.currentTarget.style.color = COLORS.GRAY_800
-              }
+              e.currentTarget.style.backgroundColor = COLORS.TRANSPARENT
             }}
           >
             <div className={style({ display: 'flex', gap: 8, alignItems: 'center' })}>
@@ -173,9 +178,9 @@ export const SingleStepFormLayout: React.FC<SingleStepFormLayoutProps> = ({
             </div>
           </button>
 
-          {/* Side Nav Items */}
           <div>
             <button
+              type="button"
               disabled
               style={{
                 border: 'none',
@@ -200,20 +205,21 @@ export const SingleStepFormLayout: React.FC<SingleStepFormLayoutProps> = ({
             <div className={style({ display: 'flex', flexDirection: 'column', gap: 4 })}>
               {sideNavItems.map((item) => (
                 <button
+                  type="button"
                   key={item.id}
                   disabled={isSaving}
                   style={{
                     border: 'none',
-                    background: item.isActive ? COLORS.ADOBE_RED : COLORS.TRANSPARENT,
-                    color: item.isActive ? COLORS.WHITE : COLORS.GRAY_800,
+                    background: item.isActive ? SIDE_NAV_SELECTED_BG : COLORS.TRANSPARENT,
+                    color: COLORS.GRAY_800,
                     padding: '8px 12px',
                     paddingLeft: '32px',
                     textAlign: 'left',
                     cursor: 'default',
                     borderRadius: '4px',
                     fontSize: '14px',
-                    fontWeight: item.isActive ? 500 : 400,
-                    transition: 'all 0.2s ease',
+                    fontWeight: item.isActive ? 600 : 400,
+                    transition: 'background-color 0.15s ease',
                     width: '100%',
                   }}
                 >
@@ -241,12 +247,11 @@ export const SingleStepFormLayout: React.FC<SingleStepFormLayoutProps> = ({
     const isActionDisabled = !isValid || isSaving
 
     return (
-      <div style={{ ...FIXED_ACTION_BAR_STYLES, backgroundColor: COLORS.ADOBE_RED }}>
+      <div style={FORM_WIZARD_FOOTER_STYLES}>
         <div
-          className={style({ display: 'flex', justifyContent: 'end', alignItems: 'center', height: '[100%]' })}
+          className={style({ display: 'flex', justifyContent: 'end', alignItems: 'center', height: '[100%]', flex: 1 })}
           style={{ marginInlineStart: 'var(--spectrum-global-dimension-size-400)', marginInlineEnd: 'var(--spectrum-global-dimension-size-400)' }}
         >
-          {/* Save and Publish buttons */}
           <div className={style({ display: 'flex', gap: 8, alignItems: 'center' })}>
             <Button
               variant="secondary"
@@ -258,9 +263,9 @@ export const SingleStepFormLayout: React.FC<SingleStepFormLayoutProps> = ({
               {getSaveButtonText()}
             </Button>
             <Button
-              variant="primary"
+              variant="accent"
               fillStyle="fill"
-              staticColor="black"
+              staticColor="white"
               onPress={handlePublish}
               isDisabled={isActionDisabled}
             >
@@ -275,13 +280,36 @@ export const SingleStepFormLayout: React.FC<SingleStepFormLayoutProps> = ({
     )
   }
 
+  const shellStyle: React.CSSProperties = {
+    display: 'flex',
+    flexDirection: 'column',
+    flex: 1,
+    minHeight: 0,
+    height: '100%',
+    width: '100%',
+    alignSelf: 'stretch',
+  }
+
+  const bodyRowStyle: React.CSSProperties = {
+    display: 'flex',
+    flex: 1,
+    minHeight: 0,
+    overflow: 'hidden',
+  }
+
+  const mainColumnStyle: React.CSSProperties = {
+    flex: 1,
+    minHeight: 0,
+    overflow: 'auto',
+    padding: 32,
+  }
+
   return (
-    <>
-      <div className={style({ display: 'flex', gap: 0 })}>
+    <div style={shellStyle}>
+      <div style={bodyRowStyle}>
         {renderSideNav()}
-        <div style={{ ...SCROLLABLE_CONTENT_STYLES, flex: 1, padding: 32 }}>
+        <div style={mainColumnStyle}>
           <div>
-            {/* Title section */}
             <div style={{ marginBottom: 24 }}>
               {typeLabel && (
                 <Text
@@ -297,11 +325,9 @@ export const SingleStepFormLayout: React.FC<SingleStepFormLayoutProps> = ({
                 </Text>
               )}
 
-              {/* Heading row with status badge and optional header actions */}
               <div className={style({ display: 'flex', alignItems: 'center', gap: 32 })}>
                 <Heading level={2} UNSAFE_style={TYPOGRAPHY.STEP_HEADING}>{title}</Heading>
 
-                {/* Status badge */}
                 <div
                   style={{
                     display: 'inline-flex',
@@ -333,15 +359,11 @@ export const SingleStepFormLayout: React.FC<SingleStepFormLayoutProps> = ({
                   </Text>
                 </div>
 
-                {/* Spacer to push header actions to the right */}
                 {headerActions && <div style={{ flex: 1 }} />}
-
-                {/* Optional header actions (e.g., history button) */}
                 {headerActions}
               </div>
             </div>
 
-            {/* Form content */}
             <div style={{ marginTop: 24, marginBottom: 32 }}>
               {children}
             </div>
@@ -349,6 +371,6 @@ export const SingleStepFormLayout: React.FC<SingleStepFormLayoutProps> = ({
         </div>
       </div>
       {renderActionBar()}
-    </>
+    </div>
   )
 }
