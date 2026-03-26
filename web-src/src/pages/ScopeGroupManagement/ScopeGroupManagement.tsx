@@ -15,7 +15,7 @@ import {
   AlertDialog,
   ActionButton,
 } from '@adobe/react-spectrum'
-import { Badge, Button, ButtonGroup, TextField, Picker, PickerItem, ComboBox, ComboBoxItem, Text, DialogTrigger, Dialog, Content, Heading } from "@react-spectrum/s2"
+import { Badge, Button, ButtonGroup, TextField, Picker, PickerItem, ComboBox, ComboBoxItem, Text, DialogTrigger, Dialog, Content, Heading, Switch } from "@react-spectrum/s2"
 import { style } from "@react-spectrum/s2/style" with { type: "macro" }
 import EditIcon from "@react-spectrum/s2/icons/Edit"
 import DeleteIcon from "@react-spectrum/s2/icons/Delete"
@@ -24,7 +24,7 @@ import UserAdd from "@react-spectrum/s2/icons/UserAdd"
 import RemoveCircle from "@react-spectrum/s2/icons/RemoveCircle"
 import UserGroupIcon from "@react-spectrum/s2/icons/UserGroup"
 import { useApi } from '../../contexts/ApiContext'
-import { useToast } from '../../contexts'
+import { useToast, useGroup, useAuth } from '../../contexts'
 import { IMS } from '../../types'
 import type {
   RBACApiScope,
@@ -60,6 +60,8 @@ const GROUP_SEARCH_KEYS = ['name', 'description']
 export const ScopeGroupManagement: React.FC<ScopeGroupManagementProps> = () => {
   const apiService = useApi()
   const toast = useToast()
+  const { ims } = useAuth()
+  const { groups: userMemberGroups, refreshGroups } = useGroup()
 
   // Permissions
   const canWriteScope = useHasPermission('scope', 'write')
@@ -76,6 +78,7 @@ export const ScopeGroupManagement: React.FC<ScopeGroupManagementProps> = () => {
   const [scopes, setScopes] = useState<RBACApiScope[]>([])
   const [selectedScopeId, setSelectedScopeId] = useState<string | null>(null)
   const [scopeFilterText, setScopeFilterText] = useState('')
+  const [myScopesOnly, setMyScopesOnly] = useState(false)
   const [isLoadingScopes, setIsLoadingScopes] = useState(true)
   const [roles, setRoles] = useState<RBACApiRole[]>([])
 
@@ -135,12 +138,45 @@ export const ScopeGroupManagement: React.FC<ScopeGroupManagementProps> = () => {
     [scopes, selectedScopeId]
   )
 
+  const scopeIdsImMemberOf = useMemo(() => {
+    const ids = new Set<string>()
+    for (const g of userMemberGroups) {
+      if (g.scopeId) ids.add(g.scopeId)
+    }
+    return ids
+  }, [userMemberGroups])
+
+  const scopesForPicker = useMemo(() => {
+    if (!myScopesOnly) return scopes
+    return scopes.filter(s => scopeIdsImMemberOf.has(s.scopeId))
+  }, [scopes, myScopesOnly, scopeIdsImMemberOf])
+
   const filteredScopes = useMemo(() => {
-    const items = scopes.map(s => ({ id: s.scopeId, name: s.name, type: s.type }))
+    const items = scopesForPicker.map(s => ({ id: s.scopeId, name: s.name, type: s.type }))
     if (!scopeFilterText) return items
     const lower = scopeFilterText.toLowerCase()
     return items.filter(s => s.name.toLowerCase().includes(lower) || s.type.toLowerCase().includes(lower))
-  }, [scopes, scopeFilterText])
+  }, [scopesForPicker, scopeFilterText])
+
+  /** Group IDs the current user belongs to for the selected scope (for table filter). */
+  const myGroupIdsInSelectedScope = useMemo(() => {
+    if (!selectedScopeId) return new Set<string>()
+    const withScopeId = userMemberGroups.some(m => !!m.scopeId)
+    if (withScopeId) {
+      const ids = new Set<string>()
+      for (const m of userMemberGroups) {
+        if (m.scopeId === selectedScopeId) ids.add(m.groupId)
+      }
+      return ids
+    }
+    // /me/groups omitted scopeId — match by groupId; table is already limited to selected scope's groups
+    return new Set(userMemberGroups.map(m => m.groupId))
+  }, [userMemberGroups, selectedScopeId])
+
+  const groupsForTable = useMemo(() => {
+    if (!myScopesOnly || !selectedScopeId) return groups
+    return groups.filter(g => myGroupIdsInSelectedScope.has(g.groupId))
+  }, [groups, myScopesOnly, selectedScopeId, myGroupIdsInSelectedScope])
 
   const parentScopes = useMemo(() => {
     if (scopeFormType === 'platform') return []
@@ -250,6 +286,35 @@ export const ScopeGroupManagement: React.FC<ScopeGroupManagementProps> = () => {
     setExpandedGroupIds(new Set())
     setGroupUsersMap({})
   }, [selectedScopeId])
+
+  // Drop scope selection if it falls outside the current picker pool (e.g. My scopes on)
+  useEffect(() => {
+    if (!selectedScopeId) return
+    if (!scopesForPicker.some(s => s.scopeId === selectedScopeId)) {
+      setSelectedScopeId(null)
+    }
+  }, [selectedScopeId, scopesForPicker])
+
+  // Remove expand/user cache for groups no longer visible in the table
+  useEffect(() => {
+    const valid = new Set(groupsForTable.map(g => g.groupId))
+    setExpandedGroupIds(prev => {
+      const next = new Set([...prev].filter(id => valid.has(id)))
+      return next.size === prev.size ? prev : next
+    })
+    setGroupUsersMap(prev => {
+      let changed = false
+      const next = { ...prev }
+      for (const k of Object.keys(next)) {
+        if (!valid.has(k)) {
+          delete next[k]
+          changed = true
+        }
+      }
+      return changed ? next : prev
+    })
+    setSelectedGroup(prev => (prev && !valid.has(prev.groupId) ? null : prev))
+  }, [groupsForTable])
 
   // ============================================================================
   // SCOPE CRUD
@@ -432,12 +497,15 @@ export const ScopeGroupManagement: React.FC<ScopeGroupManagementProps> = () => {
         return next
       })
       await loadGroups()
+      if (userMemberGroups.some(g => g.groupId === group.groupId)) {
+        await refreshGroups()
+      }
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Failed to delete group')
     } finally {
       setIsSaving(false)
     }
-  }, [apiService, selectedScopeId, toast, loadGroups, selectedGroup])
+  }, [apiService, selectedScopeId, toast, loadGroups, selectedGroup, userMemberGroups, refreshGroups])
 
   // ============================================================================
   // USER CRUD
@@ -446,6 +514,7 @@ export const ScopeGroupManagement: React.FC<ScopeGroupManagementProps> = () => {
   const handleSaveUser = useCallback(async () => {
     if (!selectedGroup || !selectedScopeId) return
     setIsSaving(true)
+    let addedSelfToGroup = false
     try {
       if (editingUser) {
         const updateData: ScopeUserUpdateBody = {
@@ -465,8 +534,11 @@ export const ScopeGroupManagement: React.FC<ScopeGroupManagementProps> = () => {
         toast.success('User updated')
       } else {
         if (!newUserEmail.trim()) return
+        const profileEmail = ims.profile?.email?.toLowerCase()
+        const addedEmail = newUserEmail.trim().toLowerCase()
+        addedSelfToGroup = !!(profileEmail && addedEmail === profileEmail)
         const result = await apiService.addGroupUser(selectedScopeId, selectedGroup.groupId, {
-          email: newUserEmail.trim().toLowerCase(),
+          email: addedEmail,
           ...(newUserFirstName.trim() && { firstName: newUserFirstName.trim() }),
           ...(newUserLastName.trim() && { lastName: newUserLastName.trim() }),
           ...(newUserGuid.trim() && { userGuid: newUserGuid.trim() }),
@@ -485,12 +557,15 @@ export const ScopeGroupManagement: React.FC<ScopeGroupManagementProps> = () => {
       setNewUserGuid('')
       // Refresh users in the expanded row
       await loadGroupUsersForExpand(selectedGroup.groupId)
+      if (addedSelfToGroup) {
+        await refreshGroups()
+      }
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Failed to save user')
     } finally {
       setIsSaving(false)
     }
-  }, [editingUser, newUserEmail, newUserFirstName, newUserLastName, newUserGuid, selectedGroup, selectedScopeId, apiService, toast, loadGroupUsersForExpand])
+  }, [editingUser, newUserEmail, newUserFirstName, newUserLastName, newUserGuid, selectedGroup, selectedScopeId, apiService, toast, loadGroupUsersForExpand, ims.profile?.email, refreshGroups])
 
   const handleRemoveUser = useCallback(async (user: ScopeUser) => {
     if (!selectedGroup || !selectedScopeId) return
@@ -505,12 +580,16 @@ export const ScopeGroupManagement: React.FC<ScopeGroupManagementProps> = () => {
       setUserToRemove(null)
       // Refresh users in the expanded row
       await loadGroupUsersForExpand(selectedGroup.groupId)
+      const profileEmail = ims.profile?.email?.toLowerCase()
+      if (profileEmail && user.email.toLowerCase() === profileEmail) {
+        await refreshGroups()
+      }
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Failed to remove user')
     } finally {
       setIsSaving(false)
     }
-  }, [selectedGroup, selectedScopeId, apiService, toast, loadGroupUsersForExpand])
+  }, [selectedGroup, selectedScopeId, apiService, toast, loadGroupUsersForExpand, ims.profile?.email, refreshGroups])
 
   // ============================================================================
   // TABLE COLUMNS
@@ -683,14 +762,19 @@ export const ScopeGroupManagement: React.FC<ScopeGroupManagementProps> = () => {
   return (
     <View padding="size-400" maxWidth="1400px" marginX="auto">
       <div className={style({display: 'flex', flexDirection: 'column', gap: 32})}>
-        <Heading level={1}>Access Management</Heading>
+        <div className={style({display: 'flex', flexDirection: 'row', alignItems: 'center', gap: 24, flexWrap: 'wrap'})}>
+          <Heading level={1}>Access Management</Heading>
+          <Switch isSelected={myScopesOnly} onChange={setMyScopesOnly}>
+            My
+          </Switch>
+        </div>
 
         {/* ── Scope selector + actions ── */}
         <div className={style({padding: 20})}>
           <div className={style({display: 'flex', justifyContent: 'space-between', alignItems: 'end', gap: 16, flexWrap: 'wrap'})}>
             <div className={style({display: 'flex', alignItems: 'end', gap: 8})}>
               <ComboBox
-                label={`Select Scope (${scopes.length} scope${scopes.length === 1 ? '' : 's'} available)`}
+                label={`Select Scope (${filteredScopes.length} scope${filteredScopes.length === 1 ? '' : 's'} available)`}
                 selectedKey={selectedScopeId}
                 onSelectionChange={(key) => setSelectedScopeId(key as string | null)}
                 onInputChange={setScopeFilterText}
@@ -753,9 +837,9 @@ export const ScopeGroupManagement: React.FC<ScopeGroupManagementProps> = () => {
         {selectedScopeId ? (
           <ResourceDashboardLayout
             title="Groups"
-            totalCount={groups.length}
+            totalCount={groupsForTable.length}
             error={groupError}
-            data={groups}
+            data={groupsForTable}
             columns={groupColumns}
             getItemKey={(item) => item.groupId}
             createButton={canWriteGroup ? (
