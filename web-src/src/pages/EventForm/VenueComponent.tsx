@@ -639,7 +639,7 @@ export const VenueComponent: React.FC = () => {
           onPress={handleAlternativeNameToggle}
           UNSAFE_style={{
             color: COLORS.GRAY_800,
-            padding: 0,
+            padding: '0 12px',
             marginLeft: '-8px'
           }}
         >
