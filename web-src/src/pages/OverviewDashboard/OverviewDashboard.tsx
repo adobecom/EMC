@@ -29,14 +29,13 @@ interface StatCardProps {
   title: string
   value: number | string
   subtitle?: string
-  color?: string
   onClick?: () => void
 }
 
 /**
  * Stat Card component for displaying individual metrics
  */
-const StatCard: React.FC<StatCardProps> = ({ icon, title, value, subtitle, color = COLORS.ADOBE_RED, onClick }) => (
+const StatCard: React.FC<StatCardProps> = ({ icon, title, value, subtitle, onClick }) => (
   <div
     style={{
       backgroundColor: 'var(--spectrum-gray-50)',
@@ -58,18 +57,6 @@ const StatCard: React.FC<StatCardProps> = ({ icon, title, value, subtitle, color
       tabIndex={onClick ? 0 : undefined}
       style={{ height: '100%' }}
     >
-      {/* Accent bar on top */}
-      <div
-        style={{
-          position: 'absolute',
-          top: 0,
-          left: 0,
-          right: 0,
-          height: '4px',
-          backgroundColor: color
-        }}
-      />
-
       <div className={style({ display: 'flex', flexDirection: 'column', gap: 12 })}>
         {/* Icon and Title Row */}
         <div className={style({ display: 'flex', gap: 8, alignItems: 'center' })}>
@@ -470,7 +457,6 @@ export const OverviewDashboard: React.FC<OverviewDashboardProps> = () => {
                   title="Total Events"
                   value={stats.totalEvents}
                   subtitle={`${stats.upcomingEvents} upcoming, ${stats.pastEvents} past`}
-                  color={COLORS.ADOBE_RED}
                   onClick={() => window.location.hash = '#/events'}
                 />
               )}
@@ -481,7 +467,6 @@ export const OverviewDashboard: React.FC<OverviewDashboardProps> = () => {
                   title="Total Series"
                   value={stats.totalSeries}
                   subtitle={`${stats.publishedSeries} published`}
-                  color="#0D66D0"
                   onClick={() => window.location.hash = '#/series'}
                 />
               )}
@@ -492,7 +477,6 @@ export const OverviewDashboard: React.FC<OverviewDashboardProps> = () => {
                   title="Total Attendees"
                   value={stats.totalAttendees.toLocaleString()}
                   subtitle={stats.totalCapacity > 0 ? `of ${stats.totalCapacity.toLocaleString()} capacity` : 'registered'}
-                  color="#268E6C"
                   onClick={() => window.location.hash = '#/registrations'}
                 />
               )}
@@ -503,7 +487,6 @@ export const OverviewDashboard: React.FC<OverviewDashboardProps> = () => {
                   title="Published Events"
                   value={stats.publishedEvents}
                   subtitle={`${stats.draftEvents} drafts`}
-                  color={COLORS.STATUS_PUBLISHED}
                 />
               )}
             </div>

@@ -91,7 +91,12 @@ const AppContent: React.FC<{ runtime: Runtime }> = ({ runtime }) => {
   return (
     <ErrorBoundary onError={onError} FallbackComponent={fallbackComponent}>
       <Router>
-        <Provider theme={defaultTheme} colorScheme={'light'} scale={'medium'}>
+        <Provider
+          theme={defaultTheme}
+          colorScheme={'light'}
+          scale={'medium'}
+          UNSAFE_className="emc-app-provider"
+        >
           <S2Provider colorScheme="light">
           <Fonts />
           <ApiProvider ims={ims}>

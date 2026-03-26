@@ -10,9 +10,9 @@ import {
   DialogTrigger,
   Text
 } from '@react-spectrum/s2'
-import { style, iconStyle } from '@react-spectrum/s2/style' with { type: 'macro' }
+import { style } from '@react-spectrum/s2/style' with { type: 'macro' }
 import Delete from '@react-spectrum/s2/icons/Delete'
-import ImageAdd from '@react-spectrum/s2/icons/ImageAdd';
+import DropToUpload from '@react-spectrum/s2/illustrations/linear/DropToUpload'
 import { uploadImage, UploadTracker } from '../../services/requestHelpers'
 import { getCurrentEnvironment, getApiHost } from '../../config/constants'
 import { apiService } from '../../services/api'
@@ -449,7 +449,7 @@ export const ImageUploader: React.FC<ImageUploaderProps> = ({
             </div>
           ) : (
             <div className={style({ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12 })}>
-              <ImageAdd styles={iconStyle({ size: 'XL', color: 'gray'})} aria-hidden />
+              <DropToUpload aria-hidden />
               <Text UNSAFE_style={{ fontSize: '14px', color: '#4B4B4B' }}>
                 {dropzoneTitle || 'Drop image here or click to browse'}
               </Text>

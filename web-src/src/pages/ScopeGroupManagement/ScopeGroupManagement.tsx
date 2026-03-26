@@ -37,6 +37,7 @@ import type {
 } from '../../types/rbacApi'
 import { TableColumn } from '../../components/shared/DataTable'
 import { ResourceDashboardLayout, BlurredLoadingOverlay } from '../../components/shared'
+import FolderSharedIllustration from '@react-spectrum/s2/illustrations/linear/FolderShared'
 import { useHasPermission } from '../../hooks/useHasPermission'
 
 interface ScopeGroupManagementProps {
@@ -849,6 +850,7 @@ export const ScopeGroupManagement: React.FC<ScopeGroupManagementProps> = () => {
               </Button>
             ) : undefined}
             onRefresh={loadGroups}
+            emptyStateIllustration={<FolderSharedIllustration aria-hidden />}
             emptyStateTitle="No Groups"
             emptyStateDescription="Create a group in this scope to manage user access"
             searchPlaceholder="Search groups..."

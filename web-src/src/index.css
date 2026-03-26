@@ -2,11 +2,16 @@
 * <license header>
 */
 
+/** Canonical sans stack (S2 variable font + fallbacks). Single source: keep TS `FONT_FAMILY_SANS` in sync. **/
+:root {
+  --emc-font-sans: adobe-clean-spectrum-vf, adobe-clean-variable, adobe-clean, ui-sans-serif, system-ui, sans-serif;
+}
+
 /** Global Font Settings — use S2's variable font for the entire app **/
 html,
 body {
   margin: 0;
-  font-family: adobe-clean-spectrum-vf, adobe-clean-variable, adobe-clean, ui-sans-serif, system-ui, sans-serif;
+  font-family: var(--emc-font-sans);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   background-color: #FFFFFF;
@@ -14,12 +19,25 @@ body {
 
 #root {
   background-color: #FFFFFF;
+  font-family: var(--emc-font-sans);
 }
 
-/** Ensure v3 Provider and all Spectrum components also use S2's loaded Adobe Clean variable font **/
+/** Root v3 Provider: wins over hashed i18nFontFamily legacy stack (see App.tsx `emc-app-provider`). **/
+.emc-app-provider {
+  font-family: var(--emc-font-sans) !important;
+}
+
+/** Legacy selectors — hashed Spectrum classes may not match; kept for consistency if present **/
 .spectrum-Provider,
 .spectrum {
-  font-family: adobe-clean-spectrum-vf, adobe-clean-variable, adobe-clean, ui-sans-serif, system-ui, sans-serif !important;
+  font-family: var(--emc-font-sans) !important;
+}
+
+button,
+input,
+textarea,
+select {
+  font-family: inherit;
 }
 
 
@@ -42,7 +60,7 @@ body {
   box-sizing: border-box;
   height: 56px;
   padding: 0 20px;
-  font-family: adobe-clean-spectrum-vf, adobe-clean-variable, adobe-clean, ui-sans-serif, system-ui, sans-serif;
+  font-family: var(--emc-font-sans);
   font-size: 14px;
   font-weight: 500;
   text-decoration: none;

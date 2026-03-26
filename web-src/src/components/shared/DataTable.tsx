@@ -15,6 +15,8 @@ import ChevronDown from '@react-spectrum/s2/icons/ChevronDown'
 import ChevronLeft from '@react-spectrum/s2/icons/ChevronLeft'
 import ChevronRight from '@react-spectrum/s2/icons/ChevronRight'
 import { deduplicateBy } from '../../utils/deduplication'
+import BuildTable from '@react-spectrum/s2/illustrations/linear/BuildTable'
+import { ResourceEmptyState, RESOURCE_EMPTY_STATE_MIN_HEIGHT_PX } from './ResourceEmptyState'
 
 export interface TableColumn<T> {
   key: string
@@ -248,8 +250,23 @@ export function DataTable<T extends Record<string, any>>({
   // Empty state check AFTER all hooks are defined
   if (data.length === 0 && !isLoading) {
     return (
-      <div style={{ width: '100%', minHeight: '400px' }}>
-        {emptyState || <Text>No data available</Text>}
+      <div
+        className={style({
+          display: 'flex',
+          flexDirection: 'column',
+          width: '[100%]',
+          flex: 1,
+        })}
+        style={{ minHeight: RESOURCE_EMPTY_STATE_MIN_HEIGHT_PX }}
+      >
+        {emptyState ?? (
+          <ResourceEmptyState
+            fillContainer
+            illustration={<BuildTable aria-hidden />}
+            title="No data to show"
+            description="There is nothing in this list yet. Add or import items elsewhere in the app to see them here."
+          />
+        )}
       </div>
     )
   }

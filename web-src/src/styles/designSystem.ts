@@ -243,6 +243,9 @@ export const COLORS = {
 // Typography
 // ============================================================
 
+/** App sans stack — must match `:root { --emc-font-sans }` in `web-src/src/index.css` */
+export const FONT_FAMILY_SANS = 'var(--emc-font-sans)' as const
+
 /**
  * Typography styles for consistent text styling across the app
  * 
@@ -256,6 +259,7 @@ export const TYPOGRAPHY = {
    */
   STEP_HEADING: {
     color: COLORS.ADOBE_RED,
+    fontFamily: FONT_FAMILY_SANS,
     fontSize: '24px',
     lineHeight: '30px',
     fontWeight: 900,
@@ -268,6 +272,7 @@ export const TYPOGRAPHY = {
    */
   COMPONENT_HEADING: {
     color: COLORS.BLACK,
+    fontFamily: FONT_FAMILY_SANS,
     fontSize: '28px',
     lineHeight: '35px',
     fontWeight: 700,
@@ -279,6 +284,7 @@ export const TYPOGRAPHY = {
    */
   SUBSECTION_HEADING: {
     color: COLORS.GRAY_800,
+    fontFamily: FONT_FAMILY_SANS,
     fontSize: '18px',
     lineHeight: '24px',
     fontWeight: 700,
@@ -290,6 +296,7 @@ export const TYPOGRAPHY = {
    */
   FIELD_LABEL: {
     color: COLORS.GRAY_800,
+    fontFamily: FONT_FAMILY_SANS,
     fontSize: '14px',
     lineHeight: '20px',
     fontWeight: 600,
@@ -301,6 +308,7 @@ export const TYPOGRAPHY = {
    */
   HELPER_TEXT: {
     color: COLORS.GRAY_600,
+    fontFamily: FONT_FAMILY_SANS,
     fontSize: '12px',
     lineHeight: '16px',
     fontWeight: 400,
@@ -312,6 +320,7 @@ export const TYPOGRAPHY = {
    */
   SECTION_DESCRIPTION: {
     color: COLORS.GRAY_700,
+    fontFamily: FONT_FAMILY_SANS,
     fontSize: '14px',
     lineHeight: '20px',
     fontWeight: 400,

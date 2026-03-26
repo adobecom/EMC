@@ -19,6 +19,7 @@ import { IMS } from '../../types'
 import type { RBACUser, UserRole } from '../../types/rbac'
 import { TableColumn } from '../../components/shared/DataTable'
 import { ResourceDashboardLayout, BlurredLoadingOverlay } from '../../components/shared'
+import UserGroupIllustration from '@react-spectrum/s2/illustrations/linear/UserGroup'
 import * as githubService from '../../services/githubService'
 
 interface UserManagementProps {
@@ -372,6 +373,7 @@ export const UserManagement: React.FC<UserManagementProps> = () => {
           onCreate={openAddDialog}
           createLabel="Add User"
           onRefresh={refreshUsers}
+          emptyStateIllustration={<UserGroupIllustration aria-hidden />}
           emptyStateTitle="No Users"
           emptyStateDescription="Add users to control access to EMC"
           searchPlaceholder="Search users..."

@@ -11,6 +11,7 @@ import Duplicate from '@react-spectrum/s2/icons/Duplicate'
 import Archive from '@react-spectrum/s2/icons/Archive'
 import { TableColumn } from '../../components/shared/DataTable'
 import { StatusBadge, ResourceDashboardLayout, BlurredLoadingOverlay } from '../../components/shared'
+import LayersIllustration from '@react-spectrum/s2/illustrations/linear/Layers'
 import { SeriesDashboardItem, EventApiResponse } from '../../types/domain'
 import { apiService, cachedApi } from '../../services/api'
 import { IMS } from '../../types'
@@ -459,6 +460,7 @@ export const SeriesDashboard: React.FC<SeriesDashboardProps> = () => {
         onRefresh={loadSeriesData}
         onCreate={canWriteSeries ? handleCreateSeries : undefined}
         createLabel="Create new series"
+        emptyStateIllustration={<LayersIllustration aria-hidden />}
         emptyStateTitle="No Series Found"
         emptyStateDescription="Get started by creating your first series"
         searchPlaceholder="Search series..."

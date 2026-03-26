@@ -3,10 +3,13 @@
 */
 
 import React, { useState, useMemo, useEffect, useCallback } from 'react'
-import { Text, Button, SearchField, Heading, ActionButton } from '@react-spectrum/s2'
+import { Text, Button, SearchField, Heading } from '@react-spectrum/s2'
 import { style } from '@react-spectrum/s2/style' with { type: 'macro' }
 import Refresh from "@react-spectrum/s2/icons/Refresh"
+import NoSearchResults from '@react-spectrum/s2/illustrations/linear/NoSearchResults'
+import BuildTable from '@react-spectrum/s2/illustrations/linear/BuildTable'
 import { DataTable, TableColumn, TableAction } from './DataTable'
+import { ResourceEmptyState } from './ResourceEmptyState'
 import { LoadingSpinner } from './LoadingSpinner'
 import { debounceCancellable } from '../../services/cacheUtils'
 
@@ -37,6 +40,8 @@ interface ResourceDashboardLayoutProps<T> {
   // Empty state
   emptyStateTitle?: string
   emptyStateDescription?: string
+  /** Linear illustration when the list is empty (not search). Defaults to BuildTable. */
+  emptyStateIllustration?: React.ReactNode
 
   // Search configuration
   searchPlaceholder?: string
@@ -66,6 +71,7 @@ export function ResourceDashboardLayout<T extends Record<string, any>>({
   onVisibleIdsChange,
   emptyStateTitle = 'No Items Found',
   emptyStateDescription = 'Get started by creating your first item',
+  emptyStateIllustration,
   searchPlaceholder = 'Search...',
   searchKeys = [],
   searchFilter,
@@ -205,8 +211,8 @@ export function ResourceDashboardLayout<T extends Record<string, any>>({
           </div>
         </div>
 
-        {/* Table */}
-        <div className={style({flex: 1})}>
+        {/* Table — min height so empty IllustratedMessage centers in the band */}
+        <div className={style({ flex: 1, minHeight: '[480px]', display: 'flex', flexDirection: 'column' })}>
           {isSearching ? (
             <div
               className={`${style({ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '[100%]' })} fade-in`}
@@ -214,7 +220,7 @@ export function ResourceDashboardLayout<T extends Record<string, any>>({
               <LoadingSpinner message="Searching..." />
             </div>
           ) : (
-            <div className="fade-in">
+            <div className={`${style({ flex: 1, display: 'flex', flexDirection: 'column', minHeight: '[100%]' })} fade-in`}>
               <DataTable
                 columns={columns}
                 data={filteredData}
@@ -225,28 +231,30 @@ export function ResourceDashboardLayout<T extends Record<string, any>>({
                 renderExpandedContent={renderExpandedContent}
                 expandedKeys={expandedKeys}
                 onToggleExpand={onToggleExpand}
-              emptyState={
-                <div className={style({ display: 'flex', flexDirection: 'column', gap: 12, alignItems: 'center' })}>
-                  <Heading level={3}>
-                    {debouncedQuery ? 'No Results Found' : emptyStateTitle}
-                  </Heading>
-                  <Text>
-                    {debouncedQuery
-                      ? `No items match "${debouncedQuery}"`
-                      : emptyStateDescription
-                    }
-                  </Text>
-                  {debouncedQuery ? (
-                    <ActionButton onPress={handleClear}><Text>Clear Search</Text></ActionButton>
+                emptyState={
+                  debouncedQuery ? (
+                    <ResourceEmptyState
+                      fillContainer
+                      illustration={<NoSearchResults aria-hidden />}
+                      title="No Results Found"
+                      description={`No items match "${debouncedQuery}"`}
+                      actions={
+                        <Button variant="secondary" fillStyle="outline" onPress={handleClear}>
+                          <Text>Clear Search</Text>
+                        </Button>
+                      }
+                    />
                   ) : (
-                    createButton ? createButton : onCreate && (
-                      <Button onPress={onCreate} variant="accent">
-                        {createLabel}
-                      </Button>
-                    )
-                  )}
-                </div>
-              }
+                    <ResourceEmptyState
+                      fillContainer
+                      illustration={
+                        emptyStateIllustration ?? <BuildTable aria-hidden />
+                      }
+                      title={emptyStateTitle}
+                      description={emptyStateDescription}
+                    />
+                  )
+                }
               />
             </div>
           )}

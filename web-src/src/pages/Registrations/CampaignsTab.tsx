@@ -12,8 +12,9 @@ import Copy from '@react-spectrum/s2/icons/Copy'
 import type { EventApiResponse } from '../../types/domain'
 import type { Campaign, CampaignFormData, CampaignStatus } from '../../types/campaign'
 import { calculateCampaignStats } from '../../types/campaign'
-import { DataTable, TableColumn } from '../../components/shared'
-import { COLORS, SPACING } from '../../styles/designSystem'
+import ChannelIllustration from '@react-spectrum/s2/illustrations/linear/Channel'
+import { DataTable, TableColumn, ResourceEmptyState } from '../../components/shared'
+import { COLORS } from '../../styles/designSystem'
 import { useHasPermission } from '../../hooks/useHasPermission'
 
 interface CampaignsTabProps {
@@ -255,17 +256,30 @@ export const CampaignsTab: React.FC<CampaignsTabProps> = ({
       )}
 
       {/* Campaigns Table */}
-      {campaigns.length > 0 ? (
+      <div style={{ minHeight: 480, display: 'flex', flexDirection: 'column' }}>
         <DataTable
           columns={columns}
           data={campaigns}
           getItemKey={(item) => item.campaignId}
           pageSize={10}
-          emptyState={<EmptyCampaignsState onCreateClick={handleCreateClick} />}
+          emptyState={
+            <ResourceEmptyState
+              fillContainer
+              illustration={<ChannelIllustration aria-hidden />}
+              title="No campaigns yet"
+              description="Create campaigns to track registrations from different sources like email, social media, or partner promotions."
+              actions={
+                canWriteEvent ? (
+                  <Button variant="accent" onPress={handleCreateClick}>
+                    <Add />
+                    <Text>Add Campaign</Text>
+                  </Button>
+                ) : undefined
+              }
+            />
+          }
         />
-      ) : (
-        <EmptyCampaignsState onCreateClick={handleCreateClick} />
-      )}
+      </div>
 
       {/* Create/Edit Campaign Dialog */}
       <DialogTrigger
@@ -361,21 +375,6 @@ const StatItem: React.FC<{
         </Text>
       )}
     </div>
-  </div>
-)
-
-const EmptyCampaignsState: React.FC<{ onCreateClick: () => void }> = ({ onCreateClick: _onCreateClick }) => (
-  <div style={{ padding: '48px', textAlign: 'center', border: `2px dashed ${COLORS.GRAY_300}`, borderRadius: '8px' }}>
-    <h3 style={{ marginBottom: SPACING.MD }}>
-      No campaigns yet
-    </h3>
-    <Text UNSAFE_style={{
-      color: COLORS.GRAY_600,
-      marginBottom: SPACING.LG,
-      display: 'block'
-    }}>
-      Create campaigns to track registrations from different sources like email, social media, or partner promotions.
-    </Text>
   </div>
 )
 

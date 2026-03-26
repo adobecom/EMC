@@ -604,7 +604,6 @@ export const VenueComponent: React.FC = () => {
             borderRadius: '4px',
             backgroundColor: '#FFFFFF',
             color: COLORS.GRAY_800,
-            fontFamily: 'adobe-clean, sans-serif',
             boxSizing: 'border-box'
           }}
         />

@@ -9,13 +9,13 @@ import {
   Text
 } from '@react-spectrum/s2'
 import { style } from '@react-spectrum/s2/style' with { type: 'macro' }
-import Collection from '@react-spectrum/s2/icons/Collection'
-import CursorClick from '@react-spectrum/s2/icons/CursorClick'
-import UserGroup from '@react-spectrum/s2/icons/UserGroup'
-import Slideshow from '@react-spectrum/s2/icons/Slideshow'
-import InfoCircle from '@react-spectrum/s2/icons/InfoCircle'
-import ChartBarVert from '@react-spectrum/s2/icons/ChartBarVert'
-import { SPACING, COLORS } from '../styles/designSystem'
+import GraphBarChart from '@react-spectrum/s2/illustrations/gradient/generic1/GraphBarChart'
+import CalendarIllustration from '@react-spectrum/s2/illustrations/gradient/generic1/Calendar'
+import UserGroupIllustration from '@react-spectrum/s2/illustrations/gradient/generic1/UserGroup'
+import MicrophoneIllustration from '@react-spectrum/s2/illustrations/gradient/generic1/Microphone'
+import LayersIllustration from '@react-spectrum/s2/illustrations/gradient/generic1/Layers'
+import DocumentIllustration from '@react-spectrum/s2/illustrations/gradient/generic1/Document'
+import { SPACING } from '../styles/designSystem'
 import { checkPermission } from '../hooks/useHasPermission'
 import { useGroup } from '../contexts/GroupContext'
 
@@ -28,7 +28,6 @@ interface NavDestination {
   icon: React.ReactNode
   title: string
   description: string
-  color?: string
   permission?: { resource: string, access: string }
 }
 
@@ -36,54 +35,48 @@ const destinations: NavDestination[] = [
   {
     id: 'overview',
     path: '/overview',
-    icon: <ChartBarVert />,
+    icon: <GraphBarChart aria-hidden />,
     title: 'Overview',
     description: 'View comprehensive statistics, metrics, and insights across all events and series.',
-    color: '#0D66D0'
   },
   {
     id: 'events',
     path: '/events',
-    icon: <CursorClick />,
+    icon: <CalendarIllustration aria-hidden />,
     title: 'Events',
     description: 'Create, edit, and publish events with full configuration options.',
-    color: COLORS.ADOBE_RED,
     permission: { resource: 'event', access: 'read' }
   },
   {
     id: 'registrations',
     path: '/registrations',
-    icon: <UserGroup />,
+    icon: <UserGroupIllustration aria-hidden />,
     title: 'Registrations',
     description: 'View and manage event registrations, campaigns, and track RSVPs.',
-    color: '#268E6C',
     permission: { resource: 'event', access: 'read' }
   },
   {
     id: 'speakers',
     path: '/speakers',
-    icon: <Slideshow />,
+    icon: <MicrophoneIllustration aria-hidden />,
     title: 'Speakers',
     description: 'Manage speakers at the series level and assign them to events.',
-    color: '#CD3ACE',
     permission: { resource: 'event', access: 'read' }
   },
   {
     id: 'series',
     path: '/series',
-    icon: <Collection />,
+    icon: <LayersIllustration aria-hidden />,
     title: 'Series',
     description: 'Create and manage event series to group related events together.',
-    color: '#2D9D92',
     permission: { resource: 'series', access: 'read' }
   },
   {
     id: 'about',
     path: '/about',
-    icon: <InfoCircle />,
+    icon: <DocumentIllustration aria-hidden />,
     title: 'Documentation',
     description: 'Access comprehensive documentation, guides, and API references.',
-    color: '#6E6E6E'
   }
 ]
 
@@ -96,7 +89,6 @@ interface NavCardProps {
 }
 
 const NavCard: React.FC<NavCardProps> = ({ destination, onClick }) => {
-  const color = destination.color || COLORS.ADOBE_RED
   return (
     <div
       style={{
@@ -113,16 +105,6 @@ const NavCard: React.FC<NavCardProps> = ({ destination, onClick }) => {
       className="nav-card"
     >
       <div onClick={onClick} style={{ height: '100%' }}>
-        <div
-          style={{
-            position: 'absolute',
-            top: 0,
-            left: 0,
-            right: 0,
-            height: '4px',
-            backgroundColor: color
-          }}
-        />
         <div className={style({ display: 'flex', flexDirection: 'column', gap: 16 })}
           style={{ height: '100%' }}
         >

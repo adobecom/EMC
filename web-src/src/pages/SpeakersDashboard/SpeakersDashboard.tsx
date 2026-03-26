@@ -33,6 +33,7 @@ import Link from '@react-spectrum/s2/icons/Link'
 import User from '@react-spectrum/s2/icons/User'
 import { TableColumn } from '../../components/shared/DataTable'
 import { ResourceDashboardLayout, BlurredLoadingOverlay } from '../../components/shared'
+import MicrophoneIllustration from '@react-spectrum/s2/illustrations/linear/Microphone'
 import { SeriesSpeaker, SeriesApiResponse, EventApiResponse } from '../../types/domain'
 import { apiService, cachedApi } from '../../services/api'
 import { IMS } from '../../types'
@@ -804,6 +805,7 @@ export const SpeakersDashboard: React.FC<SpeakersDashboardProps> = () => {
           onVisibleIdsChange={handleVisibleIdsChange}
           onRefresh={loadSpeakers}
           createButton={createButton}
+          emptyStateIllustration={<MicrophoneIllustration aria-hidden />}
           emptyStateTitle="No Speakers Found"
           emptyStateDescription="Get started by adding your first speaker to this series"
           searchPlaceholder="Search speakers..."

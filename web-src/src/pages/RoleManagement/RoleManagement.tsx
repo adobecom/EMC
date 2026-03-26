@@ -18,6 +18,7 @@ import { IMS } from '../../types'
 import type { RBACApiRole, RBACPermission } from '../../types/rbacApi'
 import { TableColumn } from '../../components/shared/DataTable'
 import { ResourceDashboardLayout, BlurredLoadingOverlay } from '../../components/shared'
+import BriefcaseIllustration from '@react-spectrum/s2/illustrations/linear/Briefcase'
 import { useHasPermission } from '../../hooks/useHasPermission'
 
 interface RoleManagementProps {
@@ -261,6 +262,7 @@ export const RoleManagement: React.FC<RoleManagementProps> = () => {
           onCreate={canWrite ? openAddDialog : undefined}
           createLabel="Create Role"
           onRefresh={loadData}
+          emptyStateIllustration={<BriefcaseIllustration aria-hidden />}
           emptyStateTitle="No Roles"
           emptyStateDescription="Create roles to define permission sets for groups"
           searchPlaceholder="Search roles..."

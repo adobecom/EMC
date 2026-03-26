@@ -19,6 +19,7 @@ import Location from "@react-spectrum/s2/icons/Location"
 import { getEventTypeOptions, EventType } from '../../config/eventTypeConfig'
 import { TableColumn } from '../../components/shared/DataTable'
 import { StatusBadge, ResourceDashboardLayout, BlurredLoadingOverlay } from '../../components/shared'
+import CalendarIllustration from '@react-spectrum/s2/illustrations/linear/Calendar'
 import { EventDashboardItem } from '../../types/domain'
 import { apiService, cachedApi } from '../../services/api'
 import { thumbnailEnrichmentManager, venueEnrichmentManager, historyEnrichmentManager, EventThumbnail, EventVenueInfo, EventHistoryInfo } from '../../services/eventEnrichment'
@@ -928,6 +929,7 @@ export const EventsDashboard: React.FC<EventsDashboardProps> = () => {
         onVisibleItemsChange={handleVisibleEventsChange}
         onRefresh={loadEventsData}
         createButton={createEventButton}
+        emptyStateIllustration={<CalendarIllustration aria-hidden />}
         emptyStateTitle="No Events Found"
         emptyStateDescription="Get started by creating your first event"
         searchPlaceholder="Search events..."
