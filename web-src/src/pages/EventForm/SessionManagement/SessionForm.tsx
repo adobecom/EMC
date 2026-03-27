@@ -83,6 +83,12 @@ function tagsToString(tags: EventTag[]): string[] {
   return tags.map((t) => t.caasId ?? t.name);
 }
 
+function parseTagsFromApi(tags: unknown): string[] {
+  if (typeof tags === "string") return tags.split(",").map((t) => t.trim()).filter(Boolean);
+  if (Array.isArray(tags)) return (tags as string[]).map((t) => String(t).trim()).filter(Boolean);
+  return [];
+}
+
 export function mapApiToSession(item: Record<string, unknown>): Session {
   const loc = (
     item.localizations as Record<
@@ -102,7 +108,7 @@ export function mapApiToSession(item: Record<string, unknown>): Session {
     startDateTime: String(item.startDateTime ?? ""),
     endDateTime: String(item.endDateTime ?? ""),
     capacity: item.capacity != null ? Number(item.capacity) : undefined,
-    tags: Array.isArray(item.tags) ? (item.tags as string[]) : [],
+    tags: parseTagsFromApi(item.tags),
   };
 }
 

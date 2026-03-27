@@ -12,7 +12,7 @@ import ChevronDown from '@react-spectrum/s2/icons/ChevronDown';
 import RemoveCircle from '@react-spectrum/s2/icons/RemoveCircle';
 import { Session } from "../../../types/sessions";
 import Chip from "../../../components/shared/Chip";
-import { COLORS } from "../../../styles/designSystem";
+// import { COLORS } from "../../../styles/designSystem";
 import { formatTime, formatDate } from "../../../utils/dateTime";
 import { SessionForm } from "./SessionForm";
 import type { SessionFormData } from "./SessionForm";
@@ -103,11 +103,11 @@ export const SessionItem: React.FC<SessionItemProps> = ({
           <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
             <Heading
               level={3}
-              UNSAFE_style={{ color: COLORS.GRAY_700, margin: 0 }}
+              UNSAFE_style={{ color: "#464646", margin: 0 }}
             >
               {session.name}
             </Heading>
-            <Text>
+            <Text UNSAFE_style={{ color: "#464646", fontSize: "14px" }}>
               {sessionDate} | {startTime} - {endTime}
             </Text>
             {session.tags && session.tags.length > 0 && (

@@ -1,5 +1,4 @@
 import React, { useState, useEffect, useCallback } from "react";
-import { Well } from "@adobe/react-spectrum";
 import { ProgressCircle, Button, Heading, Text, InlineAlert } from "@react-spectrum/s2";
 import AddCircle from "@react-spectrum/s2/icons/AddCircle";
 import { Session } from "../../../types/sessions";
@@ -18,6 +17,16 @@ interface SessionTimeData {
   modificationTime?: number;
 }
 
+function parseTagsFromApi(tags: unknown): string[] {
+  if (typeof tags === "string") return tags.split(",").map((t) => t.trim()).filter(Boolean);
+  if (Array.isArray(tags)) return (tags as string[]).map((t) => String(t).trim()).filter(Boolean);
+  return [];
+}
+
+function serializeTagsForApi(tags: string[] | undefined): string {
+  return (tags ?? []).join(",");
+}
+
 function mapApiSessionToSession(item: Record<string, unknown>): Session {
   return {
     id: String(item.id ?? item.sessionId ?? ""),
@@ -27,7 +36,7 @@ function mapApiSessionToSession(item: Record<string, unknown>): Session {
     startDateTime: String(item.startDateTime ?? ""),
     endDateTime: String(item.endDateTime ?? ""),
     capacity: item.capacity != null ? Number(item.capacity) : undefined,
-    tags: Array.isArray(item.tags) ? (item.tags as string[]) : [],
+    tags: parseTagsFromApi(item.tags),
   };
 }
 
@@ -231,7 +240,7 @@ export const Sessions: React.FC = () => {
     const payload = {
       name: data.name,
       description: data.description,
-      tags: data.tags,
+      tags: serializeTagsForApi(data.tags),
       ...(data.timezone ? { timezone: data.timezone } : {}),
     };
     const res = await apiService.createSession(eventId, payload);
@@ -316,7 +325,7 @@ export const Sessions: React.FC = () => {
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
         <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
           <Heading level={2}>Sessions</Heading>
-          <Text>Breakdown your event into sessions and add details</Text>
+          <Text>Break down your event into sessions and add details.</Text>
         </div>
         <Button
           variant="secondary"
@@ -339,9 +348,23 @@ export const Sessions: React.FC = () => {
           <Text>Loading sessions</Text>
         </div>
       ) : sessions.length === 0 && !isAddingNew ? (
-        <Well UNSAFE_style={{ textAlign: "center", marginTop: "28px" }}>
-          No sessions have been created yet for this event
-        </Well>
+        <div
+          style={{
+            background: "#f8f8f8",
+            border: "1px solid #e9e9e9",
+            borderRadius: "8px",
+            height: "89px",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            width: "100%",
+            marginTop: "12px",
+          }}
+        >
+          <span style={{ color: "#222", fontSize: "18px" }}>
+            No sessions have been created yet for this event
+          </span>
+        </div>
       ) : (
         <SessionsList
           sessions={sessions}

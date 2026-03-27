@@ -332,17 +332,18 @@ class ApiService {
   async createSession(eventId: string, data: Record<string, unknown>): Promise<any | ErrorResponse> {
     validateString(eventId, 'event ID')
     validateObject(data, 'session data')
-    const sessionCode = (String(data.name ?? data.enTitle ?? '').replace(/\s+/g, '-').toLowerCase()).substring(0, 50) || 'session'
-    const body = {
+    const sessionCode = (String(data.name ?? '').replace(/\s+/g, '-').toLowerCase()).substring(0, 50) || 'session'
+    const body: Record<string, unknown> = {
       eventId,
-      enTitle: data.name ?? data.enTitle ?? '',
-      title: data.name ?? data.enTitle ?? '',
+      enTitle: data.name ?? '',
+      title: data.name ?? '',
       description: data.description ?? '',
+      tags: data.tags ?? '',
       sessionCode,
-      sessionType: data.sessionType ?? 'Session',
-      published: data.published ?? false,
-      ...data
+      sessionType: 'Session',
+      published: false,
     }
+    if (data.timezone) body.timezone = data.timezone
     return this.callExternalApi('esp', '/v1/sessions', 'POST', body, {
       operationName: 'createSession',
       shouldReturnFullResponse: true,
@@ -353,19 +354,22 @@ class ApiService {
     validateString(id, 'session ID')
     validateString(eventId, 'event ID')
     validateObject(data, 'session data')
-    const sessionCode = (String(data.name ?? data.enTitle ?? '').replace(/\s+/g, '-').toLowerCase()).substring(0, 50) || 'session'
+    const sessionCode = (String(data.name ?? '').replace(/\s+/g, '-').toLowerCase()).substring(0, 50) || 'session'
     const now = Date.now()
-    const body = {
-      ...data,
+    const body: Record<string, unknown> = {
       sessionId: id,
       eventId,
+      enTitle: data.name ?? '',
+      title: data.name ?? '',
+      description: data.description ?? '',
+      tags: data.tags ?? '',
       sessionCode,
-      enTitle: data.enTitle ?? data.name ?? '',
-      sessionType: data.sessionType ?? 'Session',
-      published: data.published ?? false,
+      sessionType: 'Session',
+      published: false,
       creationTime: (data.creationTime as number) ?? now,
       modificationTime: (data.modificationTime as number) ?? now,
     }
+    if (data.timezone) body.timezone = data.timezone
     return this.callExternalApi('esp', `/v1/sessions/${encodeURIComponent(id)}`, 'PUT', body, {
       operationName: 'updateSession',
       shouldReturnFullResponse: true,
