@@ -3,12 +3,12 @@
  *
  * The generic loop in buildEventPayload (useEventFormSave) iterates
  * EVENT_DATA_FILTER and includes every submittable field that is not
- * in speciallyHandledFields. These tests verify the two guards that
- * prevent read-only fields from reaching ESP update payloads:
+ * in speciallyHandledFields. These tests verify guards on automatic payload building:
  *
- * 1. detailPagePath — submittable: false in EVENT_DATA_FILTER
- * 2. inviteOnly — in speciallyHandledFields (tested indirectly via
- *    filterEventData, which also respects submittable)
+ * 1. detailPagePath — submittable: false so buildEventPayload does not copy it from
+ *    form state; EventForm merges `detailPagePath` via extraPayload when a series URL
+ *    pattern applies on create.
+ * 2. inviteOnly — in speciallyHandledFields (tested indirectly via filterEventData)
  */
 
 import {
@@ -80,11 +80,3 @@ describe('isValidAttribute handles boolean false correctly', () => {
   })
 })
 
-describe('extraPayload url field passes through correctly', () => {
-  it('url field is not in EVENT_DATA_FILTER so it passes through Object.assign without interference', () => {
-    // The url field is passed via extraPayload in EventForm.tsx
-    // and merged via Object.assign(payload, extraPayload).
-    // Verify url is NOT a known filter field (would cause double-processing).
-    expect(EVENT_DATA_FILTER.url).toBeUndefined()
-  })
-})

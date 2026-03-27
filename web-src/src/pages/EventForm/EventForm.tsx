@@ -485,7 +485,6 @@ const EventFormInner: React.FC<EventFormInnerProps> = ({ ims: _ims }) => {
     url: string
     collision: EventApiResponse | null
     pendingAction: 'save' | 'publish'
-    relativeUrl: string
   } | null>(null)
   const [isCheckingUrl, setIsCheckingUrl] = useState(false)
   
@@ -667,7 +666,7 @@ const EventFormInner: React.FC<EventFormInnerProps> = ({ ims: _ims }) => {
       if (!result) return { proceed: true }
 
       // Pattern found — show confirmation dialog
-      setUrlDialogState({ url: result.url, collision: result.collision, pendingAction: action, relativeUrl: result.relativeUrl })
+      setUrlDialogState({ url: result.url, collision: result.collision, pendingAction: action })
       return { proceed: false }
     } catch (err) {
       console.error('URL pattern check failed:', err)
@@ -683,12 +682,12 @@ const EventFormInner: React.FC<EventFormInnerProps> = ({ ims: _ims }) => {
    */
   const executeSaveWithUrl = useCallback(async (
     action: 'save' | 'publish',
-    relativeUrl: string
+    detailPagePath: string
   ) => {
     setUrlDialogState(null)
     persistToStorage()
 
-    const extra = { url: relativeUrl }
+    const extra = { detailPagePath }
 
     if (action === 'publish') {
       await publishEvent({
@@ -1090,7 +1089,7 @@ const EventFormInner: React.FC<EventFormInnerProps> = ({ ims: _ims }) => {
                 variant="accent"
                 onPress={() => {
                   if (urlDialogState) {
-                    executeSaveWithUrl(urlDialogState.pendingAction, urlDialogState.relativeUrl)
+                    executeSaveWithUrl(urlDialogState.pendingAction, urlDialogState.url)
                   }
                 }}
               >
