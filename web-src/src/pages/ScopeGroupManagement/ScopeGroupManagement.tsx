@@ -840,7 +840,7 @@ export const ScopeGroupManagement: React.FC<ScopeGroupManagementProps> = () => {
                     </Button>
                   )}
                   {canDeleteScope && selectedScope.type === 'team' && (
-                    <Button size="S" variant="negative" fillStyle="outline" onPress={() => setScopeToDelete(selectedScope)}>
+                    <Button size="S" variant="secondary" onPress={() => setScopeToDelete(selectedScope)}>
                       <RemoveCircle />
                       <Text>Delete Scope</Text>
                     </Button>
@@ -858,7 +858,7 @@ export const ScopeGroupManagement: React.FC<ScopeGroupManagementProps> = () => {
           </div>
         </div>
 
-        <Divider />
+        <Divider styles={style({ marginBottom: 56 })} />
 
         {/* ── Groups table ── */}
         {selectedScopeId ? (
