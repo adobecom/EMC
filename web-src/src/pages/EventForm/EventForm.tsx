@@ -587,7 +587,6 @@ const EventFormInner: React.FC<EventFormInnerProps> = ({ ims: _ims }) => {
               action: { label: 'View Events', onPress: () => navigate('/events') }
             }
           )
-          setTimeout(() => navigate('/events'), 2000)
         },
         onError: (error) => {
           console.error('Failed to publish event:', error)
@@ -652,9 +651,6 @@ const EventFormInner: React.FC<EventFormInnerProps> = ({ ims: _ims }) => {
             }
           }
         )
-        setTimeout(() => {
-          navigate('/events')
-        }, 2000)
       },
       onError: (error) => {
         console.error('Failed to publish event:', error)
