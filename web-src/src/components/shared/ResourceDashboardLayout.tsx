@@ -260,11 +260,6 @@ export function ResourceDashboardLayout<T extends Record<string, any>>({
                       illustration={<NoSearchResults aria-hidden />}
                       title="No Results Found"
                       description={`No items match "${debouncedQuery}"`}
-                      actions={
-                        <Button variant="secondary" fillStyle="outline" onPress={handleClear}>
-                          <Text>Clear Search</Text>
-                        </Button>
-                      }
                     />
                   ) : (
                     <ResourceEmptyState
