@@ -15,6 +15,7 @@ import {
   DialogTrigger,
   Content,
   ButtonGroup,
+  AlertDialog,
 } from '@react-spectrum/s2'
 import { style } from "@react-spectrum/s2/style" with { type: "macro" }
 import { useNavigate, useParams } from 'react-router-dom'
@@ -47,7 +48,7 @@ import {
 } from './index'
 import { mapApiResponseToFormData } from '../../utils/eventFormMappers'
 import { useEventFeatureFlags } from '../../hooks/useEventTypeFeatures'
-import { EventFormProvider, useEventFormContext, useToast } from '../../contexts'
+import { EventFormProvider, useEventFormContext, useToast, useGroup } from '../../contexts'
 import { useEventFormSave } from '../../hooks/useEventFormSave'
 import { useCustomDetailPagePath } from '../../hooks/useCustomDetailPagePath'
 import { COLORS, Z_INDEX, TYPOGRAPHY } from '../../styles/designSystem'
@@ -76,9 +77,11 @@ interface SeriesOption {
  */
 const FormatSelectionOverlay: React.FC<{
   eventType: 'in-person' | 'webinar'
+  /** Re-fetch series when RBAC group changes */
+  activeGroupId: string | null
   onConfirm: (cloudType: 'CreativeCloud' | 'ExperienceCloud', seriesId: string) => void
   onCancel: () => void
-}> = ({ eventType, onConfirm, onCancel }) => {
+}> = ({ eventType, activeGroupId, onConfirm, onCancel }) => {
   // Local state for selections — only committed to context on confirm
   const [selectedCloud, setSelectedCloud] = useState<string | null>(null)
   const [selectedSeries, setSelectedSeries] = useState<string | null>(null)
@@ -135,7 +138,7 @@ const FormatSelectionOverlay: React.FC<{
 
     loadData()
     return () => { isMounted = false }
-  }, [])
+  }, [activeGroupId])
 
   // ============================================================================
   // SERIES FILTERING
@@ -173,6 +176,7 @@ const FormatSelectionOverlay: React.FC<{
   useEffect(() => {
     if (!selectedCloud || allSeries.length === 0) {
       setFilteredSeries([])
+      setSelectedSeries(null)
       return
     }
 
@@ -196,10 +200,12 @@ const FormatSelectionOverlay: React.FC<{
 
     setFilteredSeries(options)
 
-    // Clear series selection if the previously selected series is no longer available
-    if (selectedSeries && !options.some(s => s.id === selectedSeries)) {
+    if (options.length === 0) {
+      setSelectedSeries(null)
+    } else if (selectedSeries && !options.some(s => s.id === selectedSeries)) {
       setSelectedSeries(null)
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- only reset series when filter inputs change; including selectedSeries would re-run on every pick
   }, [selectedCloud, allSeries, seriesTemplates, eventType])
 
   // ============================================================================
@@ -215,8 +221,12 @@ const FormatSelectionOverlay: React.FC<{
     setSelectedSeries(key ? String(key) : null)
   }
 
+  const hasValidSeriesSelection = Boolean(
+    selectedSeries && filteredSeries.some(s => s.id === selectedSeries)
+  )
+
   const handleConfirm = () => {
-    if (selectedCloud && selectedSeries) {
+    if (selectedCloud && hasValidSeriesSelection && selectedSeries) {
       onConfirm(
         selectedCloud as 'CreativeCloud' | 'ExperienceCloud',
         selectedSeries
@@ -224,7 +234,7 @@ const FormatSelectionOverlay: React.FC<{
     }
   }
 
-  const isConfirmDisabled = !selectedCloud || !selectedSeries
+  const isConfirmDisabled = !selectedCloud || !hasValidSeriesSelection
 
   // ============================================================================
   // RENDER
@@ -317,28 +327,55 @@ const FormatSelectionOverlay: React.FC<{
               ))}
             </Picker>
 
-            <Picker
-              label="Series"
-              isRequired
-              selectedKey={selectedSeries}
-              onSelectionChange={handleSeriesChange}
-              isDisabled={!selectedCloud}
-              placeholder={!selectedCloud ? 'Select a cloud first' : 'Choose a series...'}
-              styles={style({ width: '[100%]' })}
-              description={
-                selectedSeries
-                  ? filteredSeries.find(s => s.id === selectedSeries)?.description || undefined
-                  : undefined
-              }
-            >
-              {filteredSeries.length === 0 ? (
-                <PickerItem id="no-series">No series available for this cloud</PickerItem>
-              ) : (
-                filteredSeries.map((s) => (
+            {!selectedCloud ? (
+              <div className={style({ display: 'flex', flexDirection: 'column', gap: 8 })}>
+                <Text
+                  UNSAFE_style={{
+                    fontSize: '12px',
+                    fontWeight: 600,
+                    color: 'var(--spectrum-global-color-gray-800)',
+                  }}
+                >
+                  Series <span aria-hidden="true">*</span>
+                </Text>
+                <Text UNSAFE_style={{ fontSize: '14px', color: COLORS.GRAY_600 }}>
+                  Select a cloud first.
+                </Text>
+              </div>
+            ) : filteredSeries.length === 0 ? (
+              <div className={style({ display: 'flex', flexDirection: 'column', gap: 8 })}>
+                <Text
+                  UNSAFE_style={{
+                    fontSize: '12px',
+                    fontWeight: 600,
+                    color: 'var(--spectrum-global-color-gray-800)',
+                  }}
+                >
+                  Series <span aria-hidden="true">*</span>
+                </Text>
+                <Text UNSAFE_style={{ fontSize: '14px', color: COLORS.GRAY_600 }}>
+                  No series available for this cloud and event type.
+                </Text>
+              </div>
+            ) : (
+              <Picker
+                label="Series"
+                isRequired
+                selectedKey={selectedSeries}
+                onSelectionChange={handleSeriesChange}
+                placeholder="Choose a series..."
+                styles={style({ width: '[100%]' })}
+                description={
+                  selectedSeries
+                    ? filteredSeries.find(s => s.id === selectedSeries)?.description || undefined
+                    : undefined
+                }
+              >
+                {filteredSeries.map((s) => (
                   <PickerItem key={s.id} id={s.id}>{s.name}</PickerItem>
-                ))
-              )}
-            </Picker>
+                ))}
+              </Picker>
+            )}
 
             {selectedCloud && filteredSeries.length === 0 && (
               <div
@@ -394,10 +431,20 @@ const EventFormInner: React.FC<EventFormInnerProps> = ({ ims: _ims }) => {
   const navigate = useNavigate()
   const { id: eventIdParam } = useParams<{ id: string }>()
   const toast = useToast()
-  
+  const { activeGroup, setActiveGroup } = useGroup()
+
   // Track the last error shown to prevent duplicate toasts
   const lastErrorShownRef = useRef<string | null>(null)
-  
+
+  // RBAC group switch: avoid stale dirty reads inside effects
+  const isDirtyRef = useRef(false)
+  const lastStableGroupIdRef = useRef<string | null>(null)
+  const groupSwitchDialogOpenRef = useRef(false)
+  const pendingRevertGroupIdRef = useRef<string | null>(null)
+  /** Set synchronously on primary action so Dialog onOpenChange does not revert the group */
+  const groupSwitchDiscardChosenRef = useRef(false)
+  const [groupSwitchDirtyOpen, setGroupSwitchDirtyOpen] = useState(false)
+
   // Get context
   const {
     formData,
@@ -407,6 +454,7 @@ const EventFormInner: React.FC<EventFormInnerProps> = ({ ims: _ims }) => {
     isPublished,
     maxStepReached,
     isFormatConfirmed,
+    isDirty,
     updateFormData,
     setEventId,
     setEditMode,
@@ -423,6 +471,8 @@ const EventFormInner: React.FC<EventFormInnerProps> = ({ ims: _ims }) => {
     persistToStorage,
     state,
   } = useEventFormContext()
+
+  isDirtyRef.current = isDirty
   
   // Get save hook
   const { publishEvent, saveDraft, isSaving, saveError } = useEventFormSave()
@@ -457,56 +507,121 @@ const EventFormInner: React.FC<EventFormInnerProps> = ({ ims: _ims }) => {
   // ============================================================================
   // LOAD EVENT DATA
   // ============================================================================
-  
-  useEffect(() => {
-    if (eventIdParam) {
-      setEventId(eventIdParam)
-      setEditMode(true)
-      setFormatConfirmed(true) // Edit mode: format is already set
-      loadEvent(eventIdParam)
-    } else {
-      loadFromStorage()
-    }
-  }, [eventIdParam])
-  
-  // Auto-confirm format when loading a draft that already has cloud + series selected
-  useEffect(() => {
-    if (!isEditMode && !isFormatConfirmed && formData.cloudType && formData.seriesId) {
-      setFormatConfirmed(true)
-    }
-  }, [isEditMode, isFormatConfirmed, formData.cloudType, formData.seriesId, setFormatConfirmed])
-  
-  const loadEvent = async (eventIdToLoad: string) => {
+
+  const loadEvent = useCallback(async (eventIdToLoad: string) => {
     setLoading(true)
     try {
       const response = await cachedApi.getEventFull(eventIdToLoad)
-      
+
       if ('error' in response) {
         console.error('Failed to load event:', response)
         setLoadError('Failed to load event data')
         return
       }
-      
+
       setEventResponse(response as EventApiResponse)
-      
-      // Set published status
+
       setPublished(response.published ?? false)
-      
-      // When editing an existing event, all steps are accessible
-      setMaxStepReached(3) // 0-indexed, so 3 is the last step (RSVP)
-      
+
+      setMaxStepReached(3)
+
       const eventLocale = response.defaultLocale || 'en-US'
       setLocale(eventLocale)
       const mappedData = mapApiResponseToFormData(response as EventApiResponse, eventLocale)
       populateFormDataFromResponse(mappedData)
-      
     } catch (err) {
       console.error('Failed to load event:', err)
       setLoadError('Failed to load event data')
     } finally {
       setLoading(false)
     }
-  }
+  }, [
+    setLoading,
+    setLoadError,
+    setEventResponse,
+    setPublished,
+    setMaxStepReached,
+    setLocale,
+    populateFormDataFromResponse,
+  ])
+
+  const reloadAfterGroupChange = useCallback(async () => {
+    if (eventIdParam) {
+      await loadEvent(eventIdParam)
+    } else {
+      loadFromStorage()
+    }
+  }, [eventIdParam, loadEvent, loadFromStorage])
+
+  useEffect(() => {
+    if (eventIdParam) {
+      setEventId(eventIdParam)
+      setEditMode(true)
+      setFormatConfirmed(true)
+      void loadEvent(eventIdParam)
+    } else {
+      loadFromStorage()
+    }
+  }, [eventIdParam, loadEvent, loadFromStorage, setEventId, setEditMode, setFormatConfirmed])
+
+  useEffect(() => {
+    const gid = activeGroup?.groupId ?? null
+    if (!gid) return
+
+    if (lastStableGroupIdRef.current === null) {
+      lastStableGroupIdRef.current = gid
+      return
+    }
+
+    if (lastStableGroupIdRef.current === gid) return
+
+    if (groupSwitchDialogOpenRef.current) return
+
+    if (isDirtyRef.current) {
+      groupSwitchDialogOpenRef.current = true
+      pendingRevertGroupIdRef.current = lastStableGroupIdRef.current
+      setGroupSwitchDirtyOpen(true)
+      return
+    }
+
+    void (async () => {
+      await reloadAfterGroupChange()
+      lastStableGroupIdRef.current = gid
+    })()
+  }, [activeGroup?.groupId, reloadAfterGroupChange])
+
+  const handleGroupSwitchDiscard = useCallback(async () => {
+    const newGid = activeGroup?.groupId ?? null
+    pendingRevertGroupIdRef.current = null
+    groupSwitchDialogOpenRef.current = false
+    setGroupSwitchDirtyOpen(false)
+    try {
+      await reloadAfterGroupChange()
+      if (newGid) lastStableGroupIdRef.current = newGid
+    } finally {
+      groupSwitchDiscardChosenRef.current = false
+    }
+  }, [activeGroup?.groupId, reloadAfterGroupChange])
+
+  const handleGroupSwitchCancel = useCallback(() => {
+    if (groupSwitchDiscardChosenRef.current) {
+      groupSwitchDiscardChosenRef.current = false
+      pendingRevertGroupIdRef.current = null
+      return
+    }
+    const revert = pendingRevertGroupIdRef.current
+    groupSwitchDialogOpenRef.current = false
+    pendingRevertGroupIdRef.current = null
+    setGroupSwitchDirtyOpen(false)
+    if (revert) setActiveGroup(revert)
+  }, [setActiveGroup])
+
+  // Auto-confirm format when loading a draft that already has cloud + series selected
+  useEffect(() => {
+    if (!isEditMode && !isFormatConfirmed && formData.cloudType && formData.seriesId) {
+      setFormatConfirmed(true)
+    }
+  }, [isEditMode, isFormatConfirmed, formData.cloudType, formData.seriesId, setFormatConfirmed])
   
   // ============================================================================
   // FORMAT SELECTION HANDLERS
@@ -892,10 +1007,34 @@ const EventFormInner: React.FC<EventFormInnerProps> = ({ ims: _ims }) => {
       {showFormatOverlay && (
         <FormatSelectionOverlay
           eventType={formData.eventType}
+          activeGroupId={activeGroup?.groupId ?? null}
           onConfirm={handleFormatConfirm}
           onCancel={handleFormatCancel}
         />
       )}
+
+      <DialogTrigger
+        isOpen={groupSwitchDirtyOpen}
+        onOpenChange={(open) => { if (!open) handleGroupSwitchCancel() }}
+      >
+        <div style={{ display: 'none' }} />
+        <AlertDialog
+          title="Switch group with unsaved changes?"
+          variant="destructive"
+          primaryActionLabel="Discard changes & switch"
+          cancelLabel="Cancel"
+          onPrimaryAction={() => {
+            groupSwitchDiscardChosenRef.current = true
+            void handleGroupSwitchDiscard()
+          }}
+          onCancel={handleGroupSwitchCancel}
+        >
+          <Text>
+            You have unsaved changes. Save your work first, or discard to load this form for the
+            selected group (your edits will be lost).
+          </Text>
+        </AlertDialog>
+      </DialogTrigger>
 
       {/* Custom URL Pattern Confirmation Dialog */}
       <DialogTrigger
