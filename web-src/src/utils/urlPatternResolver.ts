@@ -7,6 +7,7 @@
 
 import type { EnvironmentTier } from '../config/env'
 import type { EventFormData, SeriesApiResponse } from '../types/domain'
+import { normalizeContentRoot, normalizeRelatedDomain } from './seriesFormAutoCorrect'
 
 /**
  * Slugify a string for use in a URL path segment.
@@ -90,15 +91,16 @@ export function normalizeRelativeUrl(resolved: string): string {
 
 /**
  * Join relatedDomain, contentRoot, and the resolved pattern into a
- * single path, normalizing slashes between segments.
+ * single absolute detail URL (https://…), using the same domain/root
+ * normalization as the series form so API `detailPagePath` matches list/get.
  */
 export function constructDetailPagePath(
   relatedDomain: string,
   contentRoot: string,
   resolvedPattern: string
 ): string {
-  const domain = relatedDomain.replace(/\/+$/, '')
-  const root = contentRoot.replace(/^\/+/, '').replace(/\/+$/, '')
+  const domain = normalizeRelatedDomain(relatedDomain)
+  const root = normalizeContentRoot(contentRoot).replace(/^\/+/, '').replace(/\/+$/, '')
   const pattern = resolvedPattern.replace(/^\/+/, '')
 
   const segments = [domain, root, pattern].filter(Boolean)

@@ -20,7 +20,7 @@ export interface SaveOptions {
   publish?: boolean
   /** Skip calling component onAfterSave callbacks */
   skipAfterSave?: boolean
-  /** Additional fields merged into the API payload after normal payload building */
+  /** Additional fields merged into the API payload after normal payload building (e.g. `detailPagePath` for URL pattern on create) */
   extraPayload?: Record<string, any>
   /** Custom success callback */
   onSuccess?: (eventId: string, response: EventApiResponse) => void

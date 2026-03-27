@@ -110,4 +110,10 @@ describe('constructDetailPagePath', () => {
       constructDetailPagePath('', '', 'my-event')
     ).toBe('my-event')
   })
+
+  it('prefixes https when relatedDomain has host but no scheme', () => {
+    expect(
+      constructDetailPagePath('www.adobe.com', '/events', 'my-event/overview')
+    ).toBe('https://www.adobe.com/events/my-event/overview')
+  })
 })
