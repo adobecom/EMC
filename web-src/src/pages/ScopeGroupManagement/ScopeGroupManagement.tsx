@@ -819,15 +819,9 @@ export const ScopeGroupManagement: React.FC<ScopeGroupManagementProps> = () => {
 
               {selectedScope && (
                 <div className={style({display: 'flex', gap: 8, alignItems: 'center', marginBottom: 4})}>
-                  <Badge variant={SCOPE_TYPE_VARIANTS[selectedScope.type] || 'neutral' } UNSAFE_style={{ marginRight: 8 }}>
+                  <Badge variant={SCOPE_TYPE_VARIANTS[selectedScope.type] || 'neutral' } UNSAFE_style={{ marginRight: 40 }}>
                     {selectedScope.type}
                   </Badge>
-                  {canWriteScope && (
-                    <Button size="S" variant="secondary" onPress={openScopeEdit}>
-                      <EditIcon />
-                      <Text>Edit Scope</Text>
-                    </Button>
-                  )}
                   <Button
                     size="S"
                     variant="secondary"
@@ -839,8 +833,14 @@ export const ScopeGroupManagement: React.FC<ScopeGroupManagementProps> = () => {
                     <RemoveCircle />
                     <Text>Reset</Text>
                   </Button>
+                  {canWriteScope && (
+                    <Button size="S" variant="secondary" onPress={openScopeEdit}>
+                      <EditIcon />
+                      <Text>Edit Scope</Text>
+                    </Button>
+                  )}
                   {canDeleteScope && selectedScope.type === 'team' && (
-                    <Button size="S" variant="negative" onPress={() => setScopeToDelete(selectedScope)}>
+                    <Button size="S" variant="negative" fillStyle="outline" onPress={() => setScopeToDelete(selectedScope)}>
                       <RemoveCircle />
                       <Text>Delete Scope</Text>
                     </Button>
