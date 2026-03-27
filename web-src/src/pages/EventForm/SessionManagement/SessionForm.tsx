@@ -571,7 +571,7 @@ export const SessionForm: React.FC<SessionFormProps> = ({
         </div>
       )}
 
-      <Form unsafe_style={{ display: "flex", flexDirection: "column", gap: "24px" }}>
+      <Form>
         <TextField
           label="Title"
           isRequired

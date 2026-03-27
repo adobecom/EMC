@@ -6,13 +6,12 @@ import {
   Button,
   Tooltip,
   TooltipTrigger,
+  Badge,
 } from "@react-spectrum/s2";
 import ChevronRight from '@react-spectrum/s2/icons/ChevronRight';
 import ChevronDown from '@react-spectrum/s2/icons/ChevronDown';
 import RemoveCircle from '@react-spectrum/s2/icons/RemoveCircle';
 import { Session } from "../../../types/sessions";
-import Chip from "../../../components/shared/Chip";
-// import { COLORS } from "../../../styles/designSystem";
 import { formatTime, formatDate } from "../../../utils/dateTime";
 import { SessionForm } from "./SessionForm";
 import type { SessionFormData } from "./SessionForm";
@@ -111,9 +110,9 @@ export const SessionItem: React.FC<SessionItemProps> = ({
               {sessionDate} | {startTime} - {endTime}
             </Text>
             {session.tags && session.tags.length > 0 && (
-              <div style={{ display: "flex", gap: "12px", marginTop: "8px", flexWrap: "wrap" }}>
+              <div style={{ display: "flex", gap: "8px", marginTop: "8px", flexWrap: "wrap" }}>
                 {session.tags.map((tag) => (
-                  <Chip key={tag} text={getCaasTagDisplayLabel(tag)} />
+                  <Badge key={tag} variant="neutral" fillStyle="subtle" size="S">{getCaasTagDisplayLabel(tag)}</Badge>
                 ))}
               </div>
             )}
