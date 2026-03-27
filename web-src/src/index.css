@@ -217,6 +217,8 @@ select {
 
 .custom-data-table .expanded-content-panel {
   padding: 16px 24px 24px 56px;
+  max-height: 400px;
+  overflow-y: auto;
 }
 
 /** User card styles for expanded group rows **/
