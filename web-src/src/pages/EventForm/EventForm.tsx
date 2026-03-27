@@ -173,6 +173,7 @@ const FormatSelectionOverlay: React.FC<{
   useEffect(() => {
     if (!selectedCloud || allSeries.length === 0) {
       setFilteredSeries([])
+      setSelectedSeries(null)
       return
     }
 
@@ -196,10 +197,12 @@ const FormatSelectionOverlay: React.FC<{
 
     setFilteredSeries(options)
 
-    // Clear series selection if the previously selected series is no longer available
-    if (selectedSeries && !options.some(s => s.id === selectedSeries)) {
+    if (options.length === 0) {
+      setSelectedSeries(null)
+    } else if (selectedSeries && !options.some(s => s.id === selectedSeries)) {
       setSelectedSeries(null)
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- only reset series when filter inputs change; including selectedSeries would re-run on every pick
   }, [selectedCloud, allSeries, seriesTemplates, eventType])
 
   // ============================================================================
@@ -215,8 +218,12 @@ const FormatSelectionOverlay: React.FC<{
     setSelectedSeries(key ? String(key) : null)
   }
 
+  const hasValidSeriesSelection = Boolean(
+    selectedSeries && filteredSeries.some(s => s.id === selectedSeries)
+  )
+
   const handleConfirm = () => {
-    if (selectedCloud && selectedSeries) {
+    if (selectedCloud && hasValidSeriesSelection && selectedSeries) {
       onConfirm(
         selectedCloud as 'CreativeCloud' | 'ExperienceCloud',
         selectedSeries
@@ -224,7 +231,7 @@ const FormatSelectionOverlay: React.FC<{
     }
   }
 
-  const isConfirmDisabled = !selectedCloud || !selectedSeries
+  const isConfirmDisabled = !selectedCloud || !hasValidSeriesSelection
 
   // ============================================================================
   // RENDER
@@ -317,28 +324,55 @@ const FormatSelectionOverlay: React.FC<{
               ))}
             </Picker>
 
-            <Picker
-              label="Series"
-              isRequired
-              selectedKey={selectedSeries}
-              onSelectionChange={handleSeriesChange}
-              isDisabled={!selectedCloud}
-              placeholder={!selectedCloud ? 'Select a cloud first' : 'Choose a series...'}
-              styles={style({ width: '[100%]' })}
-              description={
-                selectedSeries
-                  ? filteredSeries.find(s => s.id === selectedSeries)?.description || undefined
-                  : undefined
-              }
-            >
-              {filteredSeries.length === 0 ? (
-                <PickerItem id="no-series">No series available for this cloud</PickerItem>
-              ) : (
-                filteredSeries.map((s) => (
+            {!selectedCloud ? (
+              <div className={style({ display: 'flex', flexDirection: 'column', gap: 8 })}>
+                <Text
+                  UNSAFE_style={{
+                    fontSize: '12px',
+                    fontWeight: 600,
+                    color: 'var(--spectrum-global-color-gray-800)',
+                  }}
+                >
+                  Series <span aria-hidden="true">*</span>
+                </Text>
+                <Text UNSAFE_style={{ fontSize: '14px', color: COLORS.GRAY_600 }}>
+                  Select a cloud first.
+                </Text>
+              </div>
+            ) : filteredSeries.length === 0 ? (
+              <div className={style({ display: 'flex', flexDirection: 'column', gap: 8 })}>
+                <Text
+                  UNSAFE_style={{
+                    fontSize: '12px',
+                    fontWeight: 600,
+                    color: 'var(--spectrum-global-color-gray-800)',
+                  }}
+                >
+                  Series <span aria-hidden="true">*</span>
+                </Text>
+                <Text UNSAFE_style={{ fontSize: '14px', color: COLORS.GRAY_600 }}>
+                  No series available for this cloud and event type.
+                </Text>
+              </div>
+            ) : (
+              <Picker
+                label="Series"
+                isRequired
+                selectedKey={selectedSeries}
+                onSelectionChange={handleSeriesChange}
+                placeholder="Choose a series..."
+                styles={style({ width: '[100%]' })}
+                description={
+                  selectedSeries
+                    ? filteredSeries.find(s => s.id === selectedSeries)?.description || undefined
+                    : undefined
+                }
+              >
+                {filteredSeries.map((s) => (
                   <PickerItem key={s.id} id={s.id}>{s.name}</PickerItem>
-                ))
-              )}
-            </Picker>
+                ))}
+              </Picker>
+            )}
 
             {selectedCloud && filteredSeries.length === 0 && (
               <div

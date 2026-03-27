@@ -840,7 +840,7 @@ export const ScopeGroupManagement: React.FC<ScopeGroupManagementProps> = () => {
                     </Button>
                   )}
                   {canDeleteScope && selectedScope.type === 'team' && (
-                    <Button size="S" variant="negative" onPress={() => setScopeToDelete(selectedScope)}>
+                    <Button size="S" variant="secondary" onPress={() => setScopeToDelete(selectedScope)}>
                       <RemoveCircle />
                       <Text>Delete Scope</Text>
                     </Button>

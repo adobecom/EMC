@@ -670,6 +670,13 @@ export const SpeakersDashboard: React.FC<SpeakersDashboardProps> = () => {
     }
   }, [])
 
+  const handleSeriesReset = useCallback(() => {
+    setSelectedSeriesId(null)
+    setSeriesFilterText('')
+    setEventConnections(new Map())
+    loadedSpeakerIdsRef.current.clear()
+  }, [])
+
   // Series selector header with searchable ComboBox
   const seriesSelectorHeader = useMemo(() => (
     <div
@@ -683,7 +690,7 @@ export const SpeakersDashboard: React.FC<SpeakersDashboardProps> = () => {
     >
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 16 }}>
         {/* ComboBox Row */}
-        <div style={{ display: 'flex', alignItems: 'flex-end', gap: 16 }}>
+        <div className={style({ display: 'flex', alignItems: 'end', gap: 8 })}>
           {isLoadingSeries ? (
             <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
               <Text UNSAFE_style={{ fontWeight: 600 }}>Loading series...</Text>
@@ -711,6 +718,14 @@ export const SpeakersDashboard: React.FC<SpeakersDashboardProps> = () => {
                 </ComboBoxItem>
               )}
             </ComboBox>
+          )}
+          {!isLoadingSeries && selectedSeriesId && (
+            <div className={style({ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 4 })}>
+              <Button size="S" variant="secondary" onPress={handleSeriesReset}>
+                <RemoveCircle />
+                <Text>Reset</Text>
+              </Button>
+            </div>
           )}
           {seriesList.length > 0 && (
             <Text UNSAFE_style={{ 
@@ -766,7 +781,7 @@ export const SpeakersDashboard: React.FC<SpeakersDashboardProps> = () => {
         )}
       </div>
     </div>
-  ), [isLoadingSeries, selectedSeriesId, handleSeriesComboBoxChange, seriesList, filteredSeriesItems, selectedSeries, speakers.length])
+  ), [isLoadingSeries, selectedSeriesId, handleSeriesComboBoxChange, handleSeriesReset, seriesList, filteredSeriesItems, selectedSeries, speakers.length])
   
   // Custom create button — only shown when user has event:write
   const createButton = useMemo(() => {
