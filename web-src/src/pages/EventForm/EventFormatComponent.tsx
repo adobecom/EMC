@@ -11,7 +11,7 @@ import { cachedApi } from '../../services/api'
 import { HeadingWithTooltip } from '../../components/shared'
 import { SeriesApiResponse } from '../../types/domain'
 import { useEventFormComponent } from '../../hooks/useEventFormComponent'
-import { useEventFormContext } from '../../contexts/EventFormContext'
+import { useEventFormContext, useGroup } from '../../contexts'
 import { COLORS, TYPOGRAPHY, SPACING } from '../../styles/designSystem'
 
 /**
@@ -36,6 +36,7 @@ export const EventFormatComponent: React.FC = () => {
   })
   
   const { seriesId: contextSeriesId, isFormatConfirmed, resetForReselect } = useEventFormContext()
+  const { activeGroup } = useGroup()
   
   const cloudType = formData.cloudType
   const seriesId = contextSeriesId || formData.seriesId || ''
@@ -82,7 +83,7 @@ export const EventFormatComponent: React.FC = () => {
 
     loadSeriesName()
     return () => { isMounted = false }
-  }, [seriesId])
+  }, [seriesId, activeGroup?.groupId])
 
   // ============================================================================
   // HELPERS
