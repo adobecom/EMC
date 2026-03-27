@@ -1,0 +1,32 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm run lint)",
+      "Bash(npm run lint:fix)",
+      "Bash(npm run type-check)",
+      "Bash(npm run check)",
+      "Bash(npm run dev)",
+      "Bash(npm run dev:local)",
+      "Bash(npm run build:*)",
+      "Bash(npm run deploy:dev)",
+      "Bash(npx jest*)",
+      "Bash(aio app test*)",
+      "Bash(git status)",
+      "Bash(git diff*)",
+      "Bash(git log*)",
+      "Bash(git branch*)",
+      "Bash(git show*)",
+      "Bash(git stash list)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(git push:*)",
+      "Bash(gh pr:*)",
+      "Bash(gh issue:*)",
+      "Bash(gh run:*)"
+    ],
+    "deny": [
+      "Bash(npm run deploy:stage)",
+      "Bash(npm run deploy:prod)"
+    ]
+  }
+}

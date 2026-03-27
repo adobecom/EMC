@@ -8,6 +8,15 @@ import { getClientIdentity as getClientIdentityFromEnv } from '../config/env'
 import { ALLOWED_HOSTS } from '../config/constants'
 
 /**
+ * Module-level active group ID for XHR-based requests (e.g. uploadImage)
+ * that bypass the ApiService class. Set by ApiService.setGroupId().
+ */
+let _activeGroupId: string | null = null
+export function setUploadGroupId(groupId: string | null): void {
+  _activeGroupId = groupId
+}
+
+/**
  * Generate a UUID v4
  * Used for x-request-id header
  */
@@ -157,13 +166,14 @@ export async function uploadImage(
   tracker?: UploadTracker,
   imageId?: string
 ): Promise<any> {
+  const groupId = _activeGroupId
   const requestId = generateUUID()
   const method = imageId ? 'PUT' : 'POST'
   const url = imageId ? `${config.targetUrl}/${imageId}` : config.targetUrl
 
   return new Promise((resolve, reject) => {
     const xhr = new XMLHttpRequest()
-    
+
     xhr.open(method, url)
     xhr.setRequestHeader('x-image-alt-text', config.altText || '')
     xhr.setRequestHeader('x-image-kind', config.type)
@@ -171,6 +181,9 @@ export async function uploadImage(
     xhr.setRequestHeader('Authorization', `Bearer ${authToken}`)
     xhr.setRequestHeader('x-request-id', requestId)
     xhr.setRequestHeader('x-client-identity', getClientIdentity())
+    if (groupId) {
+      xhr.setRequestHeader('x-adobe-esp-group-id', groupId)
+    }
 
     if (tracker) {
       xhr.upload.onprogress = (event) => {

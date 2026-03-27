@@ -38,7 +38,7 @@ export interface SocialPlatform {
 // Uniform dark gray background for all social icons
 const SOCIAL_ICON_BG = '#4a4a4a'
 
-// Helper to create icon element (fixes React 16/18 type compatibility)
+// Helper to create icon element (stable typing for React 18 createElement / ReactNode)
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const icon = (Icon: any): React.ReactElement => 
   React.createElement(Icon, { size: 18, color: 'white' }) as React.ReactElement

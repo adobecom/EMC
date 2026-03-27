@@ -20,6 +20,8 @@ export interface SaveOptions {
   publish?: boolean
   /** Skip calling component onAfterSave callbacks */
   skipAfterSave?: boolean
+  /** Additional fields merged into the API payload after normal payload building */
+  extraPayload?: Record<string, any>
   /** Custom success callback */
   onSuccess?: (eventId: string, response: EventApiResponse) => void
   /** Custom error callback */
@@ -94,7 +96,7 @@ export function useEventFormSave() {
     
     // Process each field according to the data filter
     // Note: Some fields are handled specially below (tags, eventType, dates, etc.)
-    const speciallyHandledFields = new Set(['tags', 'eventType', 'startDateTime', 'endDateTime', 'agendaItems', 'promotionalItems', 'timezone'])
+    const speciallyHandledFields = new Set(['tags', 'eventType', 'startDateTime', 'endDateTime', 'agendaItems', 'promotionalItems', 'timezone', 'inviteOnly'])
     
     Object.entries(mergedData).forEach(([key, value]) => {
       const descriptor = EVENT_DATA_FILTER[key]
@@ -168,7 +170,14 @@ export function useEventFormSave() {
     // Title mapping
     if (mergedData.name) {
       setEventAttribute(payload, 'title', mergedData.name, locale)
-      payload.enTitle = mergedData.name // English title for URL generation
+    }
+    // English title for URL generation — prefer the dedicated enTitle field
+    // so that saving in a non-English locale doesn't overwrite enTitle with
+    // the localized name.
+    if (mergedData.enTitle) {
+      payload.enTitle = mergedData.enTitle
+    } else if (mergedData.name) {
+      payload.enTitle = mergedData.name
     }
     
     // Description mapping (shortDescription -> description in API)
@@ -250,7 +259,10 @@ export function useEventFormSave() {
     
     // Privacy mapping
     payload.isPrivate = mergedData.isPrivate ?? false
-    
+    if (!eventId) {
+      payload.inviteOnly = mergedData.inviteOnly ?? false
+    }
+
     // Tags transformation (array of EventTag -> comma-separated CAAS IDs string)
     // Per OpenAPI TagIdList schema:
     // - Type: string | null (NOT array)
@@ -321,7 +333,7 @@ export function useEventFormSave() {
     }
     
     return payload
-  }, [locale, seriesId])
+  }, [locale, seriesId, eventId])
   
   /**
    * Validate all registered components
@@ -392,7 +404,7 @@ export function useEventFormSave() {
    * Main save function
    */
   const saveEvent = useCallback(async (options: SaveOptions = {}): Promise<SaveResult> => {
-    const { publish = false, skipAfterSave = false, onSuccess, onError } = options
+    const { publish = false, skipAfterSave = false, extraPayload, onSuccess, onError } = options
     
     try {
       // 1. Set saving status
@@ -413,6 +425,11 @@ export function useEventFormSave() {
       
       // 4. Build the API payload
       const payload = buildEventPayload(formData, additionalPayload)
+
+      // 4b. Merge caller-supplied extra fields (e.g. custom detailPagePath)
+      if (extraPayload) {
+        Object.assign(payload, extraPayload)
+      }
       
       // Add publish flag if requested
       if (publish) {

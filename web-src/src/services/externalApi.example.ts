@@ -200,32 +200,6 @@ class ExternalApiService {
   }
 
   /**
-   * Get clouds
-   */
-  async getClouds(): Promise<any> {
-    const result = await this.request<{ clouds?: any[] }>('esp', '/v1/clouds', 'GET')
-    return result.clouds
-  }
-
-  /**
-   * Get a specific cloud
-   */
-  async getCloud(cloudType: string): Promise<any> {
-    if (!cloudType) throw new Error('Invalid cloud type')
-    
-    return this.request('esp', `/v1/clouds/${cloudType}`, 'GET')
-  }
-
-  /**
-   * Update a cloud
-   */
-  async updateCloud(cloudType: string, cloudData: any): Promise<any> {
-    if (!cloudType) throw new Error('Invalid cloud type')
-    
-    return this.request('esp', `/v1/clouds/${cloudType}`, 'PUT', cloudData)
-  }
-
-  /**
    * Get speakers for a series
    */
   async getSpeakers(seriesId: string): Promise<any> {

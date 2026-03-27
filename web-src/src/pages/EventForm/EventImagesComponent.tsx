@@ -3,11 +3,7 @@
 */
 
 import React, { useCallback } from 'react'
-import {
-  Flex,
-  Heading,
-  Text
-} from '@adobe/react-spectrum'
+import { Heading, Text } from '@react-spectrum/s2'
 import type { EventImageData as _EventImageData } from '../../types/domain'
 import { ImageUploader } from '../../components/shared'
 import { TYPOGRAPHY } from '../../styles/designSystem'
@@ -62,7 +58,7 @@ export const EventImagesComponent: React.FC = () => {
   // ============================================================================
 
   return (
-    <Flex direction="column" gap="size-300">
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
       <Heading level={3} UNSAFE_style={TYPOGRAPHY.COMPONENT_HEADING}>Event Images</Heading>
       <Text>
         Add images for your event. These images will be displayed on the event page and listing.
@@ -115,6 +111,6 @@ export const EventImagesComponent: React.FC = () => {
         onChange={(imageUrl, imageId) => handleImageChange('venue-image', imageUrl, imageId)}
         onRemove={() => handleImageRemove('venue-image')}
       />
-    </Flex>
+    </div>
   )
 }

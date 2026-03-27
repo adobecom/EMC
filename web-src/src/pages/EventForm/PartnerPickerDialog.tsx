@@ -3,24 +3,12 @@
 */
 
 import React, { useState, useMemo, useCallback, useEffect } from 'react'
-import {
-  Dialog,
-  DialogContainer,
-  Content,
-  TextField,
-  Button,
-  View,
-  Flex,
-  Text,
-  ActionButton,
-  ProgressCircle,
-  SearchField,
-} from '@adobe/react-spectrum'
-import Add from '@spectrum-icons/workflow/Add'
-import ArrowLeft from '@spectrum-icons/workflow/ArrowLeft'
+import { ProgressCircle } from '@react-spectrum/s2'
+import { Button, Dialog, DialogContainer, TextField, Text, SearchField, Content, Heading } from '@react-spectrum/s2'
+import { style } from '@react-spectrum/s2/style' with { type: 'macro' }
+import Add from '@react-spectrum/s2/icons/Add'
 import { SeriesSponsor, SponsorData } from '../../types/domain'
 import { ImageUploader } from '../../components/shared'
-import { TYPOGRAPHY, FLEX_GAP } from '../../styles/designSystem'
 import { apiService, cachedApi } from '../../services/api'
 import { uploadImage, UploadTracker } from '../../services/requestHelpers'
 import { getCurrentEnvironment, getApiHost } from '../../config/constants'
@@ -75,7 +63,6 @@ export const PartnerPickerDialog: React.FC<PartnerPickerDialogProps> = ({
   const [pendingFile, setPendingFile] = useState<File | null>(null)
   const [isCreating, setIsCreating] = useState(false)
   const [localSponsors, setLocalSponsors] = useState<SeriesSponsor[]>([])
-  const [isLoadingSponsors, setIsLoadingSponsors] = useState(false)
   const toast = useToast()
 
   useEffect(() => {
@@ -92,14 +79,12 @@ export const PartnerPickerDialog: React.FC<PartnerPickerDialogProps> = ({
   // Fetch series sponsors when dialog opens (ensures network call happens when user opens picker)
   useEffect(() => {
     if (isOpen && seriesId) {
-      setIsLoadingSponsors(true)
       fetchSeriesSponsors(seriesId)
         .then((sponsors) => setLocalSponsors(sponsors))
         .catch((err) => {
           console.error('Failed to fetch series sponsors:', err)
           setLocalSponsors([])
         })
-        .finally(() => setIsLoadingSponsors(false))
     } else {
       setLocalSponsors([])
     }
@@ -245,43 +230,30 @@ export const PartnerPickerDialog: React.FC<PartnerPickerDialogProps> = ({
     setView('select')
   }, [])
 
-  const renderSelectView = () => (
+  const renderSelectContent = () => (
     <>
-      <Flex justifyContent="space-between" alignItems="center" marginBottom="size-200">
-        <Flex alignItems="center" gap="size-100">
-          <Text UNSAFE_style={TYPOGRAPHY.COMPONENT_HEADING}>Select Partner</Text>
-          {isLoadingSponsors && (
-            <ProgressCircle size="S" isIndeterminate aria-label="Loading partners" />
-          )}
-        </Flex>
-        <Flex gap="size-100" alignItems="center">
-          <ActionButton onPress={handleSwitchToCreate} aria-label="Create new partner">
-            <Add />
-          </ActionButton>
-          <Button
-            variant="accent"
-            onPress={handleSelectConfirm}
-            isDisabled={!selectedSponsorId}
-          >
-            <Text>Select</Text>
-          </Button>
-        </Flex>
-      </Flex>
-
+      <div className={style({display: 'flex', justifyContent: 'end', gap: 8, marginBottom: 16, alignItems: 'center'})}>
+        <Button variant="secondary" onPress={handleSwitchToCreate} aria-label="Create new partner">
+          <Add />
+          <Text>New Partner</Text>
+        </Button>
+        <Button variant="accent" onPress={handleSelectConfirm} isDisabled={!selectedSponsorId}>
+          <Text>Select Partner</Text>
+        </Button>
+      </div>
       <SearchField
         label="Search partners"
         value={searchQuery}
         onChange={setSearchQuery}
-        width="100%"
-        marginBottom="size-300"
+        styles={style({ width: '[100%]', marginBottom: 24 })}
       />
 
       {filteredSponsors.length === 0 ? (
-        <View padding="size-400" UNSAFE_style={{ textAlign: 'center' }}>
+        <div style={{ padding: 32, textAlign: 'center' }}>
           <Text>No partners available. Create a new one using the + button above.</Text>
-        </View>
+        </div>
       ) : (
-        <Flex direction="column" gap="size-100">
+        <div className={style({display: 'flex', flexDirection: 'column', gap: 8})}>
           {filteredSponsors.map((sponsor) => {
             const imageData = sponsor.image || sponsor.logo
             const isSelected = selectedSponsorId === sponsor.sponsorId
@@ -302,11 +274,11 @@ export const PartnerPickerDialog: React.FC<PartnerPickerDialogProps> = ({
                   padding: '12px',
                   borderRadius: '8px',
                   border: isSelected
-                    ? '2px solid var(--spectrum-global-color-blue-500)'
-                    : '1px solid var(--spectrum-global-color-gray-300)',
+                    ? '2px solid #1473E6'
+                    : '1px solid #D3D3D3',
                   backgroundColor: isSelected
-                    ? 'var(--spectrum-global-color-blue-100)'
-                    : 'var(--spectrum-global-color-gray-50)',
+                    ? '#E5F0FF'
+                    : '#FFFFFF',
                   cursor: 'pointer',
                   display: 'flex',
                   alignItems: 'center',
@@ -334,7 +306,7 @@ export const PartnerPickerDialog: React.FC<PartnerPickerDialogProps> = ({
                 <div style={{ display: 'flex', flexDirection: 'column', minWidth: 0 }}>
                   <span style={{ fontWeight: 600 }}>{sponsor.name}</span>
                   {(sponsor.externalUrl || sponsor.link) && (
-                    <span style={{ fontSize: '12px', color: 'var(--spectrum-global-color-gray-600)' }}>
+                    <span style={{ fontSize: '12px', color: '#6E6E6E' }}>
                       {sponsor.externalUrl || sponsor.link}
                     </span>
                   )}
@@ -342,25 +314,35 @@ export const PartnerPickerDialog: React.FC<PartnerPickerDialogProps> = ({
               </div>
             )
           })}
-        </Flex>
+        </div>
       )}
     </>
   )
 
-  const renderCreateView = () => (
+  const renderCreateContent = () => (
     <>
-      <Flex justifyContent="space-between" alignItems="center" marginBottom="size-200">
-        <Flex alignItems="center" gap="size-100">
-          <ActionButton onPress={handleBackToSelect} isQuiet aria-label="Back to search">
-            <ArrowLeft />
-          </ActionButton>
-          <Text UNSAFE_style={TYPOGRAPHY.COMPONENT_HEADING}>New Partner</Text>
-        </Flex>
-      </Flex>
-
-      <Flex direction="column" gap={FLEX_GAP.FIELD}>
-        <Flex gap={FLEX_GAP.LARGE} alignItems="start">
-          <View UNSAFE_style={{ textAlign: 'center' }}>
+      <div className={style({display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16})}>
+        <Button variant="secondary" onPress={handleBackToSelect} aria-label="Back to search">
+          <Text>Back</Text>
+        </Button>
+        <Button
+          variant="accent"
+          onPress={handleCreatePartner}
+          isDisabled={!isCreateFormValid || isCreating}
+        >
+          {isCreating ? (
+            <>
+              <ProgressCircle size="S" isIndeterminate aria-label="Creating" />
+              <Text>Creating...</Text>
+            </>
+          ) : (
+            <Text>Add Partner</Text>
+          )}
+        </Button>
+      </div>
+      <div className={style({display: 'flex', flexDirection: 'column', gap: 16})}>
+        <div className={style({display: 'flex', gap: 32, alignItems: 'start'})}>
+          <div style={{ textAlign: 'center' }}>
             <ImageUploader
               label=""
               imageUrl={createForm.imageUrl || ''}
@@ -384,15 +366,15 @@ export const PartnerPickerDialog: React.FC<PartnerPickerDialogProps> = ({
                 updateCreateField('imageId', undefined)
               }}
             />
-          </View>
+          </div>
 
-          <Flex direction="column" gap={FLEX_GAP.FIELD} flex={1}>
+          <div className={style({display: 'flex', flexDirection: 'column', gap: 16, flexGrow: 1})}>
             <TextField
               label="Partner Name"
               value={createForm.name}
               onChange={(v) => updateCreateField('name', v)}
               isRequired
-              width="100%"
+              styles={style({ width: '[100%]' })}
             />
             <TextField
               label="Partner Website"
@@ -400,38 +382,30 @@ export const PartnerPickerDialog: React.FC<PartnerPickerDialogProps> = ({
               onChange={(v) => updateCreateField('website', v)}
               placeholder="www.example.com"
               isRequired
-              width="100%"
+              styles={style({ width: '[100%]' })}
             />
-          </Flex>
-        </Flex>
-
-        <Flex justifyContent="end" marginTop="size-200">
-          <Button
-            variant="accent"
-            onPress={handleCreatePartner}
-            isDisabled={!isCreateFormValid || isCreating}
-          >
-            {isCreating ? (
-              <>
-                <ProgressCircle size="S" isIndeterminate aria-label="Creating" />
-                <Text>Creating...</Text>
-              </>
-            ) : (
-              <Text>Add Partner</Text>
-            )}
-          </Button>
-        </Flex>
-      </Flex>
+          </div>
+        </div>
+      </div>
     </>
   )
 
   return (
     <DialogContainer onDismiss={onClose}>
       {isOpen && (
-        <Dialog size="L" isDismissable UNSAFE_style={{ maxHeight: '80vh' }}>
-          <Content UNSAFE_style={{ overflow: 'auto' }}>
-            {view === 'select' ? renderSelectView() : renderCreateView()}
-          </Content>
+        <Dialog isDismissible size="L">
+          {() => (
+            <>
+              <Heading slot="title">
+                {view === 'select' ? 'Select Partner' : 'New Partner'}
+              </Heading>
+              <Content>
+                <div style={{ overflow: 'auto', maxHeight: '60vh' }}>
+                  {view === 'select' ? renderSelectContent() : renderCreateContent()}
+                </div>
+              </Content>
+            </>
+          )}
         </Dialog>
       )}
     </DialogContainer>

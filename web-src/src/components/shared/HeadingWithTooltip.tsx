@@ -1,6 +1,7 @@
 import React from 'react'
-import { Flex, Heading, TooltipTrigger, Tooltip, ActionButton } from '@adobe/react-spectrum'
-import Info from '@spectrum-icons/workflow/Info'
+import { ActionButton, Heading, TooltipTrigger, Tooltip } from '@react-spectrum/s2'
+import { style } from "@react-spectrum/s2/style" with { type: "macro" }
+import InfoCircle from "@react-spectrum/s2/icons/InfoCircle"
 import { TYPOGRAPHY } from '../../styles/designSystem'
 
 interface HeadingWithTooltipProps {
@@ -8,23 +9,24 @@ interface HeadingWithTooltipProps {
    * The heading text to display
    */
   children: React.ReactNode
-  
+
   /**
    * The tooltip content to show on hover
    */
   tooltip?: string | React.ReactNode
-  
+
   /**
    * The heading level (1-6)
    * Level 3 is styled as a step heading (red, 24px, bold)
    */
   level?: 1 | 2 | 3 | 4 | 5 | 6
-  
+
   /**
    * Optional margin bottom
    */
-  marginBottom?: 'size-0' | 'size-50' | 'size-100' | 'size-150' | 'size-200' | 'size-300' | 'size-400'
-  
+  /** Bottom margin in px (maps from former Spectrum dimension tokens) */
+  marginBottomPx?: number
+
   /**
    * Optional additional styles
    */
@@ -44,53 +46,37 @@ export const HeadingWithTooltip: React.FC<HeadingWithTooltipProps> = ({
   children,
   tooltip,
   level = 3,
-  marginBottom,
+  marginBottomPx,
   UNSAFE_style
 }) => {
   const headingStyles = getHeadingStyles(level, UNSAFE_style)
-  
+  const wrapStyle: React.CSSProperties | undefined =
+    marginBottomPx != null ? { marginBottom: marginBottomPx } : undefined
+
   // If no tooltip provided, just render the heading
   if (!tooltip) {
     return (
-      <Heading 
-        level={level} 
-        marginBottom={marginBottom}
-        UNSAFE_style={headingStyles}
-      >
+      <Heading level={level} UNSAFE_style={{ ...headingStyles, ...wrapStyle }}>
         {children}
       </Heading>
     )
   }
 
   return (
-    <Flex 
-      direction="row" 
-      gap="size-100" 
-      alignItems="center"
-      marginBottom={marginBottom}
+    <div
+      className={style({ display: 'flex', gap: 8, alignItems: 'center' })}
+      style={wrapStyle}
     >
-      <Heading 
-        level={level}
-        UNSAFE_style={headingStyles}
-      >
+      <Heading level={level} UNSAFE_style={headingStyles}>
         {children}
       </Heading>
-      
+
       <TooltipTrigger delay={0}>
-        <ActionButton 
-          isQuiet 
-          UNSAFE_style={{ 
-            minWidth: 'auto',
-            padding: 0,
-            width: '20px',
-            height: '20px'
-          }}
-        >
-          <Info size="S" />
+        <ActionButton isQuiet>
+          <InfoCircle />
         </ActionButton>
-        <Tooltip variant="info">{tooltip}</Tooltip>
+        <Tooltip>{tooltip}</Tooltip>
       </TooltipTrigger>
-    </Flex>
+    </div>
   )
 }
-

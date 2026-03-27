@@ -4,19 +4,23 @@
 
 import React, { useEffect, useCallback, useRef, useState } from 'react'
 import {
-  View,
-  Flex,
-  Picker,
-  Item,
   Button,
+  Picker,
+  PickerItem,
   Text,
   Heading,
   Divider,
-  ProgressCircle
-} from '@adobe/react-spectrum'
+  ProgressCircle,
+  Dialog,
+  DialogTrigger,
+  Content,
+  ButtonGroup,
+} from '@react-spectrum/s2'
+import { style } from "@react-spectrum/s2/style" with { type: "macro" }
 import { useNavigate, useParams } from 'react-router-dom'
-import ChevronRight from '@spectrum-icons/workflow/ChevronRight'
-import ChevronLeft from '@spectrum-icons/workflow/ChevronLeft'
+import ChevronRight from "@react-spectrum/s2/icons/ChevronRight"
+import ChevronLeft from "@react-spectrum/s2/icons/ChevronLeft"
+import AlertTriangle from '@react-spectrum/s2/icons/AlertTriangle'
 import {
   EventApiResponse,
   SeriesApiResponse,
@@ -45,6 +49,7 @@ import { mapApiResponseToFormData } from '../../utils/eventFormMappers'
 import { useEventFeatureFlags } from '../../hooks/useEventTypeFeatures'
 import { EventFormProvider, useEventFormContext, useToast } from '../../contexts'
 import { useEventFormSave } from '../../hooks/useEventFormSave'
+import { useCustomDetailPagePath } from '../../hooks/useCustomDetailPagePath'
 import { COLORS, Z_INDEX, TYPOGRAPHY } from '../../styles/designSystem'
 import { getEspEnvParam } from '../../config/constants'
 
@@ -243,19 +248,19 @@ const FormatSelectionOverlay: React.FC<{
         justifyContent: 'center',
       }}
     >
-      <View
-        backgroundColor="gray-50"
-        borderRadius="medium"
-        padding="size-500"
-        width="520px"
-        UNSAFE_style={{
+      <div
+        style={{
+          backgroundColor: 'var(--spectrum-global-color-gray-50)',
+          borderRadius: 8,
+          padding: 40,
+          width: 520,
           zIndex: Z_INDEX.MODAL,
           boxShadow: '0 8px 32px rgba(0, 0, 0, 0.18)',
           maxWidth: '90vw',
         }}
       >
         {/* Header */}
-        <Flex direction="column" gap="size-100" marginBottom="size-300">
+        <div className={style({display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 24})}>
           <Text UNSAFE_style={{ 
             fontSize: '13px', 
             fontWeight: 500, 
@@ -274,45 +279,41 @@ const FormatSelectionOverlay: React.FC<{
             Choose the cloud and series for this event. This determines
             where your event will be published and what metadata it inherits.
           </Text>
-        </Flex>
+        </div>
 
-        <Divider size="S" marginBottom="size-300" />
+        <Divider size="S" styles={style({ marginBottom: 24 })} />
 
         {/* Content */}
         {isLoading ? (
-          <Flex 
-            alignItems="center" 
-            justifyContent="center" 
-            minHeight="size-2000"
-            direction="column"
-            gap="size-200"
-          >
+          <div className={style({display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: 16})} style={{minHeight: 'var(--spectrum-global-dimension-size-2000)'}}>
             <ProgressCircle aria-label="Loading format options..." isIndeterminate size="M" />
             <Text UNSAFE_style={{ color: COLORS.GRAY_600, fontSize: '14px' }}>
               Loading format options...
             </Text>
-          </Flex>
+          </div>
         ) : error ? (
-          <View
-            padding="size-200"
-            backgroundColor="negative"
-            borderRadius="medium"
-            marginBottom="size-300"
+          <div
+            style={{
+              padding: 16,
+              background: 'var(--spectrum-semantic-negative-color-default, #d7373f)',
+              borderRadius: 8,
+              marginBottom: 24,
+            }}
           >
             <Text UNSAFE_style={{ color: 'white' }}>Error: {error}</Text>
-          </View>
+          </div>
         ) : (
-          <Flex direction="column" gap="size-300" marginBottom="size-400">
+          <div className={style({display: 'flex', flexDirection: 'column', gap: 24, marginBottom: 32})}>
             <Picker
               label="Cloud"
               isRequired
               selectedKey={selectedCloud}
               onSelectionChange={handleCloudChange}
               placeholder="Choose a cloud..."
-              width="100%"
+              styles={style({ width: '[100%]' })}
             >
               {clouds.map((cloud) => (
-                <Item key={cloud.key}>{cloud.label}</Item>
+                <PickerItem key={cloud.key} id={cloud.key}>{cloud.label}</PickerItem>
               ))}
             </Picker>
 
@@ -323,7 +324,7 @@ const FormatSelectionOverlay: React.FC<{
               onSelectionChange={handleSeriesChange}
               isDisabled={!selectedCloud}
               placeholder={!selectedCloud ? 'Select a cloud first' : 'Choose a series...'}
-              width="100%"
+              styles={style({ width: '[100%]' })}
               description={
                 selectedSeries
                   ? filteredSeries.find(s => s.id === selectedSeries)?.description || undefined
@@ -331,38 +332,40 @@ const FormatSelectionOverlay: React.FC<{
               }
             >
               {filteredSeries.length === 0 ? (
-                <Item key="no-series">No series available for this cloud</Item>
+                <PickerItem id="no-series">No series available for this cloud</PickerItem>
               ) : (
                 filteredSeries.map((s) => (
-                  <Item key={s.id}>{s.name}</Item>
+                  <PickerItem key={s.id} id={s.id}>{s.name}</PickerItem>
                 ))
               )}
             </Picker>
 
             {selectedCloud && filteredSeries.length === 0 && (
-              <View
-                padding="size-150"
-                backgroundColor="notice"
-                borderRadius="medium"
+              <div
+                style={{
+                  padding: 12,
+                  backgroundColor: 'rgba(230, 134, 25, 0.15)',
+                  borderRadius: 8,
+                }}
               >
                 <Text UNSAFE_style={{ fontSize: '13px' }}>
                   No event series available for this cloud and event type combination. 
                   Please create a series first or contact your administrator.
                 </Text>
-              </View>
+              </div>
             )}
-          </Flex>
+          </div>
         )}
 
-        <Divider size="S" marginBottom="size-300" />
+        <Divider size="S" styles={style({ marginBottom: 24 })} />
 
         {/* Actions */}
-        <Flex direction="row" justifyContent="end" gap="size-200">
+        <div className={style({display: 'flex', justifyContent: 'end', gap: 16})}>
           <Button
             variant="secondary"
             onPress={onCancel}
           >
-            <ChevronLeft size="S" />
+            <ChevronLeft />
             <Text>Back to Dashboard</Text>
           </Button>
           <Button
@@ -371,10 +374,10 @@ const FormatSelectionOverlay: React.FC<{
             isDisabled={isConfirmDisabled || isLoading}
           >
             <Text>Confirm & Continue</Text>
-            <ChevronRight size="S" />
+            <ChevronRight />
           </Button>
-        </Flex>
-      </View>
+        </div>
+      </div>
     </div>
   )
 }
@@ -423,6 +426,18 @@ const EventFormInner: React.FC<EventFormInnerProps> = ({ ims: _ims }) => {
   
   // Get save hook
   const { publishEvent, saveDraft, isSaving, saveError } = useEventFormSave()
+
+  // Custom URL pattern hook
+  const { getDetailPagePathForSave } = useCustomDetailPagePath()
+
+  // Dialog state for custom detailPagePath confirmation
+  const [urlDialogState, setUrlDialogState] = useState<{
+    url: string
+    collision: EventApiResponse | null
+    pendingAction: 'save' | 'publish'
+    relativeUrl: string
+  } | null>(null)
+  const [isCheckingUrl, setIsCheckingUrl] = useState(false)
   
   // Show toast when saveError changes
   useEffect(() => {
@@ -521,59 +536,109 @@ const EventFormInner: React.FC<EventFormInnerProps> = ({ ims: _ims }) => {
   // ============================================================================
   
   /**
+   * Check whether the selected series requires a custom detailPagePath.
+   * If so, show a confirmation/collision dialog instead of saving immediately.
+   * Returns true when save should proceed directly (no pattern or edit mode).
+   */
+  const checkUrlPatternBeforeSave = useCallback(async (
+    action: 'save' | 'publish'
+  ): Promise<{ proceed: boolean; extraPayload?: Record<string, any> }> => {
+    // Only intercept on first creation (no eventId yet)
+    if (isEditMode || eventId) return { proceed: true }
+
+    setIsCheckingUrl(true)
+    try {
+      const result = await getDetailPagePathForSave(formData.seriesId, formData)
+      if (!result) return { proceed: true }
+
+      // Pattern found — show confirmation dialog
+      setUrlDialogState({ url: result.url, collision: result.collision, pendingAction: action, relativeUrl: result.relativeUrl })
+      return { proceed: false }
+    } catch (err) {
+      console.error('URL pattern check failed:', err)
+      // On error, let the save through without a custom path
+      return { proceed: true }
+    } finally {
+      setIsCheckingUrl(false)
+    }
+  }, [isEditMode, eventId, formData, getDetailPagePathForSave])
+
+  /**
+   * Execute the actual save/publish after URL confirmation
+   */
+  const executeSaveWithUrl = useCallback(async (
+    action: 'save' | 'publish',
+    relativeUrl: string
+  ) => {
+    setUrlDialogState(null)
+    persistToStorage()
+
+    const extra = { url: relativeUrl }
+
+    if (action === 'publish') {
+      await publishEvent({
+        extraPayload: extra,
+        onSuccess: () => {
+          setPublished(true)
+          toast.success(
+            isPublished ? 'Event re-published successfully!' : 'Event published successfully!',
+            {
+              duration: 3000,
+              action: { label: 'View Events', onPress: () => navigate('/events') }
+            }
+          )
+        },
+        onError: (error) => {
+          console.error('Failed to publish event:', error)
+        }
+      })
+    } else {
+      await saveDraft({
+        extraPayload: extra,
+        onSuccess: () => {
+          toast.success('Event saved successfully!')
+        },
+        onError: (error) => {
+          console.error('Failed to save event:', error)
+        }
+      })
+    }
+  }, [publishEvent, saveDraft, persistToStorage, setPublished, navigate, toast, isPublished])
+
+  /**
    * Handle Save button click - saves to API + sessionStorage without advancing
    * Returns true on success, false on failure
    */
   const handleSave = useCallback(async (): Promise<boolean> => {
-    // First persist to sessionStorage immediately
+    const { proceed, extraPayload } = await checkUrlPatternBeforeSave('save')
+    if (!proceed) return false // Dialog will handle continuation
+
     persistToStorage()
-    
-    // Then save to API
+
     const result = await saveDraft({
+      extraPayload,
       onSuccess: () => {
         toast.success(isEditMode ? 'Event updated successfully!' : 'Event saved successfully!')
       },
       onError: (error) => {
         console.error('Failed to save event:', error)
-        // Error toast is handled by the useEffect watching saveError
       }
     })
     
     return result.success
-  }, [saveDraft, persistToStorage, toast, isEditMode])
+  }, [checkUrlPatternBeforeSave, saveDraft, persistToStorage, toast, isEditMode])
   
   /**
-   * Handle Next Step button click - saves to API + sessionStorage then advances
-   * Returns true on success (so FormWizard can advance), false on failure
-   */
-  const handleNextStep = useCallback(async (): Promise<boolean> => {
-    // First persist to sessionStorage immediately
-    persistToStorage()
-    
-    // Then save to API
-    const result = await saveDraft({
-      onSuccess: () => {
-        // Show a subtle success toast for auto-save during navigation
-        toast.success('Progress saved', { duration: 2000 })
-      },
-      onError: (error) => {
-        console.error('Failed to save event:', error)
-        // Error toast is handled by the useEffect watching saveError
-      }
-    })
-    
-    return result.success
-  }, [saveDraft, persistToStorage, toast])
-  
-  /**
-   * Handle Publish/Re-publish button click (last step completion)
+   * Handle Publish/Re-publish button click
    */
   const handleComplete = useCallback(async () => {
-    // Persist to sessionStorage first
+    const { proceed, extraPayload } = await checkUrlPatternBeforeSave('publish')
+    if (!proceed) return
+
     persistToStorage()
     
-    // Save and publish
     await publishEvent({
+      extraPayload,
       onSuccess: () => {
         setPublished(true)
         toast.success(
@@ -586,17 +651,12 @@ const EventFormInner: React.FC<EventFormInnerProps> = ({ ims: _ims }) => {
             }
           }
         )
-        // Navigate after a short delay to let user see the success message
-        setTimeout(() => {
-          navigate('/events')
-        }, 2000)
       },
       onError: (error) => {
         console.error('Failed to publish event:', error)
-        // Error toast is handled by the useEffect watching saveError
       }
     })
-  }, [publishEvent, persistToStorage, setPublished, navigate, toast, isPublished])
+  }, [checkUrlPatternBeforeSave, publishEvent, persistToStorage, setPublished, navigate, toast, isPublished])
   
   /**
    * Handle max step change from FormWizard
@@ -651,7 +711,7 @@ const EventFormInner: React.FC<EventFormInnerProps> = ({ ims: _ims }) => {
     (hasVenue ? Boolean(formData.venue?.placeId) : true)
   
   const step1Component = (
-    <Flex direction="column" gap="size-0">
+    <div className={style({display: 'flex', flexDirection: 'column', gap: 0})}>
       <FormCard>
         <EventFormatComponent />
       </FormCard>
@@ -685,9 +745,9 @@ const EventFormInner: React.FC<EventFormInnerProps> = ({ ims: _ims }) => {
           <MarketoIntegrationComponent />
         </FormCard>
       )}
-    </Flex>
+    </div>
   )
-  
+
   // ============================================================================
   // STEP 2: Speakers & Hosts
   // ============================================================================
@@ -799,16 +859,23 @@ const EventFormInner: React.FC<EventFormInnerProps> = ({ ims: _ims }) => {
   const showFormatOverlay = !isFormatConfirmed && !isEditMode
 
   return (
-    <View 
-      UNSAFE_style={{
-        backgroundColor: 'var(--spectrum-global-color-gray-100)',
+    <div
+      style={{
+        backgroundColor: '#F5F5F5',
+        display: 'flex',
+        flexDirection: 'column',
+        flex: 1,
+        minHeight: 0,
+        width: '100%',
+        height: '100%',
+        alignSelf: 'stretch',
+        overflow: 'hidden',
       }}
     >
       <FormWizard
         steps={steps}
         onComplete={handleComplete}
         onSave={handleSave}
-        onNextStep={handleNextStep}
         onCancel={handleCancel}
         onPreview={handlePreview}
         isSubmitting={isSaving}
@@ -829,7 +896,77 @@ const EventFormInner: React.FC<EventFormInnerProps> = ({ ims: _ims }) => {
           onCancel={handleFormatCancel}
         />
       )}
-    </View>
+
+      {/* Custom URL Pattern Confirmation Dialog */}
+      <DialogTrigger
+        isOpen={urlDialogState !== null}
+        onOpenChange={(open) => { if (!open) setUrlDialogState(null) }}
+      >
+        <div style={{ display: 'none' }} />
+        <Dialog size="M">
+          <Heading slot="title">{urlDialogState?.collision ? 'URL Conflict Detected' : 'Confirm Event URL'}</Heading>
+          <Divider />
+          <Content>
+            <div className={style({display: 'flex', flexDirection: 'column', gap: 16})}>
+              <Text>The following detail page URL will be assigned to this event:</Text>
+              <div
+                style={{
+                  background: 'var(--spectrum-global-color-gray-75)',
+                  padding: 12,
+                  borderRadius: 4,
+                  wordBreak: 'break-all',
+                  fontFamily: 'monospace',
+                  fontSize: 13,
+                }}
+              >
+                <Text>{urlDialogState?.url}</Text>
+              </div>
+
+              {urlDialogState?.collision && (
+                <div className={style({display: 'flex', flexDirection: 'column', gap: 8})}>
+                  <div className={style({display: 'flex', alignItems: 'center', gap: 8})}>
+                    <AlertTriangle />
+                    <Text UNSAFE_style={{ color: COLORS.RED_600, fontWeight: 600 }}>
+                      This URL is already in use by another event.
+                    </Text>
+                  </div>
+                  <Text>
+                    The event <strong>{urlDialogState.collision.title || urlDialogState.collision.enTitle || urlDialogState.collision.eventId}</strong> already
+                    uses this URL. Please go back and change the fields that affect the URL
+                    (e.g. title or start date) before saving.
+                  </Text>
+                </div>
+              )}
+            </div>
+          </Content>
+          <ButtonGroup>
+            <Button
+              variant="secondary"
+              onPress={() => setUrlDialogState(null)}
+            >
+              {urlDialogState?.collision ? 'Go Back' : 'Cancel'}
+            </Button>
+            {!urlDialogState?.collision && (
+              <Button
+                variant="accent"
+                onPress={() => {
+                  if (urlDialogState) {
+                    executeSaveWithUrl(urlDialogState.pendingAction, urlDialogState.relativeUrl)
+                  }
+                }}
+              >
+                Confirm & Save
+              </Button>
+            )}
+          </ButtonGroup>
+        </Dialog>
+      </DialogTrigger>
+
+      {/* URL pattern check loading overlay */}
+      {isCheckingUrl && (
+        <BlurredLoadingOverlay visible={true} message="Checking URL pattern..." ariaLabel="Checking URL" />
+      )}
+    </div>
   )
 }
 
