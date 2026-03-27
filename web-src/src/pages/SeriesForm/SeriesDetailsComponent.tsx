@@ -3,15 +3,10 @@
 */
 
 import React, { useState, useEffect } from 'react'
-import {
-  View,
-  Flex,
-  Text
-} from '@adobe/react-spectrum'
-import { TextField, TextArea, Picker, PickerItem } from '@react-spectrum/s2'
+import { TextField, TextArea, Picker, PickerItem, Text } from '@react-spectrum/s2'
 import { style } from '@react-spectrum/s2/style' with { type: 'macro' }
 import { HeadingWithTooltip, LoadingSpinner } from '../../components/shared'
-import { FLEX_GAP } from '../../styles/designSystem'
+import { SPACING } from '../../styles/designSystem'
 import { useSeriesFormComponent } from '../../hooks/useSeriesFormComponent'
 import { SUPPORTED_CLOUDS } from '../../config/constants'
 import { EXTERNAL_CONFIG_URLS } from '../../config/externalConfigs'
@@ -156,7 +151,7 @@ export const SeriesDetailsComponent: React.FC = () => {
   // ============================================================================
 
   return (
-    <Flex direction="column" gap={FLEX_GAP.SECTION}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: SPACING.LG }}>
       {/* Header */}
       <HeadingWithTooltip 
         level={3}
@@ -168,7 +163,7 @@ export const SeriesDetailsComponent: React.FC = () => {
       <Text>Add details</Text>
 
       {/* Cloud and Target CMS Selection */}
-      <Flex direction="row" gap="size-200" wrap>
+      <div style={{ display: 'flex', flexDirection: 'row', gap: 16, flexWrap: 'wrap' }}>
         <Picker
           label="Cloud Type"
           isRequired
@@ -183,15 +178,15 @@ export const SeriesDetailsComponent: React.FC = () => {
         </Picker>
 
         {isLoadingCms ? (
-          <View width="size-2400">
+          <div style={{ width: 192 }}>
             <LoadingSpinner message="Loading..." />
-          </View>
+          </div>
         ) : cmsError ? (
-          <View width="size-2400" padding="size-100">
+          <div style={{ width: 192, padding: 8 }}>
             <Text UNSAFE_style={{ color: 'var(--spectrum-global-color-red-600)', fontSize: '12px' }}>
               {cmsError}
             </Text>
-          </View>
+          </div>
         ) : (
           <Picker
             label="Target CMS"
@@ -206,7 +201,7 @@ export const SeriesDetailsComponent: React.FC = () => {
             ))}
           </Picker>
         )}
-      </Flex>
+      </div>
 
       {/* Series Name */}
       <TextField
@@ -228,7 +223,7 @@ export const SeriesDetailsComponent: React.FC = () => {
         description="600 characters max"
         styles={style({ width: '[100%]' })}
       />
-    </Flex>
+    </div>
   )
 }
 

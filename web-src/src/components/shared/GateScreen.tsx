@@ -3,8 +3,7 @@
  */
 
 import React from 'react'
-import { View, Text, ProgressCircle } from '@adobe/react-spectrum'
-import { Button } from "@react-spectrum/s2"
+import { Button, Text, ProgressCircle } from '@react-spectrum/s2'
 import { SPACING, COLORS, TYPOGRAPHY } from '../../styles/designSystem'
 const gateBg = new URL('../../assets/gate-bg.png', import.meta.url).href
 
@@ -93,23 +92,23 @@ export const GateScreen: React.FC<GateScreenProps> = ({
     justifyContent: 'center'
   }
 
+  const cardStyle: React.CSSProperties = {
+    padding: 48,
+    borderRadius: 8,
+    background: 'rgba(255, 255, 255, 0.90)',
+    backdropFilter: 'blur(10px)',
+    boxShadow: '0 8px 32px rgba(0, 0, 0, 0.8)',
+    display: 'flex',
+    flexDirection: 'column',
+    alignItems: 'center',
+    gap: 16,
+    minWidth: 360,
+    maxWidth: 480,
+  }
+
   return (
-    <View UNSAFE_style={outerStyle}>
-      <View
-        padding="size-800"
-        borderRadius="medium"
-        UNSAFE_style={{
-          background: 'rgba(255, 255, 255, 0.90)',
-          backdropFilter: 'blur(10px)',
-          boxShadow: '0 8px 32px rgba(0, 0, 0, 0.8)',
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          gap: '16px',
-          minWidth: 360,
-          maxWidth: 480
-        }}
-      >
+    <div style={outerStyle}>
+      <div style={cardStyle}>
         {isLoading ? (
           <>
             <ProgressCircle
@@ -133,9 +132,9 @@ export const GateScreen: React.FC<GateScreenProps> = ({
               Events Management Console
             </Text>
 
-            <View UNSAFE_style={{ margin: SPACING.XXL }}>
+            <div style={{ margin: SPACING.XXL }}>
               <BrowserLockIcon />
-            </View>
+            </div>
 
             <Text
               UNSAFE_style={{
@@ -155,8 +154,8 @@ export const GateScreen: React.FC<GateScreenProps> = ({
             </Button>
           </>
         )}
-      </View>
-    </View>
+      </div>
+    </div>
   )
 }
 

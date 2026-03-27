@@ -118,7 +118,7 @@ export const EventInfoComponent: React.FC<EventInfoComponentProps> = ({
 
   if (!event) {
     return (
-      <div style={{ backgroundColor: 'var(--spectrum-gray-100)', padding: '24px', borderRadius: '8px' }}>
+      <div style={{ backgroundColor: 'var(--spectrum-global-color-gray-100)', padding: '24px', borderRadius: '8px' }}>
         <Text>Select an event to view details</Text>
       </div>
     )
@@ -132,7 +132,7 @@ export const EventInfoComponent: React.FC<EventInfoComponentProps> = ({
     : 'N/A'
 
   return (
-    <div style={{ backgroundColor: 'var(--spectrum-gray-100)', padding: '24px', borderRadius: '8px' }}>
+    <div style={{ backgroundColor: 'var(--spectrum-global-color-gray-100)', padding: '24px', borderRadius: '8px' }}>
       <div className={style({ display: 'flex', flexDirection: 'row', gap: 32, alignItems: 'start' })}>
         {/* Event Image */}
         {imageUrl && (
@@ -234,7 +234,7 @@ const StatItem: React.FC<{
             fontSize: '48px',
             fontWeight: 700,
             lineHeight: '1',
-            color: COLORS.ADOBE_RED
+            color: COLORS.RED_600
           }}
         >
           {value}

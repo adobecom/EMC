@@ -3,10 +3,7 @@
 */
 
 import React, { useState, useEffect } from 'react'
-import {
-  View,
-  Text
-} from '@adobe/react-spectrum'
+import { Text } from '@react-spectrum/s2'
 import { style } from '@react-spectrum/s2/style' with { type: 'macro' }
 import { COLORS, TYPOGRAPHY, SPACING } from '../../styles/designSystem'
 import { HistoryRecord } from '../../types/domain'
@@ -53,7 +50,7 @@ const DiffDisplay: React.FC<DiffDisplayProps> = ({ diff }) => {
     <div className={style({ display: 'flex', flexDirection: 'column', gap: 12 })}>
       {/* Added fields */}
       {hasAdded && (
-        <View>
+        <div>
           <Text UNSAFE_style={{
             fontSize: '11px',
             fontWeight: 600,
@@ -65,8 +62,8 @@ const DiffDisplay: React.FC<DiffDisplayProps> = ({ diff }) => {
           }}>
             Added
           </Text>
-          <View
-            UNSAFE_style={{
+          <div
+            style={{
               backgroundColor: 'rgba(45, 157, 120, 0.1)',
               borderLeft: '3px solid var(--spectrum-global-color-green-600)',
               padding: '8px 12px',
@@ -83,13 +80,13 @@ const DiffDisplay: React.FC<DiffDisplayProps> = ({ diff }) => {
                 </Text>
               </div>
             ))}
-          </View>
-        </View>
+          </div>
+        </div>
       )}
 
       {/* Updated fields */}
       {hasUpdated && (
-        <View>
+        <div>
           <Text UNSAFE_style={{
             fontSize: '11px',
             fontWeight: 600,
@@ -101,8 +98,8 @@ const DiffDisplay: React.FC<DiffDisplayProps> = ({ diff }) => {
           }}>
             Updated
           </Text>
-          <View
-            UNSAFE_style={{
+          <div
+            style={{
               backgroundColor: 'rgba(59, 130, 246, 0.1)',
               borderLeft: '3px solid var(--spectrum-global-color-blue-500)',
               padding: '8px 12px',
@@ -119,13 +116,13 @@ const DiffDisplay: React.FC<DiffDisplayProps> = ({ diff }) => {
                 </Text>
               </div>
             ))}
-          </View>
-        </View>
+          </div>
+        </div>
       )}
 
       {/* Deleted fields */}
       {hasDeleted && (
-        <View>
+        <div>
           <Text UNSAFE_style={{
             fontSize: '11px',
             fontWeight: 600,
@@ -137,8 +134,8 @@ const DiffDisplay: React.FC<DiffDisplayProps> = ({ diff }) => {
           }}>
             Deleted
           </Text>
-          <View
-            UNSAFE_style={{
+          <div
+            style={{
               backgroundColor: 'rgba(220, 38, 38, 0.1)',
               borderLeft: '3px solid var(--spectrum-global-color-red-600)',
               padding: '8px 12px',
@@ -155,8 +152,8 @@ const DiffDisplay: React.FC<DiffDisplayProps> = ({ diff }) => {
                 </Text>
               </div>
             ))}
-          </View>
-        </View>
+          </div>
+        </div>
       )}
     </div>
   )
@@ -181,15 +178,15 @@ export const DetailCard: React.FC<DetailCardProps> = ({ record, isLocked }) => {
 
   if (!record) {
     return (
-      <View
-        UNSAFE_style={{
+      <div
+        style={{
           padding: `${SPACING.MD}px`,
           textAlign: 'center',
           color: COLORS.GRAY_600
         }}
       >
         <Text>Hover over a point in the timeline to see details. Click to lock selection.</Text>
-      </View>
+      </div>
     )
   }
 
@@ -201,8 +198,8 @@ export const DetailCard: React.FC<DetailCardProps> = ({ record, isLocked }) => {
   )
 
   return (
-    <View
-      UNSAFE_style={{
+    <div
+      style={{
         padding: `${SPACING.MD}px ${SPACING.LG}px`,
         backgroundColor: COLORS.GRAY_100,
         borderRadius: '8px',
@@ -214,8 +211,8 @@ export const DetailCard: React.FC<DetailCardProps> = ({ record, isLocked }) => {
         className={style({ display: 'flex', gap: 24, alignItems: 'start' })}
       >
         {/* Change type icon */}
-        <View
-          UNSAFE_style={{
+        <div
+          style={{
             width: '40px',
             height: '40px',
             borderRadius: '50%',
@@ -228,10 +225,10 @@ export const DetailCard: React.FC<DetailCardProps> = ({ record, isLocked }) => {
           }}
         >
           {getChangeIcon(record.changeType)}
-        </View>
+        </div>
 
         {/* Details */}
-        <View flex={1}>
+        <div style={{ flex: 1 }}>
           <Text UNSAFE_style={{
             ...TYPOGRAPHY.SUBSECTION_HEADING,
             display: 'block',
@@ -271,11 +268,11 @@ export const DetailCard: React.FC<DetailCardProps> = ({ record, isLocked }) => {
               </Text>
             )}
           </div>
-        </View>
+        </div>
 
         {/* Change type badge */}
-        <View
-          UNSAFE_style={{
+        <div
+          style={{
             padding: '4px 12px',
             borderRadius: '16px',
             backgroundColor: changeColor,
@@ -287,12 +284,12 @@ export const DetailCard: React.FC<DetailCardProps> = ({ record, isLocked }) => {
           }}
         >
           {record.changeType}
-        </View>
+        </div>
       </div>
 
       {/* Collapsible Details Section */}
       {hasDiff && isLocked && (
-        <View UNSAFE_style={{ marginTop: `${SPACING.MD}px` }}>
+        <div style={{ marginTop: `${SPACING.MD}px` }}>
           {/* Details toggle button */}
           <button
             onClick={() => setIsDetailsOpen(!isDetailsOpen)}
@@ -338,7 +335,7 @@ export const DetailCard: React.FC<DetailCardProps> = ({ record, isLocked }) => {
           >
             <DiffDisplay diff={record.diff} />
           </div>
-        </View>
+        </div>
       )}
 
       {/* Lock indicator */}
@@ -352,6 +349,6 @@ export const DetailCard: React.FC<DetailCardProps> = ({ record, isLocked }) => {
           Click another point to change selection, or click the same point to deselect.
         </Text>
       )}
-    </View>
+    </div>
   )
 }

@@ -5,12 +5,17 @@
 
 import React, { useState, useEffect } from 'react'
 import {
-  View,
-  StatusLight,
+  Text,
+  Button,
+  ButtonGroup,
+  TextArea,
+  Dialog,
+  DialogContainer,
+  Content,
+  Heading,
+  DialogTrigger,
   AlertDialog,
-  DialogContainer as V3DialogContainer
-} from '@adobe/react-spectrum'
-import { Text, Button, ButtonGroup, TextArea, Dialog, DialogContainer, Content, Heading } from '@react-spectrum/s2'
+} from '@react-spectrum/s2'
 import { style } from '@react-spectrum/s2/style' with { type: 'macro' }
 import { tokenStorage } from '../../services/tokenStorage'
 
@@ -21,9 +26,27 @@ interface DevTokenDialogProps {
   mode?: 'required' | 'optional'
 }
 
-export const DevTokenDialog: React.FC<DevTokenDialogProps> = ({ 
-  isOpen, 
-  onTokenSaved, 
+const statusRowStyle = (variant: 'positive' | 'notice'): React.CSSProperties => ({
+  display: 'flex',
+  alignItems: 'center',
+  gap: 8,
+  padding: '8px 12px',
+  borderRadius: 6,
+  marginBottom: 12,
+  background:
+    variant === 'positive'
+      ? 'var(--spectrum-alias-status-positive-color-transparent, rgba(45, 157, 120, 0.12))'
+      : 'var(--spectrum-alias-status-info-color-transparent, rgba(59, 130, 246, 0.12))',
+  borderLeft: `3px solid ${
+    variant === 'positive'
+      ? 'var(--spectrum-global-color-green-600)'
+      : 'var(--spectrum-global-color-blue-500)'
+  }`,
+})
+
+export const DevTokenDialog: React.FC<DevTokenDialogProps> = ({
+  isOpen,
+  onTokenSaved,
   onDismiss,
   mode = 'optional'
 }) => {
@@ -35,11 +58,10 @@ export const DevTokenDialog: React.FC<DevTokenDialogProps> = ({
   const [showClearConfirm, setShowClearConfirm] = useState(false)
 
   useEffect(() => {
-    // Check for existing token when dialog opens
     if (isOpen) {
       const token = tokenStorage.getValidToken()
       setExistingToken(token)
-      
+
       if (token) {
         const info = tokenStorage.getTokenExpiration()
         setExpirationInfo(info)
@@ -58,19 +80,17 @@ export const DevTokenDialog: React.FC<DevTokenDialogProps> = ({
     }
 
     const parsedToken = tokenStorage.parseTokenInput(tokenInput.trim())
-    
+
     if (!parsedToken) {
       setIsValid(false)
       setErrorMessage('Invalid token format. Please paste a valid Adobe IMS token.')
       return
     }
 
-    // Save the token
     tokenStorage.saveToken(parsedToken)
     setIsValid(true)
     setTokenInput('')
-    
-    // Notify parent component
+
     setTimeout(() => {
       onTokenSaved(parsedToken.token)
     }, 500)
@@ -100,25 +120,23 @@ export const DevTokenDialog: React.FC<DevTokenDialogProps> = ({
 
   return (
     <>
-      <DialogContainer onDismiss={mode === 'optional' ? handleContinueWithoutToken : () => { return }}>
+      <DialogContainer onDismiss={mode === 'optional' ? handleContinueWithoutToken : () => {}}>
         {isOpen && (
           <Dialog size="L">
             {() => (
               <>
                 <Heading slot="title">Developer Authentication</Heading>
                 <Content>
-                  <View>
+                  <div>
                     {existingToken ? (
-                      <View marginBottom="size-300">
-                        <View marginBottom="size-150">
-                          <StatusLight variant="positive">
-                            <Text>
-                              <strong>Active Token Found</strong>
-                            </Text>
-                          </StatusLight>
-                        </View>
+                      <div style={{ marginBottom: 24 }}>
+                        <div style={statusRowStyle('positive')}>
+                          <Text>
+                            <strong>Active Token Found</strong>
+                          </Text>
+                        </div>
                         {expirationInfo && (
-                          <View marginBottom="size-200" marginStart="size-400">
+                          <div style={{ marginBottom: 16, marginLeft: 32 }}>
                             <Text>
                               <strong>Expires:</strong> {new Date(expirationInfo.expiresAt).toLocaleString()}
                             </Text>
@@ -126,9 +144,9 @@ export const DevTokenDialog: React.FC<DevTokenDialogProps> = ({
                             <Text>
                               <strong>Time Remaining:</strong> {expirationInfo.timeRemaining}
                             </Text>
-                          </View>
+                          </div>
                         )}
-                        <View marginStart="size-400">
+                        <div style={{ marginLeft: 32 }}>
                           <ButtonGroup>
                             <Button variant="accent" onPress={handleUseExistingToken}>
                               Use Existing Token
@@ -137,34 +155,34 @@ export const DevTokenDialog: React.FC<DevTokenDialogProps> = ({
                               Clear Token
                             </Button>
                           </ButtonGroup>
-                        </View>
-                        <View marginTop="size-300" marginBottom="size-300">
+                        </div>
+                        <div style={{ marginTop: 24, marginBottom: 24 }}>
                           <hr style={{ border: 'none', borderTop: '1px solid var(--spectrum-global-color-gray-300)' }} />
-                        </View>
+                        </div>
                         <Text>
                           <strong>Or paste a new token below:</strong>
                         </Text>
-                      </View>
+                      </div>
                     ) : (
-                      <View marginBottom="size-300">
-                        <StatusLight variant="notice">
+                      <div style={{ marginBottom: 24 }}>
+                        <div style={statusRowStyle('notice')}>
                           <Text>
                             <strong>No Token Found</strong>
                           </Text>
-                        </StatusLight>
-                        <View marginTop="size-150" marginStart="size-400">
+                        </div>
+                        <div style={{ marginTop: 12, marginLeft: 32 }}>
                           <Text>
                             To use this app in local development, you need to provide an Adobe IMS token.
                           </Text>
-                        </View>
-                      </View>
+                        </div>
+                      </div>
                     )}
 
-                    <View marginBottom="size-150">
+                    <div style={{ marginBottom: 12 }}>
                       <Text>
                         <strong>How to get a token:</strong>
                       </Text>
-                      <ol style={{ marginTop: '8px', marginBottom: '16px', paddingLeft: '40px' }}>
+                      <ol style={{ marginTop: 8, marginBottom: 16, paddingLeft: 40 }}>
                         <li>
                           Open{' '}
                           <a
@@ -178,11 +196,11 @@ export const DevTokenDialog: React.FC<DevTokenDialogProps> = ({
                           {' '}and sign in
                         </li>
                         <li>Open Developer Tools (F12)</li>
-                        <li>In the Console, run: <code style={{ background: '#f5f5f5', padding: '2px 6px', borderRadius: '3px' }}>window.adobeIMS?.getAccessToken()</code></li>
+                        <li>In the Console, run: <code style={{ background: '#f5f5f5', padding: '2px 6px', borderRadius: 3 }}>window.adobeIMS?.getAccessToken()</code></li>
                         <li>Copy the entire token object or just the token string</li>
                         <li>Paste it below</li>
                       </ol>
-                    </View>
+                    </div>
 
                     <TextArea
                       label="Adobe IMS Token"
@@ -196,13 +214,13 @@ export const DevTokenDialog: React.FC<DevTokenDialogProps> = ({
                     />
 
                     {mode === 'optional' && (
-                      <View marginTop="size-200">
+                      <div style={{ marginTop: 16 }}>
                         <Text>
                           <em>Note: You can continue without a token, but API calls will fail.</em>
                         </Text>
-                      </View>
+                      </div>
                     )}
-                  </View>
+                  </div>
                 </Content>
                 <ButtonGroup>
                   <Button variant="accent" onPress={validateAndSaveToken}>
@@ -220,23 +238,24 @@ export const DevTokenDialog: React.FC<DevTokenDialogProps> = ({
         )}
       </DialogContainer>
 
-      <V3DialogContainer onDismiss={() => setShowClearConfirm(false)}>
-        {showClearConfirm && (
-          <AlertDialog
-            variant="destructive"
-            title="Clear Token"
-            primaryActionLabel="Clear"
-            secondaryActionLabel="Cancel"
-            onPrimaryAction={handleClearToken}
-            onSecondaryAction={() => setShowClearConfirm(false)}
-          >
-            Are you sure you want to clear the stored token? You'll need to paste a new one to make API calls.
-          </AlertDialog>
-        )}
-      </V3DialogContainer>
+      <DialogTrigger
+        isOpen={showClearConfirm}
+        onOpenChange={(open) => !open && setShowClearConfirm(false)}
+      >
+        <div style={{ display: 'none' }} />
+        <AlertDialog
+          title="Clear Token"
+          variant="destructive"
+          primaryActionLabel="Clear"
+          cancelLabel="Cancel"
+          onPrimaryAction={handleClearToken}
+          onCancel={() => setShowClearConfirm(false)}
+        >
+          Are you sure you want to clear the stored token? You&apos;ll need to paste a new one to make API calls.
+        </AlertDialog>
+      </DialogTrigger>
     </>
   )
 }
 
 export default DevTokenDialog
-

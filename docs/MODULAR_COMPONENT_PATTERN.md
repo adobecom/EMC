@@ -68,7 +68,7 @@ web-src/src/components/
 */
 
 import React, { useState, useEffect } from 'react'
-import { /* Spectrum components */ } from '@adobe/react-spectrum'
+import { /* Spectrum S2 components */ } from '@react-spectrum/s2'
 import { /* Other imports */ } from '../shared'
 
 // Define clear interface for component props

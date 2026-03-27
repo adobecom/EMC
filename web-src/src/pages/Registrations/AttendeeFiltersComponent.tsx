@@ -109,7 +109,7 @@ export const AttendeeFiltersComponent: React.FC<AttendeeFiltersComponentProps> =
   }, [filterMenus, onFiltersChange])
 
   return (
-    <div style={{ backgroundColor: 'var(--spectrum-gray-100)', borderRadius: '8px', padding: '16px', minWidth: '200px', maxWidth: '220px', alignSelf: 'flex-start' }}>
+    <div style={{ backgroundColor: 'var(--spectrum-global-color-gray-100)', borderRadius: '8px', padding: '16px', minWidth: '200px', maxWidth: '220px', alignSelf: 'flex-start' }}>
       <div className={style({display: 'flex', flexDirection: 'column', gap: 16})}>
         {/* Back Button */}
         {onBackClick && backLabel && (
@@ -172,15 +172,14 @@ const FilterMenu: React.FC<FilterMenuProps> = ({ menu, selectedValues, onToggle 
   const [isExpanded, setIsExpanded] = React.useState(true)
 
   return (
-    <div>
+    <div className={style({ paddingInline: 12 })}>
       <ActionButton
         onPress={() => setIsExpanded(!isExpanded)}
         isQuiet
         UNSAFE_style={{
           width: '100%',
           justifyContent: 'space-between',
-          paddingLeft: 0,
-          paddingRight: 0
+          paddingInline: 0
         }}
       >
         <Text UNSAFE_style={{ fontWeight: 600, fontSize: '12px' }}>

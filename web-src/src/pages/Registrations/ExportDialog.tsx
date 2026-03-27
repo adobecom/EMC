@@ -123,7 +123,7 @@ export const ExportDialog: React.FC<ExportDialogProps> = ({
               onPress={handleExport}
               isDisabled={selectedColumns.size === 0 || attendees.length === 0}
             >
-              Export ({attendees.length} rows)
+              <Text>Export ({attendees.length} rows)</Text>
             </Button>
           </ButtonGroup>
         </>

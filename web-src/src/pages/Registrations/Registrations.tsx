@@ -181,10 +181,6 @@ export const Registrations: React.FC<RegistrationsProps> = ({ ims: _ims }) => {
     navigate(`/registrations/${eventId}`, { replace: true })
   }, [navigate])
 
-  const handleBackClick = useCallback(() => {
-    navigate('/events')
-  }, [navigate])
-
   const handleAttendeesRefresh = useCallback(async () => {
     if (!selectedEventId) return
 
@@ -285,26 +281,6 @@ export const Registrations: React.FC<RegistrationsProps> = ({ ims: _ims }) => {
         gap: '16px',
         marginBottom: '24px'
       }}>
-        <button
-          onClick={handleBackClick}
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '6px',
-            padding: '8px 12px',
-            background: 'transparent',
-            border: '1px solid var(--spectrum-global-color-gray-300)',
-            borderRadius: '4px',
-            cursor: 'pointer',
-            fontSize: '14px',
-            fontWeight: 500,
-            color: 'var(--spectrum-global-color-gray-800)'
-          }}
-        >
-          <span style={{ fontSize: '14px' }}>←</span>
-          <span>Back</span>
-        </button>
-
         <h1 style={{ margin: 0, flex: 1 }}>Event report</h1>
 
         <div style={{ width: '280px' }}>

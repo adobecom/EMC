@@ -2,24 +2,95 @@
 * <license header>
 */
 
+/** Canonical sans stack (S2 variable font + fallbacks). Single source: keep TS `FONT_FAMILY_SANS` in sync. **/
+:root {
+  color-scheme: light;
+  --emc-font-sans: adobe-clean-spectrum-vf, adobe-clean-variable, adobe-clean, ui-sans-serif, system-ui, sans-serif;
+
+  /**
+   * Legacy Spectrum global palette + dimensions (light theme).
+   * React Spectrum S2 does not inject --spectrum-global-* tokens from v3 Provider.
+   * EMC COLORS, overlays, dialogs, and index.css reference them — define here so backgrounds and borders resolve.
+   * Values align with Spectrum light global colors / dimension scale.
+   */
+  --spectrum-global-color-gray-50: #f8f8f8;
+  --spectrum-global-color-gray-75: #fafafa;
+  --spectrum-global-color-gray-100: #f5f5f5;
+  --spectrum-global-color-gray-200: #eaeaea;
+  --spectrum-global-color-gray-300: #e1e1e1;
+  --spectrum-global-color-gray-400: #cacaca;
+  --spectrum-global-color-gray-500: #aeaeae;
+  --spectrum-global-color-gray-600: #959595;
+  --spectrum-global-color-gray-700: #757575;
+  --spectrum-global-color-gray-800: #5c5c5c;
+  --spectrum-global-color-gray-900: #404040;
+  --spectrum-global-color-blue-100: #e0f2ff;
+  --spectrum-global-color-blue-400: #2680eb;
+  --spectrum-global-color-blue-500: #1473e6;
+  --spectrum-global-color-blue-600: #0d66d0;
+  --spectrum-global-color-green-100: #cef8e0;
+  --spectrum-global-color-green-500: #2d9d78;
+  --spectrum-global-color-green-600: #228572;
+  --spectrum-global-color-green-700: #1d7a68;
+  --spectrum-global-color-red-600: #e34850;
+  --spectrum-global-color-yellow-100: #fff1cc;
+  --spectrum-global-color-yellow-400: #dfbf02;
+  --spectrum-global-dimension-font-size-400: 14px;
+  --spectrum-global-dimension-font-size-500: 17px;
+  --spectrum-global-dimension-size-150: 12px;
+  --spectrum-global-dimension-size-200: 16px;
+  --spectrum-global-dimension-size-400: 32px;
+  --spectrum-global-dimension-size-2000: 160px;
+
+  /**
+   * S2 page.css sets --s2-container-bg via LightningCSS branches; without the build-time
+   * transform the value is not a single valid color. Force a light surface for the app shell.
+   */
+  --s2-container-bg: #ffffff;
+}
+
+/**
+ * S2 Modal / Dialog surface (@react-spectrum/s2 Modal.css): same --s2-container-bg issue
+ * is re-declared on the dialog node (.-Ovbhqd-g_g12), which overrides :root and leaves
+ * background-color invalid. Class names are from installed @react-spectrum/s2 — recheck after upgrades.
+ */
+.-Ovbhqd-g_g12.gEzkoQe12 {
+  --s2-container-bg: #ffffff;
+  background-color: #ffffff;
+}
+
 /** Global Font Settings — use S2's variable font for the entire app **/
 html,
 body {
   margin: 0;
-  font-family: adobe-clean-spectrum-vf, adobe-clean-variable, adobe-clean, ui-sans-serif, system-ui, sans-serif;
+  font-family: var(--emc-font-sans);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   background-color: #FFFFFF;
+  color: var(--spectrum-global-color-gray-800);
 }
 
 #root {
   background-color: #FFFFFF;
+  font-family: var(--emc-font-sans);
 }
 
-/** Ensure v3 Provider and all Spectrum components also use S2's loaded Adobe Clean variable font **/
+/** Root v3 Provider: wins over hashed i18nFontFamily legacy stack (see App.tsx `emc-app-provider`). **/
+.emc-app-provider {
+  font-family: var(--emc-font-sans) !important;
+}
+
+/** Legacy selectors — hashed Spectrum classes may not match; kept for consistency if present **/
 .spectrum-Provider,
 .spectrum {
-  font-family: adobe-clean-spectrum-vf, adobe-clean-variable, adobe-clean, ui-sans-serif, system-ui, sans-serif !important;
+  font-family: var(--emc-font-sans) !important;
+}
+
+button,
+input,
+textarea,
+select {
+  font-family: inherit;
 }
 
 
@@ -42,7 +113,7 @@ body {
   box-sizing: border-box;
   height: 56px;
   padding: 0 20px;
-  font-family: adobe-clean-spectrum-vf, adobe-clean-variable, adobe-clean, ui-sans-serif, system-ui, sans-serif;
+  font-family: var(--emc-font-sans);
   font-size: 14px;
   font-weight: 500;
   text-decoration: none;
@@ -54,16 +125,16 @@ body {
 
 .nav-link:hover {
   color: var(--spectrum-global-color-gray-900);
-  background-color: var(--spectrum-global-color-gray-200);
+  background-color: var(--spectrum-global-color-gray-100);
 }
 
 .nav-link.is-selected {
-  color: var(--spectrum-global-color-blue-600);
-  border-bottom-color: var(--spectrum-global-color-blue-600);
-  background-color: var(--spectrum-global-color-gray-75);
+  color: var(--spectrum-global-color-gray-900);
+  border-bottom-color: #000000;
+  background-color: transparent;
 }
 
-/** Content Area Styling **/
+/** Main scroll region below TopNav **/
 .content-area {
   overflow-y: auto;
   background-color: #FFFFFF;
@@ -81,7 +152,7 @@ body {
   width: 100%;
   border-collapse: collapse;
   background-color: #FFFFFF;
-  table-layout: auto;
+  table-layout: fixed;
 }
 
 .custom-data-table thead tr {
@@ -117,7 +188,13 @@ body {
   padding: 16px;
   vertical-align: middle;
   background-color: #FFFFFF;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
+.custom-data-table td.data-table-td-nowrap {
   white-space: nowrap;
+  vertical-align: middle;
 }
 
 .custom-data-table th {
@@ -140,6 +217,8 @@ body {
 
 .custom-data-table .expanded-content-panel {
   padding: 16px 24px 24px 56px;
+  max-height: 400px;
+  overflow-y: auto;
 }
 
 /** User card styles for expanded group rows **/
@@ -393,18 +472,58 @@ body {
   color: var(--spectrum-global-color-gray-800);
 }
 
-/** Home Page - Navigation Cards **/
+/** Home Page - Navigation Cards (Figma: horizontal row, 32px padding, 48px icon, shadow states) **/
 .nav-card {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 16px;
+  box-sizing: border-box;
+  padding: 32px;
+  background-color: #fff;
+  border: none;
+  border-radius: 8px;
+  text-decoration: none;
+  color: inherit;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: box-shadow 0.2s ease;
+  /* Default: X 0, Y 0, blur 1 */
+  box-shadow: 0 0 1px rgba(0, 0, 0, 0.12);
 }
 
 .nav-card:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  /* Hover: Y 2, blur 8 */
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.14);
 }
 
 .nav-card:active {
-  transform: translateY(0);
+  box-shadow: 0 0 1px rgba(0, 0, 0, 0.12);
+}
+
+.nav-card:focus-visible {
+  outline: 2px solid var(--spectrum-global-color-blue-500);
+  outline-offset: 2px;
+}
+
+.home-nav-card-icon {
+  flex-shrink: 0;
+  width: 48px;
+  height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.home-nav-card-icon svg {
+  width: 100%;
+  height: 100%;
+}
+
+.home-nav-card-body {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
 }
 

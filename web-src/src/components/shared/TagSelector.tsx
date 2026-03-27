@@ -5,7 +5,20 @@ import Close from '@react-spectrum/s2/icons/Close'
 import Add from '@react-spectrum/s2/icons/Add'
 import { EventTag, CaasTagsResponse, CaasTag } from '../../types/domain'
 import { cachedApi } from '../../services/api'
+import { COLORS } from '../../styles/designSystem'
 import { LoadingSpinner } from './LoadingSpinner'
+
+/** S2 icons (Add, Close) use fill: var(--iconPrimary); default gray matches #2C2C2C chips unless overridden */
+const TAG_CHIP_STYLE: React.CSSProperties = {
+  backgroundColor: '#2C2C2C',
+  display: 'flex',
+  alignItems: 'center',
+  gap: '8px',
+  cursor: 'pointer',
+  borderRadius: '4px',
+  padding: '8px',
+  '--iconPrimary': COLORS.WHITE,
+} as React.CSSProperties
 
 interface TagGroup {
   groupName: string
@@ -294,15 +307,7 @@ export const TagSelector: React.FC<TagSelectorProps> = ({
                     {group.tags.map(tag => (
                       <div
                         key={tag.caasId || tag.name}
-                        style={{
-                          backgroundColor: '#2C2C2C',
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: '8px',
-                          cursor: 'pointer',
-                          borderRadius: '4px',
-                          padding: '8px'
-                        }}
+                        style={TAG_CHIP_STYLE}
                         onClick={() => {
                           handleAddTag(tag)
                           setIsDropdownOpen(false)
@@ -317,7 +322,7 @@ export const TagSelector: React.FC<TagSelectorProps> = ({
                         }}>
                           {tag.name}
                         </Text>
-                        <Add UNSAFE_style={{ color: 'white' }} />
+                        <Add />
                       </div>
                     ))}
                   </div>
@@ -383,15 +388,7 @@ export const TagSelector: React.FC<TagSelectorProps> = ({
                 {group.tags.map(tag => (
                   <div
                     key={tag.caasId || tag.name}
-                    style={{
-                      backgroundColor: '#2C2C2C',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '8px',
-                      cursor: 'pointer',
-                      borderRadius: '4px',
-                      padding: '8px'
-                    }}
+                    style={TAG_CHIP_STYLE}
                     onClick={() => handleRemoveTag(tag)}
                     role="button"
                     tabIndex={0}
@@ -403,7 +400,7 @@ export const TagSelector: React.FC<TagSelectorProps> = ({
                     }}>
                       {tag.name}
                     </Text>
-                    <Close UNSAFE_style={{ color: 'white' }} />
+                    <Close />
                   </div>
                 ))}
               </div>

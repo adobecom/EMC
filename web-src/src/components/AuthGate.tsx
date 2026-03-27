@@ -3,7 +3,9 @@
  */
 
 import React, { ReactNode } from 'react'
-import { Provider, defaultTheme } from '@adobe/react-spectrum'
+// @ts-ignore — Fonts not in package exports for v0.12.0
+import { Fonts } from '@react-spectrum/s2/dist/Fonts.mjs'
+import { Provider as S2Provider } from '@react-spectrum/s2'
 import { useAuth } from '../contexts/AuthContext'
 import { GateScreen } from './shared/GateScreen'
 
@@ -38,14 +40,15 @@ export const AuthGate: React.FC<AuthGateProps> = ({ children }) => {
     }
 
     return (
-      <Provider theme={defaultTheme} colorScheme="light" scale="medium">
+      <S2Provider colorScheme="light">
+        <Fonts />
         <GateScreen
           onRequestAccess={onAction}
           isLoading={isCheckingAccess}
           message={message}
           actionLabel={actionLabel}
         />
-      </Provider>
+      </S2Provider>
     )
   }
 

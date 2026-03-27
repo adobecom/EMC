@@ -34,7 +34,7 @@ const ImagePlaceholder: React.FC<ImagePlaceholderProps> = ({ width, height, isSe
       height,
       backgroundColor: 'var(--spectrum-global-color-gray-200)',
       border: isSelected 
-        ? `3px solid ${COLORS.ADOBE_RED}` 
+        ? `3px solid ${COLORS.RED_600}` 
         : '1px solid var(--spectrum-global-color-gray-400)',
       borderRadius: '4px',
       display: 'flex',
@@ -260,7 +260,7 @@ export const TemplatePicker: React.FC<TemplatePickerProps> = ({
         </ActionButton>
         
         {/* Title */}
-        <Heading level={2} UNSAFE_style={{ color: COLORS.ADOBE_RED, marginBottom: '24px' }}>
+        <Heading level={2} UNSAFE_style={{ color: COLORS.RED_600, marginBottom: '24px' }}>
           Select a template
         </Heading>
         
@@ -413,7 +413,7 @@ export const TemplatePicker: React.FC<TemplatePickerProps> = ({
                             objectFit: 'cover',
                             objectPosition: 'top left',
                             border: isSelected 
-                              ? `3px solid ${COLORS.ADOBE_RED}` 
+                              ? `3px solid ${COLORS.RED_600}` 
                               : '1px solid var(--spectrum-global-color-gray-400)',
                             borderRadius: '4px',
                             marginBottom: '8px',

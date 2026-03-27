@@ -5,7 +5,7 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react'
 import { Button, Text, Picker, PickerItem, ActionButton, ProgressCircle } from '@react-spectrum/s2'
 import { style } from '@react-spectrum/s2/style' with { type: 'macro' }
-import Cancel from '@react-spectrum/s2/icons/Cancel'
+import RemoveCircle from '@react-spectrum/s2/icons/RemoveCircle'
 import Add from "@react-spectrum/s2/icons/Add"
 import { useEventFormComponent } from '../../hooks/useEventFormComponent'
 import { configService } from '../../services/configService'
@@ -239,7 +239,7 @@ export const PromotionalContentComponent: React.FC = () => {
       
       {/* Empty State */}
       {!isLoading && !loadError && selectedItems.length === 0 && (
-        <div style={{ padding: '32px', backgroundColor: 'var(--spectrum-gray-100)', borderRadius: '4px', textAlign: 'center' }}>
+        <div style={{ padding: '32px', backgroundColor: 'var(--spectrum-global-color-gray-100)', borderRadius: '4px', textAlign: 'center' }}>
           <div className={style({display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 16})}>
             <Text>Add promotional content to feature on your event page</Text>
             <Button
@@ -319,7 +319,7 @@ export const PromotionalContentComponent: React.FC = () => {
                 padding: 0,
               }}
             >
-              <Cancel />
+              <RemoveCircle />
             </ActionButton>
           </div>
         )
@@ -333,9 +333,9 @@ export const PromotionalContentComponent: React.FC = () => {
           isDisabled={isLoading || availablePromotions.length === 0}
           styles={style({ width: '[100%]' })}
           UNSAFE_style={{
-            backgroundColor: 'var(--spectrum-gray-200)',
+            backgroundColor: 'var(--spectrum-global-color-gray-200)',
             border: 'none',
-            color: 'var(--spectrum-gray-800)',
+            color: 'var(--spectrum-global-color-gray-800)',
           }}
         >
           <Add />

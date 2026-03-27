@@ -15,7 +15,7 @@ import Data from '@react-spectrum/s2/icons/Data'
 import { cachedApi } from '../../services/api'
 import { BlurredLoadingOverlay } from '../../components/shared'
 import { EventApiResponse, SeriesApiResponse } from '../../types/domain'
-import { COLORS, SPACING, TYPOGRAPHY } from '../../styles/designSystem'
+import { COLORS, GRADIENT_BACKGROUND, SPACING, TYPOGRAPHY } from '../../styles/designSystem'
 import { IMS } from '../../types'
 import { useSafeState, useRBACFilter, useHasPermission } from '../../hooks'
 import { useGroup } from '../../contexts/GroupContext'
@@ -29,18 +29,17 @@ interface StatCardProps {
   title: string
   value: number | string
   subtitle?: string
-  color?: string
   onClick?: () => void
 }
 
 /**
  * Stat Card component for displaying individual metrics
  */
-const StatCard: React.FC<StatCardProps> = ({ icon, title, value, subtitle, color = COLORS.ADOBE_RED, onClick }) => (
+const StatCard: React.FC<StatCardProps> = ({ icon, title, value, subtitle, onClick }) => (
   <div
     style={{
-      backgroundColor: 'var(--spectrum-gray-50)',
-      border: '1px solid var(--spectrum-gray-200)',
+      backgroundColor: 'var(--spectrum-global-color-gray-50)',
+      border: '1px solid var(--spectrum-global-color-gray-200)',
       borderRadius: '8px',
       padding: 24,
       cursor: onClick ? 'pointer' : 'default',
@@ -58,18 +57,6 @@ const StatCard: React.FC<StatCardProps> = ({ icon, title, value, subtitle, color
       tabIndex={onClick ? 0 : undefined}
       style={{ height: '100%' }}
     >
-      {/* Accent bar on top */}
-      <div
-        style={{
-          position: 'absolute',
-          top: 0,
-          left: 0,
-          right: 0,
-          height: '4px',
-          backgroundColor: color
-        }}
-      />
-
       <div className={style({ display: 'flex', flexDirection: 'column', gap: 12 })}>
         {/* Icon and Title Row */}
         <div className={style({ display: 'flex', gap: 8, alignItems: 'center' })}>
@@ -198,8 +185,8 @@ const TemplateBreakdown: React.FC<TemplateBreakdownProps> = ({ templateCounts })
   return (
     <div
       style={{
-        backgroundColor: 'var(--spectrum-gray-50)',
-        border: '1px solid var(--spectrum-gray-200)',
+        backgroundColor: 'var(--spectrum-global-color-gray-50)',
+        border: '1px solid var(--spectrum-global-color-gray-200)',
         borderRadius: '8px',
         padding: 24
       }}
@@ -246,7 +233,7 @@ const TemplateBreakdown: React.FC<TemplateBreakdownProps> = ({ templateCounts })
                     {/* Progress bar */}
                     <div
                       style={{
-                        backgroundColor: 'var(--spectrum-gray-200)',
+                        backgroundColor: 'var(--spectrum-global-color-gray-200)',
                         borderRadius: '4px',
                         height: 8,
                         overflow: 'hidden'
@@ -431,14 +418,14 @@ export const OverviewDashboard: React.FC<OverviewDashboardProps> = () => {
   }
 
   return (
-    <div style={{ padding: 32, maxWidth: '1400px', margin: '0 auto' }}>
-      <div className={style({ display: 'flex', flexDirection: 'column', gap: 32 })}>
+    <div style={{ padding: 32, background: GRADIENT_BACKGROUND }}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 32, maxWidth: '1400px', margin: '0 auto' }}>
         {/* Header */}
         <div className={style({ display: 'flex', justifyContent: 'space-between', alignItems: 'center' })}>
           <div>
             <Heading level={1} UNSAFE_style={{ marginBottom: 4 }}>Overview Dashboard</Heading>
             <Text UNSAFE_style={{ color: 'var(--spectrum-global-color-gray-700)', fontSize: '14px' }}>
-              Event Management Cloud statistics and metrics
+              Event Management Console statistics and metrics
             </Text>
           </div>
 
@@ -470,7 +457,6 @@ export const OverviewDashboard: React.FC<OverviewDashboardProps> = () => {
                   title="Total Events"
                   value={stats.totalEvents}
                   subtitle={`${stats.upcomingEvents} upcoming, ${stats.pastEvents} past`}
-                  color={COLORS.ADOBE_RED}
                   onClick={() => window.location.hash = '#/events'}
                 />
               )}
@@ -481,7 +467,6 @@ export const OverviewDashboard: React.FC<OverviewDashboardProps> = () => {
                   title="Total Series"
                   value={stats.totalSeries}
                   subtitle={`${stats.publishedSeries} published`}
-                  color="#0D66D0"
                   onClick={() => window.location.hash = '#/series'}
                 />
               )}
@@ -492,7 +477,6 @@ export const OverviewDashboard: React.FC<OverviewDashboardProps> = () => {
                   title="Total Attendees"
                   value={stats.totalAttendees.toLocaleString()}
                   subtitle={stats.totalCapacity > 0 ? `of ${stats.totalCapacity.toLocaleString()} capacity` : 'registered'}
-                  color="#268E6C"
                   onClick={() => window.location.hash = '#/registrations'}
                 />
               )}
@@ -503,7 +487,6 @@ export const OverviewDashboard: React.FC<OverviewDashboardProps> = () => {
                   title="Published Events"
                   value={stats.publishedEvents}
                   subtitle={`${stats.draftEvents} drafts`}
-                  color={COLORS.STATUS_PUBLISHED}
                 />
               )}
             </div>
@@ -518,8 +501,8 @@ export const OverviewDashboard: React.FC<OverviewDashboardProps> = () => {
                   {canReadEvents && (
                   <div
                     style={{
-                      backgroundColor: 'var(--spectrum-gray-50)',
-                      border: '1px solid var(--spectrum-gray-200)',
+                      backgroundColor: 'var(--spectrum-global-color-gray-50)',
+                      border: '1px solid var(--spectrum-global-color-gray-200)',
                       borderRadius: '8px',
                       padding: 24
                     }}
@@ -581,8 +564,8 @@ export const OverviewDashboard: React.FC<OverviewDashboardProps> = () => {
                   {canReadEvents && (
                   <div
                     style={{
-                      backgroundColor: 'var(--spectrum-gray-50)',
-                      border: '1px solid var(--spectrum-gray-200)',
+                      backgroundColor: 'var(--spectrum-global-color-gray-50)',
+                      border: '1px solid var(--spectrum-global-color-gray-200)',
                       borderRadius: '8px',
                       padding: 24
                     }}
@@ -623,8 +606,8 @@ export const OverviewDashboard: React.FC<OverviewDashboardProps> = () => {
                   {canReadSeries && (
                   <div
                     style={{
-                      backgroundColor: 'var(--spectrum-gray-50)',
-                      border: '1px solid var(--spectrum-gray-200)',
+                      backgroundColor: 'var(--spectrum-global-color-gray-50)',
+                      border: '1px solid var(--spectrum-global-color-gray-200)',
                       borderRadius: '8px',
                       padding: 24
                     }}
@@ -686,7 +669,7 @@ export const OverviewDashboard: React.FC<OverviewDashboardProps> = () => {
             {(canReadEvents || canReadSeries) && (
             <div
               style={{
-                backgroundColor: 'var(--spectrum-gray-100)',
+                backgroundColor: 'var(--spectrum-global-color-gray-100)',
                 borderRadius: '8px',
                 padding: 24,
                 marginTop: 16

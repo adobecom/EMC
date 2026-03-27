@@ -2,9 +2,9 @@
 * <license header>
 */
 
-import React, { useEffect, useMemo, useCallback } from 'react'
+import React, { useEffect, useMemo, useCallback, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { ActionButton, Button, MenuTrigger, Menu, MenuItem, Text, DialogTrigger, AlertDialog, Link } from "@react-spectrum/s2"
+import { ActionButton, Button, ButtonGroup, MenuTrigger, Menu, MenuItem, Text, DialogTrigger, Dialog, Content, Heading, AlertDialog, Link, Picker, PickerItem } from "@react-spectrum/s2"
 import { style } from "@react-spectrum/s2/style" with { type: "macro" }
 import More from "@react-spectrum/s2/icons/More"
 import Publish from "@react-spectrum/s2/icons/Publish"
@@ -13,15 +13,18 @@ import Preview from "@react-spectrum/s2/icons/Preview"
 import Copy from "@react-spectrum/s2/icons/Copy"
 import Edit from "@react-spectrum/s2/icons/Edit"
 import Duplicate from "@react-spectrum/s2/icons/Duplicate"
-import Delete from "@react-spectrum/s2/icons/Delete"
+import RemoveCircle from "@react-spectrum/s2/icons/RemoveCircle"
+import Filter from "@react-spectrum/s2/icons/Filter"
 import GlobeGrid from "@react-spectrum/s2/icons/GlobeGrid"
 import Location from "@react-spectrum/s2/icons/Location"
 import { getEventTypeOptions, EventType } from '../../config/eventTypeConfig'
 import { TableColumn } from '../../components/shared/DataTable'
 import { StatusBadge, ResourceDashboardLayout, BlurredLoadingOverlay } from '../../components/shared'
+import CalendarIllustration from '@react-spectrum/s2/illustrations/linear/Calendar'
 import { EventDashboardItem } from '../../types/domain'
 import { apiService, cachedApi } from '../../services/api'
 import { thumbnailEnrichmentManager, venueEnrichmentManager, historyEnrichmentManager, EventThumbnail, EventVenueInfo, EventHistoryInfo } from '../../services/eventEnrichment'
+import { SPACING } from '../../styles/designSystem'
 import { seriesEnrichmentManager, SeriesInfo } from '../../services/seriesEnrichment'
 import { IMS } from '../../types'
 import { useToast, useGroup } from '../../contexts'
@@ -31,6 +34,23 @@ import { useHasPermission } from '../../hooks/useHasPermission'
 import { getEspEnvParam } from '../../config/constants'
 
 const EVENTS_SEARCH_KEYS = ['eventName', 'eventType', 'cloudType', 'hostEmail', 'seriesId']
+
+const FILTER_ALL = '__all__'
+const FILTER_NONE_SERIES = '__none__'
+const FILTER_EMPTY_CLOUD = '__empty__'
+
+function getEventCreatorForFilter(
+  item: EventDashboardItem,
+  historyMap: Map<string, EventHistoryInfo>
+): string {
+  const h = historyMap.get(item.eventId)
+  return (
+    item.createdBy?.trim() ||
+    h?.creator?.name?.trim() ||
+    h?.creator?.email?.trim() ||
+    ''
+  )
+}
 
 interface EventsDashboardProps {
   ims: IMS
@@ -56,6 +76,21 @@ export const EventsDashboard: React.FC<EventsDashboardProps> = () => {
   const [loadingHistory, setLoadingHistory] = useSafeState<Set<string>>(new Set())
   const [itemToDelete, setItemToDelete] = useSafeState<EventDashboardItem | null>(null)
   const [actionInProgress, setActionInProgress] = useSafeState<string | null>(null)
+
+  const [listFilters, setListFilters] = useSafeState<{
+    seriesId: string
+    creator: string
+    publish: string
+    cloudType: string
+  }>({
+    seriesId: FILTER_ALL,
+    creator: FILTER_ALL,
+    publish: FILTER_ALL,
+    cloudType: FILTER_ALL,
+  })
+
+  const seriesRef = useRef<Map<string, SeriesInfo>>(series)
+  seriesRef.current = series
 
   const loadEventsData = async () => {
     setIsLoading(true)
@@ -183,29 +218,32 @@ export const EventsDashboard: React.FC<EventsDashboardProps> = () => {
     fetchVenues()
   }, [visibleEventIds])
 
-  // Fetch series only for visible event IDs that have seriesId (triggered by pagination)
+  // Prefetch series metadata for every series referenced by loaded events (table + filter labels).
+  // seriesEnrichmentManager batches and caches; no longer tied to visible page only.
   useEffect(() => {
-    if (visibleEventIds.length === 0) return
+    if (events.length === 0) return
+
+    const seriesIds = Array.from(new Set(
+      events.map(e => e.seriesId).filter((id): id is string => !!id)
+    ))
+    if (seriesIds.length === 0) return
+
+    let cancelled = false
 
     const fetchSeries = async () => {
-      // Get unique series IDs from visible events (filter out undefined/null)
-      const seriesIds = Array.from(new Set(
-        visibleEventIds
-          .map(eventId => events.find(e => e.eventId === eventId)?.seriesId)
-          .filter((id): id is string => !!id)
-      ))
-
-      if (seriesIds.length === 0) return
-
-      // Mark series as loading (only ones not already cached)
-      const seriesToLoad = seriesIds.filter(id => !series.has(id))
-      if (seriesToLoad.length > 0) {
-        setLoadingSeries(prev => new Set([...prev, ...seriesToLoad]))
+      const missing = seriesIds.filter(id => !seriesRef.current.has(id))
+      if (missing.length > 0) {
+        setLoadingSeries(prev => {
+          const next = new Set(prev)
+          missing.forEach(id => next.add(id))
+          return next
+        })
       }
 
       try {
         const seriesResults = await seriesEnrichmentManager.getMany(seriesIds)
-        
+        if (cancelled) return
+
         setSeries(prev => {
           const updated = new Map(prev)
           seriesResults.forEach((value, key) => {
@@ -218,16 +256,21 @@ export const EventsDashboard: React.FC<EventsDashboardProps> = () => {
       } catch (error) {
         console.error('Error fetching series:', error)
       } finally {
-        setLoadingSeries(prev => {
-          const updated = new Set(prev)
-          seriesIds.forEach(id => updated.delete(id))
-          return updated
-        })
+        if (!cancelled) {
+          setLoadingSeries(prev => {
+            const next = new Set(prev)
+            seriesIds.forEach(id => next.delete(id))
+            return next
+          })
+        }
       }
     }
 
     fetchSeries()
-  }, [visibleEventIds, events])
+    return () => {
+      cancelled = true
+    }
+  }, [events])
 
   // Fetch history only for visible event IDs (triggered by pagination)
   useEffect(() => {
@@ -628,9 +671,7 @@ export const EventsDashboard: React.FC<EventsDashboardProps> = () => {
               <Text>{seriesInfo.seriesName}</Text>
               {seriesInfo.seriesDescription && (
                 <Text UNSAFE_style={{ fontSize: '12px', color: 'var(--spectrum-global-color-gray-700)' }}>
-                  {seriesInfo.seriesDescription.length > 60 
-                    ? `${seriesInfo.seriesDescription.substring(0, 60)}...` 
-                    : seriesInfo.seriesDescription}
+                  {seriesInfo.seriesDescription}
                 </Text>
               )}
             </div>
@@ -814,6 +855,7 @@ export const EventsDashboard: React.FC<EventsDashboardProps> = () => {
       name: 'MANAGE',
       width: 190,
       sortable: false,
+      cellNoWrap: true,
       render: (item) => (
         <MenuTrigger>
           <ActionButton isQuiet aria-label="Actions menu">
@@ -852,7 +894,7 @@ export const EventsDashboard: React.FC<EventsDashboardProps> = () => {
             )}
             {canDeleteEvent && (
               <MenuItem id="delete" textValue="Delete">
-                <Delete />
+                <RemoveCircle />
                 <Text slot="label">Delete</Text>
               </MenuItem>
             )}
@@ -898,6 +940,179 @@ export const EventsDashboard: React.FC<EventsDashboardProps> = () => {
     'webinar': <GlobeGrid />,
   }
 
+  const filteredEvents = useMemo(() => {
+    return events.filter(item => {
+      if (listFilters.seriesId !== FILTER_ALL) {
+        if (listFilters.seriesId === FILTER_NONE_SERIES) {
+          if (item.seriesId) return false
+        } else if (item.seriesId !== listFilters.seriesId) {
+          return false
+        }
+      }
+      if (listFilters.creator !== FILTER_ALL) {
+        if (getEventCreatorForFilter(item, history) !== listFilters.creator) return false
+      }
+      if (listFilters.publish !== FILTER_ALL) {
+        if (listFilters.publish === 'published' && !item.published) return false
+        if (listFilters.publish === 'draft' && item.published) return false
+      }
+      if (listFilters.cloudType !== FILTER_ALL) {
+        const ct = item.cloudType || ''
+        if (listFilters.cloudType === FILTER_EMPTY_CLOUD) {
+          if (ct !== '') return false
+        } else if (ct !== listFilters.cloudType) {
+          return false
+        }
+      }
+      return true
+    })
+  }, [events, listFilters, history])
+
+  const seriesFilterIds = useMemo(() => {
+    const ids = new Set<string>()
+    events.forEach(e => {
+      if (e.seriesId) ids.add(e.seriesId)
+    })
+    return Array.from(ids).sort((a, b) => {
+      const na = series.get(a)?.seriesName || a
+      const nb = series.get(b)?.seriesName || b
+      return na.localeCompare(nb)
+    })
+  }, [events, series])
+
+  const hasEventsWithoutSeries = useMemo(
+    () => events.some(e => !e.seriesId),
+    [events]
+  )
+
+  const creatorFilterOptions = useMemo(() => {
+    const s = new Set<string>()
+    events.forEach(e => {
+      const c = getEventCreatorForFilter(e, history)
+      if (c) s.add(c)
+    })
+    return Array.from(s).sort((a, b) => a.localeCompare(b))
+  }, [events, history])
+
+  const cloudTypeFilterOptions = useMemo(() => {
+    const s = new Set<string>()
+    events.forEach(e => {
+      if (e.cloudType) s.add(e.cloudType)
+    })
+    return Array.from(s).sort()
+  }, [events])
+
+  const hasEventsWithoutCloudType = useMemo(
+    () => events.some(e => !e.cloudType),
+    [events]
+  )
+
+  const clearListFilters = useCallback(() => {
+    setListFilters({
+      seriesId: FILTER_ALL,
+      creator: FILTER_ALL,
+      publish: FILTER_ALL,
+      cloudType: FILTER_ALL,
+    })
+  }, [])
+
+  const eventsFilterToolbar = useMemo(() => (
+    <DialogTrigger>
+      <ActionButton isQuiet aria-label="Filter events">
+        <Filter />
+      </ActionButton>
+      <Dialog size="L">
+        {({ close }) => (
+          <>
+            <Heading slot="title">Filter events</Heading>
+            <Content>
+              <div
+                className={style({ display: 'flex', flexDirection: 'column' })}
+                style={{ gap: SPACING.MD }}
+              >
+                <Picker
+                  label="Series"
+                  selectedKey={listFilters.seriesId}
+                  onSelectionChange={(key) => {
+                    if (key == null) return
+                    setListFilters(f => ({ ...f, seriesId: String(key) }))
+                  }}
+                >
+                  <PickerItem id={FILTER_ALL} textValue="All series">All series</PickerItem>
+                  {hasEventsWithoutSeries && (
+                    <PickerItem id={FILTER_NONE_SERIES} textValue="No series">No series</PickerItem>
+                  )}
+                  {seriesFilterIds.map(sid => {
+                    const label = series.get(sid)?.seriesName || sid
+                    return (
+                      <PickerItem key={sid} id={sid} textValue={label}>
+                        {label}
+                      </PickerItem>
+                    )
+                  })}
+                </Picker>
+                <Picker
+                  label="Creator"
+                  selectedKey={listFilters.creator}
+                  onSelectionChange={(key) => {
+                    if (key == null) return
+                    setListFilters(f => ({ ...f, creator: String(key) }))
+                  }}
+                >
+                  <PickerItem id={FILTER_ALL} textValue="All creators">All creators</PickerItem>
+                  {creatorFilterOptions.map(c => (
+                    <PickerItem key={c} id={c} textValue={c}>{c}</PickerItem>
+                  ))}
+                </Picker>
+                <Picker
+                  label="Publish state"
+                  selectedKey={listFilters.publish}
+                  onSelectionChange={(key) => {
+                    if (key == null) return
+                    setListFilters(f => ({ ...f, publish: String(key) }))
+                  }}
+                >
+                  <PickerItem id={FILTER_ALL} textValue="All states">All states</PickerItem>
+                  <PickerItem id="published" textValue="Published">Published</PickerItem>
+                  <PickerItem id="draft" textValue="Draft">Draft</PickerItem>
+                </Picker>
+                <Picker
+                  label="Cloud type"
+                  selectedKey={listFilters.cloudType}
+                  onSelectionChange={(key) => {
+                    if (key == null) return
+                    setListFilters(f => ({ ...f, cloudType: String(key) }))
+                  }}
+                >
+                  <PickerItem id={FILTER_ALL} textValue="All cloud types">All cloud types</PickerItem>
+                  {hasEventsWithoutCloudType && (
+                    <PickerItem id={FILTER_EMPTY_CLOUD} textValue="(empty)">(empty)</PickerItem>
+                  )}
+                  {cloudTypeFilterOptions.map(ct => (
+                    <PickerItem key={ct} id={ct} textValue={ct}>{ct}</PickerItem>
+                  ))}
+                </Picker>
+              </div>
+            </Content>
+            <ButtonGroup>
+              <Button variant="secondary" onPress={clearListFilters}>Clear filters</Button>
+              <Button variant="accent" onPress={close}>Done</Button>
+            </ButtonGroup>
+          </>
+        )}
+      </Dialog>
+    </DialogTrigger>
+  ), [
+    listFilters,
+    seriesFilterIds,
+    hasEventsWithoutSeries,
+    creatorFilterOptions,
+    cloudTypeFilterOptions,
+    hasEventsWithoutCloudType,
+    series,
+    clearListFilters,
+  ])
+
   // Custom create button with dropdown menu — only shown when user has event:write
   const createEventButton = useMemo(() => {
     if (!canWriteEvent) return undefined
@@ -918,21 +1133,25 @@ export const EventsDashboard: React.FC<EventsDashboardProps> = () => {
 
   return (
     <>
-      <ResourceDashboardLayout
-        title="All Events"
-        totalCount={events.length}
-        error={error}
-        data={events}
-        columns={columns}
-        getItemKey={(item) => item.eventId}
-        onVisibleItemsChange={handleVisibleEventsChange}
-        onRefresh={loadEventsData}
-        createButton={createEventButton}
-        emptyStateTitle="No Events Found"
-        emptyStateDescription="Get started by creating your first event"
-        searchPlaceholder="Search events..."
-        searchKeys={EVENTS_SEARCH_KEYS}
-      />
+      <div className={style({padding: 32})}>
+        <ResourceDashboardLayout
+          title="All Events"
+          totalCount={filteredEvents.length}
+          error={error}
+          data={filteredEvents}
+          columns={columns}
+          getItemKey={(item) => item.eventId}
+          onVisibleItemsChange={handleVisibleEventsChange}
+          onRefresh={loadEventsData}
+          createButton={createEventButton}
+          toolbarEnd={eventsFilterToolbar}
+          emptyStateIllustration={<CalendarIllustration aria-hidden />}
+          emptyStateTitle="No Events Found"
+          emptyStateDescription="Get started by creating your first event"
+          searchPlaceholder="Search events..."
+          searchKeys={EVENTS_SEARCH_KEYS}
+        />
+      </div>
 
       <BlurredLoadingOverlay
         visible={isLoading}

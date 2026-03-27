@@ -1,4 +1,4 @@
-# EMC - Event Management Cloud
+# EMC - Event Management Console
 
 ## Quick Start
 

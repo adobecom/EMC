@@ -3,14 +3,10 @@
 */
 
 import React from 'react'
-import {
-  Flex,
-  Text
-} from '@adobe/react-spectrum'
-import { TextField } from '@react-spectrum/s2'
+import { TextField, Text } from '@react-spectrum/s2'
 import { style } from '@react-spectrum/s2/style' with { type: 'macro' }
 import { HeadingWithTooltip } from '../../components/shared'
-import { FLEX_GAP } from '../../styles/designSystem'
+import { SPACING } from '../../styles/designSystem'
 import { useSeriesFormComponent } from '../../hooks/useSeriesFormComponent'
 import { normalizeRelatedDomain, normalizeContentRoot } from '../../utils/seriesFormAutoCorrect'
 
@@ -45,7 +41,7 @@ export const SeriesAdditionalInfoComponent: React.FC = () => {
   // ============================================================================
 
   return (
-    <Flex direction="column" gap={FLEX_GAP.SECTION}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: SPACING.LG }}>
       {/* Additional Information Header */}
       <HeadingWithTooltip 
         level={3}
@@ -55,8 +51,8 @@ export const SeriesAdditionalInfoComponent: React.FC = () => {
       </HeadingWithTooltip>
       
       {/* Form Fields */}
-      <Flex direction="column" gap={FLEX_GAP.FIELD}>
-        <Flex direction="row" gap="size-400" alignItems="start">
+      <div style={{ display: 'flex', flexDirection: 'column', gap: SPACING.MD }}>
+        <div style={{ display: 'flex', flexDirection: 'row', gap: 32, alignItems: 'flex-start' }}>
           <Text UNSAFE_style={{ width: '150px', flexShrink: 0, fontWeight: 600 }}>
             SUSI context ID:
           </Text>
@@ -67,9 +63,9 @@ export const SeriesAdditionalInfoComponent: React.FC = () => {
             onChange={(value) => updateFormData({ susiContextId: value })}
             styles={style({ width: '[100%]' })}
           />
-        </Flex>
-        
-        <Flex direction="row" gap="size-400" alignItems="start">
+        </div>
+
+        <div style={{ display: 'flex', flexDirection: 'row', gap: 32, alignItems: 'flex-start' }}>
           <Text UNSAFE_style={{ width: '150px', flexShrink: 0, fontWeight: 600 }}>
             Related domain:
           </Text>
@@ -86,9 +82,9 @@ export const SeriesAdditionalInfoComponent: React.FC = () => {
             }}
             styles={style({ width: '[100%]' })}
           />
-        </Flex>
-        
-        <Flex direction="row" gap="size-400" alignItems="start">
+        </div>
+
+        <div style={{ display: 'flex', flexDirection: 'row', gap: 32, alignItems: 'flex-start' }}>
           <Text UNSAFE_style={{ width: '150px', flexShrink: 0, fontWeight: 600 }}>
             Content root:
           </Text>
@@ -105,9 +101,9 @@ export const SeriesAdditionalInfoComponent: React.FC = () => {
             }}
             styles={style({ width: '[100%]' })}
           />
-        </Flex>
-        
-        <Flex direction="row" gap="size-400" alignItems="start">
+        </div>
+
+        <div style={{ display: 'flex', flexDirection: 'row', gap: 32, alignItems: 'flex-start' }}>
           <Text UNSAFE_style={{ width: '150px', flexShrink: 0, fontWeight: 600 }}>
             External theme ID:
           </Text>
@@ -118,8 +114,8 @@ export const SeriesAdditionalInfoComponent: React.FC = () => {
             onChange={(value) => updateFormData({ externalThemeId: value })}
             styles={style({ width: '[100%]' })}
           />
-        </Flex>
-      </Flex>
-    </Flex>
+        </div>
+      </div>
+    </div>
   )
 }

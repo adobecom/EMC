@@ -14,15 +14,22 @@
 
 import React, { useState, useCallback, useEffect } from 'react'
 import {
+  ActionButton,
+  Text,
+  Button,
+  ButtonGroup,
+  TextField,
+  Dialog,
+  DialogTrigger,
+  Content,
+  Heading,
   Form,
-  View,
   ProgressCircle,
-  Checkbox
-} from '@adobe/react-spectrum'
-import { ActionButton, Text, Button, ButtonGroup, TextField, Dialog, DialogTrigger, Content, Heading } from '@react-spectrum/s2'
+  Checkbox,
+} from '@react-spectrum/s2'
 import { style } from '@react-spectrum/s2/style' with { type: 'macro' }
 import Add from '@react-spectrum/s2/icons/Add'
-import Delete from '@react-spectrum/s2/icons/Delete'
+import RemoveCircle from '@react-spectrum/s2/icons/RemoveCircle'
 import OpenIn from '@react-spectrum/s2/icons/OpenIn'
 import { SpeakerDashboardItem } from './SpeakersDashboard'
 import { SocialLinkFormData } from '../../types/domain'
@@ -199,7 +206,7 @@ export const SpeakerFormDialog: React.FC<SpeakerFormDialogProps> = ({
                   </div>
 
                   {/* Profile Image */}
-                  <View width="100%" UNSAFE_style={{ maxWidth: '300px' }}>
+                  <div style={{ width: '100%', maxWidth: 300 }}>
                     <ImageUploader
                       label="Profile Image"
                       imageUrl={formState.imageUrl}
@@ -219,7 +226,7 @@ export const SpeakerFormDialog: React.FC<SpeakerFormDialogProps> = ({
                       }}
                       onRemove={handleFileRemove}
                     />
-                  </View>
+                  </div>
 
                   {/* Title */}
                   <TextField
@@ -239,7 +246,7 @@ export const SpeakerFormDialog: React.FC<SpeakerFormDialogProps> = ({
                   />
 
                   {/* Social Links */}
-                  <View>
+                  <div>
                     <div className={style({display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8})}>
                       <Text UNSAFE_style={TYPOGRAPHY.FIELD_LABEL}>Social Media Links</Text>
                       <ActionButton onPress={handleAddSocialLink} isQuiet>
@@ -260,10 +267,10 @@ export const SpeakerFormDialog: React.FC<SpeakerFormDialogProps> = ({
 
                           return (
                             <div key={index} className={style({display: 'flex', gap: 8, alignItems: 'center'})}>
-                              <View
-                                UNSAFE_style={{
-                                  minWidth: '40px',
-                                  height: '40px',
+                              <div
+                                style={{
+                                  minWidth: 40,
+                                  height: 40,
                                   display: 'flex',
                                   alignItems: 'center',
                                   justifyContent: 'center',
@@ -271,13 +278,13 @@ export const SpeakerFormDialog: React.FC<SpeakerFormDialogProps> = ({
                                     ? detectedPlatform.color
                                     : 'var(--spectrum-global-color-gray-400)',
                                   color: 'white',
-                                  borderRadius: '4px',
-                                  fontSize: '16px',
-                                  fontWeight: 'bold'
+                                  borderRadius: 4,
+                                  fontSize: 16,
+                                  fontWeight: 'bold',
                                 }}
                               >
                                 {detectedPlatform ? detectedPlatform.icon : <OpenIn />}
-                              </View>
+                              </div>
 
                               <TextField
                                 placeholder="https://..."
@@ -288,34 +295,35 @@ export const SpeakerFormDialog: React.FC<SpeakerFormDialogProps> = ({
                               />
 
                               <ActionButton onPress={() => handleRemoveSocialLink(index)} isQuiet>
-                                <Delete />
+                                <RemoveCircle />
                               </ActionButton>
                             </div>
                           )
                         })}
                       </div>
                     )}
-                  </View>
+                  </div>
 
                   {/* Cascade option (only shown for editing with linked events) */}
                   {isEditing && cascadeToEvents !== undefined && (
-                    <View
-                      padding="size-200"
-                      borderWidth="thin"
-                      borderColor="yellow-400"
-                      borderRadius="medium"
-                      backgroundColor="yellow-400"
+                    <div
+                      style={{
+                        padding: 16,
+                        border: '1px solid var(--spectrum-global-color-yellow-400)',
+                        borderRadius: 8,
+                        backgroundColor: 'var(--spectrum-global-color-yellow-400)',
+                      }}
                     >
                       <Checkbox
                         isSelected={shouldCascade}
                         onChange={setShouldCascade}
                       >
-                        <Text>Update this speaker in all linked events</Text>
+                        Update this speaker in all linked events
                       </Checkbox>
                       <Text UNSAFE_style={{ fontSize: '12px', color: 'var(--spectrum-global-color-gray-600)', marginTop: '4px' }}>
                         This speaker is linked to events. Check this option to propagate changes to all linked events.
                       </Text>
-                    </View>
+                    </div>
                   )}
                 </div>
               </Form>
