@@ -175,7 +175,7 @@ export function ResourceDashboardLayout<T extends Record<string, any>>({
   const isSearching = inputValue !== debouncedQuery
 
   return (
-    <div className={style({padding: 32})}>
+    <div>
       <div className={style({ display: 'flex', flexDirection: 'column', gap: 12, height: '[100%]' })}>
         {/* Header */}
         <div className={style({ display: 'flex', justifyContent: 'space-between', alignItems: 'center' })}>

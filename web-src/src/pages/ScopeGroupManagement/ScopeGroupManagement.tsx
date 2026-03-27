@@ -9,7 +9,7 @@
  */
 
 import React, { useState, useCallback, useMemo, useEffect } from 'react'
-import { Badge, Button, ButtonGroup, TextField, Picker, PickerItem, ComboBox, ComboBoxItem, Text, DialogTrigger, Dialog, Content, Heading, Switch, ActionButton, AlertDialog } from "@react-spectrum/s2"
+import { Badge, Button, ButtonGroup, TextField, Picker, PickerItem, ComboBox, ComboBoxItem, Text, DialogTrigger, Dialog, Content, Heading, Switch, ActionButton, AlertDialog, Divider } from "@react-spectrum/s2"
 import { style } from "@react-spectrum/s2/style" with { type: "macro" }
 import EditIcon from "@react-spectrum/s2/icons/Edit"
 import Add from "@react-spectrum/s2/icons/Add"
@@ -787,7 +787,7 @@ export const ScopeGroupManagement: React.FC<ScopeGroupManagementProps> = () => {
   return (
     <div style={{ padding: 32, maxWidth: 1400, marginLeft: 'auto', marginRight: 'auto' }}>
       <div className={style({display: 'flex', flexDirection: 'column', gap: 32})}>
-        <div className={style({display: 'flex', flexDirection: 'row', alignItems: 'center', gap: 24, flexWrap: 'wrap'})}>
+        <div className={style({display: 'flex', flexDirection: 'column', alignItems: 'start'})}>
           <Heading level={1}>Access Management</Heading>
           <Switch isSelected={myScopesOnly} onChange={setMyScopesOnly}>
             Show my scopes only
@@ -818,8 +818,8 @@ export const ScopeGroupManagement: React.FC<ScopeGroupManagementProps> = () => {
               </ComboBox>
 
               {selectedScope && (
-                <div className={style({display: 'flex', gap: 8, alignItems: 'center'})}>
-                  <Badge variant={SCOPE_TYPE_VARIANTS[selectedScope.type] || 'neutral'}>
+                <div className={style({display: 'flex', gap: 8, alignItems: 'center', marginBottom: 4})}>
+                  <Badge variant={SCOPE_TYPE_VARIANTS[selectedScope.type] || 'neutral' } UNSAFE_style={{ marginRight: 8 }}>
                     {selectedScope.type}
                   </Badge>
                   {canWriteScope && (
@@ -837,10 +837,10 @@ export const ScopeGroupManagement: React.FC<ScopeGroupManagementProps> = () => {
                     }}
                   >
                     <RemoveCircle />
-                    <Text>Clear</Text>
+                    <Text>Reset</Text>
                   </Button>
                   {canDeleteScope && selectedScope.type === 'team' && (
-                    <Button size="S" variant="negative" fillStyle="outline" onPress={() => setScopeToDelete(selectedScope)}>
+                    <Button size="S" variant="negative" onPress={() => setScopeToDelete(selectedScope)}>
                       <RemoveCircle />
                       <Text>Delete Scope</Text>
                     </Button>
@@ -857,6 +857,8 @@ export const ScopeGroupManagement: React.FC<ScopeGroupManagementProps> = () => {
             )}
           </div>
         </div>
+
+        <Divider />
 
         {/* ── Groups table ── */}
         {selectedScopeId ? (

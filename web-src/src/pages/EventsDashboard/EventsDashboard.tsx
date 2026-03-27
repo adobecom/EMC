@@ -1133,23 +1133,25 @@ export const EventsDashboard: React.FC<EventsDashboardProps> = () => {
 
   return (
     <>
-      <ResourceDashboardLayout
-        title="All Events"
-        totalCount={filteredEvents.length}
-        error={error}
-        data={filteredEvents}
-        columns={columns}
-        getItemKey={(item) => item.eventId}
-        onVisibleItemsChange={handleVisibleEventsChange}
-        onRefresh={loadEventsData}
-        createButton={createEventButton}
-        toolbarEnd={eventsFilterToolbar}
-        emptyStateIllustration={<CalendarIllustration aria-hidden />}
-        emptyStateTitle="No Events Found"
-        emptyStateDescription="Get started by creating your first event"
-        searchPlaceholder="Search events..."
-        searchKeys={EVENTS_SEARCH_KEYS}
-      />
+      <div className={style({padding: 32})}>
+        <ResourceDashboardLayout
+          title="All Events"
+          totalCount={filteredEvents.length}
+          error={error}
+          data={filteredEvents}
+          columns={columns}
+          getItemKey={(item) => item.eventId}
+          onVisibleItemsChange={handleVisibleEventsChange}
+          onRefresh={loadEventsData}
+          createButton={createEventButton}
+          toolbarEnd={eventsFilterToolbar}
+          emptyStateIllustration={<CalendarIllustration aria-hidden />}
+          emptyStateTitle="No Events Found"
+          emptyStateDescription="Get started by creating your first event"
+          searchPlaceholder="Search events..."
+          searchKeys={EVENTS_SEARCH_KEYS}
+        />
+      </div>
 
       <BlurredLoadingOverlay
         visible={isLoading}

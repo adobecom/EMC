@@ -802,26 +802,28 @@ export const SpeakersDashboard: React.FC<SpeakersDashboardProps> = () => {
           />
         </div>
       ) : (
-        <ResourceDashboardLayout
-          title="Speakers"
-          totalCount={enrichedSpeakers.length}
-          error={error}
-          data={enrichedSpeakers}
-          columns={columns}
-          getItemKey={(item) => item.speakerId}
-          onVisibleIdsChange={handleVisibleIdsChange}
-          onRefresh={loadSpeakers}
-          createButton={createButton}
-          emptyStateIllustration={<MicrophoneIllustration aria-hidden />}
-          emptyStateTitle="No Speakers Found"
-          emptyStateDescription="Get started by adding your first speaker to this series"
-          searchPlaceholder="Search speakers..."
-          searchKeys={SPEAKERS_SEARCH_KEYS}
-          searchFilter={(speaker, query) => {
-            const fullName = `${speaker.firstName || ''} ${speaker.lastName || ''}`.toLowerCase()
-            return fullName.includes(query) || (speaker.title || '').toLowerCase().includes(query)
-          }}
-        />
+        <div className={style({padding: 32})}>
+          <ResourceDashboardLayout
+            title="Speakers"
+            totalCount={enrichedSpeakers.length}
+            error={error}
+            data={enrichedSpeakers}
+            columns={columns}
+            getItemKey={(item) => item.speakerId}
+            onVisibleIdsChange={handleVisibleIdsChange}
+            onRefresh={loadSpeakers}
+            createButton={createButton}
+            emptyStateIllustration={<MicrophoneIllustration aria-hidden />}
+            emptyStateTitle="No Speakers Found"
+            emptyStateDescription="Get started by adding your first speaker to this series"
+            searchPlaceholder="Search speakers..."
+            searchKeys={SPEAKERS_SEARCH_KEYS}
+            searchFilter={(speaker, query) => {
+              const fullName = `${speaker.firstName || ''} ${speaker.lastName || ''}`.toLowerCase()
+              return fullName.includes(query) || (speaker.title || '').toLowerCase().includes(query)
+            }}
+          />
+        </div>
       )}
       
       {/* Speaker Form Dialog */}

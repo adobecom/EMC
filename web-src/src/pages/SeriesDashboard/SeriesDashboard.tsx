@@ -611,24 +611,27 @@ export const SeriesDashboard: React.FC<SeriesDashboardProps> = () => {
 
   return (
     <>
-      <ResourceDashboardLayout
-        title="All Series"
-        totalCount={filteredSeries.length}
-        error={error}
-        data={filteredSeries}
-        columns={columns}
-        getItemKey={getItemKey}
-        onVisibleIdsChange={handleVisibleIdsChange}
-        onRefresh={loadSeriesData}
-        onCreate={canWriteSeries ? handleCreateSeries : undefined}
-        createLabel="Create new series"
-        toolbarEnd={seriesFilterToolbar}
-        emptyStateIllustration={<LayersIllustration aria-hidden />}
-        emptyStateTitle="No Series Found"
-        emptyStateDescription="Get started by creating your first series"
-        searchPlaceholder="Search series..."
-        searchKeys={SERIES_SEARCH_KEYS}
-      />
+      <div className={style({padding: 32})}>
+        <ResourceDashboardLayout
+          title="All Series"
+          totalCount={filteredSeries.length}
+          error={error}
+          data={filteredSeries}
+          columns={columns}
+          getItemKey={getItemKey}
+          onVisibleIdsChange={handleVisibleIdsChange}
+          onRefresh={loadSeriesData}
+          onCreate={canWriteSeries ? handleCreateSeries : undefined}
+          createLabel="Create new series"
+          toolbarEnd={seriesFilterToolbar}
+          emptyStateIllustration={<LayersIllustration aria-hidden />}
+          emptyStateTitle="No Series Found"
+          emptyStateDescription="Get started by creating your first series"
+          searchPlaceholder="Search series..."
+          searchKeys={SERIES_SEARCH_KEYS}
+        />
+      </div>
+
       <BlurredLoadingOverlay
         visible={isLoading}
         message="Loading series..."
