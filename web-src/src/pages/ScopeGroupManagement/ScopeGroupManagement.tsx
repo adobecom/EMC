@@ -795,7 +795,7 @@ export const ScopeGroupManagement: React.FC<ScopeGroupManagementProps> = () => {
         </div>
 
         {/* ── Scope selector + actions ── */}
-        <div className={style({padding: 20})}>
+        <div>
           <div className={style({display: 'flex', justifyContent: 'space-between', alignItems: 'end', gap: 16, flexWrap: 'wrap'})}>
             <div className={style({display: 'flex', alignItems: 'end', gap: 8})}>
               <ComboBox
