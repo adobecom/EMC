@@ -274,11 +274,6 @@ const SeriesFormInner: React.FC<SeriesFormInnerProps> = ({ ims: _ims }) => {
         }
       )
       
-      // Navigate after a short delay
-      setTimeout(() => {
-        navigate('/series')
-      }, 2000)
-      
     } catch (err) {
       console.error('Failed to publish series:', err)
       const errorMessage = err instanceof Error ? err.message : 'Failed to publish series'

@@ -10,7 +10,11 @@ import CheckmarkCircle from '@react-spectrum/s2/icons/CheckmarkCircle'
 import AlertDiamond from '@react-spectrum/s2/icons/AlertDiamond'
 import InfoCircle from '@react-spectrum/s2/icons/InfoCircle'
 import { useToast, Toast, ToastVariant } from '../../contexts/ToastContext'
-import { Z_INDEX } from '../../styles/designSystem'
+import { COLORS, Z_INDEX } from '../../styles/designSystem'
+
+/** Foreground on colored toast surfaces (icons use --iconPrimary, not inherited color) */
+const TOAST_ON_SURFACE = COLORS.WHITE
+const TOAST_ICON_MUTED = 'rgba(255, 255, 255, 0.85)'
 
 // ============================================================================
 // STYLES
@@ -67,15 +71,22 @@ const getToastStyles = (variant: ToastVariant, isExiting: boolean): React.CSSPro
   return { ...baseStyles, ...variantStyles[variant] }
 }
 
-const ICON_STYLES: React.CSSProperties = {
+const TOAST_ICON_STYLES = {
   flexShrink: 0,
-}
+  '--iconPrimary': TOAST_ON_SURFACE,
+} as React.CSSProperties
+
+const CLOSE_ICON_STYLES = {
+  flexShrink: 0,
+  '--iconPrimary': TOAST_ICON_MUTED,
+} as React.CSSProperties
 
 const MESSAGE_STYLES: React.CSSProperties = {
   flex: 1,
   fontSize: 14,
   lineHeight: '20px',
   fontWeight: 500,
+  color: TOAST_ON_SURFACE,
 }
 
 const CLOSE_BUTTON_STYLES: React.CSSProperties = {
@@ -117,7 +128,7 @@ const ToastItem: React.FC<ToastItemProps> = ({ toast, onDismiss }) => {
   }
 
   const getIcon = () => {
-    const iconProps = { UNSAFE_style: ICON_STYLES }
+    const iconProps = { UNSAFE_style: TOAST_ICON_STYLES }
 
     switch (toast.variant) {
       case 'positive':
@@ -143,11 +154,8 @@ const ToastItem: React.FC<ToastItemProps> = ({ toast, onDismiss }) => {
       role="alert"
       aria-live={toast.variant === 'negative' ? 'assertive' : 'polite'}
     >
-      <div className={style({ display: 'flex', alignItems: 'start', gap: 12 })}>
-        {/* Icon */}
-        <div style={{ marginTop: 2 }}>
-          {getIcon()}
-        </div>
+      <div className={style({ display: 'flex', alignItems: 'center', gap: 12 })}>
+        {getIcon()}
 
         {/* Message */}
         <div style={{ flex: 1, minWidth: 0 }}>
@@ -185,7 +193,7 @@ const ToastItem: React.FC<ToastItemProps> = ({ toast, onDismiss }) => {
               e.currentTarget.style.backgroundColor = 'transparent'
             }}
           >
-            <Close />
+            <Close UNSAFE_style={CLOSE_ICON_STYLES} />
           </button>
         )}
       </div>
