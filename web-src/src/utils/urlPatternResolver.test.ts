@@ -116,4 +116,26 @@ describe('constructDetailPagePath', () => {
       constructDetailPagePath('www.adobe.com', '/events', 'my-event/overview')
     ).toBe('https://www.adobe.com/events/my-event/overview')
   })
+
+  it('inserts locale prefix between domain and content root', () => {
+    expect(
+      constructDetailPagePath(
+        'https://www.adobe.com',
+        'events',
+        'my-event/overview',
+        'de'
+      )
+    ).toBe('https://www.adobe.com/de/events/my-event/overview')
+  })
+
+  it('normalizes slashes on locale prefix', () => {
+    expect(
+      constructDetailPagePath(
+        'https://www.adobe.com',
+        '/events',
+        'slug/overview',
+        '/ca_fr/'
+      )
+    ).toBe('https://www.adobe.com/ca_fr/events/slug/overview')
+  })
 })

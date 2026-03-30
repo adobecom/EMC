@@ -2,7 +2,7 @@
 * <license header>
 */
 
-import React, { useState, useCallback, useMemo } from 'react'
+import React, { useState, useCallback, useMemo, useEffect } from 'react'
 import { Button, ButtonGroup, TextField, Picker, PickerItem, DialogTrigger, Dialog, Content, Heading, Text, ActionButton, NumberField, Switch, AlertDialog } from '@react-spectrum/s2'
 import { style } from "@react-spectrum/s2/style" with { type: "macro" }
 import Add from '@react-spectrum/s2/icons/Add'
@@ -43,6 +43,43 @@ export const CampaignsTab: React.FC<CampaignsTabProps> = ({
   const [isSaving, setIsSaving] = useState(false)
   const [copiedId, setCopiedId] = useState<string | null>(null)
 
+  const [formName, setFormName] = useState('')
+  const [formAttendeeLimit, setFormAttendeeLimit] = useState<number | undefined>(undefined)
+  const [formNoCapacityLimit, setFormNoCapacityLimit] = useState(false)
+  const [formStatus, setFormStatus] = useState<CampaignStatus>('Active')
+
+  const eventCapacity = event?.attendeeLimit
+
+  useEffect(() => {
+    if (!isFormOpen) return
+    if (editingCampaign) {
+      setFormName(editingCampaign.name || '')
+      setFormAttendeeLimit(editingCampaign.attendeeLimit)
+      setFormStatus(editingCampaign.status)
+      setFormNoCapacityLimit(false)
+    } else {
+      setFormName('')
+      setFormAttendeeLimit(undefined)
+      setFormNoCapacityLimit(false)
+      setFormStatus('Active')
+    }
+  }, [isFormOpen, editingCampaign])
+
+  const formHasValidLimit = useMemo(
+    () =>
+      formNoCapacityLimit
+        ? eventCapacity != null
+        : formAttendeeLimit != null &&
+          !Number.isNaN(formAttendeeLimit) &&
+          formAttendeeLimit >= 1,
+    [formNoCapacityLimit, eventCapacity, formAttendeeLimit]
+  )
+
+  const formIsValid = useMemo(
+    () => formName.trim().length > 0 && formHasValidLimit,
+    [formName, formHasValidLimit]
+  )
+
   const stats = useMemo(() => calculateCampaignStats(campaigns), [campaigns])
 
   const performSaveCampaign = useCallback(async (campaign: Campaign | null, formData: CampaignFormData) => {
@@ -74,6 +111,30 @@ export const CampaignsTab: React.FC<CampaignsTabProps> = ({
     }
     await performSaveCampaign(editingCampaign, formData)
   }, [editingCampaign, performSaveCampaign])
+
+  const handleSubmitCampaignForm = useCallback(() => {
+    const trimmed = formName.trim()
+    if (!trimmed) return
+    const effectiveLimit =
+      formNoCapacityLimit && eventCapacity != null
+        ? eventCapacity
+        : formAttendeeLimit != null && !Number.isNaN(formAttendeeLimit)
+          ? formAttendeeLimit
+          : undefined
+    void handleSaveCampaign({
+      name: trimmed,
+      attendeeLimit: effectiveLimit,
+      status: editingCampaign ? formStatus : 'Active',
+    })
+  }, [
+    formName,
+    formNoCapacityLimit,
+    eventCapacity,
+    formAttendeeLimit,
+    formStatus,
+    editingCampaign,
+    handleSaveCampaign,
+  ])
 
   const handleDeleteCampaign = useCallback(async () => {
     if (!campaignToDelete) return
@@ -288,11 +349,18 @@ export const CampaignsTab: React.FC<CampaignsTabProps> = ({
           {({close}) => (
             <CampaignFormDialogContent
               campaign={editingCampaign}
-              eventCapacity={event?.attendeeLimit}
+              eventCapacity={eventCapacity}
               isSaving={isSaving}
-              onSave={(data) => {
-                handleSaveCampaign(data)
-              }}
+              name={formName}
+              onNameChange={setFormName}
+              attendeeLimit={formAttendeeLimit}
+              onAttendeeLimitChange={setFormAttendeeLimit}
+              noCapacityLimit={formNoCapacityLimit}
+              onNoCapacityLimitChange={setFormNoCapacityLimit}
+              status={formStatus}
+              onStatusChange={setFormStatus}
+              isValid={formIsValid}
+              onSubmitForm={handleSubmitCampaignForm}
               onCancel={close}
             />
           )}
@@ -374,7 +442,16 @@ interface CampaignFormDialogContentProps {
   campaign: Campaign | null
   eventCapacity?: number
   isSaving: boolean
-  onSave: (data: CampaignFormData) => void
+  name: string
+  onNameChange: (value: string) => void
+  attendeeLimit: number | undefined
+  onAttendeeLimitChange: (value: number | undefined) => void
+  noCapacityLimit: boolean
+  onNoCapacityLimitChange: (value: boolean) => void
+  status: CampaignStatus
+  onStatusChange: (value: CampaignStatus) => void
+  isValid: boolean
+  onSubmitForm: () => void
   onCancel: () => void
 }
 
@@ -382,116 +459,95 @@ const CampaignFormDialogContent: React.FC<CampaignFormDialogContentProps> = ({
   campaign,
   eventCapacity,
   isSaving,
-  onSave,
+  name,
+  onNameChange,
+  attendeeLimit,
+  onAttendeeLimitChange,
+  noCapacityLimit,
+  onNoCapacityLimitChange,
+  status,
+  onStatusChange,
+  isValid,
+  onSubmitForm,
   onCancel
-}) => {
-  const [name, setName] = useState(campaign?.name || '')
-  const [attendeeLimit, setAttendeeLimit] = useState<number | undefined>(campaign?.attendeeLimit)
-  const [noCapacityLimit, setNoCapacityLimit] = useState(false)
-  const [status, setStatus] = useState<CampaignStatus>(campaign?.status ?? 'Active')
+}) => (
+  <>
+    <Heading slot="title">{campaign ? 'Edit Campaign' : 'Create Campaign'}</Heading>
+    <Content>
+      <div className={style({display: 'flex', flexDirection: 'column', gap: 24})}>
+        <TextField
+          label="Name"
+          value={name}
+          onChange={onNameChange}
+          isRequired
+          autoFocus
+          styles={style({ width: '[100%]' })}
+        />
 
-  const handleSave = () => {
-    if (!name.trim()) return
-
-    const effectiveLimit = noCapacityLimit && eventCapacity != null
-      ? eventCapacity
-      : (attendeeLimit != null && !Number.isNaN(attendeeLimit) ? attendeeLimit : undefined)
-
-    onSave({
-      name: name.trim(),
-      attendeeLimit: effectiveLimit,
-      status: campaign ? status : 'Active'
-    })
-  }
-
-  const hasValidLimit = noCapacityLimit
-    ? eventCapacity != null
-    : (attendeeLimit != null && !Number.isNaN(attendeeLimit) && attendeeLimit >= 1)
-  const isValid = name.trim().length > 0 && hasValidLimit
-
-  return (
-    <>
-      <Heading slot="title">{campaign ? 'Edit Campaign' : 'Create Campaign'}</Heading>
-      <Content>
-        <div className={style({display: 'flex', flexDirection: 'column', gap: 24})}>
-          {/* Name Field */}
+        {campaign && (
           <TextField
-            label="Name"
-            value={name}
-            onChange={setName}
-            isRequired
-            autoFocus
+            label="Campaign URL"
+            value={campaign.url}
+            isReadOnly
             styles={style({ width: '[100%]' })}
+            description="Auto-generated from the event URL"
           />
+        )}
 
-          {/* Campaign URL (read-only, only shown when editing) */}
-          {campaign && (
-            <TextField
-              label="Campaign URL"
-              value={campaign.url}
-              isReadOnly
-              styles={style({ width: '[100%]' })}
-              description="Auto-generated from the event URL"
+        {!campaign && (
+          <div className={style({display: 'flex', flexDirection: 'column', gap: 16})}>
+            <NumberField
+              label="Attendee limit"
+              value={noCapacityLimit && eventCapacity != null ? eventCapacity : (attendeeLimit ?? NaN)}
+              onChange={onAttendeeLimitChange}
+              minValue={1}
+              isDisabled={noCapacityLimit}
             />
-          )}
-
-          {/* Attendee Limit (only on create) */}
-          {!campaign && (
-            <div className={style({display: 'flex', flexDirection: 'column', gap: 16})}>
-              <NumberField
-                label="Attendee limit"
-                value={noCapacityLimit && eventCapacity != null ? eventCapacity : (attendeeLimit ?? NaN)}
-                onChange={(value) => setAttendeeLimit(value)}
-                minValue={1}
-                isDisabled={noCapacityLimit}
-              />
-              <Switch
-                isSelected={noCapacityLimit}
-                onChange={setNoCapacityLimit}
-                isDisabled={eventCapacity == null}
-              >
-                No capacity limit (use full event capacity)
-              </Switch>
-              {eventCapacity == null && (
-                <Text UNSAFE_style={{ fontSize: '12px', color: COLORS.GRAY_600 }}>
-                  Event has no capacity limit set
-                </Text>
-              )}
-            </div>
-          )}
-
-          {/* Status Picker (only when editing; create always uses Active) */}
-          {campaign && (
-            <Picker
-              label="Status"
-              selectedKey={status}
-              onSelectionChange={(key) => setStatus(key as CampaignStatus)}
-              styles={style({ width: '[100%]' })}
+            <Switch
+              isSelected={noCapacityLimit}
+              onChange={onNoCapacityLimitChange}
+              isDisabled={eventCapacity == null}
             >
-              <PickerItem id="Active">Active</PickerItem>
-              <PickerItem id="Archived">Archived</PickerItem>
-            </Picker>
-          )}
-        </div>
-      </Content>
-      <ButtonGroup>
-        <Button variant="secondary" onPress={onCancel}>
-          Cancel
-        </Button>
-        <Button
-          variant="accent"
-          onPress={handleSave}
-          isDisabled={!isValid || isSaving}
-          UNSAFE_style={{
-            backgroundColor: COLORS.BLACK,
-            borderColor: COLORS.BLACK
-          }}
-        >
-          {isSaving ? 'Saving...' : 'Save'}
-        </Button>
-      </ButtonGroup>
-    </>
-  )
-}
+              No capacity limit (use full event capacity)
+            </Switch>
+            {eventCapacity == null && (
+              <Text UNSAFE_style={{ fontSize: '12px', color: COLORS.GRAY_600 }}>
+                Event has no capacity limit set
+              </Text>
+            )}
+          </div>
+        )}
+
+        {campaign && (
+          <Picker
+            label="Status"
+            selectedKey={status}
+            onSelectionChange={(key) => onStatusChange(key as CampaignStatus)}
+            styles={style({ width: '[100%]' })}
+          >
+            <PickerItem id="Active">Active</PickerItem>
+            <PickerItem id="Archived">Archived</PickerItem>
+          </Picker>
+        )}
+      </div>
+    </Content>
+    <ButtonGroup>
+      <Button variant="secondary" onPress={onCancel}>
+        Cancel
+      </Button>
+      <Button
+        variant="accent"
+        onPress={onSubmitForm}
+        isDisabled={!isValid || isSaving}
+        UNSAFE_style={{
+          backgroundColor: COLORS.BLACK,
+          borderColor: COLORS.BLACK
+        }}
+      >
+        {isSaving ? 'Saving...' : 'Save'}
+      </Button>
+    </ButtonGroup>
+  </>
+)
 
 export default CampaignsTab

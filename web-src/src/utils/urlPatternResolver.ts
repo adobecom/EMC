@@ -90,19 +90,23 @@ export function normalizeRelativeUrl(resolved: string): string {
 }
 
 /**
- * Join relatedDomain, contentRoot, and the resolved pattern into a
- * single absolute detail URL (https://…), using the same domain/root
- * normalization as the series form so API `detailPagePath` matches list/get.
+ * Join relatedDomain, optional locale prefix, contentRoot, and the resolved
+ * pattern into a single absolute detail URL (https://…), using the same
+ * domain/root normalization as the series form so API `detailPagePath` matches list/get.
  */
 export function constructDetailPagePath(
   relatedDomain: string,
   contentRoot: string,
-  resolvedPattern: string
+  resolvedPattern: string,
+  localePrefix?: string
 ): string {
   const domain = normalizeRelatedDomain(relatedDomain)
+  const locale = (localePrefix ?? '')
+    .replace(/^\/+/, '')
+    .replace(/\/+$/, '')
   const root = normalizeContentRoot(contentRoot).replace(/^\/+/, '').replace(/\/+$/, '')
   const pattern = resolvedPattern.replace(/^\/+/, '')
 
-  const segments = [domain, root, pattern].filter(Boolean)
+  const segments = [domain, locale, root, pattern].filter(Boolean)
   return segments.join('/')
 }
