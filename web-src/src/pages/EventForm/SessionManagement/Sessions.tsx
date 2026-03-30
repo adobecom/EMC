@@ -95,6 +95,7 @@ async function createSessionTimeForSession(
     ...(data.isAutoRegistrationEnabled === false && data.attendeeLimit != null
       ? { attendeeLimit: data.attendeeLimit }
       : {}),
+    ...(data.timezone ? { timezone: data.timezone } : {}),
   });
 
   if ("error" in sessionTimeRes) {
@@ -146,6 +147,7 @@ async function upsertSessionTimeForSession(
         data.sessionTimeCreationTime ?? existingTime.creationTime,
       modificationTime:
         data.sessionTimeModificationTime ?? existingTime.modificationTime,
+      ...(data.timezone ? { timezone: data.timezone } : {}),
     },
   );
 
@@ -241,7 +243,6 @@ export const Sessions: React.FC = () => {
       name: data.name,
       description: data.description,
       tags: serializeTagsForApi(data.tags),
-      ...(data.timezone ? { timezone: data.timezone } : {}),
     };
     const res = await apiService.createSession(eventId, payload);
     if ("error" in res) {
@@ -287,8 +288,7 @@ export const Sessions: React.FC = () => {
     const payload: Record<string, unknown> = {
       name: data.name,
       description: data.description,
-      tags: data.tags,
-      ...(data.timezone ? { timezone: data.timezone } : {}),
+      tags: serializeTagsForApi(data.tags),
     };
     if (data.creationTime != null) payload.creationTime = data.creationTime;
     if (data.modificationTime != null)

@@ -343,7 +343,6 @@ class ApiService {
       sessionType: 'Session',
       published: false,
     }
-    if (data.timezone) body.timezone = data.timezone
     return this.callExternalApi('esp', '/v1/sessions', 'POST', body, {
       operationName: 'createSession',
       shouldReturnFullResponse: true,
@@ -369,7 +368,6 @@ class ApiService {
       creationTime: (data.creationTime as number) ?? now,
       modificationTime: (data.modificationTime as number) ?? now,
     }
-    if (data.timezone) body.timezone = data.timezone
     return this.callExternalApi('esp', `/v1/sessions/${encodeURIComponent(id)}`, 'PUT', body, {
       operationName: 'updateSession',
       shouldReturnFullResponse: true,
