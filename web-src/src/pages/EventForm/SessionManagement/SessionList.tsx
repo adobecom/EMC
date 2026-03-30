@@ -1,18 +1,17 @@
 import React, { useState } from "react";
 import {
-  Flex,
   Heading,
   Text,
-  View,
   ActionButton,
   Button,
-} from "@adobe/react-spectrum";
-import ChevronRight from "@spectrum-icons/workflow/ChevronRight";
-import ChevronDown from "@spectrum-icons/workflow/ChevronDown";
+  Tooltip,
+  TooltipTrigger,
+  Badge,
+} from "@react-spectrum/s2";
+import ChevronRight from '@react-spectrum/s2/icons/ChevronRight';
+import ChevronDown from '@react-spectrum/s2/icons/ChevronDown';
+import RemoveCircle from '@react-spectrum/s2/icons/RemoveCircle';
 import { Session } from "../../../types/sessions";
-import Chip from "../../../components/shared/Chip";
-import { COLORS } from "../../../styles/designSystem";
-import { DeleteIcon } from "../../../components/icons/delete";
 import { formatTime, formatDate } from "../../../utils/dateTime";
 import { SessionForm } from "./SessionForm";
 import type { SessionFormData } from "./SessionForm";
@@ -69,17 +68,15 @@ export const SessionItem: React.FC<SessionItemProps> = ({
   };
 
   return (
-    <View
-      paddingTop="size-150"
-      paddingBottom="size-150"
-      paddingStart="size-200"
-      paddingEnd="size-200"
-      borderWidth="thin"
-      borderColor="gray-300"
-      borderRadius="medium"
-      UNSAFE_style={{ position: "relative" }}
+    <div
+      style={{
+        padding: "12px 16px",
+        border: "1px solid var(--spectrum-global-color-gray-300)",
+        borderRadius: "4px",
+        position: "relative",
+      }}
     >
-      <Flex justifyContent="space-between" alignItems="center">
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
         <div
           role="button"
           tabIndex={0}
@@ -99,44 +96,36 @@ export const SessionItem: React.FC<SessionItemProps> = ({
             outline: "none",
           }}
         >
-          <View
-            UNSAFE_style={{
-              display: "flex",
-              alignItems: "center",
-              flexShrink: 0,
-            }}
-          >
-            {isExpanded ? (
-              <ChevronDown size="S" />
-            ) : (
-              <ChevronRight size="S" />
-            )}
-          </View>
-          <Flex direction="column" gap="size-100">
+          <div style={{ display: "flex", alignItems: "center", flexShrink: 0 }}>
+            {isExpanded ? <ChevronDown /> : <ChevronRight />}
+          </div>
+          <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
             <Heading
               level={3}
-              margin="size-0"
-              UNSAFE_style={{ color: COLORS.GRAY_700 }}
+              UNSAFE_style={{ color: "#464646", margin: 0 }}
             >
               {session.name}
             </Heading>
-            <Text>
+            <Text UNSAFE_style={{ color: "#464646", fontSize: "14px" }}>
               {sessionDate} | {startTime} - {endTime}
             </Text>
             {session.tags && session.tags.length > 0 && (
-              <Flex gap="size-150" marginTop="size-100">
+              <div style={{ display: "flex", gap: "8px", marginTop: "8px", flexWrap: "wrap" }}>
                 {session.tags.map((tag) => (
-                  <Chip key={tag} text={getCaasTagDisplayLabel(tag)} />
+                  <Badge key={tag} variant="neutral" fillStyle="subtle" size="S">{getCaasTagDisplayLabel(tag)}</Badge>
                 ))}
-              </Flex>
+              </div>
             )}
-          </Flex>
+          </div>
         </div>
 
-        <ActionButton isQuiet aria-label="Delete" onPress={handleDeleteClick}>
-          <DeleteIcon />
-        </ActionButton>
-      </Flex>
+        <TooltipTrigger>
+          <ActionButton isQuiet aria-label="Delete" onPress={handleDeleteClick}>
+            <RemoveCircle />
+          </ActionButton>
+          <Tooltip>Delete</Tooltip>
+        </TooltipTrigger>
+      </div>
 
       {isExpanded && (
         <SessionForm
@@ -147,8 +136,8 @@ export const SessionItem: React.FC<SessionItemProps> = ({
       )}
 
       {showDeleteConfirm && (
-        <View
-          UNSAFE_style={{
+        <div
+          style={{
             position: "absolute",
             top: 0,
             left: 0,
@@ -165,21 +154,17 @@ export const SessionItem: React.FC<SessionItemProps> = ({
           }}
         >
           <Text>Are you sure you want to delete this session?</Text>
-          <Flex gap="size-150">
+          <div style={{ display: "flex", gap: "12px" }}>
             <Button variant="secondary" onPress={handleCancelDelete}>
               Cancel
             </Button>
-            <Button
-              variant="negative"
-              style="fill"
-              onPress={handleConfirmDelete}
-            >
+            <Button variant="negative" onPress={handleConfirmDelete}>
               Delete
             </Button>
-          </Flex>
-        </View>
+          </div>
+        </div>
       )}
-    </View>
+    </div>
   );
 };
 
@@ -211,7 +196,7 @@ export const SessionsList: React.FC<SessionsListProps> = ({
   };
 
   return (
-    <Flex direction="column" gap="size-150" marginTop="size-150">
+    <div style={{ display: "flex", flexDirection: "column", gap: "12px", marginTop: "12px" }}>
       {isAddingNew && (
         <SessionForm
           session={null}
@@ -229,6 +214,6 @@ export const SessionsList: React.FC<SessionsListProps> = ({
           onSave={onSave}
         />
       ))}
-    </Flex>
+    </div>
   );
 };

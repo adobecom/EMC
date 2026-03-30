@@ -3,19 +3,11 @@
 */
 
 import React, { useEffect, useRef, useState, useCallback } from 'react'
-import {
-  View,
-  Flex,
-  Heading,
-  Text,
-  TextField,
-  ActionButton,
-  Switch,
-  Button
-} from '@adobe/react-spectrum'
-import Add from '@spectrum-icons/workflow/Add'
-import Remove from '@spectrum-icons/workflow/Remove'
-import Delete from '@spectrum-icons/workflow/Delete'
+import { TextField, Text, Heading, ActionButton, Button } from '@react-spectrum/s2'
+import { Switch } from '@react-spectrum/s2'
+import { style } from "@react-spectrum/s2/style" with { type: "macro" }
+import Add from '@react-spectrum/s2/icons/Add'
+import RemoveCircle from '@react-spectrum/s2/icons/RemoveCircle'
 import { ImageUploader, RichTextEditor } from '../../components/shared'
 import { TYPOGRAPHY, COLORS, FLEX_GAP } from '../../styles/designSystem'
 import { VenueData, EventApiResponse } from '../../types/domain'
@@ -604,10 +596,10 @@ export const VenueComponent: React.FC = () => {
   // ============================================================================
 
   return (
-    <Flex direction="column" gap="size-300">
+    <div className={style({display: 'flex', flexDirection: 'column', gap: 24})}>
       {/* Section Heading */}
       <Heading level={3} UNSAFE_style={TYPOGRAPHY.COMPONENT_HEADING}>
-        Venue information<span style={{ color: COLORS.ADOBE_RED }}>*</span>
+        Venue information<span style={{ color: COLORS.RED_600 }}>*</span>
       </Heading>
 
       {/* Post-event visibility toggle */}
@@ -622,8 +614,8 @@ export const VenueComponent: React.FC = () => {
       </Switch>
 
       {/* Venue Name Field */}
-      <View width="100%">
-        <Flex justifyContent="space-between" alignItems="center" marginBottom="size-50">
+      <div style={{ width: '100%' }}>
+        <div className={style({display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4})}>
           <Text UNSAFE_style={{ 
             fontSize: '14px',
             color: COLORS.GRAY_700
@@ -636,8 +628,8 @@ export const VenueComponent: React.FC = () => {
           }}>
             {VENUE_NAME_MAX_LENGTH} characters max
           </Text>
-        </Flex>
-        
+        </div>
+
         <input
           id="venue-name-input"
           ref={venueNameInputRef}
@@ -653,13 +645,10 @@ export const VenueComponent: React.FC = () => {
             width: '100%',
             padding: '10px 12px',
             fontSize: '14px',
-            border: showVenueNameError
-              ? `2px solid ${COLORS.ADOBE_RED}` 
-              : '1px solid var(--spectrum-global-color-gray-400)',
-            borderRadius: '4px',
-            backgroundColor: 'var(--spectrum-global-color-gray-50)',
+            border: '2px solid rgb(218, 218, 218)',
+            borderRadius: '8px',
+            backgroundColor: COLORS.WHITE,
             color: COLORS.GRAY_800,
-            fontFamily: 'adobe-clean, sans-serif',
             boxSizing: 'border-box'
           }}
         />
@@ -669,7 +658,7 @@ export const VenueComponent: React.FC = () => {
             id="venue-name-error"
             UNSAFE_style={{ 
               fontSize: '12px', 
-              color: COLORS.ADOBE_RED,
+              color: COLORS.RED_600,
               marginTop: '4px',
               display: 'block'
             }}
@@ -679,29 +668,29 @@ export const VenueComponent: React.FC = () => {
         )}
         
         {placesApiError && (
-          <Text UNSAFE_style={{ 
-            fontSize: '12px', 
-            color: COLORS.ADOBE_RED,
+          <Text UNSAFE_style={{
+            fontSize: '12px',
+            color: COLORS.RED_600,
             marginTop: '4px',
             display: 'block'
           }}>
             {placesApiError}
           </Text>
         )}
-      </View>
+      </div>
 
       {/* Alternative Venue Name Toggle */}
-      <View>
+      <div>
         <ActionButton
           isQuiet
           onPress={handleAlternativeNameToggle}
           UNSAFE_style={{
             color: COLORS.GRAY_800,
-            padding: 0,
+            padding: '0 12px',
             marginLeft: '-8px'
           }}
         >
-          {showAlternativeNameField ? <Remove size="S" /> : <Add size="S" />}
+          {showAlternativeNameField ? <RemoveCircle /> : <Add />}
           <Text UNSAFE_style={{ marginLeft: '4px', color: COLORS.GRAY_800 }}>
             {showAlternativeNameField 
               ? 'Remove alternative venue name' 
@@ -710,30 +699,28 @@ export const VenueComponent: React.FC = () => {
         </ActionButton>
         
         {showAlternativeNameField && (
-          <View marginTop="size-200">
+          <div style={{ marginTop: '16px' }}>
             <TextField
               label="Alternative venue name"
-              width="100%"
+              styles={style({ width: '[100%]' })}
               value={alternativeVenueName}
               onChange={handleAlternativeNameChange}
               maxLength={VENUE_NAME_MAX_LENGTH}
               description="This name will be displayed instead of the Google Places name"
             />
-          </View>
+          </div>
         )}
-      </View>
+      </div>
 
       {/* Venue Image Section */}
-      <View marginTop="size-200">
+      <div className={style({display: 'flex', flexDirection: 'column', gap: 16})}>
         <Heading level={4} UNSAFE_style={TYPOGRAPHY.SUBSECTION_HEADING}>
           Venue image or map
         </Heading>
-        
+
         <Switch
           isSelected={venue.showVenueImagePostEvent || false}
           onChange={handleShowVenueImagePostEventChange}
-          marginTop="size-100"
-          marginBottom="size-200"
         >
           Display image and instructions post-event.
         </Switch>
@@ -756,87 +743,68 @@ export const VenueComponent: React.FC = () => {
           onFileSelected={handleImageFileSelected}
           pendingFile={pendingImageFile ?? undefined}
         />
-      </View>
+      </div>
 
       {/* Instructions for Attendees */}
-      <View marginTop="size-200">
+      <div style={{ marginTop: '16px' }}>
         <RichTextEditor
           label="Instructions for attendees"
           value={venue.additionalInformation || ''}
           onChange={handleAdditionalInfoChange}
           height="200px"
         />
-      </View>
+      </div>
 
       {/* Locations inside the venue */}
-      <View>
-        <Flex direction="column" gap={FLEX_GAP.SECTION}>
+      <div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: FLEX_GAP.SECTION }}>
           <Heading level={4} UNSAFE_style={TYPOGRAPHY.SUBSECTION_HEADING}>
             Locations inside the venue
           </Heading>
 
           {venueLocations.length === 0 ? (
-            <View
-              padding="size-400"
-              backgroundColor="gray-100"
-              borderRadius="medium"
-              UNSAFE_style={{ textAlign: 'center' }}
+            <div
+              style={{ padding: '16px', backgroundColor: COLORS.GRAY_100, borderRadius: '8px', textAlign: 'center' }}
             >
-              <Flex direction="column" alignItems="center" gap="size-200">
-                <Text>Add locations to your selected venue using the button below.</Text>
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '16px' }}>
+                <p>Add locations to your selected venue using the button below.</p>
                 <Button variant="secondary" onPress={() => setIsLocationDialogOpen(true)}>
                   <Add />
-                  <Text>Add Location</Text>
+                  <p>Add Location</p>
                 </Button>
-              </Flex>
-            </View>
+              </div>
+            </div>
           ) : (
-            <Flex direction="column" gap="size-100">
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
               {venueLocations.map(loc => (
-                <Flex
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 16px', border: '1px solid var(--spectrum-global-color-gray-300)', borderRadius: '8px', backgroundColor: 'var(--spectrum-global-color-gray-50)' }}>
                   key={loc.locationId}
-                  justifyContent="space-between"
-                  alignItems="center"
-                  UNSAFE_style={{
-                    padding: '12px 16px',
-                    border: '1px solid var(--spectrum-global-color-gray-300)',
-                    borderRadius: '8px',
-                    backgroundColor: 'var(--spectrum-global-color-gray-50)',
-                  }}
-                >
-                  <Flex direction="column" gap="size-50">
-                    <Text UNSAFE_style={{ fontWeight: 600, fontSize: '14px' }}>{loc.name}</Text>
-                    <Flex direction="row" gap="size-150" alignItems="center">
-                      <span style={{
-                        fontSize: '11px',
-                        padding: '2px 8px',
-                        borderRadius: '10px',
-                        backgroundColor: 'var(--spectrum-global-color-gray-200)',
-                        color: COLORS.GRAY_700,
-                        fontWeight: 500,
-                      }}>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                    <p style={{ fontWeight: 600, fontSize: '14px' }}>{loc.name}</p>
+                    <div style={{ display: 'flex', flexDirection: 'row', gap: '16px', alignItems: 'center' }}>
+                      <span style={{ fontSize: '11px', padding: '2px 8px', borderRadius: '10px', backgroundColor: 'var(--spectrum-global-color-gray-200)', color: COLORS.GRAY_700, fontWeight: 500 }}>
                         {loc.locationType.charAt(0).toUpperCase() + loc.locationType.slice(1)}
                       </span>
                       {loc.locationCode && (
-                        <Text UNSAFE_style={{ fontSize: '12px', color: COLORS.GRAY_600 }}>
+                        <p style={{ fontSize: '12px', color: COLORS.GRAY_600 }}>
                           Code: {loc.locationCode}
-                        </Text>
+                        </p>
                       )}
                       {loc.capacity != null && (
-                        <Text UNSAFE_style={{ fontSize: '12px', color: COLORS.GRAY_600 }}>
+                        <p style={{ fontSize: '12px', color: COLORS.GRAY_600 }}>
                           Capacity: {loc.capacity}
-                        </Text>
+                        </p>
                       )}
-                    </Flex>
-                  </Flex>
+                    </div>
+                  </div>
                   <ActionButton
                     isQuiet
                     onPress={() => handleLocationRemove(loc.locationId)}
                     aria-label={`Remove ${loc.name}`}
                   >
-                    <Delete />
+                    <RemoveCircle />
                   </ActionButton>
-                </Flex>
+                </div>
               ))}
               <Button
                 variant="secondary"
@@ -844,12 +812,12 @@ export const VenueComponent: React.FC = () => {
                 onPress={() => setIsLocationDialogOpen(true)}
               >
                 <Add />
-                <Text>Add Location</Text>
+                <p>Add Location</p>
               </Button>
-            </Flex>
+            </div>
           )}
-        </Flex>
-      </View>
+        </div>
+      </div>
 
       <LocationPickerDialog
         isOpen={isLocationDialogOpen}
@@ -858,6 +826,6 @@ export const VenueComponent: React.FC = () => {
         venueId={venueApiId ?? 'dummy'}
       />
       
-    </Flex>
+    </div>
   )
 }

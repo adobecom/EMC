@@ -18,6 +18,13 @@
                 "ecmaVersion": "latest",
                 "sourceType": "module"
             }
+        },
+        {
+            "files": ["docs/**/*.js"],
+            "parserOptions": {
+                "ecmaVersion": "latest",
+                "sourceType": "module"
+            }
         }
     ]
 }

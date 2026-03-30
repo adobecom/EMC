@@ -1,13 +1,10 @@
-/* 
+/*
 * <license header>
 */
 
 import React, { useState, useEffect } from 'react'
-import {
-  View,
-  Flex,
-  Text
-} from '@adobe/react-spectrum'
+import { Text } from '@react-spectrum/s2'
+import { style } from '@react-spectrum/s2/style' with { type: 'macro' }
 import { COLORS, TYPOGRAPHY, SPACING } from '../../styles/designSystem'
 import { HistoryRecord } from '../../types/domain'
 import {
@@ -50,13 +47,13 @@ const DiffDisplay: React.FC<DiffDisplayProps> = ({ diff }) => {
   }
 
   return (
-    <Flex direction="column" gap="size-150">
+    <div className={style({ display: 'flex', flexDirection: 'column', gap: 12 })}>
       {/* Added fields */}
       {hasAdded && (
-        <View>
-          <Text UNSAFE_style={{ 
-            fontSize: '11px', 
-            fontWeight: 600, 
+        <div>
+          <Text UNSAFE_style={{
+            fontSize: '11px',
+            fontWeight: 600,
             color: 'var(--spectrum-global-color-green-600)',
             textTransform: 'uppercase',
             letterSpacing: '0.5px',
@@ -65,8 +62,8 @@ const DiffDisplay: React.FC<DiffDisplayProps> = ({ diff }) => {
           }}>
             Added
           </Text>
-          <View
-            UNSAFE_style={{
+          <div
+            style={{
               backgroundColor: 'rgba(45, 157, 120, 0.1)',
               borderLeft: '3px solid var(--spectrum-global-color-green-600)',
               padding: '8px 12px',
@@ -74,25 +71,25 @@ const DiffDisplay: React.FC<DiffDisplayProps> = ({ diff }) => {
             }}
           >
             {Object.entries(diff.added!).map(([key, value]) => (
-              <Flex key={key} direction="row" gap="size-100" UNSAFE_style={{ marginBottom: '4px' }}>
+              <div key={key} className={style({ display: 'flex', gap: 8 })} style={{ marginBottom: '4px' }}>
                 <Text UNSAFE_style={{ fontSize: '12px', fontWeight: 500, color: COLORS.GRAY_800, minWidth: '120px' }}>
                   {formatFieldName(key)}:
                 </Text>
                 <Text UNSAFE_style={{ fontSize: '12px', color: COLORS.GRAY_700, wordBreak: 'break-word' }}>
                   {formatDiffValue(value)}
                 </Text>
-              </Flex>
+              </div>
             ))}
-          </View>
-        </View>
+          </div>
+        </div>
       )}
 
       {/* Updated fields */}
       {hasUpdated && (
-        <View>
-          <Text UNSAFE_style={{ 
-            fontSize: '11px', 
-            fontWeight: 600, 
+        <div>
+          <Text UNSAFE_style={{
+            fontSize: '11px',
+            fontWeight: 600,
             color: 'var(--spectrum-global-color-blue-500)',
             textTransform: 'uppercase',
             letterSpacing: '0.5px',
@@ -101,8 +98,8 @@ const DiffDisplay: React.FC<DiffDisplayProps> = ({ diff }) => {
           }}>
             Updated
           </Text>
-          <View
-            UNSAFE_style={{
+          <div
+            style={{
               backgroundColor: 'rgba(59, 130, 246, 0.1)',
               borderLeft: '3px solid var(--spectrum-global-color-blue-500)',
               padding: '8px 12px',
@@ -110,25 +107,25 @@ const DiffDisplay: React.FC<DiffDisplayProps> = ({ diff }) => {
             }}
           >
             {Object.entries(diff.updated!).map(([key, value]) => (
-              <Flex key={key} direction="row" gap="size-100" UNSAFE_style={{ marginBottom: '4px' }}>
+              <div key={key} className={style({ display: 'flex', gap: 8 })} style={{ marginBottom: '4px' }}>
                 <Text UNSAFE_style={{ fontSize: '12px', fontWeight: 500, color: COLORS.GRAY_800, minWidth: '120px' }}>
                   {formatFieldName(key)}:
                 </Text>
                 <Text UNSAFE_style={{ fontSize: '12px', color: COLORS.GRAY_700, wordBreak: 'break-word' }}>
                   {formatDiffValue(value)}
                 </Text>
-              </Flex>
+              </div>
             ))}
-          </View>
-        </View>
+          </div>
+        </div>
       )}
 
       {/* Deleted fields */}
       {hasDeleted && (
-        <View>
-          <Text UNSAFE_style={{ 
-            fontSize: '11px', 
-            fontWeight: 600, 
+        <div>
+          <Text UNSAFE_style={{
+            fontSize: '11px',
+            fontWeight: 600,
             color: 'var(--spectrum-global-color-red-600)',
             textTransform: 'uppercase',
             letterSpacing: '0.5px',
@@ -137,8 +134,8 @@ const DiffDisplay: React.FC<DiffDisplayProps> = ({ diff }) => {
           }}>
             Deleted
           </Text>
-          <View
-            UNSAFE_style={{
+          <div
+            style={{
               backgroundColor: 'rgba(220, 38, 38, 0.1)',
               borderLeft: '3px solid var(--spectrum-global-color-red-600)',
               padding: '8px 12px',
@@ -146,19 +143,19 @@ const DiffDisplay: React.FC<DiffDisplayProps> = ({ diff }) => {
             }}
           >
             {Object.entries(diff.deleted!).map(([key, value]) => (
-              <Flex key={key} direction="row" gap="size-100" UNSAFE_style={{ marginBottom: '4px' }}>
+              <div key={key} className={style({ display: 'flex', gap: 8 })} style={{ marginBottom: '4px' }}>
                 <Text UNSAFE_style={{ fontSize: '12px', fontWeight: 500, color: COLORS.GRAY_800, minWidth: '120px' }}>
                   {formatFieldName(key)}:
                 </Text>
                 <Text UNSAFE_style={{ fontSize: '12px', color: COLORS.GRAY_700, wordBreak: 'break-word', textDecoration: 'line-through' }}>
                   {formatDiffValue(value)}
                 </Text>
-              </Flex>
+              </div>
             ))}
-          </View>
-        </View>
+          </div>
+        </div>
       )}
-    </Flex>
+    </div>
   )
 }
 
@@ -181,28 +178,28 @@ export const DetailCard: React.FC<DetailCardProps> = ({ record, isLocked }) => {
 
   if (!record) {
     return (
-      <View
-        UNSAFE_style={{
+      <div
+        style={{
           padding: `${SPACING.MD}px`,
           textAlign: 'center',
           color: COLORS.GRAY_600
         }}
       >
         <Text>Hover over a point in the timeline to see details. Click to lock selection.</Text>
-      </View>
+      </div>
     )
   }
-  
+
   const changeColor = getChangeColor(record.changeType)
   const hasDiff = record.diff && (
     (record.diff.added && Object.keys(record.diff.added).length > 0) ||
     (record.diff.updated && Object.keys(record.diff.updated).length > 0) ||
     (record.diff.deleted && Object.keys(record.diff.deleted).length > 0)
   )
-  
+
   return (
-    <View
-      UNSAFE_style={{
+    <div
+      style={{
         padding: `${SPACING.MD}px ${SPACING.LG}px`,
         backgroundColor: COLORS.GRAY_100,
         borderRadius: '8px',
@@ -210,14 +207,12 @@ export const DetailCard: React.FC<DetailCardProps> = ({ record, isLocked }) => {
         border: isLocked ? `2px solid ${changeColor}` : '2px solid transparent'
       }}
     >
-      <Flex 
-        direction="row" 
-        gap="size-300" 
-        alignItems="start"
+      <div
+        className={style({ display: 'flex', gap: 24, alignItems: 'start' })}
       >
         {/* Change type icon */}
-        <View
-          UNSAFE_style={{
+        <div
+          style={{
             width: '40px',
             height: '40px',
             borderRadius: '50%',
@@ -230,11 +225,11 @@ export const DetailCard: React.FC<DetailCardProps> = ({ record, isLocked }) => {
           }}
         >
           {getChangeIcon(record.changeType)}
-        </View>
-        
+        </div>
+
         {/* Details */}
-        <View flex={1}>
-          <Text UNSAFE_style={{ 
+        <div style={{ flex: 1 }}>
+          <Text UNSAFE_style={{
             ...TYPOGRAPHY.SUBSECTION_HEADING,
             display: 'block',
             marginBottom: '4px'
@@ -248,9 +243,9 @@ export const DetailCard: React.FC<DetailCardProps> = ({ record, isLocked }) => {
           }}>
             {formatTimestamp(record.timestamp)}
           </Text>
-          
+
           {/* User info */}
-          <Flex direction="row" gap="size-100" alignItems="center" wrap="wrap">
+          <div className={style({ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' })}>
             <Text UNSAFE_style={{
               ...TYPOGRAPHY.HELPER_TEXT,
               color: COLORS.GRAY_600
@@ -272,12 +267,12 @@ export const DetailCard: React.FC<DetailCardProps> = ({ record, isLocked }) => {
                 ({record.user.email})
               </Text>
             )}
-          </Flex>
-        </View>
-        
+          </div>
+        </div>
+
         {/* Change type badge */}
-        <View
-          UNSAFE_style={{
+        <div
+          style={{
             padding: '4px 12px',
             borderRadius: '16px',
             backgroundColor: changeColor,
@@ -289,12 +284,12 @@ export const DetailCard: React.FC<DetailCardProps> = ({ record, isLocked }) => {
           }}
         >
           {record.changeType}
-        </View>
-      </Flex>
+        </div>
+      </div>
 
       {/* Collapsible Details Section */}
       {hasDiff && isLocked && (
-        <View UNSAFE_style={{ marginTop: `${SPACING.MD}px` }}>
+        <div style={{ marginTop: `${SPACING.MD}px` }}>
           {/* Details toggle button */}
           <button
             onClick={() => setIsDetailsOpen(!isDetailsOpen)}
@@ -319,7 +314,7 @@ export const DetailCard: React.FC<DetailCardProps> = ({ record, isLocked }) => {
               e.currentTarget.style.backgroundColor = COLORS.WHITE
             }}
           >
-            <span style={{ 
+            <span style={{
               transform: isDetailsOpen ? 'rotate(90deg)' : 'rotate(0deg)',
               transition: 'transform 0.2s ease',
               display: 'inline-block'
@@ -340,7 +335,7 @@ export const DetailCard: React.FC<DetailCardProps> = ({ record, isLocked }) => {
           >
             <DiffDisplay diff={record.diff} />
           </div>
-        </View>
+        </div>
       )}
 
       {/* Lock indicator */}
@@ -354,6 +349,6 @@ export const DetailCard: React.FC<DetailCardProps> = ({ record, isLocked }) => {
           Click another point to change selection, or click the same point to deselect.
         </Text>
       )}
-    </View>
+    </div>
   )
 }

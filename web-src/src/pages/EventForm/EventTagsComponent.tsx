@@ -3,9 +3,9 @@
 */
 
 import React from 'react'
-import { Flex, Heading, Text } from '@adobe/react-spectrum'
+import { Heading, Text } from '@react-spectrum/s2'
+import { SPACING, TYPOGRAPHY } from '../../styles/designSystem'
 import { TagSelector } from '../../components/shared'
-import { TYPOGRAPHY, FLEX_GAP } from '../../styles/designSystem'
 import { useEventFormComponent } from '../../hooks/useEventFormComponent'
 
 /**
@@ -41,18 +41,18 @@ export const EventTagsComponent: React.FC = () => {
   // ============================================================================
   
   return (
-    <Flex direction="column" gap={FLEX_GAP.SECTION}>
-      <Flex direction="column" gap={FLEX_GAP.TIGHT}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: SPACING.LG }}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: SPACING.XS }}>
         <Heading level={3} UNSAFE_style={TYPOGRAPHY.COMPONENT_HEADING}>Event Tags</Heading>
         <Text UNSAFE_style={TYPOGRAPHY.SECTION_DESCRIPTION}>
           Add tags to help users filter for relevant events.
         </Text>
-      </Flex>
-      
+      </div>
+
       <TagSelector
         selectedTags={selectedTags}
         onChange={handleTagsChange}
       />
-    </Flex>
+    </div>
   )
 }

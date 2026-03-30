@@ -2,13 +2,10 @@
  * <license header>
  */
 
-import React, { useState } from 'react'
-import { View, Text, Button, ProgressCircle } from '@adobe/react-spectrum'
+import React from 'react'
+import { Button, Text, ProgressCircle } from '@react-spectrum/s2'
 import { SPACING, COLORS, TYPOGRAPHY } from '../../styles/designSystem'
-import { GATE_BACKGROUND_IMAGES } from '../../assets/gate-backgrounds'
-
-/** Fallback background when images are unavailable */
-const GATE_BACKGROUND_FALLBACK = '#E8E8E8'
+const gateBg = new URL('../../assets/gate-bg.png', import.meta.url).href
 
 /**
  * Browser access forbidden icon - from ecc-milo browser-access-forbidden-lg.svg
@@ -64,6 +61,10 @@ const BrowserLockIcon: React.FC = () => (
 interface GateScreenProps {
   onRequestAccess: () => void
   isLoading?: boolean
+  /** Message shown when access is denied. Defaults to sign-in prompt. */
+  message?: string
+  /** Label for the action button. Defaults to "Sign In". */
+  actionLabel?: string
 }
 
 /**
@@ -72,22 +73,17 @@ interface GateScreenProps {
  */
 export const GateScreen: React.FC<GateScreenProps> = ({
   onRequestAccess,
-  isLoading = false
+  isLoading = false,
+  message = 'Please sign in with an authorized account to continue.',
+  actionLabel = 'Sign In'
 }) => {
-  const [backgroundImage] = useState(() => {
-    if (GATE_BACKGROUND_IMAGES.length === 0) return null
-    return GATE_BACKGROUND_IMAGES[
-      Math.floor(Math.random() * GATE_BACKGROUND_IMAGES.length)
-    ]
-  })
-
   const outerStyle: React.CSSProperties = {
     position: 'fixed',
     top: 0,
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: GATE_BACKGROUND_FALLBACK,
+    backgroundImage: `url(${gateBg})`,
     backgroundSize: 'cover',
     backgroundPosition: 'center',
     display: 'flex',
@@ -95,27 +91,24 @@ export const GateScreen: React.FC<GateScreenProps> = ({
     textAlign: 'center',
     justifyContent: 'center'
   }
-  if (backgroundImage) {
-    outerStyle.backgroundImage = `url(${backgroundImage})`
+
+  const cardStyle: React.CSSProperties = {
+    padding: 48,
+    borderRadius: 8,
+    background: 'rgba(255, 255, 255, 0.90)',
+    backdropFilter: 'blur(10px)',
+    boxShadow: '0 8px 32px rgba(0, 0, 0, 0.8)',
+    display: 'flex',
+    flexDirection: 'column',
+    alignItems: 'center',
+    gap: 16,
+    minWidth: 360,
+    maxWidth: 480,
   }
 
   return (
-    <View UNSAFE_style={outerStyle}>
-      <View
-        padding="size-800"
-        borderRadius="medium"
-        UNSAFE_style={{
-          background: 'rgba(255, 255, 255, 0.90)',
-          backdropFilter: 'blur(10px)',
-          boxShadow: '0 8px 32px rgba(0, 0, 0, 0.8)',
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          gap: '16px',
-          minWidth: 360,
-          maxWidth: 480
-        }}
-      >
+    <div style={outerStyle}>
+      <div style={cardStyle}>
         {isLoading ? (
           <>
             <ProgressCircle
@@ -139,9 +132,9 @@ export const GateScreen: React.FC<GateScreenProps> = ({
               Events Management Console
             </Text>
 
-            <View UNSAFE_style={{ margin: SPACING.XXL }}>
+            <div style={{ margin: SPACING.XXL }}>
               <BrowserLockIcon />
-            </View>
+            </div>
 
             <Text
               UNSAFE_style={{
@@ -150,18 +143,19 @@ export const GateScreen: React.FC<GateScreenProps> = ({
                 maxWidth: 420
               }}
             >
-              Please sign in with an authorized account to continue.
+              {message}
             </Text>
 
-            <Button 
-            variant="accent"
-            onPress={onRequestAccess}>
-              Sign In
+            <Button
+              variant="accent"
+              onPress={onRequestAccess}
+            >
+              {actionLabel}
             </Button>
           </>
         )}
-      </View>
-    </View>
+      </div>
+    </div>
   )
 }
 

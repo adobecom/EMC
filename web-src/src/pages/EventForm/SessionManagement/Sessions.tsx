@@ -1,14 +1,7 @@
 import React, { useState, useEffect, useCallback } from "react";
-import {
-  Flex,
-  Heading,
-  Text,
-  Well,
-  View,
-  Button,
-} from "@adobe/react-spectrum";
+import { ProgressCircle, Button, Heading, Text, InlineAlert } from "@react-spectrum/s2";
+import AddCircle from "@react-spectrum/s2/icons/AddCircle";
 import { Session } from "../../../types/sessions";
-import { AddIcon } from "../../../components/icons/add";
 import { SessionsList } from "./SessionList";
 import type { SessionFormData } from "./SessionForm";
 import { useEventFormContext } from "../../../contexts";
@@ -24,6 +17,16 @@ interface SessionTimeData {
   modificationTime?: number;
 }
 
+function parseTagsFromApi(tags: unknown): string[] {
+  if (typeof tags === "string") return tags.split(",").map((t) => t.trim()).filter(Boolean);
+  if (Array.isArray(tags)) return (tags as string[]).map((t) => String(t).trim()).filter(Boolean);
+  return [];
+}
+
+function serializeTagsForApi(tags: string[] | undefined): string {
+  return (tags ?? []).join(",");
+}
+
 function mapApiSessionToSession(item: Record<string, unknown>): Session {
   return {
     id: String(item.id ?? item.sessionId ?? ""),
@@ -33,7 +36,7 @@ function mapApiSessionToSession(item: Record<string, unknown>): Session {
     startDateTime: String(item.startDateTime ?? ""),
     endDateTime: String(item.endDateTime ?? ""),
     capacity: item.capacity != null ? Number(item.capacity) : undefined,
-    tags: Array.isArray(item.tags) ? (item.tags as string[]) : [],
+    tags: parseTagsFromApi(item.tags),
   };
 }
 
@@ -92,6 +95,7 @@ async function createSessionTimeForSession(
     ...(data.isAutoRegistrationEnabled === false && data.attendeeLimit != null
       ? { attendeeLimit: data.attendeeLimit }
       : {}),
+    ...(data.timezone ? { timezone: data.timezone } : {}),
   });
 
   if ("error" in sessionTimeRes) {
@@ -153,6 +157,7 @@ async function upsertSessionTimeForSession(
         data.sessionTimeCreationTime ?? existingTime.creationTime,
       modificationTime:
         data.sessionTimeModificationTime ?? existingTime.modificationTime,
+      ...(data.timezone ? { timezone: data.timezone } : {}),
     },
   );
 
@@ -202,6 +207,7 @@ export const Sessions: React.FC = () => {
   const { eventId } = useEventFormContext();
   const [sessions, setSessions] = useState<Session[]>([]);
   const [loadError, setLoadError] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
   const [isAddingNew, setIsAddingNew] = useState(false);
 
   const loadSessions = useCallback(async () => {
@@ -210,8 +216,9 @@ export const Sessions: React.FC = () => {
       return;
     }
     setLoadError(null);
+    setIsLoading(true);
     try {
-      const response = await apiService.getSessions(eventId);
+      const response = await apiService.getAllEventSessions(eventId);
       if (response && "error" in response) {
         setLoadError(response.error?.message || String(response.error));
         setSessions([]);
@@ -229,6 +236,8 @@ export const Sessions: React.FC = () => {
         err instanceof Error ? err.message : "Failed to load sessions";
       setLoadError(message);
       setSessions([]);
+    } finally {
+      setIsLoading(false);
     }
   }, [eventId]);
 
@@ -250,8 +259,7 @@ export const Sessions: React.FC = () => {
     const payload = {
       name: data.name,
       description: data.description,
-      tags: data.tags,
-      ...(data.timezone ? { timezone: data.timezone } : {}),
+      tags: serializeTagsForApi(data.tags),
     };
     const res = await apiService.createSession(eventId, payload);
     if ("error" in res) {
@@ -297,8 +305,7 @@ export const Sessions: React.FC = () => {
     const payload: Record<string, unknown> = {
       name: data.name,
       description: data.description,
-      tags: data.tags,
-      ...(data.timezone ? { timezone: data.timezone } : {}),
+      tags: serializeTagsForApi(data.tags),
     };
     if (data.creationTime != null) payload.creationTime = data.creationTime;
     if (data.modificationTime != null)
@@ -331,34 +338,50 @@ export const Sessions: React.FC = () => {
   };
 
   return (
-    <View>
-      <Flex justifyContent="space-between" alignItems="center">
-        <Flex direction="column" gap="size-100">
+    <div>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+        <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
           <Heading level={2}>Sessions</Heading>
-          <Text>Breakdown your event into sessions and add details</Text>
-        </Flex>
-        <View>
-          <Button
-            variant="secondary"
-            style="fill"
-            aria-label="Add new session"
-            onPress={() => setIsAddingNew(true)}
-            isDisabled={isAddingNew}
-          >
-            <AddIcon />
-            <Text>Add new session</Text>
-          </Button>
-        </View>
-      </Flex>
+          <Text>Break down your event into sessions and add details.</Text>
+        </div>
+        <Button
+          variant="secondary"
+          aria-label="Add new session"
+          onPress={() => setIsAddingNew(true)}
+          isDisabled={isAddingNew}
+        >
+          <AddCircle />
+          <Text>Add new session</Text>
+        </Button>
+      </div>
 
       {loadError ? (
-        <Well UNSAFE_style={{ textAlign: "center", marginTop: "28px" }}>
+        <InlineAlert variant="negative" UNSAFE_style={{ marginTop: "28px" }}>
           <Text>{loadError}</Text>
-        </Well>
+        </InlineAlert>
+      ) : isLoading ? (
+        <div style={{ display: "flex", justifyContent: "center", alignItems: "center", gap: "12px", marginTop: "32px" }}>
+          <ProgressCircle isIndeterminate aria-label="Loading sessions" />
+          <Text>Loading sessions</Text>
+        </div>
       ) : sessions.length === 0 && !isAddingNew ? (
-        <Well UNSAFE_style={{ textAlign: "center", marginTop: "28px" }}>
-          No sessions have been created yet for this event
-        </Well>
+        <div
+          style={{
+            background: "#f8f8f8",
+            border: "1px solid #e9e9e9",
+            borderRadius: "8px",
+            height: "89px",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            width: "100%",
+            marginTop: "12px",
+          }}
+        >
+          <span style={{ color: "#222", fontSize: "18px" }}>
+            No sessions have been created yet for this event
+          </span>
+        </div>
       ) : (
         <SessionsList
           sessions={sessions}
@@ -369,7 +392,7 @@ export const Sessions: React.FC = () => {
           onSave={handleUpdateSession}
         />
       )}
-    </View>
+    </div>
   );
 };
 

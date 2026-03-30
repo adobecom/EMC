@@ -3,14 +3,9 @@
 */
 
 import React, { useState, useEffect } from 'react'
-import {
-  View,
-  Flex,
-  Text,
-  Button
-} from '@adobe/react-spectrum'
+import { Text, Button } from '@react-spectrum/s2'
 import { HeadingWithTooltip, LoadingSpinner } from '../../components/shared'
-import { FLEX_GAP, COLORS } from '../../styles/designSystem'
+import { SPACING, COLORS } from '../../styles/designSystem'
 import { useSeriesFormComponent } from '../../hooks/useSeriesFormComponent'
 import { EXTERNAL_CONFIG_URLS, ECC_CONFIG_BASE } from '../../config/externalConfigs'
 import { TemplatePicker, TemplateOption } from './TemplatePicker'
@@ -138,7 +133,7 @@ export const SeriesTemplateComponent: React.FC = () => {
   // ============================================================================
 
   return (
-    <Flex direction="column" gap={FLEX_GAP.SECTION}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: SPACING.LG }}>
       {/* Template Selection Header */}
       <HeadingWithTooltip 
         level={3}
@@ -150,19 +145,19 @@ export const SeriesTemplateComponent: React.FC = () => {
       {isLoadingTemplates ? (
         <LoadingSpinner message="Loading templates..." />
       ) : loadError ? (
-        <View padding="size-100">
+        <div style={{ padding: 8 }}>
           <Text UNSAFE_style={{ color: 'var(--spectrum-global-color-red-600)', fontSize: '14px' }}>
             {loadError}
           </Text>
-        </View>
+        </div>
       ) : (
-        <Flex direction="row" gap="size-400" alignItems="center">
+        <div style={{ display: 'flex', flexDirection: 'row', gap: 32, alignItems: 'center' }}>
           <Text UNSAFE_style={{ width: '150px', flexShrink: 0, fontWeight: 600 }}>
             Event template
           </Text>
           
           {/* Show selected template name or prompt */}
-          <View flex>
+          <div style={{ flex: 1, minWidth: 0 }}>
             {selectedTemplate ? (
               <Text>{selectedTemplate.name}</Text>
             ) : (
@@ -170,19 +165,19 @@ export const SeriesTemplateComponent: React.FC = () => {
                 No template selected
               </Text>
             )}
-          </View>
-          
+          </div>
+
           <Button
             variant="accent"
             onPress={handleOpenPicker}
-            UNSAFE_style={{ 
+            UNSAFE_style={{
               backgroundColor: COLORS.BLACK,
-              borderColor: COLORS.BLACK 
+              borderColor: COLORS.BLACK,
             }}
           >
             Select
           </Button>
-        </Flex>
+        </div>
       )}
       
       {/* Template Picker Modal */}
@@ -194,6 +189,6 @@ export const SeriesTemplateComponent: React.FC = () => {
         selectedTemplateId={templateId}
         isLoading={isLoadingTemplates}
       />
-    </Flex>
+    </div>
   )
 }
