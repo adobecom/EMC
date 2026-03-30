@@ -8,6 +8,7 @@ import { Switch } from '@react-spectrum/s2'
 import { style } from "@react-spectrum/s2/style" with { type: "macro" }
 import Add from '@react-spectrum/s2/icons/Add'
 import RemoveCircle from '@react-spectrum/s2/icons/RemoveCircle'
+import AddCircle from '@react-spectrum/s2/icons/AddCircle'
 import { ImageUploader, RichTextEditor } from '../../components/shared'
 import { TYPOGRAPHY, COLORS, FLEX_GAP } from '../../styles/designSystem'
 import { VenueData, EventApiResponse } from '../../types/domain'
@@ -17,7 +18,7 @@ import { apiService } from '../../services/api'
 import { getVenuePayload } from '../../utils/dataFilters'
 import { uploadImage } from '../../services/requestHelpers'
 import { getCurrentEnvironment, getApiHost } from '../../config/constants'
-import { LocationPickerDialog, VenueLocation } from './LocationPickerDialog'
+import { LocationPickerDialog, VenueLocation } from './LocationDialog'
 import '../../../src/types/google-places.d.ts'
 
 // ============================================================================
@@ -192,6 +193,10 @@ export const VenueComponent: React.FC = () => {
             console.error('Failed to create venue:', result)
             return
           }
+          // Capture venueId so location management becomes available
+          if (result?.venueId) {
+            setVenueApiId(result.venueId)
+          }
         } else {
           // ---- UPDATE (PUT) — include venueId + timestamps as required by API ----
           const putPayload = {
@@ -280,28 +285,26 @@ export const VenueComponent: React.FC = () => {
     pendingImageFileRef.current = pendingImageFile
   }, [pendingImageFile])
 
-  // TODO: Re-enable once location APIs are ready.
   // Fetch the venueId from API when editing an existing event
-  // useEffect(() => {
-  //   if (!eventId) return
-  //   apiService.getEventVenue(eventId).then((res) => {
-  //     if (res && !('error' in res) && res?.venueId) {
-  //       setVenueApiId(res.venueId)
-  //     }
-  //   }).catch(() => {})
-  // }, [eventId])
+  useEffect(() => {
+    if (!eventId) return
+    apiService.getEventVenue(eventId).then((res) => {
+      if (res && !('error' in res) && res?.venueId) {
+        setVenueApiId(res.venueId)
+      }
+    }).catch(() => {})
+  }, [eventId])
 
-  // TODO: Re-enable once location APIs are ready.
   // Load existing locations when venueApiId becomes available
-  // useEffect(() => {
-  //   if (!venueApiId) return
-  //   apiService.listVenueLocations(venueApiId).then((res) => {
-  //     if (res && !('error' in res)) {
-  //       const list = res.locations ?? res ?? []
-  //       setVenueLocations(Array.isArray(list) ? list : [])
-  //     }
-  //   }).catch(() => {})
-  // }, [venueApiId])
+  useEffect(() => {
+    if (!venueApiId) return
+    apiService.listVenueLocations(venueApiId).then((res) => {
+      if (res && !('error' in res)) {
+        const list = (res as any).locations ?? res ?? []
+        setVenueLocations(Array.isArray(list) ? list : [])
+      }
+    }).catch(() => {})
+  }, [venueApiId])
   
   // ============================================================================
   // REFS FOR CALLBACK STABILITY
@@ -548,15 +551,15 @@ export const VenueComponent: React.FC = () => {
   }, [])
 
   const handleLocationRemove = useCallback(async (locationId: string) => {
-    // TODO: Re-enable once location APIs are ready.
-    // if (!venueApiId) return
-    // try {
-    //   await apiService.deleteVenueLocation(venueApiId, locationId)
-    // } catch (err) {
-    //   console.error('Failed to delete location:', err)
-    // }
+    if (venueApiId) {
+      try {
+        await apiService.deleteVenueLocation(venueApiId, locationId)
+      } catch (err) {
+        console.error('Failed to delete location:', err)
+      }
+    }
     setVenueLocations(prev => prev.filter(l => l.locationId !== locationId))
-  }, [])
+  }, [venueApiId])
   
   const handleImageChange = (imageUrl: string | undefined, imageId: string | undefined) => {
     // Clear pending file since we now have an uploaded image
@@ -762,69 +765,75 @@ export const VenueComponent: React.FC = () => {
             Locations inside the venue
           </Heading>
 
-          {venueLocations.length === 0 ? (
-            <div
-              style={{ padding: '16px', backgroundColor: COLORS.GRAY_100, borderRadius: '8px', textAlign: 'center' }}
-            >
+          {venueLocations.length === 0 && (
+            <div style={{ padding: '2rem', backgroundColor: '#F5F5F5', borderRadius: '4px', textAlign: 'center', marginTop: '1rem' }}>
               <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '16px' }}>
-                <p>Add locations to your selected venue using the button below.</p>
-                <Button variant="secondary" onPress={() => setIsLocationDialogOpen(true)}>
+                <Text>Add locations to your venue using the button below.</Text>
+                <Button variant="secondary" onPress={() => setIsLocationDialogOpen(true)} isDisabled={!venueApiId}>
                   <Add />
-                  <p>Add Location</p>
+                  <Text>Add Location</Text>
                 </Button>
               </div>
             </div>
-          ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-              {venueLocations.map(loc => (
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 16px', border: '1px solid var(--spectrum-global-color-gray-300)', borderRadius: '8px', backgroundColor: 'var(--spectrum-global-color-gray-50)' }}>
-                  key={loc.locationId}
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                    <p style={{ fontWeight: 600, fontSize: '14px' }}>{loc.name}</p>
-                    <div style={{ display: 'flex', flexDirection: 'row', gap: '16px', alignItems: 'center' }}>
-                      <span style={{ fontSize: '11px', padding: '2px 8px', borderRadius: '10px', backgroundColor: 'var(--spectrum-global-color-gray-200)', color: COLORS.GRAY_700, fontWeight: 500 }}>
-                        {loc.locationType.charAt(0).toUpperCase() + loc.locationType.slice(1)}
-                      </span>
-                      {loc.locationCode && (
-                        <p style={{ fontSize: '12px', color: COLORS.GRAY_600 }}>
-                          Code: {loc.locationCode}
-                        </p>
-                      )}
-                      {loc.capacity != null && (
-                        <p style={{ fontSize: '12px', color: COLORS.GRAY_600 }}>
-                          Capacity: {loc.capacity}
-                        </p>
-                      )}
-                    </div>
+          )}
+
+          {venueLocations.map(loc => (
+            <div key={loc.locationId} style={{ padding: '16px', border: '1px solid #D3D3D3', borderRadius: '8px', backgroundColor: '#FFFFFF' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', flexGrow: 1, gap: '4px' }}>
+                  <Text UNSAFE_style={{ fontWeight: 600, fontSize: '14px' }}>{loc.name}</Text>
+                  <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+                    <span style={{ fontSize: '11px', padding: '2px 8px', borderRadius: '10px', backgroundColor: '#E1E1E1', color: COLORS.GRAY_700, fontWeight: 500 }}>
+                      {loc.locationType.charAt(0).toUpperCase() + loc.locationType.slice(1)}
+                    </span>
+                    {loc.locationCode && (
+                      <Text UNSAFE_style={{ fontSize: '12px', color: '#6E6E6E' }}>
+                        Code: {loc.locationCode}
+                      </Text>
+                    )}
+                    {loc.capacity != null && (
+                      <Text UNSAFE_style={{ fontSize: '12px', color: '#6E6E6E' }}>
+                        Capacity: {loc.capacity}
+                      </Text>
+                    )}
                   </div>
-                  <ActionButton
-                    isQuiet
-                    onPress={() => handleLocationRemove(loc.locationId)}
-                    aria-label={`Remove ${loc.name}`}
-                  >
-                    <RemoveCircle />
-                  </ActionButton>
                 </div>
-              ))}
-              <Button
-                variant="secondary"
-                UNSAFE_style={{ alignSelf: 'flex-start' }}
-                onPress={() => setIsLocationDialogOpen(true)}
-              >
-                <Add />
-                <p>Add Location</p>
-              </Button>
+                <ActionButton onPress={() => handleLocationRemove(loc.locationId)} isQuiet aria-label={`Remove ${loc.name}`}>
+                  <RemoveCircle />
+                </ActionButton>
+              </div>
             </div>
+          ))}
+
+          {venueLocations.length > 0 && (
+            <Button
+              variant="secondary"
+              onPress={() => setIsLocationDialogOpen(true)}
+              isDisabled={!venueApiId}
+              styles={style({ width: '[100%]' })}
+              UNSAFE_style={{
+                backgroundColor: '#E1E1E1',
+                border: 'none',
+                color: '#2C2C2C',
+                justifyContent: 'flex-start',
+                paddingLeft: '16px',
+              }}
+            >
+              <Add />
+              <Text>Add Location</Text>
+            </Button>
           )}
         </div>
       </div>
 
-      <LocationPickerDialog
-        isOpen={isLocationDialogOpen}
-        onClose={() => setIsLocationDialogOpen(false)}
-        onSelect={handleLocationAdded}
-        venueId={venueApiId ?? 'dummy'}
-      />
+      {venueApiId && (
+        <LocationPickerDialog
+          isOpen={isLocationDialogOpen}
+          onClose={() => setIsLocationDialogOpen(false)}
+          onSelect={handleLocationAdded}
+          venueId={venueApiId}
+        />
+      )}
       
     </div>
   )

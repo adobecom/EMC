@@ -16,6 +16,8 @@ import {
   Form,
   SegmentedControl,
   SegmentedControlItem,
+  ComboBox,
+  ComboBoxItem,
 } from "@react-spectrum/s2"
 import {
   CalendarDate,
@@ -32,7 +34,7 @@ import {
   safeParseDateTimeString,
 } from "../../../utils/dateTime";
 import { SpeakerPickerDialog } from "../SpeakerPickerDialog";
-import { VenueLocation } from "../LocationPickerDialog";
+import { VenueLocation } from "../LocationDialog";
 
 // ============================================================================
 // SHARED TYPES
@@ -540,26 +542,25 @@ export const SessionForm: React.FC<SessionFormProps> = ({
   );
 
   const renderLocations = () => (
-    <Flex direction="column" gap="size-100">
-      <Text>Location</Text>
-      <Picker
-        aria-label="Session Location"
+    <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+      <ComboBox
+        label="Location"
         placeholder="Select session location"
-        width="100%"
+        UNSAFE_style={{ width: "100%" }}
         selectedKey={selectedLocationId ?? undefined}
         onSelectionChange={(key) => setSelectedLocationId(key ? String(key) : null)}
         isDisabled={venueLocations.length === 0}
       >
         {venueLocations.map((loc) => (
-          <Item key={loc.locationId}>{loc.name}</Item>
+          <ComboBoxItem key={loc.locationId} id={loc.locationId}>{loc.name}</ComboBoxItem>
         ))}
-      </Picker>
+      </ComboBox>
       {venueLocations.length === 0 && (
         <Text UNSAFE_style={{ fontSize: "12px", color: "var(--spectrum-global-color-gray-600)" }}>
           No locations available for the selected venue.
         </Text>
       )}
-    </Flex>
+    </div>
   );
 
   const renderTags = () => (
