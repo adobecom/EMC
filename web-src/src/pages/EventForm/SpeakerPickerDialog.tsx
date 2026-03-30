@@ -685,7 +685,7 @@ export const SpeakerPickerDialog: React.FC<SpeakerPickerDialogProps> = ({
   return (
     <DialogContainer onDismiss={onClose}>
       {isOpen && (
-        <Dialog size="L" isDismissible>
+        <Dialog data-testid="speaker-picker-dialog" size="L" isDismissible>
           {() => (
             <>
               <Heading slot="title">

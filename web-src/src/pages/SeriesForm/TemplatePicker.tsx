@@ -70,6 +70,7 @@ interface TemplatePickerProps {
   templates: TemplateOption[]
   selectedTemplateId?: string
   isLoading?: boolean
+  'data-testid'?: string
 }
 
 /**
@@ -87,7 +88,8 @@ export const TemplatePicker: React.FC<TemplatePickerProps> = ({
   onSelect,
   templates,
   selectedTemplateId,
-  isLoading: _isLoading = false
+  isLoading: _isLoading = false,
+  'data-testid': dataTestId
 }) => {
   // ============================================================================
   // STATE
@@ -218,6 +220,7 @@ export const TemplatePicker: React.FC<TemplatePickerProps> = ({
 
   return (
     <div
+      data-testid={dataTestId}
       style={{
         position: 'fixed',
         top: 0,

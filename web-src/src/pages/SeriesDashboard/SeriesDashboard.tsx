@@ -611,7 +611,7 @@ export const SeriesDashboard: React.FC<SeriesDashboardProps> = () => {
 
   return (
     <>
-      <div className={style({padding: 32})}>
+      <div data-testid="series-dashboard" className={style({padding: 32})}>
         <ResourceDashboardLayout
           title="All Series"
           totalCount={filteredSeries.length}
@@ -623,6 +623,7 @@ export const SeriesDashboard: React.FC<SeriesDashboardProps> = () => {
           onRefresh={loadSeriesData}
           onCreate={canWriteSeries ? handleCreateSeries : undefined}
           createLabel="Create new series"
+          createButtonTestId="create-series-button"
           toolbarEnd={seriesFilterToolbar}
           emptyStateIllustration={<LayersIllustration aria-hidden />}
           emptyStateTitle="No Series Found"

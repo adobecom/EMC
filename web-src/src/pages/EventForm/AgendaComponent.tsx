@@ -424,7 +424,7 @@ export const AgendaComponent: React.FC = () => {
   // ============================================================================
 
   return (
-    <div className={style({display: 'flex', flexDirection: 'column', gap: 16})}>
+    <div data-testid="agenda-section" className={style({display: 'flex', flexDirection: 'column', gap: 16})}>
       {/* Header with toggles */}
       <div className={style({display: 'flex', justifyContent: 'space-between', alignItems: 'start'})}>
         <HeadingWithTooltip 
@@ -437,6 +437,7 @@ export const AgendaComponent: React.FC = () => {
         <div className={style({display: 'flex', flexDirection: 'column', gap: 8, alignItems: 'end'})}>
           <div style={{ display: 'inline-block' }}>
             <Switch
+              data-testid="agenda-order-by-time"
               isSelected={orderByTime}
               onChange={setOrderByTime}
             >
@@ -462,6 +463,7 @@ export const AgendaComponent: React.FC = () => {
           <div className={style({display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 16})}>
             <Text>Create a new time slot to add to your agenda</Text>
             <Button
+              data-testid="agenda-add-slot"
               variant="secondary"
               onPress={addAgendaItem}
             >
@@ -699,6 +701,7 @@ export const AgendaComponent: React.FC = () => {
       {/* Add Button - only show when items exist */}
       {agendaItems.length > 0 && (
         <Button
+          data-testid="agenda-add-slot"
           variant="secondary"
           onPress={addAgendaItem}
           styles={style({ width: '[100%]' })}
@@ -718,6 +721,7 @@ export const AgendaComponent: React.FC = () => {
       {/* Show Agenda Post-Event Toggle */}
       <div style={{ display: 'inline-block' }}>
         <Switch
+          data-testid="agenda-post-event-switch"
           isSelected={showAgendaPostEvent}
           onChange={handleShowAgendaPostEventChange}
         >

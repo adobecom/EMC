@@ -34,6 +34,7 @@ export const VideoContentComponent: React.FC = () => {
       </HeadingWithTooltip>
 
       <TextField
+        data-testid="video-url-input"
         label="Add external URL"
         placeholder="https://"
         value={videoUrl}

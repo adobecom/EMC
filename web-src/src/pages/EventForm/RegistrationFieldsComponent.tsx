@@ -393,6 +393,7 @@ export const RegistrationFieldsComponent: React.FC<RegistrationFieldsComponentPr
                     )}
                   </Text>
                   <Switch
+                    data-testid={`rsvp-field-${fieldName}-visible`}
                     isSelected={isVisible}
                     onChange={(checked) => handleVisibleToggle(fieldName, checked)}
                     isDisabled={isMandated}
@@ -400,6 +401,7 @@ export const RegistrationFieldsComponent: React.FC<RegistrationFieldsComponentPr
                     Appears on form
                   </Switch>
                   <Switch
+                    data-testid={`rsvp-field-${fieldName}-required`}
                     isSelected={isRequired}
                     onChange={(checked) => handleRequiredToggle(fieldName, checked)}
                     isDisabled={!isVisible || isMandated}

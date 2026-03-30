@@ -49,10 +49,12 @@ export const EventTagsComponent: React.FC = () => {
         </Text>
       </div>
 
-      <TagSelector
-        selectedTags={selectedTags}
-        onChange={handleTagsChange}
-      />
+      <div data-testid="tag-selector">
+        <TagSelector
+          selectedTags={selectedTags}
+          onChange={handleTagsChange}
+        />
+      </div>
     </div>
   )
 }

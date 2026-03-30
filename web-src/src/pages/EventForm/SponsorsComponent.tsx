@@ -747,7 +747,7 @@ export const SponsorsComponent: React.FC = () => {
         <div style={{ padding: '32px', backgroundColor: 'var(--spectrum-global-color-gray-100)', borderRadius: '4px', textAlign: 'center' }}>
           <div className={style({display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 16})}>
             <Text>Add partners to your event using the button below.</Text>
-            <Button variant="secondary" onPress={() => setPickerOpen(true)}>
+            <Button data-testid="add-sponsor-button" variant="secondary" onPress={() => setPickerOpen(true)}>
               <Add />
               <Text>Add Partner</Text>
             </Button>
@@ -771,6 +771,7 @@ export const SponsorsComponent: React.FC = () => {
 
       {sponsors.length > 0 && (
         <Button
+          data-testid="add-sponsor-button"
           variant="secondary"
           onPress={() => setPickerOpen(true)}
           styles={style({ width: '[100%]' })}
