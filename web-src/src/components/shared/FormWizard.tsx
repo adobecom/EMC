@@ -212,7 +212,7 @@ export const FormWizard: React.FC<FormWizardProps> = ({
         backgroundColor: COLORS.GRAY_100,
       }}
     >
-      <div style={{ padding: 24, flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0, overflow: 'auto' }}>
+      <div data-testid="wizard-side-nav" style={{ padding: 24, flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0, overflow: 'auto' }}>
         <Text UNSAFE_style={{
           fontSize: '12px',
           fontWeight: 500,
@@ -227,6 +227,7 @@ export const FormWizard: React.FC<FormWizardProps> = ({
         <div className={style({ display: 'flex', flexDirection: 'column', gap: 8 })}>
           <button
             type="button"
+            data-testid="wizard-dashboard-button"
             onClick={handleDashboardClick}
             disabled={isSubmitting || isNavigating}
             style={{
@@ -296,6 +297,7 @@ export const FormWizard: React.FC<FormWizardProps> = ({
                   <button
                     type="button"
                     key={step.id}
+                    data-testid={`wizard-step-${step.id}`}
                     onClick={() => handleStepClick(index)}
                     disabled={isDisabled}
                     style={{
@@ -415,6 +417,7 @@ export const FormWizard: React.FC<FormWizardProps> = ({
             Step {currentStepIndex + 1} of {steps.length}
           </Text>
           <ProgressBar
+            data-testid="wizard-progress"
             label="Progress"
             value={progress}
             size="S"
@@ -464,6 +467,7 @@ export const FormWizard: React.FC<FormWizardProps> = ({
       <div style={actionBarRowStyle}>
         <div style={{ flexShrink: 0 }}>
           <Button
+            data-testid="wizard-back-button"
             variant="secondary"
             fillStyle="outline"
             staticColor="white"
@@ -491,6 +495,7 @@ export const FormWizard: React.FC<FormWizardProps> = ({
                 style={{ flexWrap: 'wrap' }}
               >
                 <Button
+                  data-testid="wizard-preview-pre"
                   variant="secondary"
                   fillStyle="fill"
                   staticColor="white"
@@ -501,6 +506,7 @@ export const FormWizard: React.FC<FormWizardProps> = ({
                   <Text>Pre-event</Text>
                 </Button>
                 <Button
+                  data-testid="wizard-preview-post"
                   variant="secondary"
                   fillStyle="fill"
                   staticColor="white"
@@ -526,6 +532,7 @@ export const FormWizard: React.FC<FormWizardProps> = ({
 
           <div className={style({ display: 'flex', gap: 8, alignItems: 'center' })}>
             <Button
+              data-testid="wizard-publish-button"
               variant="accent"
               fillStyle="fill"
               onPress={handlePublish}
@@ -535,6 +542,7 @@ export const FormWizard: React.FC<FormWizardProps> = ({
               <RocketQuickActions aria-hidden />
             </Button>
             <Button
+              data-testid="wizard-save-button"
               variant="secondary"
               fillStyle="outline"
               staticColor="white"
@@ -545,6 +553,7 @@ export const FormWizard: React.FC<FormWizardProps> = ({
             </Button>
             {!isLastStep && (
               <Button
+                data-testid="wizard-next-button"
                 variant="accent"
                 fillStyle="fill"
                 onPress={handleNext}
@@ -620,7 +629,7 @@ export const FormWizard: React.FC<FormWizardProps> = ({
         )}
 
         <div className={style({ display: 'flex', alignItems: 'center', gap: 32 })}>
-          <Heading level={2} UNSAFE_style={TYPOGRAPHY.STEP_HEADING}>{currentStep.title}</Heading>
+          <Heading data-testid="wizard-step-heading" level={2} UNSAFE_style={TYPOGRAPHY.STEP_HEADING}>{currentStep.title}</Heading>
 
           <div
             style={{
@@ -643,6 +652,7 @@ export const FormWizard: React.FC<FormWizardProps> = ({
               }}
             />
             <Text
+              data-testid="wizard-status-badge"
               UNSAFE_style={{
                 fontSize: '14px',
                 fontWeight: 500,
@@ -688,7 +698,7 @@ export const FormWizard: React.FC<FormWizardProps> = ({
 
   if (showSideNav) {
     return (
-      <div style={shellStyle}>
+      <div data-testid="form-wizard" style={shellStyle}>
         <div style={bodyRowStyle}>
           {renderSideNav()}
           <div style={mainColumnStyle}>
@@ -701,7 +711,7 @@ export const FormWizard: React.FC<FormWizardProps> = ({
   }
 
   return (
-    <div style={shellStyle}>
+    <div data-testid="form-wizard" style={shellStyle}>
       <div style={{ ...bodyRowStyle, flexDirection: 'column' }}>
         <div style={{ ...mainColumnStyle, flex: 1 }}>{mainContent}</div>
       </div>

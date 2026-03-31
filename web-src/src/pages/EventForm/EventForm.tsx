@@ -245,6 +245,7 @@ const FormatSelectionOverlay: React.FC<{
 
   return (
     <div
+      data-testid="format-selection-overlay"
       style={{
         position: 'fixed',
         top: 0,
@@ -316,6 +317,7 @@ const FormatSelectionOverlay: React.FC<{
         ) : (
           <div className={style({display: 'flex', flexDirection: 'column', gap: 24, marginBottom: 32})}>
             <Picker
+              data-testid="format-cloud-picker"
               label="Cloud"
               isRequired
               selectedKey={selectedCloud}
@@ -360,6 +362,7 @@ const FormatSelectionOverlay: React.FC<{
               </div>
             ) : (
               <Picker
+                data-testid="format-series-picker"
                 label="Series"
                 isRequired
                 selectedKey={selectedSeries}
@@ -400,6 +403,7 @@ const FormatSelectionOverlay: React.FC<{
         {/* Actions */}
         <div className={style({display: 'flex', justifyContent: 'end', gap: 16})}>
           <Button
+            data-testid="format-cancel-button"
             variant="secondary"
             onPress={onCancel}
           >
@@ -407,6 +411,7 @@ const FormatSelectionOverlay: React.FC<{
             <Text>Back to Dashboard</Text>
           </Button>
           <Button
+            data-testid="format-confirm-button"
             variant="accent"
             onPress={handleConfirm}
             isDisabled={isConfirmDisabled || isLoading}

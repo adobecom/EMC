@@ -557,6 +557,7 @@ export const VenueComponent: React.FC = () => {
 
       {/* Post-event visibility toggle */}
       <Switch
+        data-testid="venue-visible-switch"
         isSelected={venue.showVenuePostEvent || false}
         onChange={handleShowVenuePostEventChange}
         UNSAFE_style={{
@@ -585,6 +586,7 @@ export const VenueComponent: React.FC = () => {
 
         <input
           id="venue-name-input"
+          data-testid="venue-name-input"
           ref={venueNameInputRef}
           type="text"
           value={venueNameValue}
@@ -654,6 +656,7 @@ export const VenueComponent: React.FC = () => {
         {showAlternativeNameField && (
           <div style={{ marginTop: '16px' }}>
             <TextField
+              data-testid="venue-alt-name-input"
               label="Alternative venue name"
               styles={style({ width: '[100%]' })}
               value={alternativeVenueName}
@@ -672,6 +675,7 @@ export const VenueComponent: React.FC = () => {
         </Heading>
 
         <Switch
+          data-testid="venue-instructions-visible-switch"
           isSelected={venue.showVenueImagePostEvent || false}
           onChange={handleShowVenueImagePostEventChange}
         >

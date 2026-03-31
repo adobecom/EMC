@@ -146,6 +146,7 @@ export const RegistrationConfigComponent: React.FC = () => {
             </TooltipTrigger>
           </div>
           <NumberField
+            data-testid="attendee-limit-input"
             value={attendeeLimit}
             onChange={handleAttendeeLimitChange}
             minValue={0}
@@ -159,6 +160,7 @@ export const RegistrationConfigComponent: React.FC = () => {
           {/* Disable Waitlist Toggle */}
           <div className={style({display: 'flex', gap: 8, alignItems: 'center'})}>
             <Switch
+              data-testid="allow-waitlist-switch"
               isSelected={!allowWaitlist}
               onChange={(value) => handleAllowWaitlistChange(!value)}
             >
@@ -180,6 +182,7 @@ export const RegistrationConfigComponent: React.FC = () => {
           {isExperienceCloud && (
             <div className={style({display: 'flex', alignItems: 'center'})}>
               <Switch
+                data-testid="allow-guest-switch"
                 isSelected={allowGuestRegistration}
                 onChange={handleAllowGuestRegistrationChange}
               >
@@ -204,6 +207,7 @@ export const RegistrationConfigComponent: React.FC = () => {
             <div className={style({display: 'flex', gap: 16, alignItems: 'center', width: '[100%]'})}>
               <div className={style({display: 'flex', alignItems: 'center'})}>
                 <Switch
+                  data-testid="contact-host-switch"
                   isSelected={contactHostEnabled}
                   onChange={handleContactHostToggle}
                 >
@@ -224,6 +228,7 @@ export const RegistrationConfigComponent: React.FC = () => {
 
               {contactHostEnabled && (
                 <TextField
+                  data-testid="host-email-input"
                   type="email"
                   placeholder="Add host email"
                   value={hostEmail}
@@ -235,7 +240,7 @@ export const RegistrationConfigComponent: React.FC = () => {
         </div>
       </div>
       {/* RSVP Description */}
-      <div style={{ width: '100%', marginTop: 16 }}>
+      <div data-testid="rsvp-description-rte" style={{ width: '100%', marginTop: 16 }}>
         <RichTextEditor
           label="RSVP Description (Optional)"
           value={rsvpDescription}

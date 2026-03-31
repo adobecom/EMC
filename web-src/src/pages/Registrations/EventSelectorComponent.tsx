@@ -87,6 +87,7 @@ export const EventSelectorComponent: React.FC<EventSelectorComponentProps> = ({
   return (
     <div style={{ width: '100%' }}>
       <ComboBox
+        data-testid="event-selector-combobox"
         label={label}
         selectedKey={selectedEventId || null}
         onSelectionChange={handleSelectionChange}
