@@ -12,6 +12,8 @@ import ChevronRight from '@react-spectrum/s2/icons/ChevronRight';
 import ChevronDown from '@react-spectrum/s2/icons/ChevronDown';
 import RemoveCircle from '@react-spectrum/s2/icons/RemoveCircle';
 import { Session } from "../../../types/sessions";
+import { SeriesSpeaker } from "../../../types/domain";
+import { VenueLocation } from "../LocationDialog";
 import { formatTime, formatDate } from "../../../utils/dateTime";
 import { SessionForm } from "./SessionForm";
 import type { SessionFormData } from "./SessionForm";
@@ -46,6 +48,9 @@ export interface SessionItemProps {
   onToggle: (sessionId: string) => void;
   onDelete: (sessionId: string) => void;
   onSave: (sessionId: string, data: SessionFormData) => Promise<void>;
+  venueLocations: VenueLocation[];
+  seriesSpeakers: SeriesSpeaker[];
+  onSpeakersRefresh: () => Promise<void>;
 }
 
 export const SessionItem: React.FC<SessionItemProps> = ({
@@ -54,6 +59,9 @@ export const SessionItem: React.FC<SessionItemProps> = ({
   onToggle,
   onDelete,
   onSave,
+  venueLocations,
+  seriesSpeakers,
+  onSpeakersRefresh,
 }) => {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const startTime = formatTime(session.startDateTime);
@@ -132,6 +140,9 @@ export const SessionItem: React.FC<SessionItemProps> = ({
           session={session}
           onSave={(data) => onSave(session.id, data)}
           onCancel={() => onToggle(session.id)}
+          venueLocations={venueLocations}
+          seriesSpeakers={seriesSpeakers}
+          onSpeakersRefresh={onSpeakersRefresh}
         />
       )}
 
@@ -179,6 +190,9 @@ export interface SessionsListProps {
   onAdd: (data: SessionFormData) => Promise<void>;
   onDelete: (sessionId: string) => void;
   onSave: (sessionId: string, data: SessionFormData) => Promise<void>;
+  venueLocations: VenueLocation[];
+  seriesSpeakers: SeriesSpeaker[];
+  onSpeakersRefresh: () => Promise<void>;
 }
 
 export const SessionsList: React.FC<SessionsListProps> = ({
@@ -188,6 +202,9 @@ export const SessionsList: React.FC<SessionsListProps> = ({
   onAdd,
   onDelete,
   onSave,
+  venueLocations,
+  seriesSpeakers,
+  onSpeakersRefresh,
 }) => {
   const [expandedId, setExpandedId] = useState<string | null>(null);
 
@@ -202,6 +219,9 @@ export const SessionsList: React.FC<SessionsListProps> = ({
           session={null}
           onSave={onAdd}
           onCancel={onCancelAdd}
+          venueLocations={venueLocations}
+          seriesSpeakers={seriesSpeakers}
+          onSpeakersRefresh={onSpeakersRefresh}
         />
       )}
       {sessions.map((session) => (
@@ -212,6 +232,9 @@ export const SessionsList: React.FC<SessionsListProps> = ({
           onToggle={handleToggle}
           onDelete={onDelete}
           onSave={onSave}
+          venueLocations={venueLocations}
+          seriesSpeakers={seriesSpeakers}
+          onSpeakersRefresh={onSpeakersRefresh}
         />
       ))}
     </div>

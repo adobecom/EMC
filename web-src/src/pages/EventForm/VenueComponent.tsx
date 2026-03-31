@@ -14,6 +14,7 @@ import { TYPOGRAPHY, COLORS, FLEX_GAP } from '../../styles/designSystem'
 import { VenueData, EventApiResponse } from '../../types/domain'
 import { loadGooglePlacesAPI } from '../../utils/loadGooglePlaces'
 import { useEventFormComponent } from '../../hooks/useEventFormComponent'
+import { useEventFormContext } from '../../contexts'
 import { apiService } from '../../services/api'
 import { getVenuePayload } from '../../utils/dataFilters'
 import { uploadImage } from '../../services/requestHelpers'
@@ -296,15 +297,18 @@ export const VenueComponent: React.FC = () => {
   }, [eventId])
 
   // Load existing locations when venueApiId becomes available
+  const { setVenueLocations: setContextVenueLocations } = useEventFormContext()
   useEffect(() => {
     if (!venueApiId) return
     apiService.listVenueLocations(venueApiId).then((res) => {
       if (res && !('error' in res)) {
         const list = (res as any).locations ?? res ?? []
-        setVenueLocations(Array.isArray(list) ? list : [])
+        const locations = Array.isArray(list) ? list : []
+        setVenueLocations(locations)
+        setContextVenueLocations(locations)
       }
     }).catch(() => {})
-  }, [venueApiId])
+  }, [venueApiId, setContextVenueLocations])
   
   // ============================================================================
   // REFS FOR CALLBACK STABILITY

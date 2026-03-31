@@ -1,21 +1,11 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { ProgressCircle, Button, Heading, Text, InlineAlert } from "@react-spectrum/s2";
 import AddCircle from "@react-spectrum/s2/icons/AddCircle";
-import { Session } from "../../../types/sessions";
+import { Session, SessionTimeInfo } from "../../../types/sessions";
 import { SessionsList } from "./SessionList";
 import type { SessionFormData } from "./SessionForm";
 import { useEventFormContext } from "../../../contexts";
 import { apiService } from "../../../services/api";
-
-interface SessionTimeData {
-  sessionTimeId?: string;
-  startTimeMillis?: number;
-  endTimeMillis?: number;
-  attendeeLimit?: number;
-  isAutoRegistrationEnabled?: boolean;
-  creationTime?: number;
-  modificationTime?: number;
-}
 
 function parseTagsFromApi(tags: unknown): string[] {
   if (typeof tags === "string") return tags.split(",").map((t) => t.trim()).filter(Boolean);
@@ -51,7 +41,7 @@ async function hydrateSessionWithTime(session: Session): Promise<Session> {
   if (timesRes && "error" in timesRes) return session;
 
   const times = Array.isArray((timesRes as any)?.sessionTimes)
-    ? ((timesRes as any).sessionTimes as SessionTimeData[])
+    ? ((timesRes as any).sessionTimes as SessionTimeInfo[])
     : [];
 
   // Current UI supports exactly one session-time per session, so we use the first item.
@@ -76,7 +66,8 @@ async function hydrateSessionWithTime(session: Session): Promise<Session> {
       sessionTime.attendeeLimit != null
         ? Number(sessionTime.attendeeLimit)
         : session.capacity,
-    locationId: (sessionTime as any).locationId ?? undefined,
+    locationId: sessionTime.locationId,
+    sessionTime,
   };
 }
 
@@ -126,7 +117,7 @@ async function upsertSessionTimeForSession(
     );
   }
 
-  const existingTime = existingTimeRes as SessionTimeData;
+  const existingTime = existingTimeRes as SessionTimeInfo;
   const updateTimeRes = await apiService.updateSessionTime(
     data.sessionTimeId,
     {
@@ -190,11 +181,15 @@ async function syncSessionSpeakers(
 }
 
 export const Sessions: React.FC = () => {
-  const { eventId } = useEventFormContext();
+  const { eventId, venueLocations, seriesSpeakers, setSeriesSpeakers } = useEventFormContext();
   const [sessions, setSessions] = useState<Session[]>([]);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [isAddingNew, setIsAddingNew] = useState(false);
+
+  const refreshSeriesSpeakers = useCallback(async () => {
+    setSeriesSpeakers(seriesSpeakers);
+  }, [seriesSpeakers, setSeriesSpeakers]);
 
   const loadSessions = useCallback(async () => {
     if (!eventId) {
@@ -378,6 +373,9 @@ export const Sessions: React.FC = () => {
           onAdd={handleAddSession}
           onDelete={handleDeleteSession}
           onSave={handleUpdateSession}
+          venueLocations={venueLocations}
+          seriesSpeakers={seriesSpeakers}
+          onSpeakersRefresh={refreshSeriesSpeakers}
         />
       )}
     </div>

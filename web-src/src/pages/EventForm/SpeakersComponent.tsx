@@ -16,6 +16,7 @@ import Move from '@react-spectrum/s2/icons/Move'
 import { apiService, cachedApi } from '../../services/api'
 import { useToast } from '../../contexts'
 import { useEventFormComponent } from '../../hooks/useEventFormComponent'
+import { useEventFormContext } from '../../contexts'
 
 const SPEAKER_TYPE_OPTIONS: { key: SpeakerType; label: string }[] = [
   { key: 'host', label: 'Host' },
@@ -226,7 +227,12 @@ export const SpeakersComponent: React.FC = () => {
     profilesRef.current = profiles
   }, [profiles])
 
-  const [seriesSpeakers, setSeriesSpeakers] = useState<SeriesSpeaker[]>([])
+  const { setSeriesSpeakers: setContextSeriesSpeakers } = useEventFormContext()
+  const [seriesSpeakers, setSeriesSpeakersLocal] = useState<SeriesSpeaker[]>([])
+  const setSeriesSpeakers = useCallback((speakers: SeriesSpeaker[]) => {
+    setSeriesSpeakersLocal(speakers)
+    setContextSeriesSpeakers(speakers)
+  }, [setContextSeriesSpeakers])
   const [isLoadingSpeakers, setIsLoadingSpeakers] = useState(false)
   const [pickerOpen, setPickerOpen] = useState(false)
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null)
@@ -262,7 +268,7 @@ export const SpeakersComponent: React.FC = () => {
     return () => {
       isMounted = false
     }
-  }, [seriesId])
+  }, [seriesId, setSeriesSpeakers])
 
   const selectedSpeakerIds = new Set(profiles.map(p => p.speakerId).filter(Boolean) as string[])
 
@@ -273,7 +279,7 @@ export const SpeakersComponent: React.FC = () => {
       const speakers = response.speakers || response || []
       setSeriesSpeakers(Array.isArray(speakers) ? speakers : [])
     }
-  }, [seriesId])
+  }, [seriesId, setSeriesSpeakers])
 
   const handlePickerSelect = useCallback(
     (speaker: SeriesSpeaker) => {
