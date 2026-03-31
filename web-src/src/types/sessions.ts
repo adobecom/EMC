@@ -6,4 +6,5 @@ export interface Session {
   endDateTime: string
   capacity?: number
   tags?: string[]
+  locationId?: string
 }

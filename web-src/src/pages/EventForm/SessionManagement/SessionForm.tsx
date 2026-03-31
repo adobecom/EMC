@@ -182,21 +182,20 @@ export const SessionForm: React.FC<SessionFormProps> = ({
 
   // Location state
   const [venueLocations, setVenueLocations] = useState<VenueLocation[]>([]);
-  const [selectedLocationId, setSelectedLocationId] = useState<string | null>(null);
+  const [selectedLocationId, setSelectedLocationId] = useState<string | null>(session?.locationId ?? null);
 
   useEffect(() => {
     if (!eventId) return;
-    // TODO: Re-enable once location APIs are ready.
-    // apiService.getEventVenue(eventId).then((venueRes) => {
-    //   if (venueRes && !('error' in venueRes) && venueRes?.venueId) {
-    //     apiService.listVenueLocations(venueRes.venueId).then((locRes) => {
-    //       if (locRes && !('error' in locRes)) {
-    //         const list = (locRes as any)?.locations ?? [];
-    //         setVenueLocations(Array.isArray(list) ? list : []);
-    //       }
-    //     });
-    //   }
-    // });
+    apiService.getEventVenue(eventId).then((venueRes) => {
+      if (venueRes && !('error' in venueRes) && venueRes?.venueId) {
+        apiService.listVenueLocations(venueRes.venueId).then((locRes) => {
+          if (locRes && !('error' in locRes)) {
+            const list = (locRes as any)?.locations ?? [];
+            setVenueLocations(Array.isArray(list) ? list : []);
+          }
+        });
+      }
+    });
     setVenueLocations([]);
   }, [eventId]);
 

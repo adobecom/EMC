@@ -760,7 +760,7 @@ export const VenueComponent: React.FC = () => {
 
       {/* Locations inside the venue */}
       <div>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: FLEX_GAP.SECTION }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
           <Heading level={4} UNSAFE_style={TYPOGRAPHY.SUBSECTION_HEADING}>
             Locations inside the venue
           </Heading>

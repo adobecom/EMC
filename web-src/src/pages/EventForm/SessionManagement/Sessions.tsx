@@ -76,6 +76,7 @@ async function hydrateSessionWithTime(session: Session): Promise<Session> {
       sessionTime.attendeeLimit != null
         ? Number(sessionTime.attendeeLimit)
         : session.capacity,
+    locationId: (sessionTime as any).locationId ?? undefined,
   };
 }
 
@@ -96,6 +97,7 @@ async function createSessionTimeForSession(
       ? { attendeeLimit: data.attendeeLimit }
       : {}),
     ...(data.timezone ? { timezone: data.timezone } : {}),
+    ...(data.locationId ? { locationId: data.locationId } : {}),
   });
 
   if ("error" in sessionTimeRes) {
@@ -103,16 +105,6 @@ async function createSessionTimeForSession(
       sessionTimeRes.error?.message || String(sessionTimeRes.error),
     );
   }
-
-  // Add selected location to session time
-
-  // const createdTimeId = (sessionTimeRes as any)?.sessionTimeId ?? (sessionTimeRes as any)?.sessionTime?.sessionTimeId;
-  // if (data.locationId && createdTimeId) {
-  //   const locRes = await apiService.createSessionTimeLocation(createdTimeId, data.locationId);
-  //   if (locRes && "error" in locRes) {
-  //     console.error("Failed to set session time location:", (locRes as any).error?.message);
-  //   }
-  // }
 }
 
 async function upsertSessionTimeForSession(
@@ -158,6 +150,7 @@ async function upsertSessionTimeForSession(
       modificationTime:
         data.sessionTimeModificationTime ?? existingTime.modificationTime,
       ...(data.timezone ? { timezone: data.timezone } : {}),
+      ...(data.locationId ? { locationId: data.locationId } : {}),
     },
   );
 
@@ -166,13 +159,6 @@ async function upsertSessionTimeForSession(
       updateTimeRes.error?.message || String(updateTimeRes.error),
     );
   }
-// Add selected location to session time
-  // if (data.locationId && data.sessionTimeId) {
-  //   const locRes = await apiService.createSessionTimeLocation(data.sessionTimeId, data.locationId);
-  //   if (locRes && "error" in locRes) {
-  //     console.error("Failed to set session time location:", (locRes as any).error?.message);
-  //   }
-  // }
 }
 
 async function syncSessionSpeakers(
@@ -292,6 +278,7 @@ export const Sessions: React.FC = () => {
       ...(data.isAutoRegistrationEnabled === false && data.attendeeLimit != null
         ? { capacity: data.attendeeLimit }
         : {}),
+      locationId: data.locationId,
     };
     setSessions((prev) => sortSessionsByDate([...prev, sessionWithTime]));
     setIsAddingNew(false);
@@ -330,6 +317,7 @@ export const Sessions: React.FC = () => {
               ...(data.isAutoRegistrationEnabled === false && data.attendeeLimit != null
                 ? { capacity: data.attendeeLimit }
                 : {}),
+              locationId: data.locationId,
             }
           : s,
       );
