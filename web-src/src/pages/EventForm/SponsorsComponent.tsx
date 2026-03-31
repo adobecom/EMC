@@ -43,10 +43,21 @@ const TIER_OPTIONS: TierOption[] = [
 // PARTNER DIALOG COMPONENT
 // ============================================================================
 
+type PartnerDialogSaveOptions = {
+  /** DELETE series sponsor image after update (user removed logo, no new file). */
+  removedSeriesSponsorImageId?: string
+  /** PUT upload target when user cleared UI then picked a new file in the same edit. */
+  replaceUploadImageId?: string
+}
+
 interface PartnerDialogProps {
   isOpen: boolean
   onClose: () => void
-  onSave: (partner: SponsorData, pendingFile?: File) => Promise<void>
+  onSave: (
+    partner: SponsorData,
+    pendingFile?: File,
+    saveOptions?: PartnerDialogSaveOptions
+  ) => Promise<void>
   partner?: SponsorData
   isNew: boolean
   isSaving: boolean
@@ -66,6 +77,7 @@ const PartnerDialog: React.FC<PartnerDialogProps> = ({
   const [imageId, setImageId] = useState(partner?.imageId || '')
   const [pendingFile, setPendingFile] = useState<File | undefined>()
   const [previewUrl, setPreviewUrl] = useState<string | null>(null)
+  const imageIdWhenDialogOpenedRef = useRef<string | undefined>(undefined)
 
   // Manage object URL lifecycle to prevent memory leaks
   useEffect(() => {
@@ -90,6 +102,7 @@ const PartnerDialog: React.FC<PartnerDialogProps> = ({
       setImageUrl(partner?.imageUrl || '')
       setImageId(partner?.imageId || '')
       setPendingFile(undefined)
+      imageIdWhenDialogOpenedRef.current = partner?.imageId || undefined
     }
   }, [isOpen, partner])
 
@@ -102,7 +115,15 @@ const PartnerDialog: React.FC<PartnerDialogProps> = ({
       imageUrl: pendingFile ? undefined : imageUrl,
       imageId: pendingFile ? undefined : imageId,
     }
-    await onSave(updatedPartner, pendingFile)
+    const openedId = imageIdWhenDialogOpenedRef.current
+    const removedSeriesSponsorImageId =
+      !isNew && openedId && !imageId && !pendingFile ? openedId : undefined
+    const replaceUploadImageId =
+      !isNew && pendingFile && !imageId && openedId ? openedId : undefined
+    await onSave(updatedPartner, pendingFile, {
+      removedSeriesSponsorImageId,
+      replaceUploadImageId,
+    })
   }
 
   const handleFileSelected = (file: File) => {
@@ -628,7 +649,13 @@ export const SponsorsComponent: React.FC = () => {
     }
   }
 
-  const handleDialogSave = async (partner: SponsorData, pendingFile?: File) => {
+  const handleDialogSave = async (
+    partner: SponsorData,
+    pendingFile?: File,
+    saveOptions?: PartnerDialogSaveOptions
+  ) => {
+    const removedSeriesSponsorImageId = saveOptions?.removedSeriesSponsorImageId
+    const replaceUploadImageId = saveOptions?.replaceUploadImageId
     if (!seriesId) return
     
     setIsSaving(true)
@@ -683,6 +710,17 @@ export const SponsorsComponent: React.FC = () => {
       if (response && !('error' in response)) {
         const savedSponsor = response.sponsor || response
         const sponsorId = savedSponsor.sponsorId || partner.sponsorId
+
+        if (removedSeriesSponsorImageId && sponsorId && seriesId) {
+          const delResult = await cachedApi.deleteSponsorImage(
+            seriesId,
+            sponsorId,
+            removedSeriesSponsorImageId
+          )
+          if (delResult && 'error' in delResult) {
+            console.error('Failed to delete sponsor image:', delResult)
+          }
+        }
         
         // Upload pending image if there is one
         let uploadedImage: { imageUrl: string; imageId: string } | null = null
@@ -690,10 +728,10 @@ export const SponsorsComponent: React.FC = () => {
         if (pendingFile && sponsorId) {
           const altText = partner.partnerName || 'Partner logo'
           uploadedImage = await uploadSponsorImage(
-            pendingFile, 
-            sponsorId, 
+            pendingFile,
+            sponsorId,
             altText,
-            partner.imageId
+            partner.imageId || replaceUploadImageId
           )
         }
         
