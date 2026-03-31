@@ -1530,6 +1530,19 @@ class ApiService {
     )
   }
 
+  async deleteSponsorImage(seriesId: string, sponsorId: string, imageId: string): Promise<any | ErrorResponse> {
+    validateString(seriesId, 'series ID')
+    validateString(sponsorId, 'sponsor ID')
+    validateString(imageId, 'image ID')
+    return this.callExternalApi(
+      'esp',
+      `/v1/series/${seriesId}/sponsors/${sponsorId}/images/${imageId}`,
+      'DELETE',
+      undefined,
+      { operationName: 'deleteSponsorImage', shouldReturnFullResponse: true }
+    )
+  }
+
   // ============================================================================
   // VENUE APIs
   // ============================================================================
@@ -2501,6 +2514,19 @@ export const cachedApi = {
     apiCache.invalidate(seriesId)
     apiCache.invalidate(speakerId)
     apiCache.invalidate('getSpeakers')
+    return result
+  },
+
+  async createSponsor(data: any, seriesId: string, locale: string) {
+    const result = await apiService.createSponsor(data, seriesId, locale)
+    apiCache.invalidate(seriesId)
+    apiCache.invalidate('getSponsors')
+    return result
+  },
+  async deleteSponsorImage(seriesId: string, sponsorId: string, imageId: string) {
+    const result = await apiService.deleteSponsorImage(seriesId, sponsorId, imageId)
+    apiCache.invalidate(seriesId)
+    apiCache.invalidate('getSponsors')
     return result
   },
 
