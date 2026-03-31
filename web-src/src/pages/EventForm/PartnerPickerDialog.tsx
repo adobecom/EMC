@@ -175,7 +175,7 @@ export const PartnerPickerDialog: React.FC<PartnerPickerDialogProps> = ({
               const config = {
                 targetUrl: uploadUrl,
                 altText: createForm.name || 'Partner logo',
-                type: 'sponsor-logo',
+                type: 'sponsor-image',
               }
               const result = await uploadImage(pendingFile, config, token, tracker)
               const imageData = result.image || result
@@ -347,7 +347,7 @@ export const PartnerPickerDialog: React.FC<PartnerPickerDialogProps> = ({
               label=""
               imageUrl={createForm.imageUrl || ''}
               imageId={createForm.imageId || ''}
-              imageKind="sponsor-logo"
+              imageKind="sponsor-image"
               altText={createForm.name || 'Partner logo'}
               maxSizeMB={25}
               width={200}

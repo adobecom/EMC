@@ -132,7 +132,7 @@ const PartnerDialog: React.FC<PartnerDialogProps> = ({
                       label=""
                       imageUrl={previewUrl || imageUrl}
                       imageId={imageId}
-                      imageKind="sponsor-logo"
+                      imageKind="sponsor-image"
                       altText={name || 'Partner logo'}
                       maxSizeMB={25}
                       width={280}
@@ -180,7 +180,7 @@ const PartnerDialog: React.FC<PartnerDialogProps> = ({
                   isDisabled={!isValid || isSaving}
                 >
                   {isSaving ? (
-                    <ProgressCircle isIndeterminate aria-label="Saving" />
+                    <ProgressCircle size="S" isIndeterminate aria-label="Saving" />
                   ) : (
                     isNew ? 'Create' : 'Save'
                   )}
@@ -610,7 +610,7 @@ export const SponsorsComponent: React.FC = () => {
       const config = {
         targetUrl: uploadUrl,
         altText: altText,
-        type: 'sponsor-logo'
+        type: 'sponsor-image'
       }
 
       const result = await uploadImage(file, config, token, tracker, existingImageId)
