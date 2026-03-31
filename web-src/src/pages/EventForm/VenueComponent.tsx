@@ -132,8 +132,8 @@ export const VenueComponent: React.FC = () => {
         if (venueResult && !('error' in venueResult)) {
           existingVenue = venueResult
         }
-      } catch {
-        // No existing venue or fetch failed — treat as new
+      } catch (err) {
+        console.error('Failed to fetch existing venue:', err)
       }
       
       // --- Detect changes -------------------------------------------------------
@@ -195,9 +195,6 @@ export const VenueComponent: React.FC = () => {
             return
           }
           savedVenueId = result?.venueId ?? null
-          if (savedVenueId) {
-            setVenueApiId(savedVenueId)
-          }
         } else {
           // ---- UPDATE (PUT) — include venueId + timestamps as required by API ----
           const putPayload = {
@@ -224,9 +221,12 @@ export const VenueComponent: React.FC = () => {
       }
 
       // ========================================================================
-      // 3. Create any pending locations that were added before the venue existed
+      // 3. Create any pending locations, then set venueApiId to trigger fetch
       // ========================================================================
       if (savedVenueId) {
+        // Create any pending locations added before the venue existed.
+        // Replace each pending location with the real one from the API response,
+        // or remove it on failure.
         const pendingLocations = venueLocationsRef.current.filter(
           loc => loc.locationId.startsWith('pending-')
         )
@@ -240,16 +240,21 @@ export const VenueComponent: React.FC = () => {
             if (loc.capacity != null) payload.capacity = loc.capacity
             const res = await apiService.createVenueLocation(savedVenueId, payload)
             if (res && !('error' in res)) {
-              const created = res.location ?? res
-              // Replace the pending location with the real one in state
+              const created: VenueLocation = res.location ?? res
               setVenueLocations(prev => prev.map(l =>
-                l.locationId === loc.locationId ? { ...created } : l
+                l.locationId === loc.locationId ? created : l
               ))
+            } else {
+              const msg = (res as any)?.error?.message || 'Failed to create location'
+              console.error(`Location "${loc.name}": ${msg}`)
+              setVenueLocations(prev => prev.filter(l => l.locationId !== loc.locationId))
             }
           } catch (err) {
             console.error('Failed to create pending location:', loc.name, err)
+            setVenueLocations(prev => prev.filter(l => l.locationId !== loc.locationId))
           }
         }
+        setVenueApiId(savedVenueId)
       }
     },
     
@@ -320,29 +325,32 @@ export const VenueComponent: React.FC = () => {
     venueLocationsRef.current = venueLocations
   }, [venueLocations])
 
-  // Fetch the venueId from API when editing an existing event
-  useEffect(() => {
-    if (!eventId) return
-    apiService.getEventVenue(eventId).then((res) => {
-      if (res && !('error' in res) && res?.venueId) {
-        setVenueApiId(res.venueId)
-      }
-    }).catch(() => {})
-  }, [eventId])
-
-  // Load existing locations when venueApiId becomes available
+  // Fetch venue + locations on initial load (edit mode only).
+  // Skip if venueApiId is already set (e.g. after a save via onAfterSave).
   const { setVenueLocations: setContextVenueLocations } = useEventFormContext()
   useEffect(() => {
-    if (!venueApiId) return
-    apiService.listVenueLocations(venueApiId).then((res) => {
-      if (res && !('error' in res)) {
-        const list = (res as any).locations ?? res ?? []
-        const locations = Array.isArray(list) ? list : []
-        setVenueLocations(locations)
-        setContextVenueLocations(locations)
+    if (!eventId || venueApiId) return
+    apiService.getEventVenue(eventId).then(async (res) => {
+      if (res && !('error' in res) && res?.venueId) {
+        const vid = res.venueId
+        // Fetch locations before setting venueApiId so both update together
+        try {
+          const locRes = await apiService.listVenueLocations(vid)
+          if (locRes && !('error' in locRes)) {
+            const list = (locRes as any).locations ?? locRes ?? []
+            const locations = Array.isArray(list) ? list : []
+            setVenueLocations(locations)
+            setContextVenueLocations(locations)
+          }
+        } catch (err) {
+          console.error('Failed to load venue locations:', err)
+        }
+        setVenueApiId(vid)
       }
-    }).catch(() => {})
-  }, [venueApiId, setContextVenueLocations])
+    }).catch((err) => {
+      console.error('Failed to fetch event venue:', err)
+    })
+  }, [eventId, venueApiId, setContextVenueLocations])
   
   // ============================================================================
   // REFS FOR CALLBACK STABILITY
