@@ -233,6 +233,19 @@ export const SingleStepFormLayout: React.FC<SingleStepFormLayoutProps> = ({
     </div>
   )
 
+  const actionBarRowStyle: React.CSSProperties = {
+    display: 'flex',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    width: '100%',
+    minWidth: 0,
+    flex: 1,
+    boxSizing: 'border-box',
+    marginInlineStart: 'var(--spectrum-global-dimension-size-400)',
+    marginInlineEnd: 'var(--spectrum-global-dimension-size-400)',
+  }
+
   const renderActionBar = () => {
     const getSaveButtonText = () => {
       if (isSaving) return 'Saving...'
@@ -248,31 +261,48 @@ export const SingleStepFormLayout: React.FC<SingleStepFormLayoutProps> = ({
 
     return (
       <div style={FORM_WIZARD_FOOTER_STYLES}>
-        <div
-          className={style({ display: 'flex', justifyContent: 'end', alignItems: 'center', height: '[100%]', flex: 1 })}
-          style={{ marginInlineStart: 'var(--spectrum-global-dimension-size-400)', marginInlineEnd: 'var(--spectrum-global-dimension-size-400)' }}
-        >
-          <div className={style({ display: 'flex', gap: 8, alignItems: 'center' })}>
-            <Button
-              variant="secondary"
-              fillStyle="outline"
-              staticColor="white"
-              onPress={handleSave}
-              isDisabled={isActionDisabled || !onSave}
-            >
-              {getSaveButtonText()}
-            </Button>
-            <Button
-              variant="accent"
-              fillStyle="fill"
-              onPress={handlePublish}
-              isDisabled={isActionDisabled}
-            >
-              <div className={style({ display: 'flex', gap: 4, alignItems: 'center' })} style={{ flexDirection: 'row-reverse' }}>
-                <Text>{getPublishButtonText()}</Text>
-                <ChevronRight />
-              </div>
-            </Button>
+        <div style={actionBarRowStyle}>
+          <div
+            style={{
+              flexShrink: 0,
+              width: 'var(--spectrum-global-dimension-size-500)',
+              height: 'var(--spectrum-global-dimension-size-500)',
+            }}
+            aria-hidden
+          />
+
+          <div
+            className={style({ display: 'flex', alignItems: 'center' })}
+            style={{
+              justifyContent: 'flex-end',
+              flexWrap: 'wrap',
+              gap: 'var(--spectrum-global-dimension-size-200)',
+              minWidth: 0,
+              flexShrink: 1,
+            }}
+          >
+            <div className={style({ display: 'flex', gap: 8, alignItems: 'center' })}>
+              <Button
+                variant="accent"
+                fillStyle="fill"
+                onPress={handlePublish}
+                isDisabled={isActionDisabled}
+              >
+                <div className={style({ display: 'flex', gap: 4, alignItems: 'center' })} style={{ flexDirection: 'row-reverse' }}>
+                  <Text>{getPublishButtonText()}</Text>
+                  <ChevronRight />
+                </div>
+              </Button>
+              <Button
+                variant="secondary"
+                fillStyle="outline"
+                staticColor="white"
+                onPress={handleSave}
+                isDisabled={isActionDisabled || !onSave}
+              >
+                {getSaveButtonText()}
+              </Button>
+            </div>
           </div>
         </div>
       </div>
