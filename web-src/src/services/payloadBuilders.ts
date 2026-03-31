@@ -141,13 +141,35 @@ export async function getSponsorPayload(
     return acc
   }, {} as Record<string, any>)
 
-  // Merge with existing localizations (preserves other locales)
-  return {
-    ...filteredGlobalPayload,
-    localizations: { 
-      ...existingSponsorPayload.localizations, 
-      [locale]: filteredLocalePayload 
-    },
+  // Preserve existing locale slices; only patch current locale when there is localized data.
+  // Applying [locale]: {} would wipe that locale's fields when only name/link change.
+  const localizations: Record<string, any> = {
+    ...(existingSponsorPayload.localizations || {}),
   }
+  if (Object.keys(filteredLocalePayload).length > 0) {
+    localizations[locale] = {
+      ...(existingSponsorPayload.localizations?.[locale] || {}),
+      ...filteredLocalePayload,
+    }
+  }
+
+  const merged: Record<string, any> = {
+    ...filteredGlobalPayload,
+  }
+  if (Object.keys(localizations).length > 0) {
+    merged.localizations = localizations
+  }
+
+  // SponsorUpdateBody (OpenAPI): Sponsor requires sponsorId + modificationTime in the body
+  if (sponsorData.sponsorId) {
+    merged.sponsorId = sponsorData.sponsorId
+    const modTime =
+      merged.modificationTime ?? existingSponsorPayload.modificationTime
+    if (modTime != null) {
+      merged.modificationTime = modTime
+    }
+  }
+
+  return merged
 }
 

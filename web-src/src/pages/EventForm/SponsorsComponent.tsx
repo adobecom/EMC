@@ -11,6 +11,7 @@ import { TYPOGRAPHY, SPACING, COLORS } from '../../styles/designSystem'
 import Edit from '@react-spectrum/s2/icons/Edit'
 import Add from '@react-spectrum/s2/icons/Add'
 import { apiService, cachedApi } from '../../services/api'
+import { getSponsorPayload } from '../../services/payloadBuilders'
 import RemoveCircle from '@react-spectrum/s2/icons/RemoveCircle'
 import { useEventFormComponent } from '../../hooks/useEventFormComponent'
 import { uploadImage, UploadTracker } from '../../services/requestHelpers'
@@ -363,6 +364,7 @@ export const SponsorsComponent: React.FC = () => {
     formData,
     updateFormData,
     seriesId: contextSeriesId,
+    locale,
   } = useEventFormComponent({
     componentId: 'sponsors',
     
@@ -652,14 +654,30 @@ export const SponsorsComponent: React.FC = () => {
       const isExisting = partner.sponsorId && (partner.isSaved || partner.isFromSeries)
       
       if (isExisting) {
+        const recordForPayload: Record<string, unknown> = {
+          sponsorId: partner.sponsorId,
+          name: sponsorData.name,
+          link: sponsorData.link,
+        }
+        if (partner.modificationTime != null) {
+          recordForPayload.modificationTime = partner.modificationTime
+        }
+        if (partner.info) {
+          recordForPayload.info = partner.info
+        }
+        const updatePayload = await getSponsorPayload(
+          recordForPayload as Record<string, any>,
+          locale,
+          seriesId
+        )
         response = await apiService.updateSponsor(
-          { ...sponsorData, modificationTime: partner.modificationTime },
+          updatePayload,
           partner.sponsorId!,
           seriesId,
-          'en-US'
+          locale
         )
       } else {
-        response = await apiService.createSponsor(sponsorData, seriesId, 'en-US')
+        response = await apiService.createSponsor(sponsorData, seriesId, locale)
       }
 
       if (response && !('error' in response)) {
