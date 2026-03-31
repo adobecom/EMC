@@ -2504,6 +2504,13 @@ export const cachedApi = {
     return result
   },
 
+  async createSponsor(data: any, seriesId: string, locale: string) {
+    const result = await apiService.createSponsor(data, seriesId, locale)
+    apiCache.invalidate(seriesId)
+    apiCache.invalidate('getSponsors')
+    return result
+  },
+
   // Attendee Mutations
   async removeAttendeeFromEvent(eventId: string, attendeeId: string) {
     const result = await apiService.removeAttendeeFromEvent(eventId, attendeeId)
