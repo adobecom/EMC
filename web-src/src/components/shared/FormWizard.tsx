@@ -57,6 +57,8 @@ interface FormWizardProps {
   eventStatus?: EventStatus
   /** Optional actions to render in the header (e.g., history button) */
   headerActions?: React.ReactNode
+  /** Content rendered when "Session Management" is selected in the side nav (outside the wizard steps) */
+  sessionContent?: React.ReactNode
 }
 
 /** Side nav: Dashboard row hover */
@@ -85,12 +87,15 @@ export const FormWizard: React.FC<FormWizardProps> = ({
   onMaxStepChange,
   eventTypeLabel,
   eventStatus,
-  headerActions
+  headerActions,
+  sessionContent
 }) => {
   const [currentStepIndex, setCurrentStepIndex] = useState(0)
   const [isNavigating, setIsNavigating] = useState(false)
+  const [showSessionView, setShowSessionView] = useState(false)
   const [pendingAction, setPendingAction] = useState<'save' | 'publish' | 'next' | null>(null)
   const [sideNavStepHoverIndex, setSideNavStepHoverIndex] = useState<number | null>(null)
+  const [sessionHover, setSessionHover] = useState(false)
   const navigate = useNavigate()
 
   const currentStep = steps[currentStepIndex]
@@ -165,7 +170,13 @@ export const FormWizard: React.FC<FormWizardProps> = ({
   const handleStepClick = (stepIndex: number) => {
     if (isSubmitting || isNavigating) return
     if (!isStepAccessible(stepIndex)) return
+    setShowSessionView(false)
     setCurrentStepIndex(stepIndex)
+  }
+
+  const handleSessionClick = () => {
+    if (isSubmitting || isNavigating) return
+    setShowSessionView(true)
   }
 
   const handleDashboardClick = () => {
@@ -184,7 +195,7 @@ export const FormWizard: React.FC<FormWizardProps> = ({
   }
 
   const getStepStatus = (index: number): 'active' | 'locked' | 'available' => {
-    if (index === currentStepIndex) return 'active'
+    if (index === currentStepIndex && !showSessionView) return 'active'
     if (!isStepAccessible(index)) return 'locked'
     return 'available'
   }
@@ -210,7 +221,7 @@ export const FormWizard: React.FC<FormWizardProps> = ({
           marginBottom: '16px',
           display: 'block'
         }}>
-          EVENT CREATION
+          EVENT DETAILS
         </Text>
 
         <div className={style({ display: 'flex', flexDirection: 'column', gap: 8 })}>
@@ -339,6 +350,62 @@ export const FormWizard: React.FC<FormWizardProps> = ({
               })}
             </div>
           </div>
+
+          {sessionContent && (
+            <div style={{ marginTop: 16 }}>
+              <Text UNSAFE_style={{
+                fontSize: '12px',
+                fontWeight: 500,
+                color: COLORS.GRAY_700,
+                letterSpacing: '0.5px',
+                marginBottom: '8px',
+                display: 'block'
+              }}>
+                SESSIONS
+              </Text>
+              <button
+                type="button"
+                onClick={handleSessionClick}
+                disabled={isSubmitting || isNavigating}
+                style={{
+                  border: 'none',
+                  background: COLORS.TRANSPARENT,
+                  color: showSessionView ? COLORS.BLACK : COLORS.GRAY_800,
+                  padding: '8px 12px',
+                  paddingLeft: SIDE_NAV_PIPE_LEFT,
+                  textAlign: 'left',
+                  cursor: (isSubmitting || isNavigating) ? 'not-allowed' : 'pointer',
+                  borderRadius: '4px',
+                  fontSize: '14px',
+                  fontWeight: showSessionView ? 700 : 400,
+                  fontStyle: 'normal',
+                  width: '100%',
+                  position: 'relative',
+                }}
+                onMouseEnter={() => { if (!isSubmitting && !isNavigating) setSessionHover(true) }}
+                onMouseLeave={() => setSessionHover(false)}
+              >
+                {(showSessionView || sessionHover) && (
+                  <span
+                    aria-hidden
+                    style={{
+                      position: 'absolute',
+                      left: SIDE_NAV_PIPE_LEFT,
+                      top: '50%',
+                      transform: 'translateY(-50%)',
+                      width: SIDE_NAV_PIPE_WIDTH,
+                      height: '1em',
+                      backgroundColor: showSessionView ? SIDE_NAV_PIPE_ACTIVE : SIDE_NAV_PIPE_HOVER,
+                      borderRadius: 0,
+                    }}
+                  />
+                )}
+                <span style={{ display: 'block', paddingLeft: SIDE_NAV_STEP_LABEL_INSET }}>
+                  <Text>Session Management</Text>
+                </span>
+              </button>
+            </div>
+          )}
         </div>
       </div>
 
@@ -528,7 +595,14 @@ export const FormWizard: React.FC<FormWizardProps> = ({
   const statusStyles = getStatusBadgeStyles(displayStatus)
   const statusLabel = displayStatus.charAt(0).toUpperCase() + displayStatus.slice(1).toLowerCase()
 
-  const mainContent = (
+  const mainContent = showSessionView ? (
+    <div>
+      <div style={{ marginBottom: 24 }}>
+        <Heading level={2} UNSAFE_style={TYPOGRAPHY.STEP_HEADING}>Session Management</Heading>
+      </div>
+      <div style={{ marginTop: 24, marginBottom: 32 }}>{sessionContent}</div>
+    </div>
+  ) : (
     <div>
       <div style={{ marginBottom: 24 }}>
         {eventTypeLabel && (

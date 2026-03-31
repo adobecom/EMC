@@ -44,6 +44,7 @@ import {
   PageMetadataComponent,
   PromotionalContentComponent,
   MarketoIntegrationComponent,
+  SessionManagementComponent,
   VideoContentComponent
 } from './index'
 import { mapApiResponseToFormData } from '../../utils/eventFormMappers'
@@ -809,6 +810,7 @@ const EventFormInner: React.FC<EventFormInnerProps> = ({ ims: _ims }) => {
     
     window.open(previewUrl.toString(), '_blank')
   }, [state.eventDataResp])
+
   
   // ============================================================================
   // STEP 1: Basic Info
@@ -824,7 +826,7 @@ const EventFormInner: React.FC<EventFormInnerProps> = ({ ims: _ims }) => {
     Boolean(formData.timezone && formData.timezone.trim() !== '') && // Timezone is required
     (hasVenue ? Boolean(formData.venue?.placeId) : true)
   
-  const step1Component = (
+  const basicInfoComponent = (
     <div className={style({display: 'flex', flexDirection: 'column', gap: 0})}>
       <FormCard>
         <EventFormatComponent />
@@ -865,7 +867,7 @@ const EventFormInner: React.FC<EventFormInnerProps> = ({ ims: _ims }) => {
   // ============================================================================
   // STEP 2: Speakers & Hosts
   // ============================================================================
-  const step2Component = (
+  const speakersHostsComponent = (
     <FormCard>
       <SpeakersComponent />
     </FormCard>
@@ -876,7 +878,7 @@ const EventFormInner: React.FC<EventFormInnerProps> = ({ ims: _ims }) => {
   // ============================================================================
   const isWebinarEvent = formData.eventType === 'webinar'
 
-  const step3Component = (
+  const additionalContentComponent = (
     <>
       <FormCard>
         <PromotionalContentComponent />
@@ -901,9 +903,19 @@ const EventFormInner: React.FC<EventFormInnerProps> = ({ ims: _ims }) => {
   // ============================================================================
   // STEP 4: RSVP
   // ============================================================================
-  const step4Component = (
+  const rsvpComponent = (
     <FormCard>
       <RegistrationConfigComponent />
+    </FormCard>
+  )
+
+
+  // ============================================================================
+  // STEP 0: Session management
+  // ============================================================================
+  const sessionManagementComponent = (
+    <FormCard>
+      <SessionManagementComponent />
     </FormCard>
   )
   
@@ -915,28 +927,28 @@ const EventFormInner: React.FC<EventFormInnerProps> = ({ ims: _ims }) => {
       id: 'basic-info',
       title: 'Basic Info',
       description: 'Event format, tags, information, date/time, and venue',
-      component: step1Component,
+      component: basicInfoComponent,
       isValid: step1IsValid
     },
     {
       id: 'speakers-hosts',
       title: 'Speakers & Hosts',
       description: 'Add speaker and host profiles (optional)',
-      component: step2Component,
+      component: speakersHostsComponent,
       isValid: true
     },
     {
       id: 'additional-content',
       title: 'Additional Content',
       description: 'Add event images and visual content (optional)',
-      component: step3Component,
+      component: additionalContentComponent,
       isValid: true
     },
     {
       id: 'rsvp',
       title: 'RSVP',
       description: 'Configure attendance capacity and registration settings',
-      component: step4Component,
+      component: rsvpComponent,
       isValid: true
     }
   ]
@@ -1000,6 +1012,7 @@ const EventFormInner: React.FC<EventFormInnerProps> = ({ ims: _ims }) => {
         onMaxStepChange={handleMaxStepChange}
         eventTypeLabel={getEventTypeLabel()}
         headerActions={renderHeaderActions()}
+        sessionContent={sessionManagementComponent}
       />
 
       {/* Format Selection Overlay — frosted glass + dialog */}
