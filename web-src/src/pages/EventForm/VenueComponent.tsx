@@ -8,9 +8,8 @@ import { Switch } from '@react-spectrum/s2'
 import { style } from "@react-spectrum/s2/style" with { type: "macro" }
 import Add from '@react-spectrum/s2/icons/Add'
 import RemoveCircle from '@react-spectrum/s2/icons/RemoveCircle'
-import AddCircle from '@react-spectrum/s2/icons/AddCircle'
 import { ImageUploader, RichTextEditor } from '../../components/shared'
-import { TYPOGRAPHY, COLORS, FLEX_GAP } from '../../styles/designSystem'
+import { TYPOGRAPHY, COLORS } from '../../styles/designSystem'
 import { VenueData, EventApiResponse } from '../../types/domain'
 import { loadGooglePlacesAPI } from '../../utils/loadGooglePlaces'
 import { useEventFormComponent } from '../../hooks/useEventFormComponent'
@@ -19,7 +18,7 @@ import { apiService } from '../../services/api'
 import { getVenuePayload } from '../../utils/dataFilters'
 import { uploadImage } from '../../services/requestHelpers'
 import { getCurrentEnvironment, getApiHost } from '../../config/constants'
-import { LocationPickerDialog, VenueLocation } from './LocationDialog'
+import { LocationDialog, VenueLocation } from './LocationDialog'
 import '../../../src/types/google-places.d.ts'
 
 // ============================================================================
@@ -186,6 +185,7 @@ export const VenueComponent: React.FC = () => {
         }
       }
       
+      let savedVenueId: string | null = existingVenue?.venueId ?? null
       try {
         if (!existingVenue) {
           // ---- CREATE (POST) ----
@@ -194,9 +194,9 @@ export const VenueComponent: React.FC = () => {
             console.error('Failed to create venue:', result)
             return
           }
-          // Capture venueId so location management becomes available
-          if (result?.venueId) {
-            setVenueApiId(result.venueId)
+          savedVenueId = result?.venueId ?? null
+          if (savedVenueId) {
+            setVenueApiId(savedVenueId)
           }
         } else {
           // ---- UPDATE (PUT) — include venueId + timestamps as required by API ----
@@ -206,13 +206,13 @@ export const VenueComponent: React.FC = () => {
             creationTime: existingVenue.creationTime,
             modificationTime: existingVenue.modificationTime,
           }
-          
+
           const result = await apiService.replaceVenue(
             savedEventId,
             existingVenue.venueId,
             putPayload
           )
-          
+
           if ('error' in result) {
             console.error('Failed to update venue:', result)
             return
@@ -220,6 +220,36 @@ export const VenueComponent: React.FC = () => {
         }
       } catch (error) {
         console.error('Error saving venue:', error)
+        return
+      }
+
+      // ========================================================================
+      // 3. Create any pending locations that were added before the venue existed
+      // ========================================================================
+      if (savedVenueId) {
+        const pendingLocations = venueLocationsRef.current.filter(
+          loc => loc.locationId.startsWith('pending-')
+        )
+        for (const loc of pendingLocations) {
+          try {
+            const payload: Record<string, any> = {
+              name: loc.name,
+              locationType: loc.locationType,
+            }
+            if (loc.locationCode) payload.locationCode = loc.locationCode
+            if (loc.capacity != null) payload.capacity = loc.capacity
+            const res = await apiService.createVenueLocation(savedVenueId, payload)
+            if (res && !('error' in res)) {
+              const created = res.location ?? res
+              // Replace the pending location with the real one in state
+              setVenueLocations(prev => prev.map(l =>
+                l.locationId === loc.locationId ? { ...created } : l
+              ))
+            }
+          } catch (err) {
+            console.error('Failed to create pending location:', loc.name, err)
+          }
+        }
       }
     },
     
@@ -280,11 +310,15 @@ export const VenueComponent: React.FC = () => {
   const [venueApiId, setVenueApiId] = useState<string | null>(null)
   const [venueLocations, setVenueLocations] = useState<VenueLocation[]>([])
   const [isLocationDialogOpen, setIsLocationDialogOpen] = useState(false)
-  
-  // Keep ref in sync with state for use in onAfterSave callback
+  const venueLocationsRef = useRef<VenueLocation[]>([])
+
+  // Keep refs in sync with state for use in onAfterSave callback
   useEffect(() => {
     pendingImageFileRef.current = pendingImageFile
   }, [pendingImageFile])
+  useEffect(() => {
+    venueLocationsRef.current = venueLocations
+  }, [venueLocations])
 
   // Fetch the venueId from API when editing an existing event
   useEffect(() => {
@@ -555,7 +589,8 @@ export const VenueComponent: React.FC = () => {
   }, [])
 
   const handleLocationRemove = useCallback(async (locationId: string) => {
-    if (venueApiId) {
+    // Pending locations (not yet saved to API) can be removed locally
+    if (!locationId.startsWith('pending-') && venueApiId) {
       try {
         await apiService.deleteVenueLocation(venueApiId, locationId)
       } catch (err) {
@@ -773,7 +808,7 @@ export const VenueComponent: React.FC = () => {
             <div style={{ padding: '2rem', backgroundColor: '#F5F5F5', borderRadius: '4px', textAlign: 'center', marginTop: '1rem' }}>
               <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '16px' }}>
                 <Text>Add locations to your venue using the button below.</Text>
-                <Button variant="secondary" onPress={() => setIsLocationDialogOpen(true)} isDisabled={!venueApiId}>
+                <Button variant="secondary" onPress={() => setIsLocationDialogOpen(true)}>
                   <Add />
                   <Text>Add Location</Text>
                 </Button>
@@ -813,7 +848,6 @@ export const VenueComponent: React.FC = () => {
             <Button
               variant="secondary"
               onPress={() => setIsLocationDialogOpen(true)}
-              isDisabled={!venueApiId}
               styles={style({ width: '[100%]' })}
               UNSAFE_style={{
                 backgroundColor: '#E1E1E1',
@@ -830,14 +864,12 @@ export const VenueComponent: React.FC = () => {
         </div>
       </div>
 
-      {venueApiId && (
-        <LocationPickerDialog
-          isOpen={isLocationDialogOpen}
-          onClose={() => setIsLocationDialogOpen(false)}
-          onSelect={handleLocationAdded}
-          venueId={venueApiId}
-        />
-      )}
+      <LocationDialog
+        isOpen={isLocationDialogOpen}
+        onClose={() => setIsLocationDialogOpen(false)}
+        onSelect={handleLocationAdded}
+        venueId={venueApiId}
+      />
       
     </div>
   )
