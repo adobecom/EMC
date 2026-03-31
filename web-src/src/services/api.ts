@@ -12,7 +12,6 @@ import {
   Event,
   EventFormData,
   EventApiResponse,
-  Session,
   Registration,
   Venue,
   EventHistoryResponse,
@@ -313,24 +312,179 @@ class ApiService {
   }
 
   // Session APIs
-  async getSessions(eventId?: string): Promise<ApiListResponse<Session>> {
-    return this.callAction<ApiListResponse<Session>>('getSessions', { eventId })
+
+  async getAllEventSessions(eventId: string): Promise<any | ErrorResponse> {
+    validateString(eventId, 'event ID')
+    return this.callExternalApi('esp', `/v1/sessions?eventId=${encodeURIComponent(eventId)}`, 'GET', undefined, {
+      operationName: 'getAllEventSessions',
+      shouldReturnFullResponse: true,
+    })
   }
 
-  async getSession(id: string): Promise<ApiResponse<Session>> {
-    return this.callAction<ApiResponse<Session>>('getSession', { id })
+  async getSingleSession(id: string): Promise<any | ErrorResponse> {
+    validateString(id, 'session ID')
+    return this.callExternalApi('esp', `/v1/sessions/${encodeURIComponent(id)}`, 'GET', undefined, {
+      operationName: 'getSingleSession',
+      shouldReturnFullResponse: true,
+    })
   }
 
-  async createSession(data: Omit<Session, 'id' | 'createdAt' | 'updatedAt'>): Promise<ApiResponse<Session>> {
-    return this.callAction<ApiResponse<Session>>('createSession', data)
+  async createSession(eventId: string, data: Record<string, unknown>): Promise<any | ErrorResponse> {
+    validateString(eventId, 'event ID')
+    validateObject(data, 'session data')
+    const sessionCode = (String(data.name ?? '').replace(/\s+/g, '-').toLowerCase()).substring(0, 50) || 'session'
+    const tagsStr = typeof data.tags === 'string' ? data.tags.trim() : ''
+    const body: Record<string, unknown> = {
+      eventId,
+      enTitle: data.name ?? '',
+      title: data.name ?? '',
+      description: data.description ?? '',
+      sessionCode,
+      sessionType: 'Session',
+      published: false,
+    }
+    if (tagsStr.length > 0) {
+      body.tags = tagsStr
+    }
+    return this.callExternalApi('esp', '/v1/sessions', 'POST', body, {
+      operationName: 'createSession',
+      shouldReturnFullResponse: true,
+    })
   }
 
-  async updateSession(id: string, data: Partial<Session>): Promise<ApiResponse<Session>> {
-    return this.callAction<ApiResponse<Session>>('updateSession', { id, ...data })
+  async updateSession(id: string, eventId: string, data: Record<string, unknown>): Promise<any | ErrorResponse> {
+    validateString(id, 'session ID')
+    validateString(eventId, 'event ID')
+    validateObject(data, 'session data')
+    const sessionCode = (String(data.name ?? '').replace(/\s+/g, '-').toLowerCase()).substring(0, 50) || 'session'
+    const now = Date.now()
+    const tagsStr = typeof data.tags === 'string' ? data.tags.trim() : ''
+    const body: Record<string, unknown> = {
+      sessionId: id,
+      eventId,
+      enTitle: data.name ?? '',
+      title: data.name ?? '',
+      description: data.description ?? '',
+      sessionCode,
+      sessionType: 'Session',
+      published: false,
+      creationTime: (data.creationTime as number) ?? now,
+      modificationTime: (data.modificationTime as number) ?? now,
+    }
+    if (tagsStr.length > 0) {
+      body.tags = tagsStr
+    }
+    return this.callExternalApi('esp', `/v1/sessions/${encodeURIComponent(id)}`, 'PUT', body, {
+      operationName: 'updateSession',
+      shouldReturnFullResponse: true,
+    })
   }
 
-  async deleteSession(id: string): Promise<ApiResponse<void>> {
-    return this.callAction<ApiResponse<void>>('deleteSession', { id })
+  async deleteSession(id: string): Promise<SuccessResponse | ErrorResponse> {
+    validateString(id, 'session ID')
+    return this.callExternalApi('esp', `/v1/sessions/${encodeURIComponent(id)}`, 'DELETE', undefined, {
+      operationName: 'deleteSession',
+    })
+  }
+
+  // Session Time APIs
+
+  async getSessionTimes(sessionId?: string): Promise<any | ErrorResponse> {
+    const endpoint = sessionId
+      ? `/v1/session-times?sessionId=${encodeURIComponent(sessionId)}`
+      : '/v1/session-times'
+    return this.callExternalApi('esp', endpoint, 'GET', undefined, {
+      operationName: 'getSessionTimes',
+      shouldReturnFullResponse: true,
+    })
+  }
+
+  async getSessionTime(id: string): Promise<any | ErrorResponse> {
+    validateString(id, 'session time ID')
+    return this.callExternalApi('esp', `/v1/session-times/${encodeURIComponent(id)}`, 'GET', undefined, {
+      operationName: 'getSessionTime',
+      shouldReturnFullResponse: true,
+    })
+  }
+
+  async createSessionTime(data: Record<string, unknown>): Promise<any | ErrorResponse> {
+    validateObject(data, 'session time data')
+    return this.callExternalApi('esp', '/v1/session-times', 'POST', data, {
+      operationName: 'createSessionTime',
+      shouldReturnFullResponse: true,
+    })
+  }
+
+  async updateSessionTime(id: string, data: Record<string, unknown>): Promise<any | ErrorResponse> {
+    validateString(id, 'session time ID')
+    validateObject(data, 'session time data')
+    const now = Date.now()
+    const body = {
+      ...data,
+      sessionTimeId: id,
+      creationTime: (data.creationTime as number) ?? now,
+      modificationTime: (data.modificationTime as number) ?? now,
+    }
+    return this.callExternalApi('esp', `/v1/session-times/${encodeURIComponent(id)}`, 'PUT', body, {
+      operationName: 'updateSessionTime',
+      shouldReturnFullResponse: true,
+    })
+  }
+
+  async deleteSessionTime(id: string): Promise<SuccessResponse | ErrorResponse> {
+    validateString(id, 'session time ID')
+    return this.callExternalApi('esp', `/v1/session-times/${encodeURIComponent(id)}`, 'DELETE', undefined, {
+      operationName: 'deleteSessionTime',
+    })
+  }
+
+  /** GET /v1/sessions/{sessionId}/speakers */
+  async getSessionSpeakers(sessionId: string): Promise<any | ErrorResponse> {
+    validateString(sessionId, 'session ID')
+    return this.callExternalApi('esp', `/v1/sessions/${encodeURIComponent(sessionId)}/speakers`, 'GET', undefined, {
+      operationName: 'getSessionSpeakers',
+      shouldReturnFullResponse: true,
+    })
+  }
+
+  /** POST /v1/sessions/{sessionId}/speakers - body: { speakerId, speakerType (PascalCase), ordinal } */
+  async addSessionSpeaker(
+    sessionId: string,
+    body: { speakerId: string; speakerType: string; ordinal: number }
+  ): Promise<any | ErrorResponse> {
+    validateString(sessionId, 'session ID')
+    validateObject(body, 'speaker data')
+    return this.callExternalApi('esp', `/v1/sessions/${encodeURIComponent(sessionId)}/speakers`, 'POST', body, {
+      operationName: 'addSessionSpeaker',
+      shouldReturnFullResponse: true,
+    })
+  }
+
+  /** PUT /v1/sessions/{sessionId}/speakers/{speakerId} - body: { speakerId, speakerType, ordinal, modificationTime } */
+  async updateSessionSpeaker(
+    sessionId: string,
+    speakerId: string,
+    body: { speakerId: string; speakerType: string; ordinal: number; modificationTime: number }
+  ): Promise<any | ErrorResponse> {
+    validateString(sessionId, 'session ID')
+    validateString(speakerId, 'speaker ID')
+    validateObject(body, 'speaker data')
+    return this.callExternalApi('esp', `/v1/sessions/${encodeURIComponent(sessionId)}/speakers/${encodeURIComponent(speakerId)}`, 'PUT', body, {
+      operationName: 'updateSessionSpeaker',
+      shouldReturnFullResponse: true,
+    })
+  }
+
+  /** DELETE /v1/sessions/{sessionId}/speakers/{speakerId} */
+  async deleteSessionSpeaker(
+    sessionId: string,
+    speakerId: string
+  ): Promise<SuccessResponse | ErrorResponse> {
+    validateString(sessionId, 'session ID')
+    validateString(speakerId, 'speaker ID')
+    return this.callExternalApi('esp', `/v1/sessions/${encodeURIComponent(sessionId)}/speakers/${encodeURIComponent(speakerId)}`, 'DELETE', undefined, {
+      operationName: 'deleteSessionSpeaker',
+    })
   }
 
   // Registration APIs

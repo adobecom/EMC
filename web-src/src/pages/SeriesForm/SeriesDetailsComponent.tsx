@@ -165,6 +165,7 @@ export const SeriesDetailsComponent: React.FC = () => {
       {/* Cloud and Target CMS Selection */}
       <div style={{ display: 'flex', flexDirection: 'row', gap: 16, flexWrap: 'wrap' }}>
         <Picker
+          data-testid="series-cloud-picker"
           label="Cloud Type"
           isRequired
           selectedKey={cloudType}
@@ -205,6 +206,7 @@ export const SeriesDetailsComponent: React.FC = () => {
 
       {/* Series Name */}
       <TextField
+        data-testid="series-name-input"
         label="Series Name"
         isRequired
         maxLength={30}
@@ -216,6 +218,7 @@ export const SeriesDetailsComponent: React.FC = () => {
 
       {/* Series Description */}
       <TextArea
+        data-testid="series-description-input"
         label="Series Description"
         maxLength={600}
         value={seriesDescription}

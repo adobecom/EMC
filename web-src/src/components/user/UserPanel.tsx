@@ -119,6 +119,7 @@ export const UserPanel: React.FC<UserPanelProps> = ({ ims, compact = false }) =>
     const badge = (
       <div className={style({ flexShrink: 0 })}>
         <Badge
+          data-testid="active-group-badge"
           variant="informative"
           fillStyle="subtle"
           size="S"
@@ -154,6 +155,7 @@ export const UserPanel: React.FC<UserPanelProps> = ({ ims, compact = false }) =>
         {compactGroupIndicator}
         <MenuTrigger>
           <ActionButton
+            data-testid="user-panel"
             isQuiet
             UNSAFE_className={compact ? 'user-panel-button-compact' : 'user-panel-button'}
           >

@@ -78,7 +78,7 @@ export const VenueComponent: React.FC = () => {
       const venueData = formData.venue
       
       // ========================================================================
-      // 1. Upload pending venue image (if any)
+      // 1. Upload pending venue additional image (ESP venue-additional-image)
       // ========================================================================
       const pendingFile = pendingImageFileRef.current
       if (pendingFile) {
@@ -91,8 +91,8 @@ export const VenueComponent: React.FC = () => {
             
             const config = {
               targetUrl: uploadUrl,
-              altText: `Venue image for ${venueData?.venueName || 'event'}`,
-              type: 'venue-image'
+              altText: `Venue additional image for ${venueData?.venueName || 'event'}`,
+              type: 'venue-additional-image'
             }
             
             const result = await uploadImage(pendingFile, config, token)
@@ -103,8 +103,8 @@ export const VenueComponent: React.FC = () => {
                 venue: {
                   ...venueData,
                   venueName: venueData?.venueName || '',
-                  venueImageUrl: result.imageUrl,
-                  venueImageId: result.imageId
+                  venueAdditionalImageUrl: result.imageUrl,
+                  venueAdditionalImageId: result.imageId
                 }
               })
             }
@@ -515,8 +515,8 @@ export const VenueComponent: React.FC = () => {
     // Clear pending file since we now have an uploaded image
     setPendingImageFile(null)
     updateVenueStable({ 
-      venueImageUrl: imageUrl, 
-      venueImageId: imageId 
+      venueAdditionalImageUrl: imageUrl, 
+      venueAdditionalImageId: imageId 
     })
   }
   
@@ -524,8 +524,8 @@ export const VenueComponent: React.FC = () => {
     // Clear both pending file and uploaded image
     setPendingImageFile(null)
     updateVenueStable({ 
-      venueImageUrl: undefined, 
-      venueImageId: undefined 
+      venueAdditionalImageUrl: undefined, 
+      venueAdditionalImageId: undefined 
     })
   }
   
@@ -557,6 +557,7 @@ export const VenueComponent: React.FC = () => {
 
       {/* Post-event visibility toggle */}
       <Switch
+        data-testid="venue-visible-switch"
         isSelected={venue.showVenuePostEvent || false}
         onChange={handleShowVenuePostEventChange}
         UNSAFE_style={{
@@ -585,6 +586,7 @@ export const VenueComponent: React.FC = () => {
 
         <input
           id="venue-name-input"
+          data-testid="venue-name-input"
           ref={venueNameInputRef}
           type="text"
           value={venueNameValue}
@@ -654,6 +656,7 @@ export const VenueComponent: React.FC = () => {
         {showAlternativeNameField && (
           <div style={{ marginTop: '16px' }}>
             <TextField
+              data-testid="venue-alt-name-input"
               label="Alternative venue name"
               styles={style({ width: '[100%]' })}
               value={alternativeVenueName}
@@ -672,6 +675,7 @@ export const VenueComponent: React.FC = () => {
         </Heading>
 
         <Switch
+          data-testid="venue-instructions-visible-switch"
           isSelected={venue.showVenueImagePostEvent || false}
           onChange={handleShowVenueImagePostEventChange}
         >
@@ -680,10 +684,10 @@ export const VenueComponent: React.FC = () => {
         
         <ImageUploader
           label=""
-          imageUrl={venue.venueImageUrl}
-          imageId={venue.venueImageId}
-          imageKind="venue-image"
-          altText={`Venue image for ${venue.venueName}`}
+          imageUrl={venue.venueAdditionalImageUrl}
+          imageId={venue.venueAdditionalImageId}
+          imageKind="venue-additional-image"
+          altText={`Venue additional image for ${venue.venueName}`}
           eventId={eventId ?? undefined}
           maxSizeMB={25}
           onChange={handleImageChange}

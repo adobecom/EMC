@@ -35,6 +35,7 @@ interface ResourceDashboardLayoutProps<T> {
   onCreate?: () => void
   createLabel?: string
   createButton?: React.ReactNode // Custom create button (overrides onCreate/createLabel)
+  createButtonTestId?: string // data-testid for the default create button
   onVisibleItemsChange?: (items: T[]) => void
   onVisibleIdsChange?: (ids: string[]) => void // Callback for visible item IDs
 
@@ -71,6 +72,7 @@ export function ResourceDashboardLayout<T extends Record<string, any>>({
   onCreate,
   createLabel = 'Create',
   createButton,
+  createButtonTestId,
   onVisibleItemsChange,
   onVisibleIdsChange,
   emptyStateTitle = 'No Items Found',
@@ -208,7 +210,7 @@ export function ResourceDashboardLayout<T extends Record<string, any>>({
               {createButton ? (
                 createButton
               ) : onCreate && (
-                <Button onPress={onCreate} variant="accent">
+                <Button data-testid={createButtonTestId} onPress={onCreate} variant="accent">
                   {createLabel}
                 </Button>
               )}

@@ -253,6 +253,7 @@ export function DataTable<T extends Record<string, any>>({
   if (data.length === 0 && !isLoading) {
     return (
       <div
+        data-testid="data-table-empty-state"
         className={style({
           display: 'flex',
           flexDirection: 'column',
@@ -274,7 +275,7 @@ export function DataTable<T extends Record<string, any>>({
   }
 
   return (
-    <div className={style({ display: 'flex', flexDirection: 'column', gap: 12, height: '[100%]', width: '[100%]' })}>
+    <div data-testid="data-table" className={style({ display: 'flex', flexDirection: 'column', gap: 12, height: '[100%]', width: '[100%]' })}>
       <div className="custom-data-table" style={{ overflowX: 'auto', width: '100%', maxWidth: '100%' }}>
         <table>
           <thead>
@@ -295,6 +296,7 @@ export function DataTable<T extends Record<string, any>>({
                 return (
                   <th
                     key={column.key}
+                    data-testid={`data-table-header-${column.key}`}
                     onClick={() => isSortable && handleSort(column.key)}
                     className={className}
                     style={{
@@ -337,7 +339,7 @@ export function DataTable<T extends Record<string, any>>({
               const isExpanded = isExpandable && effectiveExpandedKeys.has(itemKey)
               return (
                 <React.Fragment key={itemKey}>
-                  <tr className={isExpanded ? 'expanded-parent' : ''}>
+                  <tr data-testid={`data-table-row-${itemKey}`} className={isExpanded ? 'expanded-parent' : ''}>
                     {isExpandable && (
                       <td className="data-table-td-nowrap" style={{ width: '40px', minWidth: '40px', padding: '0 8px', verticalAlign: 'middle' }}>
                         <ActionButton
@@ -422,6 +424,7 @@ export function DataTable<T extends Record<string, any>>({
           <div className={style({ display: 'flex', gap: 8, alignItems: 'center' })}>
             <input
               type="text"
+              data-testid="data-table-page-input"
               value={pageInputValue}
               onChange={(e) => handlePageInputChange(e.target.value)}
               onBlur={handlePageInputBlur}

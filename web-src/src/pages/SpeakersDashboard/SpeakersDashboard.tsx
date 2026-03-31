@@ -32,6 +32,7 @@ import {
 import { style } from "@react-spectrum/s2/style" with { type: "macro" }
 import Edit from '@react-spectrum/s2/icons/Edit'
 import RemoveCircle from '@react-spectrum/s2/icons/RemoveCircle'
+import RotateCCW from '@react-spectrum/s2/icons/RotateCCW'
 import Add from '@react-spectrum/s2/icons/Add'
 import Link from '@react-spectrum/s2/icons/Link'
 import { TableColumn } from '../../components/shared/DataTable'
@@ -698,6 +699,7 @@ export const SpeakersDashboard: React.FC<SpeakersDashboardProps> = () => {
             </div>
           ) : (
             <ComboBox
+              data-testid="series-selector"
               label="Select Series"
               selectedKey={selectedSeriesId}
               onSelectionChange={handleSeriesComboBoxChange}
@@ -722,8 +724,8 @@ export const SpeakersDashboard: React.FC<SpeakersDashboardProps> = () => {
           {!isLoadingSeries && selectedSeriesId && (
             <div className={style({ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 4 })}>
               <Button size="S" variant="secondary" onPress={handleSeriesReset}>
-                <RemoveCircle />
-                <Text>Reset</Text>
+                <RotateCCW />
+                <Text>Reset series</Text>
               </Button>
             </div>
           )}
@@ -788,6 +790,7 @@ export const SpeakersDashboard: React.FC<SpeakersDashboardProps> = () => {
     if (!canWriteEvent) return undefined
     return (
       <Button
+        data-testid="add-speaker-button"
         variant="accent"
         onPress={handleCreateSpeaker}
         isDisabled={!selectedSeriesId}
@@ -799,7 +802,7 @@ export const SpeakersDashboard: React.FC<SpeakersDashboardProps> = () => {
   }, [canWriteEvent, handleCreateSpeaker, selectedSeriesId])
   
   return (
-    <div>
+    <div data-testid="speakers-dashboard">
       {/* Series Selector */}
       <div style={{ paddingLeft: 32, paddingRight: 32, paddingTop: 32 }}>
         {seriesSelectorHeader}

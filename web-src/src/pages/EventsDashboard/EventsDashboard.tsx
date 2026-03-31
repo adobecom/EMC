@@ -1031,6 +1031,7 @@ export const EventsDashboard: React.FC<EventsDashboardProps> = () => {
                 style={{ gap: SPACING.MD }}
               >
                 <Picker
+                  data-testid="filter-series-picker"
                   label="Series"
                   selectedKey={listFilters.seriesId}
                   onSelectionChange={(key) => {
@@ -1052,6 +1053,7 @@ export const EventsDashboard: React.FC<EventsDashboardProps> = () => {
                   })}
                 </Picker>
                 <Picker
+                  data-testid="filter-creator-picker"
                   label="Creator"
                   selectedKey={listFilters.creator}
                   onSelectionChange={(key) => {
@@ -1065,6 +1067,7 @@ export const EventsDashboard: React.FC<EventsDashboardProps> = () => {
                   ))}
                 </Picker>
                 <Picker
+                  data-testid="filter-status-picker"
                   label="Publish state"
                   selectedKey={listFilters.publish}
                   onSelectionChange={(key) => {
@@ -1077,6 +1080,7 @@ export const EventsDashboard: React.FC<EventsDashboardProps> = () => {
                   <PickerItem id="draft" textValue="Draft">Draft</PickerItem>
                 </Picker>
                 <Picker
+                  data-testid="filter-cloud-picker"
                   label="Cloud type"
                   selectedKey={listFilters.cloudType}
                   onSelectionChange={(key) => {
@@ -1118,7 +1122,7 @@ export const EventsDashboard: React.FC<EventsDashboardProps> = () => {
     if (!canWriteEvent) return undefined
     return (
       <MenuTrigger>
-        <Button variant="accent">Create new event</Button>
+        <Button data-testid="create-event-trigger" variant="accent">Create new event</Button>
         <Menu onAction={(key) => handleCreateEvent(key as EventType)}>
           {eventTypeOptions.map(option => (
             <MenuItem key={option.key} id={option.key} textValue={option.label}>
@@ -1133,7 +1137,7 @@ export const EventsDashboard: React.FC<EventsDashboardProps> = () => {
 
   return (
     <>
-      <div className={style({padding: 32})}>
+      <div data-testid="events-dashboard" className={style({padding: 32})}>
         <ResourceDashboardLayout
           title="All Events"
           totalCount={filteredEvents.length}

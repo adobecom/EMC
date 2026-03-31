@@ -16,6 +16,7 @@ import type {
   SeriesApiResponse,
   UrlPatternEntry,
 } from '../types/domain'
+import { getDetailPageLocalePrefixFromIetf } from '../config/detailPageLocalePrefix'
 import {
   buildTokenContext,
   constructDetailPagePath,
@@ -73,7 +74,13 @@ export function useCustomDetailPagePath() {
 
     const context = buildTokenContext(formData, series)
     const resolved = resolveUrlPattern(entry.pattern, context)
-    const url = constructDetailPagePath(relatedDomain, contentRoot, resolved)
+    const localePrefix = getDetailPageLocalePrefixFromIetf(formData.defaultLocale)
+    const url = constructDetailPagePath(
+      relatedDomain,
+      contentRoot,
+      resolved,
+      localePrefix
+    )
 
     const allEvents: EventApiResponse[] = await cachedApi.getEventsList()
     const collision = allEvents.find((e) => e.detailPagePath === url) || null
