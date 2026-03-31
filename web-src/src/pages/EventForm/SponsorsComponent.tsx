@@ -99,11 +99,8 @@ const PartnerDialog: React.FC<PartnerDialogProps> = ({
       id: partner?.id || `partner-${Date.now()}`,
       partnerName: name,
       partnerUrl: website,
-      // Omit stale URL while a new file is queued (preview uses object URL).
       imageUrl: pendingFile ? undefined : imageUrl,
-      // Keep imageId when replacing: uploadImage uses it for PUT .../images/{imageId}.
-      // Clearing it forced POST and broke replacement for sponsors that already had a logo.
-      imageId,
+      imageId: pendingFile ? undefined : imageId,
     }
     await onSave(updatedPartner, pendingFile)
   }
@@ -817,7 +814,6 @@ export const SponsorsComponent: React.FC = () => {
         seriesSponsors={availableSponsors}
         selectedSponsorIds={selectedSponsorIds}
         seriesId={seriesId}
-        locale={locale}
         onSponsorsRefresh={refreshSeriesSponsors}
       />
 
