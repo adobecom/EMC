@@ -118,6 +118,8 @@ async function upsertSessionTimeForSession(
       eventId,
       startTimeMillis,
       endTimeMillis,
+      creationTime: data.sessionTimeCreationTime,
+      modificationTime: data.sessionTimeModificationTime,
       isAutoRegistrationEnabled: data.isAutoRegistrationEnabled !== false,
       ...(data.attendeeLimit != null && data.attendeeLimit > 0
         ? { attendeeLimit: data.attendeeLimit }
@@ -295,6 +297,8 @@ export const Sessions: React.FC = () => {
       name: data.name,
       description: data.description,
       tags: serializeTagsForApi(data.tags),
+      creationTime: data.creationTime,
+      modificationTime: data.modificationTime,
     };
     const res = await apiService.updateSession(sessionId, eventId, payload);
     if ("error" in res) {
