@@ -18,6 +18,89 @@ function serializeTagsForApi(tags: string[] | undefined): string {
   return (tags ?? []).join(",");
 }
 
+function normalizeOptionalString(value: string | undefined): string {
+  return (value ?? "").trim();
+}
+
+function normalizeOptionalNumber(value: number | undefined): number | undefined {
+  return typeof value === "number" ? value : undefined;
+}
+
+function normalizeIdList(values: string[] | undefined): string[] {
+  return [...new Set((values ?? []).map((value) => String(value).trim()).filter(Boolean))].sort();
+}
+
+function getNormalizedSessionFields(session: Session) {
+  return {
+    name: normalizeOptionalString(session.name),
+    description: normalizeOptionalString(session.description),
+    tags: serializeTagsForApi(session.tags),
+  };
+}
+
+function getNormalizedSessionFieldsFromForm(data: SessionFormData) {
+  return {
+    name: normalizeOptionalString(data.name),
+    description: normalizeOptionalString(data.description),
+    tags: serializeTagsForApi(data.tags),
+  };
+}
+
+function getNormalizedSessionTimeFields(session: Session) {
+  return {
+    startDateTime: session.startDateTime,
+    endDateTime: session.endDateTime,
+    isAutoRegistrationEnabled: session.sessionTime?.isAutoRegistrationEnabled !== false,
+    attendeeLimit:
+      session.sessionTime?.isAutoRegistrationEnabled === false
+        ? normalizeOptionalNumber(session.sessionTime?.attendeeLimit)
+        : undefined,
+    locationId: session.locationId ?? undefined,
+  };
+}
+
+function getNormalizedSessionTimeFieldsFromForm(data: SessionFormData) {
+  return {
+    startDateTime: data.startDateTime,
+    endDateTime: data.endDateTime,
+    isAutoRegistrationEnabled: data.isAutoRegistrationEnabled !== false,
+    attendeeLimit:
+      data.isAutoRegistrationEnabled === false
+        ? normalizeOptionalNumber(data.attendeeLimit)
+        : undefined,
+    locationId: data.locationId ?? undefined,
+  };
+}
+
+function hasSessionFieldChanges(session: Session, data: SessionFormData): boolean {
+  const current = getNormalizedSessionFields(session);
+  const next = getNormalizedSessionFieldsFromForm(data);
+  return (
+    current.name !== next.name ||
+    current.description !== next.description ||
+    current.tags !== next.tags
+  );
+}
+
+function hasSessionTimeFieldChanges(session: Session, data: SessionFormData): boolean {
+  const current = getNormalizedSessionTimeFields(session);
+  const next = getNormalizedSessionTimeFieldsFromForm(data);
+  return (
+    current.startDateTime !== next.startDateTime ||
+    current.endDateTime !== next.endDateTime ||
+    current.isAutoRegistrationEnabled !== next.isAutoRegistrationEnabled ||
+    current.attendeeLimit !== next.attendeeLimit ||
+    current.locationId !== next.locationId
+  );
+}
+
+function hasSessionSpeakersChanges(data: SessionFormData): boolean {
+  const current = normalizeIdList(data.originalSpeakerIds);
+  const next = normalizeIdList(data.speakerIds);
+  if (current.length !== next.length) return true;
+  return current.some((id, index) => id !== next[index]);
+}
+
 function mapApiSessionToSession(item: Record<string, unknown>): Session {
   return {
     id: String(item.id ?? item.sessionId ?? ""),
@@ -165,15 +248,47 @@ async function syncSessionSpeakers(
 }
 
 export const Sessions: React.FC = () => {
-  const { eventId, mergeEventResponse, venueLocations, seriesSpeakers, setSeriesSpeakers } = useEventFormContext();
+  const {
+    eventId,
+    mergeEventResponse,
+    venueLocations,
+    seriesSpeakers,
+    setSeriesSpeakers,
+    seriesId: contextSeriesId,
+    formData,
+  } = useEventFormContext();
   const [sessions, setSessions] = useState<Session[]>([]);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [isAddingNew, setIsAddingNew] = useState(false);
+  const seriesId = contextSeriesId || formData.seriesId || "";
+
+  const loadSeriesSpeakersIfNeeded = useCallback(async () => {
+    if (!seriesId) return;
+    if (seriesSpeakers.length > 0) return;
+    try {
+      const response = await cachedApi.getSpeakers(seriesId);
+      if (response && !("error" in response)) {
+        const speakers = response.speakers || response || [];
+        setSeriesSpeakers(Array.isArray(speakers) ? speakers : []);
+      }
+    } catch (err) {
+      console.error("Failed to load series speakers:", err);
+    }
+  }, [seriesId, seriesSpeakers.length, setSeriesSpeakers]);
 
   const refreshSeriesSpeakers = useCallback(async () => {
-    setSeriesSpeakers(seriesSpeakers);
-  }, [seriesSpeakers, setSeriesSpeakers]);
+    if (!seriesId) return;
+    try {
+      const response = await cachedApi.getSpeakers(seriesId);
+      if (response && !("error" in response)) {
+        const speakers = response.speakers || response || [];
+        setSeriesSpeakers(Array.isArray(speakers) ? speakers : []);
+      }
+    } catch (err) {
+      console.error("Failed to load series speakers:", err);
+    }
+  }, [seriesId, setSeriesSpeakers]);
 
   const loadSessions = useCallback(async () => {
     if (!eventId) {
@@ -209,7 +324,7 @@ export const Sessions: React.FC = () => {
   const refreshEventConcurrencyMetadata = useCallback(
     async (id: string) => {
       cachedApi.invalidateCache(id);
-      const refreshed = await apiService.getEventFull(id);
+      const refreshed = await apiService.getEventExternal(id);
       if ("error" in refreshed) return;
       const r = refreshed as EventApiResponse;
       const patch: Partial<EventApiResponse> = {};
@@ -223,6 +338,10 @@ export const Sessions: React.FC = () => {
   useEffect(() => {
     loadSessions();
   }, [loadSessions]);
+
+  useEffect(() => {
+    loadSeriesSpeakersIfNeeded();
+  }, [loadSeriesSpeakersIfNeeded]);
 
   const handleDeleteSession = async (sessionId: string) => {
     if (!eventId) return;
@@ -293,42 +412,65 @@ export const Sessions: React.FC = () => {
     data: SessionFormData,
   ) => {
     if (!eventId) throw new Error("Event ID is required to update a session");
-    const payload: Record<string, unknown> = {
-      name: data.name,
-      description: data.description,
-      tags: serializeTagsForApi(data.tags),
-      creationTime: data.creationTime,
-      modificationTime: data.modificationTime,
-    };
-    const res = await apiService.updateSession(sessionId, eventId, payload);
-    if ("error" in res) {
-      const msg = res.error?.message || String(res.error);
-      throw new Error(msg);
+    const existingSession = sessions.find((s) => s.id === sessionId);
+    if (!existingSession) {
+      throw new Error("Session not found in current state");
     }
 
-    await upsertSessionTimeForSession(eventId, sessionId, data);
+    const shouldUpdateSession = hasSessionFieldChanges(existingSession, data);
+    const shouldUpdateSessionTime = hasSessionTimeFieldChanges(existingSession, data);
 
-    await syncSessionSpeakers(sessionId, data.speakerIds ?? []);
+    let updatedSessionApi = existingSession;
+    if (shouldUpdateSession) {
+      const payload: Record<string, unknown> = {
+        name: data.name,
+        description: data.description,
+        tags: serializeTagsForApi(data.tags),
+        creationTime: data.creationTime,
+        modificationTime: data.modificationTime,
+      };
+      const res = await apiService.updateSession(sessionId, eventId, payload);
+      if ("error" in res) {
+        const msg = res.error?.message || String(res.error);
+        throw new Error(msg);
+      }
+      updatedSessionApi = mapApiSessionToSession(res as any);
+    }
 
-    await refreshEventConcurrencyMetadata(eventId);
+    if (shouldUpdateSessionTime) {
+      await upsertSessionTimeForSession(eventId, sessionId, data);
+    }
+
+    const shouldUpdateSpeakers = hasSessionSpeakersChanges(data);
+    if (shouldUpdateSpeakers) {
+      await syncSessionSpeakers(sessionId, data.speakerIds ?? []);
+    }
+
+    if (shouldUpdateSession || shouldUpdateSessionTime || shouldUpdateSpeakers) {
+      await refreshEventConcurrencyMetadata(eventId);
+    }
 
     setSessions((prev) => {
       const updated = prev.map((s) =>
         s.id === sessionId
           ? {
-              ...mapApiSessionToSession(res as any),
+              ...updatedSessionApi,
               startDateTime: data.startDateTime,
               endDateTime: data.endDateTime,
-              ...(data.isAutoRegistrationEnabled === false && data.attendeeLimit != null
-                ? { capacity: data.attendeeLimit }
-                : {}),
+              capacity:
+                data.isAutoRegistrationEnabled === false && data.attendeeLimit != null
+                  ? Number(data.attendeeLimit)
+                  : undefined,
               locationId: data.locationId,
               sessionTime: {
                 ...s.sessionTime,
                 startTimeMillis: new Date(data.startDateTime + 'Z').getTime(),
                 endTimeMillis: new Date(data.endDateTime + 'Z').getTime(),
                 isAutoRegistrationEnabled: data.isAutoRegistrationEnabled,
-                attendeeLimit: data.attendeeLimit != null ? Number(data.attendeeLimit) : s.sessionTime?.attendeeLimit,
+                attendeeLimit:
+                  data.isAutoRegistrationEnabled === false && data.attendeeLimit != null
+                    ? Number(data.attendeeLimit)
+                    : undefined,
                 locationId: data.locationId,
                 sessionTimeId: data.sessionTimeId ?? s.sessionTime?.sessionTimeId,
               },

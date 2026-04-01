@@ -50,6 +50,8 @@ export interface SessionFormData {
   modificationTime?: number;
   /** Speaker IDs; applied after session create/update on save */
   speakerIds?: string[];
+  /** Original speaker IDs loaded for edit-mode change detection */
+  originalSpeakerIds?: string[];
   /** When true, attendees are auto-registered; when false, registration is required */
   isAutoRegistrationEnabled?: boolean;
   /** Maximum attendee capacity when registration is required */
@@ -186,6 +188,7 @@ export const SessionForm: React.FC<SessionFormProps> = ({
   // Speaker picker state — use props from parent, no internal fetch
   const seriesSpeakers = seriesSpeakersProp ?? [];
   const [selectedSpeakers, setSelectedSpeakers] = useState<SeriesSpeaker[]>([]);
+  const [originalSpeakerIds, setOriginalSpeakerIds] = useState<string[]>([]);
   const [pickerOpen, setPickerOpen] = useState(false);
 
   // Location state — use props from parent, no internal fetch
@@ -203,6 +206,10 @@ export const SessionForm: React.FC<SessionFormProps> = ({
       if (cancelled) return;
       if (res && !("error" in res)) {
         const list = (res as any)?.speakers ?? [];
+        if (Array.isArray(list)) {
+          const ids = list.map((s: any) => String(s.speakerId));
+          setOriginalSpeakerIds(ids);
+        }
         if (Array.isArray(list) && list.length > 0) {
           const ids = list.map((s: any) => String(s.speakerId));
           setSelectedSpeakers((prev) => {
@@ -339,6 +346,7 @@ export const SessionForm: React.FC<SessionFormProps> = ({
             }
           : {}),
         speakerIds: selectedSpeakers.map((s) => s.speakerId),
+        ...(isEditMode ? { originalSpeakerIds } : {}),
         timezone: formData.timezone || undefined,
         locationId: selectedLocationId ?? undefined,
       });
