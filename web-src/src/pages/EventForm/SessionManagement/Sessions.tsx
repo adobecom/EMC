@@ -84,8 +84,8 @@ async function createSessionTimeForSession(
     startTimeMillis,
     endTimeMillis,
     isAutoRegistrationEnabled: data.isAutoRegistrationEnabled !== false,
-    ...(data.isAutoRegistrationEnabled === false && data.attendeeLimit != null
-      ? { attendeeLimit: data.attendeeLimit }
+    ...(data.attendeeLimit && Number(data.attendeeLimit) > 0
+      ? { attendeeLimit: Number(data.attendeeLimit) }
       : {}),
     ...(data.timezone ? { timezone: data.timezone } : {}),
     ...(data.locationId ? { locationId: data.locationId } : {}),
@@ -110,14 +110,6 @@ async function upsertSessionTimeForSession(
     return;
   }
 
-  const existingTimeRes = await apiService.getSessionTime(data.sessionTimeId);
-  if ("error" in existingTimeRes) {
-    throw new Error(
-      existingTimeRes.error?.message || String(existingTimeRes.error),
-    );
-  }
-
-  const existingTime = existingTimeRes as SessionTimeInfo;
   const updateTimeRes = await apiService.updateSessionTime(
     data.sessionTimeId,
     {
@@ -126,20 +118,9 @@ async function upsertSessionTimeForSession(
       startTimeMillis,
       endTimeMillis,
       isAutoRegistrationEnabled: data.isAutoRegistrationEnabled !== false,
-      ...(data.isAutoRegistrationEnabled === false
-        ? (data.attendeeLimit != null
-            ? { attendeeLimit: data.attendeeLimit }
-            : (existingTime.attendeeLimit != null
-                ? { attendeeLimit: existingTime.attendeeLimit }
-                : {}))
+      ...(data.attendeeLimit != null && data.attendeeLimit > 0
+        ? { attendeeLimit: data.attendeeLimit }
         : {}),
-      allowWaitlisting: (existingTime as any).allowWaitlisting ?? false,
-      waitlistAttendeeLimit:
-        (existingTime as any).waitlistAttendeeLimit ?? 100,
-      creationTime:
-        data.sessionTimeCreationTime ?? existingTime.creationTime,
-      modificationTime:
-        data.sessionTimeModificationTime ?? existingTime.modificationTime,
       ...(data.timezone ? { timezone: data.timezone } : {}),
       ...(data.locationId ? { locationId: data.locationId } : {}),
     },
@@ -274,6 +255,13 @@ export const Sessions: React.FC = () => {
         ? { capacity: data.attendeeLimit }
         : {}),
       locationId: data.locationId,
+      sessionTime: {
+        startTimeMillis: new Date(data.startDateTime + 'Z').getTime(),
+        endTimeMillis: new Date(data.endDateTime + 'Z').getTime(),
+        isAutoRegistrationEnabled: data.isAutoRegistrationEnabled,
+        attendeeLimit: data.attendeeLimit != null ? Number(data.attendeeLimit) : undefined,
+        locationId: data.locationId,
+      },
     };
     setSessions((prev) => sortSessionsByDate([...prev, sessionWithTime]));
     setIsAddingNew(false);
@@ -289,9 +277,6 @@ export const Sessions: React.FC = () => {
       description: data.description,
       tags: serializeTagsForApi(data.tags),
     };
-    if (data.creationTime != null) payload.creationTime = data.creationTime;
-    if (data.modificationTime != null)
-      payload.modificationTime = data.modificationTime;
     const res = await apiService.updateSession(sessionId, eventId, payload);
     if ("error" in res) {
       const msg = res.error?.message || String(res.error);
@@ -313,6 +298,15 @@ export const Sessions: React.FC = () => {
                 ? { capacity: data.attendeeLimit }
                 : {}),
               locationId: data.locationId,
+              sessionTime: {
+                ...s.sessionTime,
+                startTimeMillis: new Date(data.startDateTime + 'Z').getTime(),
+                endTimeMillis: new Date(data.endDateTime + 'Z').getTime(),
+                isAutoRegistrationEnabled: data.isAutoRegistrationEnabled,
+                attendeeLimit: data.attendeeLimit != null ? Number(data.attendeeLimit) : s.sessionTime?.attendeeLimit,
+                locationId: data.locationId,
+                sessionTimeId: data.sessionTimeId ?? s.sessionTime?.sessionTimeId,
+              },
             }
           : s,
       );

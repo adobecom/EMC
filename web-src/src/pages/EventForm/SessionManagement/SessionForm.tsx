@@ -320,13 +320,9 @@ export const SessionForm: React.FC<SessionFormProps> = ({
         endDateTime,
         tags: tagsToString(selectedTags),
         isAutoRegistrationEnabled,
-        attendeeLimit:
-          attendeeLimitEnabled && attendeeLimit
-            ? (() => {
-                const n = parseInt(attendeeLimit, 10);
-                return !Number.isNaN(n) ? n : undefined;
-              })()
-            : undefined,
+        attendeeLimit: !isAutoRegistrationEnabled && attendeeLimitEnabled && attendeeLimit
+          ? Number(attendeeLimit)
+          : undefined,
         ...(isEditMode &&
         (sessionTimestamps.creationTime != null ||
           sessionTimestamps.modificationTime != null)
@@ -391,10 +387,16 @@ export const SessionForm: React.FC<SessionFormProps> = ({
       (endTime.hour === startTime.hour && endTime.minute <= startTime.minute)),
   );
 
+  const isCapacityMissing = Boolean(
+    !isAutoRegistrationEnabled && attendeeLimitEnabled &&
+    (!attendeeLimit.trim() || Number(attendeeLimit) <= 0),
+  );
+
   const canSave = Boolean(
     name.trim() && description.trim() && date && startTime && endTime &&
     !isDateOutOfRange && !isEndTimeInvalid &&
-    !isStartTimeBeforeEventStart && !isEndTimeAfterEventEnd,
+    !isStartTimeBeforeEventStart && !isEndTimeAfterEventEnd &&
+    !isCapacityMissing,
   );
 
   const renderSpeakers = () => (
@@ -657,8 +659,14 @@ export const SessionForm: React.FC<SessionFormProps> = ({
           <div style={{ display: "flex", flexDirection: "row", gap: "16px", alignItems: "center", flexWrap: "wrap" }}>
             <SegmentedControl
               selectedKey={isAutoRegistrationEnabled ? "automatic" : "registration"}
-              onSelectionChange={(key) => setIsAutoRegistrationEnabled(key !== "registration")}
-              isDisabled
+              onSelectionChange={(key) => {
+                const isAuto = key !== "registration"
+                setIsAutoRegistrationEnabled(isAuto)
+                if (isAuto) {
+                  setAttendeeLimitEnabled(false)
+                  setAttendeeLimit("")
+                }
+              }}
             >
               <SegmentedControlItem id="automatic">Automatic</SegmentedControlItem>
               <SegmentedControlItem id="registration">Registration required</SegmentedControlItem>
@@ -666,18 +674,20 @@ export const SessionForm: React.FC<SessionFormProps> = ({
             <Checkbox
               isSelected={attendeeLimitEnabled}
               onChange={setAttendeeLimitEnabled}
-              isDisabled={true}
+              isDisabled={isAutoRegistrationEnabled}
             >
               Set capacity limit
             </Checkbox>
             <TextField
               aria-label="Capacity"
               isRequired={attendeeLimitEnabled}
-              isDisabled={true}
-              type="number"
+              inputMode="numeric"
               UNSAFE_style={{ width: "96px" }}
               value={attendeeLimit}
-              onChange={setAttendeeLimit}
+              onChange={(v) => setAttendeeLimit(v)}
+              isDisabled={!attendeeLimitEnabled}
+              isInvalid={isCapacityMissing}
+              errorMessage="Capacity is required"
             />
           </div>
         </div>
