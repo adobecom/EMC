@@ -16,7 +16,7 @@ import {
   SegmentedControl,
   SegmentedControlItem,
 } from '@react-spectrum/s2'
-import { TYPOGRAPHY, COLORS } from '../../styles/designSystem'
+import { TYPOGRAPHY } from '../../styles/designSystem'
 import { apiService } from '../../services/api'
 
 // ============================================================================
@@ -177,7 +177,7 @@ export const LocationDialog: React.FC<LocationDialogProps> = ({
                     />
 
                     {createError && (
-                      <Text UNSAFE_style={{ color: COLORS.ADOBE_RED, fontSize: '14px' }}>
+                      <Text UNSAFE_style={{ color: 'var(--spectrum-global-color-red-600)', fontSize: '14px' }}>
                         {createError}
                       </Text>
                     )}

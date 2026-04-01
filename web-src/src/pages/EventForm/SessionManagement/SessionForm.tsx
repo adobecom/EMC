@@ -11,7 +11,6 @@ import {
   DatePicker,
   TimeField,
   Checkbox,
-  ProgressCircle,
   SearchField,
   Form,
   SegmentedControl,
@@ -145,7 +144,7 @@ export const SessionForm: React.FC<SessionFormProps> = ({
   onSpeakersRefresh: onSpeakersRefreshProp,
 }) => {
   const isEditMode = session !== null;
-  const { seriesId: contextSeriesId, formData, locale, eventId } = useEventFormContext();
+  const { seriesId: contextSeriesId, formData, locale } = useEventFormContext();
   const seriesId = contextSeriesId || formData.seriesId || "";
 
   const [loadingDetails, setLoadingDetails] = useState(
