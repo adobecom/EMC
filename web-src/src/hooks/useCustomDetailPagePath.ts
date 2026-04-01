@@ -2,8 +2,9 @@
 * Hook for custom detailPagePath construction based on external URL pattern config.
 *
 * During event creation, if the selected series has a URL pattern entry
-* in url-patterns.json for the current environment, the FE constructs
-* the detailPagePath instead of letting the backend generate it.
+* in url-patterns.json for the current environment, the FE builds the full
+* detail page URL and sends it as `detailPagePath` on the create payload
+* (via save extraPayload) instead of letting the API choose the path.
 */
 
 import { useCallback, useEffect, useRef } from 'react'
@@ -15,17 +16,17 @@ import type {
   SeriesApiResponse,
   UrlPatternEntry,
 } from '../types/domain'
+import { getDetailPageLocalePrefixFromIetf } from '../config/detailPageLocalePrefix'
 import {
   buildTokenContext,
   constructDetailPagePath,
-  normalizeRelativeUrl,
   resolveUrlPattern,
 } from '../utils/urlPatternResolver'
 
+/** `url` is the full detail page URL — same value sent as API `detailPagePath` on create. */
 export interface DetailPagePathResult {
   url: string
   collision: EventApiResponse | null
-  relativeUrl: string
 }
 
 export function useCustomDetailPagePath() {
@@ -73,13 +74,18 @@ export function useCustomDetailPagePath() {
 
     const context = buildTokenContext(formData, series)
     const resolved = resolveUrlPattern(entry.pattern, context)
-    const url = constructDetailPagePath(relatedDomain, contentRoot, resolved)
-    const relativeUrl = normalizeRelativeUrl(resolved)
+    const localePrefix = getDetailPageLocalePrefixFromIetf(formData.defaultLocale)
+    const url = constructDetailPagePath(
+      relatedDomain,
+      contentRoot,
+      resolved,
+      localePrefix
+    )
 
     const allEvents: EventApiResponse[] = await cachedApi.getEventsList()
     const collision = allEvents.find((e) => e.detailPagePath === url) || null
 
-    return { url, collision, relativeUrl }
+    return { url, collision }
   }, [])
 
   return { getDetailPagePathForSave }

@@ -277,60 +277,55 @@ export const ImageUploader: React.FC<ImageUploaderProps> = ({
     fileInputRef.current?.click()
   }
 
-  const handleRemoveClick = () => {
-    // For pending files (not yet uploaded), just remove without dialog
-    if (pendingFile && !imageUrl) {
-      if (onRemove) {
-        onRemove()
-      }
-      setError(null)
-      return
-    }
-    // For uploaded images, show confirmation dialog
-    setIsDeleteDialogOpen(true)
-  }
-
-  const handleDeleteConfirm = async () => {
-    // If we have an uploaded image with an ID, make the DELETE API call
+  /**
+   * Perform delete: event images call DELETE when eventId is set; otherwise clear parent state only.
+   * With deferUpload (or no eventId), removal is not committed until the parent saves — no confirm dialog,
+   * so we avoid nesting AlertDialog inside DialogContainer (which dismissed the parent modal).
+   */
+  const performDelete = async (): Promise<void> => {
     if (imageId && eventId) {
       setIsDeleting(true)
       setError(null)
-
       try {
-        // Note: targetUrl should be relative path - callExternalApi adds the host
         const config = {
           targetUrl: `/v1/events/${eventId}/images`,
           type: imageKind
         }
-
         const result = await apiService.deleteImage(config, imageId)
-
         if ('error' in result) {
           console.error('Failed to delete image:', result.error)
           setError(result.error || 'Failed to delete image')
-          setIsDeleting(false)
           return
         }
-
-        // Success - call onRemove to update local state
-        if (onRemove) {
-          onRemove()
-        }
+        onRemove?.()
       } catch (err) {
         console.error('Delete image error:', err)
         setError(err instanceof Error ? err.message : 'Failed to delete image')
       } finally {
         setIsDeleting(false)
-        setIsDeleteDialogOpen(false)
       }
     } else {
-      // No imageId or eventId - just remove from local state
-      if (onRemove) {
-        onRemove()
-      }
-      setIsDeleteDialogOpen(false)
+      onRemove?.()
     }
     setError(null)
+  }
+
+  const handleRemoveClick = () => {
+    if (deferUpload || !eventId) {
+      void performDelete()
+      return
+    }
+    if (pendingFile && !imageUrl) {
+      onRemove?.()
+      setError(null)
+      return
+    }
+    setIsDeleteDialogOpen(true)
+  }
+
+  const handleDeleteConfirm = async () => {
+    await performDelete()
+    setIsDeleteDialogOpen(false)
   }
 
   const handleDeleteCancel = () => {

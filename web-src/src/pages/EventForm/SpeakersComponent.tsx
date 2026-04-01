@@ -373,7 +373,7 @@ export const SpeakersComponent: React.FC = () => {
         >
           <div className={style({display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 16})}>
             <Text>Add speakers to your event using the button below.</Text>
-            <Button variant="secondary" onPress={() => setPickerOpen(true)}>
+            <Button data-testid="add-speaker-button" variant="secondary" onPress={() => setPickerOpen(true)}>
               <Add />
               <Text>Add Speaker</Text>
             </Button>
@@ -523,6 +523,7 @@ export const SpeakersComponent: React.FC = () => {
 
       {profiles.length > 0 && (
         <Button
+          data-testid="add-speaker-button"
           variant="secondary"
           onPress={() => setPickerOpen(true)}
           styles={style({ width: '[100%]' })}

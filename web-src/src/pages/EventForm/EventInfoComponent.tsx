@@ -266,6 +266,7 @@ export const EventInfoComponent: React.FC = () => {
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: SPACING.XS }}>
           <div className={style({display: 'flex', alignItems: 'center', gap: 8})}>
             <Switch
+              data-testid="private-event-switch"
               isSelected={isPrivate}
               onChange={(value) => updateFormData({ isPrivate: value })}
             >
@@ -282,6 +283,7 @@ export const EventInfoComponent: React.FC = () => {
           </div>
           <div className={style({display: 'flex', alignItems: 'center', gap: 8})}>
             <Switch
+              data-testid="invite-only-switch"
               isSelected={inviteOnly}
               onChange={(value) => updateFormData({ inviteOnly: value })}
               isDisabled={!!eventId}
@@ -301,6 +303,7 @@ export const EventInfoComponent: React.FC = () => {
       </div>
       {/* Form Fields */}
       <Picker
+        data-testid="language-picker"
         label="Language"
         isRequired
         selectedKey={locale || null}
@@ -330,6 +333,7 @@ export const EventInfoComponent: React.FC = () => {
         </AlertDialog>
       </DialogTrigger>
       <TextField
+        data-testid="event-title-input"
         label="Event Title"
         isRequired
         maxLength={80}
@@ -351,6 +355,7 @@ export const EventInfoComponent: React.FC = () => {
           </TooltipTrigger>
         </div>
         <TextField
+          data-testid="event-en-title-input"
           aria-label="English title for page URL"
           value={enTitle || ''}
           onChange={(value) => updateFormData({ enTitle: value })}
@@ -366,6 +371,7 @@ export const EventInfoComponent: React.FC = () => {
           Event Details
         </HeadingWithTooltip>
         <RichTextEditor
+          data-testid="event-description-rte"
           label=""
           value={description || ''}
           onChange={(value) => updateFormData({ description: value })}
@@ -373,6 +379,7 @@ export const EventInfoComponent: React.FC = () => {
         />
       </div>
       <TextArea
+        data-testid="event-seo-description"
         label="Event Description for Events Hub and SEO"
         isRequired
         maxLength={160}
@@ -383,6 +390,7 @@ export const EventInfoComponent: React.FC = () => {
       />
       <div className={style({display: 'flex', gap: 16, flexWrap: 'wrap'})}>
         <DatePicker
+          data-testid="start-datetime-picker"
           label="Start Date & Time"
           isRequired
           granularity="minute"
@@ -391,6 +399,7 @@ export const EventInfoComponent: React.FC = () => {
         />
 
         <DatePicker
+          data-testid="end-datetime-picker"
           label="End Date & Time"
           isRequired
           granularity="minute"
@@ -400,6 +409,7 @@ export const EventInfoComponent: React.FC = () => {
         />
 
         <ComboBox
+          data-testid="timezone-combobox"
           label="Timezone"
           isRequired
           defaultItems={TIMEZONE_OPTIONS}
@@ -414,6 +424,7 @@ export const EventInfoComponent: React.FC = () => {
       </div>
       <div style={{ display: 'inline-block' }}>
         <Switch
+          data-testid="secondary-link-switch"
           isSelected={hasSecondaryLink}
           onChange={handleSecondaryLinkToggle}
         >
@@ -423,6 +434,7 @@ export const EventInfoComponent: React.FC = () => {
       {hasSecondaryLink && (
         <>
           <TextField
+            data-testid="secondary-link-title"
             label="Secondary Link Title"
             value={secondaryLinkTitle || ''}
             onChange={(value) => updateFormData({ secondaryLinkTitle: value })}
@@ -431,6 +443,7 @@ export const EventInfoComponent: React.FC = () => {
           />
 
           <TextField
+            data-testid="secondary-link-url"
             label="Secondary Link URL"
             type="url"
             value={communityForumUrl || ''}

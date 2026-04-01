@@ -283,6 +283,7 @@ export const PageMetadataComponent: React.FC = () => {
         return (
           <Picker
             key={field.key}
+            data-testid={`meta-${field.key}-input`}
             label={`${field.name} *`}
             placeholder={`Select ${field.name.toLowerCase()}`}
             selectedKey={currentValue || `no-${field.key}`}

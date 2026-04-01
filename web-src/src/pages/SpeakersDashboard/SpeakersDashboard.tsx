@@ -32,6 +32,7 @@ import {
 import { style } from "@react-spectrum/s2/style" with { type: "macro" }
 import Edit from '@react-spectrum/s2/icons/Edit'
 import RemoveCircle from '@react-spectrum/s2/icons/RemoveCircle'
+import RotateCCW from '@react-spectrum/s2/icons/RotateCCW'
 import Add from '@react-spectrum/s2/icons/Add'
 import Link from '@react-spectrum/s2/icons/Link'
 import { TableColumn } from '../../components/shared/DataTable'
@@ -670,6 +671,13 @@ export const SpeakersDashboard: React.FC<SpeakersDashboardProps> = () => {
     }
   }, [])
 
+  const handleSeriesReset = useCallback(() => {
+    setSelectedSeriesId(null)
+    setSeriesFilterText('')
+    setEventConnections(new Map())
+    loadedSpeakerIdsRef.current.clear()
+  }, [])
+
   // Series selector header with searchable ComboBox
   const seriesSelectorHeader = useMemo(() => (
     <div
@@ -683,7 +691,7 @@ export const SpeakersDashboard: React.FC<SpeakersDashboardProps> = () => {
     >
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 16 }}>
         {/* ComboBox Row */}
-        <div style={{ display: 'flex', alignItems: 'flex-end', gap: 16 }}>
+        <div className={style({ display: 'flex', alignItems: 'end', gap: 8 })}>
           {isLoadingSeries ? (
             <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
               <Text UNSAFE_style={{ fontWeight: 600 }}>Loading series...</Text>
@@ -691,6 +699,7 @@ export const SpeakersDashboard: React.FC<SpeakersDashboardProps> = () => {
             </div>
           ) : (
             <ComboBox
+              data-testid="series-selector"
               label="Select Series"
               selectedKey={selectedSeriesId}
               onSelectionChange={handleSeriesComboBoxChange}
@@ -711,6 +720,14 @@ export const SpeakersDashboard: React.FC<SpeakersDashboardProps> = () => {
                 </ComboBoxItem>
               )}
             </ComboBox>
+          )}
+          {!isLoadingSeries && selectedSeriesId && (
+            <div className={style({ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 4 })}>
+              <Button size="S" variant="secondary" onPress={handleSeriesReset}>
+                <RotateCCW />
+                <Text>Reset series</Text>
+              </Button>
+            </div>
           )}
           {seriesList.length > 0 && (
             <Text UNSAFE_style={{ 
@@ -766,13 +783,14 @@ export const SpeakersDashboard: React.FC<SpeakersDashboardProps> = () => {
         )}
       </div>
     </div>
-  ), [isLoadingSeries, selectedSeriesId, handleSeriesComboBoxChange, seriesList, filteredSeriesItems, selectedSeries, speakers.length])
+  ), [isLoadingSeries, selectedSeriesId, handleSeriesComboBoxChange, handleSeriesReset, seriesList, filteredSeriesItems, selectedSeries, speakers.length])
   
   // Custom create button — only shown when user has event:write
   const createButton = useMemo(() => {
     if (!canWriteEvent) return undefined
     return (
       <Button
+        data-testid="add-speaker-button"
         variant="accent"
         onPress={handleCreateSpeaker}
         isDisabled={!selectedSeriesId}
@@ -784,7 +802,7 @@ export const SpeakersDashboard: React.FC<SpeakersDashboardProps> = () => {
   }, [canWriteEvent, handleCreateSpeaker, selectedSeriesId])
   
   return (
-    <div>
+    <div data-testid="speakers-dashboard">
       {/* Series Selector */}
       <div style={{ paddingLeft: 32, paddingRight: 32, paddingTop: 32 }}>
         {seriesSelectorHeader}

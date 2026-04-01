@@ -104,6 +104,7 @@ type EventFormAction =
   | { type: 'SET_LOCALE'; payload: string }
   | { type: 'SET_EDIT_MODE'; payload: boolean }
   | { type: 'SET_EVENT_RESPONSE'; payload: EventApiResponse | null }
+  | { type: 'MERGE_EVENT_RESPONSE'; payload: Partial<EventApiResponse> }
   | { type: 'UPDATE_FORM_DATA'; payload: Partial<EventFormData> }
   | { type: 'POPULATE_FORM_DATA'; payload: Partial<EventFormData> }
   | { type: 'RESET_FORM_DATA'; payload: EventFormData }
@@ -145,6 +146,8 @@ export interface EventFormContextValue {
   /** Populate form from API response without marking dirty (for load/edit) */
   populateFormDataFromResponse: (updates: Partial<EventFormData>) => void
   setEventResponse: (response: EventApiResponse | null) => void
+  /** Shallow-merge into eventDataResp without changing isDirty (e.g. sync modificationTime after child mutations) */
+  mergeEventResponse: (partial: Partial<EventApiResponse>) => void
   setEventId: (id: string | null) => void
   setSeriesId: (id: string) => void
   setLocale: (locale: string) => void
@@ -276,6 +279,13 @@ function eventFormReducer(state: EventFormState, action: EventFormAction): Event
         ...state,
         eventDataResp: action.payload,
         isDirty: false // Response just set means we're in sync
+      }
+
+    case 'MERGE_EVENT_RESPONSE':
+      if (!state.eventDataResp) return state
+      return {
+        ...state,
+        eventDataResp: { ...state.eventDataResp, ...action.payload },
       }
     
     case 'UPDATE_FORM_DATA':
@@ -426,6 +436,10 @@ export const EventFormProvider: React.FC<EventFormProviderProps> = ({
   
   const setEventResponse = useCallback((response: EventApiResponse | null) => {
     dispatch({ type: 'SET_EVENT_RESPONSE', payload: response })
+  }, [])
+
+  const mergeEventResponse = useCallback((partial: Partial<EventApiResponse>) => {
+    dispatch({ type: 'MERGE_EVENT_RESPONSE', payload: partial })
   }, [])
   
   const setEventId = useCallback((id: string | null) => {
@@ -585,6 +599,7 @@ export const EventFormProvider: React.FC<EventFormProviderProps> = ({
     updateFormData,
     populateFormDataFromResponse,
     setEventResponse,
+    mergeEventResponse,
     setEventId,
     setSeriesId,
     setLocale,
@@ -622,6 +637,7 @@ export const EventFormProvider: React.FC<EventFormProviderProps> = ({
     updateFormData,
     populateFormDataFromResponse,
     setEventResponse,
+    mergeEventResponse,
     setEventId,
     setSeriesId,
     setLocale,

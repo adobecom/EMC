@@ -5,7 +5,8 @@ import { Session, SessionTimeInfo } from "../../../types/sessions";
 import { SessionsList } from "./SessionList";
 import type { SessionFormData } from "./SessionForm";
 import { useEventFormContext } from "../../../contexts";
-import { apiService } from "../../../services/api";
+import { EventApiResponse } from "../../../types/domain";
+import { apiService, cachedApi } from "../../../services/api";
 
 function parseTagsFromApi(tags: unknown): string[] {
   if (typeof tags === "string") return tags.split(",").map((t) => t.trim()).filter(Boolean);
@@ -162,7 +163,7 @@ async function syncSessionSpeakers(
 }
 
 export const Sessions: React.FC = () => {
-  const { eventId, venueLocations, seriesSpeakers, setSeriesSpeakers } = useEventFormContext();
+  const { eventId, mergeEventResponse, venueLocations, seriesSpeakers, setSeriesSpeakers } = useEventFormContext();
   const [sessions, setSessions] = useState<Session[]>([]);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -203,16 +204,32 @@ export const Sessions: React.FC = () => {
     }
   }, [eventId]);
 
+  const refreshEventConcurrencyMetadata = useCallback(
+    async (id: string) => {
+      cachedApi.invalidateCache(id);
+      const refreshed = await apiService.getEventFull(id);
+      if ("error" in refreshed) return;
+      const r = refreshed as EventApiResponse;
+      const patch: Partial<EventApiResponse> = {};
+      if (r.modificationTime != null) patch.modificationTime = r.modificationTime;
+      if (r.creationTime != null) patch.creationTime = r.creationTime;
+      if (Object.keys(patch).length > 0) mergeEventResponse(patch);
+    },
+    [mergeEventResponse],
+  );
+
   useEffect(() => {
     loadSessions();
   }, [loadSessions]);
 
   const handleDeleteSession = async (sessionId: string) => {
+    if (!eventId) return;
     const res = await apiService.deleteSession(sessionId);
     if ("error" in res) {
       setLoadError(res.error?.message || String(res.error));
     } else {
       setSessions((prev) => prev.filter((s) => s.id !== sessionId));
+      await refreshEventConcurrencyMetadata(eventId);
     }
   };
 
@@ -246,6 +263,8 @@ export const Sessions: React.FC = () => {
     } catch (err) {
       throw err;
     }
+
+    await refreshEventConcurrencyMetadata(eventId);
 
     const sessionWithTime: Session = {
       ...newSession,
@@ -286,6 +305,8 @@ export const Sessions: React.FC = () => {
     await upsertSessionTimeForSession(eventId, sessionId, data);
 
     await syncSessionSpeakers(sessionId, data.speakerIds ?? []);
+
+    await refreshEventConcurrencyMetadata(eventId);
 
     setSessions((prev) => {
       const updated = prev.map((s) =>

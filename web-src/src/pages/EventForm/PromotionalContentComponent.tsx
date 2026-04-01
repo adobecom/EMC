@@ -216,9 +216,9 @@ export const PromotionalContentComponent: React.FC = () => {
   // ============================================================================
   
   return (
-    <div className={style({display: 'flex', flexDirection: 'column', gap: 16})}>
+    <div data-testid="promo-content-rte" className={style({display: 'flex', flexDirection: 'column', gap: 16})}>
       <div className={style({display: 'flex', alignItems: 'center', gap: 12})}>
-        <HeadingWithTooltip 
+        <HeadingWithTooltip
           level={3}
           tooltip="Select promotional content to feature on your event page. These items help highlight relevant Adobe products and resources."
         >

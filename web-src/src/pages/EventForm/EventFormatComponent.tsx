@@ -11,7 +11,7 @@ import { cachedApi } from '../../services/api'
 import { HeadingWithTooltip } from '../../components/shared'
 import { SeriesApiResponse } from '../../types/domain'
 import { useEventFormComponent } from '../../hooks/useEventFormComponent'
-import { useEventFormContext } from '../../contexts/EventFormContext'
+import { useEventFormContext, useGroup } from '../../contexts'
 import { COLORS, TYPOGRAPHY, SPACING } from '../../styles/designSystem'
 
 /**
@@ -36,6 +36,7 @@ export const EventFormatComponent: React.FC = () => {
   })
   
   const { seriesId: contextSeriesId, isFormatConfirmed, resetForReselect } = useEventFormContext()
+  const { activeGroup } = useGroup()
   
   const cloudType = formData.cloudType
   const seriesId = contextSeriesId || formData.seriesId || ''
@@ -82,7 +83,7 @@ export const EventFormatComponent: React.FC = () => {
 
     loadSeriesName()
     return () => { isMounted = false }
-  }, [seriesId])
+  }, [seriesId, activeGroup?.groupId])
 
   // ============================================================================
   // HELPERS
@@ -131,9 +132,9 @@ export const EventFormatComponent: React.FC = () => {
   }
 
   return (
-    <div className={style({display: 'flex', flexDirection: 'column', gap: 16})}>
+    <div data-testid="event-format-section" className={style({display: 'flex', flexDirection: 'column', gap: 16})}>
       <div>
-        <HeadingWithTooltip 
+        <HeadingWithTooltip
           level={3}
           tooltip="The cloud type and series determine where your event will be published and what metadata it inherits."
         >
@@ -162,7 +163,7 @@ export const EventFormatComponent: React.FC = () => {
           >
             <div className={style({display: 'flex', gap: 8, alignItems: 'center'})}>
               {isLocked && <Lock />}
-              <Text UNSAFE_style={{ fontWeight: 500 }}>{cloudLabel}</Text>
+              <Text data-testid="cloud-badge" UNSAFE_style={{ fontWeight: 500 }}>{cloudLabel}</Text>
             </div>
           </div>
         </div>
@@ -182,7 +183,7 @@ export const EventFormatComponent: React.FC = () => {
           >
             <div className={style({display: 'flex', gap: 8, alignItems: 'center'})}>
               {isLocked && <Lock />}
-              <Text UNSAFE_style={{ fontWeight: 500 }}>
+              <Text data-testid="series-badge" UNSAFE_style={{ fontWeight: 500 }}>
                 {isLoadingName ? 'Loading...' : (seriesName || 'Not selected')}
               </Text>
             </div>
@@ -193,6 +194,7 @@ export const EventFormatComponent: React.FC = () => {
         {!isLocked && (
           <div style={{ alignSelf: 'flex-end', marginBottom: SPACING.XXS }}>
             <Button
+              data-testid="reselect-format-button"
               variant="secondary"
               fillStyle="outline"
               onPress={handleReselectClick}

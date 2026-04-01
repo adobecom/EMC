@@ -333,15 +333,18 @@ class ApiService {
     validateString(eventId, 'event ID')
     validateObject(data, 'session data')
     const sessionCode = (String(data.name ?? '').replace(/\s+/g, '-').toLowerCase()).substring(0, 50) || 'session'
+    const tagsStr = typeof data.tags === 'string' ? data.tags.trim() : ''
     const body: Record<string, unknown> = {
       eventId,
       enTitle: data.name ?? '',
       title: data.name ?? '',
       description: data.description ?? '',
-      tags: data.tags ?? '',
       sessionCode,
       sessionType: 'Session',
       published: false,
+    }
+    if (tagsStr.length > 0) {
+      body.tags = tagsStr
     }
     return this.callExternalApi('esp', '/v1/sessions', 'POST', body, {
       operationName: 'createSession',
@@ -355,18 +358,21 @@ class ApiService {
     validateObject(data, 'session data')
     const sessionCode = (String(data.name ?? '').replace(/\s+/g, '-').toLowerCase()).substring(0, 50) || 'session'
     const now = Date.now()
+    const tagsStr = typeof data.tags === 'string' ? data.tags.trim() : ''
     const body: Record<string, unknown> = {
       sessionId: id,
       eventId,
       enTitle: data.name ?? '',
       title: data.name ?? '',
       description: data.description ?? '',
-      tags: data.tags ?? '',
       sessionCode,
       sessionType: 'Session',
       published: false,
       creationTime: (data.creationTime as number) ?? now,
       modificationTime: (data.modificationTime as number) ?? now,
+    }
+    if (tagsStr.length > 0) {
+      body.tags = tagsStr
     }
     return this.callExternalApi('esp', `/v1/sessions/${encodeURIComponent(id)}`, 'PUT', body, {
       operationName: 'updateSession',
@@ -1526,6 +1532,19 @@ class ApiService {
     )
   }
 
+  async deleteSponsorImage(seriesId: string, sponsorId: string, imageId: string): Promise<any | ErrorResponse> {
+    validateString(seriesId, 'series ID')
+    validateString(sponsorId, 'sponsor ID')
+    validateString(imageId, 'image ID')
+    return this.callExternalApi(
+      'esp',
+      `/v1/series/${seriesId}/sponsors/${sponsorId}/images/${imageId}`,
+      'DELETE',
+      undefined,
+      { operationName: 'deleteSponsorImage', shouldReturnFullResponse: true }
+    )
+  }
+
   // ============================================================================
   // VENUE APIs
   // ============================================================================
@@ -2520,6 +2539,19 @@ export const cachedApi = {
     apiCache.invalidate(seriesId)
     apiCache.invalidate(speakerId)
     apiCache.invalidate('getSpeakers')
+    return result
+  },
+
+  async createSponsor(data: any, seriesId: string, locale: string) {
+    const result = await apiService.createSponsor(data, seriesId, locale)
+    apiCache.invalidate(seriesId)
+    apiCache.invalidate('getSponsors')
+    return result
+  },
+  async deleteSponsorImage(seriesId: string, sponsorId: string, imageId: string) {
+    const result = await apiService.deleteSponsorImage(seriesId, sponsorId, imageId)
+    apiCache.invalidate(seriesId)
+    apiCache.invalidate('getSponsors')
     return result
   },
 

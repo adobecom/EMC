@@ -15,6 +15,7 @@ import EditIcon from "@react-spectrum/s2/icons/Edit"
 import Add from "@react-spectrum/s2/icons/Add"
 import UserAdd from "@react-spectrum/s2/icons/UserAdd"
 import RemoveCircle from "@react-spectrum/s2/icons/RemoveCircle"
+import RotateCCW from "@react-spectrum/s2/icons/RotateCCW"
 import UserGroupIcon from "@react-spectrum/s2/icons/UserGroup"
 import { useApi } from '../../contexts/ApiContext'
 import { useToast, useGroup, useAuth } from '../../contexts'
@@ -830,8 +831,8 @@ export const ScopeGroupManagement: React.FC<ScopeGroupManagementProps> = () => {
                       setScopeFilterText('')
                     }}
                   >
-                    <RemoveCircle />
-                    <Text>Reset</Text>
+                    <RotateCCW />
+                    <Text>Reset scope</Text>
                   </Button>
                   {canWriteScope && (
                     <Button size="S" variant="secondary" onPress={openScopeEdit}>
@@ -840,7 +841,7 @@ export const ScopeGroupManagement: React.FC<ScopeGroupManagementProps> = () => {
                     </Button>
                   )}
                   {canDeleteScope && selectedScope.type === 'team' && (
-                    <Button size="S" variant="negative" fillStyle="outline" onPress={() => setScopeToDelete(selectedScope)}>
+                    <Button size="S" variant="secondary" onPress={() => setScopeToDelete(selectedScope)}>
                       <RemoveCircle />
                       <Text>Delete Scope</Text>
                     </Button>
@@ -858,7 +859,7 @@ export const ScopeGroupManagement: React.FC<ScopeGroupManagementProps> = () => {
           </div>
         </div>
 
-        <Divider />
+        <Divider styles={style({ marginBottom: 56 })} />
 
         {/* ── Groups table ── */}
         {selectedScopeId ? (

@@ -160,6 +160,7 @@ export const MarketoIntegrationComponent: React.FC = () => {
 
       {/* Event Type Selector */}
       <Picker
+        data-testid="marketo-event-type-picker"
         label="Event type"
         isRequired
         selectedKey={eventType || 'no-integration'}
@@ -175,6 +176,7 @@ export const MarketoIntegrationComponent: React.FC = () => {
       {/* Two-column layout for main fields */}
       <div className={style({display: 'flex', gap: 32, flexWrap: 'wrap'})}>
         <TextField
+          data-testid="marketo-campaign-id-input"
           label="Salesforce campaign ID"
           isRequired={!isNoIntegration && !isLocked}
           value={marketoIntegration.salesforceCampaignId || ''}
@@ -185,6 +187,7 @@ export const MarketoIntegrationComponent: React.FC = () => {
         />
 
         <TextField
+          data-testid="marketo-program-name-input"
           label="MCZ program name"
           isRequired={!isNoIntegration && !isLocked}
           value={marketoIntegration.mczProgramName || ''}

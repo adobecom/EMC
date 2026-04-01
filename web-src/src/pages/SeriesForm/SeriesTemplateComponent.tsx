@@ -182,6 +182,7 @@ export const SeriesTemplateComponent: React.FC = () => {
       
       {/* Template Picker Modal */}
       <TemplatePicker
+        data-testid="series-template-picker"
         isOpen={isPickerOpen}
         onClose={handleClosePicker}
         onSelect={handleSelectTemplate}
