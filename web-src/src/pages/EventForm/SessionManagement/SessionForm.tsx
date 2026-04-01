@@ -516,7 +516,7 @@ export const SessionForm: React.FC<SessionFormProps> = ({
 
   const renderTags = () => (
     <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
-      <TagSelector selectedTags={selectedTags} onChange={setSelectedTags} />
+      <TagSelector selectedTags={selectedTags} onChange={setSelectedTags} placement="top"/>
     </div>
   );
 
