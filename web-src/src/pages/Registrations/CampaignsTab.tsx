@@ -3,19 +3,45 @@
 */
 
 import React, { useState, useCallback, useMemo, useEffect } from 'react'
-import { Button, ButtonGroup, TextField, Picker, PickerItem, DialogTrigger, Dialog, Content, Heading, Text, ActionButton, NumberField, Switch, AlertDialog } from '@react-spectrum/s2'
+import { Button, ButtonGroup, TextField, Picker, PickerItem, DialogTrigger, Dialog, Content, Heading, Text, ActionButton, NumberField, Switch, AlertDialog, SearchField } from '@react-spectrum/s2'
 import { style } from "@react-spectrum/s2/style" with { type: "macro" }
 import Add from '@react-spectrum/s2/icons/Add'
 import Edit from '@react-spectrum/s2/icons/Edit'
 import RemoveCircle from '@react-spectrum/s2/icons/RemoveCircle'
 import Copy from '@react-spectrum/s2/icons/Copy'
+import Download from '@react-spectrum/s2/icons/Download'
 import type { EventApiResponse } from '../../types/domain'
 import type { Campaign, CampaignFormData, CampaignStatus } from '../../types/campaign'
 import { calculateCampaignStats } from '../../types/campaign'
 import ChannelIllustration from '@react-spectrum/s2/illustrations/linear/Channel'
+import NoSearchResults from '@react-spectrum/s2/illustrations/linear/NoSearchResults'
 import { DataTable, TableColumn, ResourceEmptyState } from '../../components/shared'
 import { COLORS } from '../../styles/designSystem'
 import { useHasPermission } from '../../hooks/useHasPermission'
+import { generateCsv, downloadCsv, type CsvColumn } from '../../utils/csvExport'
+
+const DEFAULT_CAMPAIGN_PAGE_SIZE = 20
+const CAMPAIGN_PAGE_SIZE_OPTIONS = [10, 20, 50, 100] as const
+
+const CAMPAIGN_CSV_COLUMNS: CsvColumn[] = [
+  { key: 'campaignId', label: 'Campaign ID' },
+  { key: 'name', label: 'Campaign Name' },
+  { key: 'url', label: 'URL' },
+  { key: 'status', label: 'Status' },
+  { key: 'attendeeCount', label: 'Registrations (count)' },
+  { key: 'attendeeLimit', label: 'Registration limit' },
+  { key: 'waitlistAttendeeCount', label: 'Waitlisted' },
+  { key: 'creationTime', label: 'Creation time (UTC)' },
+  { key: 'modificationTime', label: 'Modification time (UTC)' },
+]
+
+function formatCampaignEpochForCsv(ms: number): string {
+  return Number.isFinite(ms) ? new Date(ms).toISOString() : ''
+}
+
+function isCampaignPageSize(n: number): n is (typeof CAMPAIGN_PAGE_SIZE_OPTIONS)[number] {
+  return (CAMPAIGN_PAGE_SIZE_OPTIONS as readonly number[]).includes(n)
+}
 
 interface CampaignsTabProps {
   eventId: string
@@ -42,6 +68,8 @@ export const CampaignsTab: React.FC<CampaignsTabProps> = ({
   const [pendingArchiveSave, setPendingArchiveSave] = useState<{ campaign: Campaign; formData: CampaignFormData } | null>(null)
   const [isSaving, setIsSaving] = useState(false)
   const [copiedId, setCopiedId] = useState<string | null>(null)
+  const [searchQuery, setSearchQuery] = useState('')
+  const [tablePageSize, setTablePageSize] = useState(DEFAULT_CAMPAIGN_PAGE_SIZE)
 
   const [formName, setFormName] = useState('')
   const [formAttendeeLimit, setFormAttendeeLimit] = useState<number | undefined>(undefined)
@@ -49,6 +77,11 @@ export const CampaignsTab: React.FC<CampaignsTabProps> = ({
   const [formStatus, setFormStatus] = useState<CampaignStatus>('Active')
 
   const eventCapacity = event?.attendeeLimit
+
+  useEffect(() => {
+    setSearchQuery('')
+    setTablePageSize(DEFAULT_CAMPAIGN_PAGE_SIZE)
+  }, [eventId])
 
   useEffect(() => {
     if (!isFormOpen) return
@@ -81,6 +114,16 @@ export const CampaignsTab: React.FC<CampaignsTabProps> = ({
   )
 
   const stats = useMemo(() => calculateCampaignStats(campaigns), [campaigns])
+
+  const filteredCampaigns = useMemo(() => {
+    const q = searchQuery.trim().toLowerCase()
+    if (!q) return campaigns
+    return campaigns.filter((c) => {
+      const name = (c.name ?? '').toLowerCase()
+      const id = (c.campaignId ?? '').toLowerCase()
+      return name.includes(q) || id.includes(q)
+    })
+  }, [campaigns, searchQuery])
 
   const performSaveCampaign = useCallback(async (campaign: Campaign | null, formData: CampaignFormData) => {
     setIsSaving(true)
@@ -166,6 +209,48 @@ export const CampaignsTab: React.FC<CampaignsTabProps> = ({
     setIsFormOpen(true)
   }, [])
 
+  const handleExportCampaignsCsv = useCallback(() => {
+    if (filteredCampaigns.length === 0) return
+    const rows: Record<string, unknown>[] = filteredCampaigns.map((c) => ({
+      campaignId: c.campaignId,
+      name: c.name,
+      url: c.url,
+      status: c.status,
+      attendeeCount: c.attendeeCount,
+      attendeeLimit: c.attendeeLimit,
+      waitlistAttendeeCount: c.waitlistAttendeeCount,
+      creationTime: formatCampaignEpochForCsv(c.creationTime),
+      modificationTime: formatCampaignEpochForCsv(c.modificationTime),
+    }))
+    const csv = generateCsv(rows, CAMPAIGN_CSV_COLUMNS)
+    const timestamp = new Date().toISOString().slice(0, 10)
+    downloadCsv(csv, `campaigns-export-${timestamp}.csv`)
+  }, [filteredCampaigns])
+
+  const campaignsTableEmptyState = useMemo(() => {
+    if (campaigns.length === 0) {
+      return (
+        <ResourceEmptyState
+          fillContainer
+          illustration={<ChannelIllustration aria-hidden />}
+          title="No campaigns yet"
+          description="Create campaigns to track registrations from different sources like email, social media, or partner promotions."
+        />
+      )
+    }
+    if (filteredCampaigns.length === 0) {
+      return (
+        <ResourceEmptyState
+          fillContainer
+          illustration={<NoSearchResults aria-hidden />}
+          title="No matching campaigns"
+          description="Try adjusting your search, or clear the search field to see all campaigns."
+        />
+      )
+    }
+    return undefined
+  }, [campaigns.length, filteredCampaigns.length])
+
   const columns: TableColumn<Campaign>[] = useMemo(() => [
     {
       key: 'name',
@@ -174,6 +259,18 @@ export const CampaignsTab: React.FC<CampaignsTabProps> = ({
       sortable: true,
       render: (campaign) => (
         <Text UNSAFE_style={{ fontWeight: 600 }}>{campaign.name}</Text>
+      )
+    },
+    {
+      key: 'campaignId',
+      name: 'CAMPAIGN ID',
+      width: 200,
+      sortable: true,
+      cellNoWrap: true,
+      render: (campaign) => (
+        <Text UNSAFE_style={{ fontFamily: 'monospace', fontSize: '13px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+          {campaign.campaignId}
+        </Text>
       )
     },
     {
@@ -250,9 +347,11 @@ export const CampaignsTab: React.FC<CampaignsTabProps> = ({
     },
     {
       key: 'actions',
-      name: '',
+      name: 'ACTIONS',
       width: 100,
+      sortable: false,
       isSticky: true,
+      cellNoWrap: true,
       render: (campaign) => (
         <div className={style({display: 'flex', gap: 8, justifyContent: 'end'})}>
           {canWriteEvent && campaign.status === 'Active' && (
@@ -301,36 +400,79 @@ export const CampaignsTab: React.FC<CampaignsTabProps> = ({
         </div>
       </div>
 
-      {/* Header with Add Button */}
-      {canWriteEvent && (
-        <div
-          className={style({display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16})}
-        >
-          <Button
-            variant="accent"
-            onPress={handleCreateClick}
-          >
-            <Add />
-            <Text>Add Campaign</Text>
-          </Button>
+      {/* Add campaign + table tools */}
+      <div
+        className={style({
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'end',
+          flexWrap: 'wrap',
+          gap: 16,
+          marginBottom: 16,
+        })}
+      >
+        <div>
+          {canWriteEvent && (
+            <Button variant="accent" onPress={handleCreateClick}>
+              <Add />
+              <Text>Add Campaign</Text>
+            </Button>
+          )}
         </div>
-      )}
+        {campaigns.length > 0 && (
+          <div
+            className={style({
+              display: 'flex',
+              gap: 12,
+              alignItems: 'end',
+              flexWrap: 'wrap',
+            })}
+          >
+            {filteredCampaigns.length > 0 && (
+              <ActionButton
+                aria-label="Export campaigns as CSV"
+                onPress={handleExportCampaignsCsv}
+              >
+                <Download />
+              </ActionButton>
+            )}
+            <Picker
+              label="Rows per page"
+              selectedKey={String(tablePageSize)}
+              onSelectionChange={(key) => {
+                const n = Number(key)
+                if (isCampaignPageSize(n)) setTablePageSize(n)
+              }}
+              styles={style({ width: 120 })}
+            >
+              {CAMPAIGN_PAGE_SIZE_OPTIONS.map((n) => (
+                <PickerItem key={n} id={String(n)}>
+                  {String(n)}
+                </PickerItem>
+              ))}
+            </Picker>
+            <div className={style({ width: 240 })}>
+              <SearchField
+                label="Search campaigns"
+                placeholder="Search by name or campaign ID"
+                value={searchQuery}
+                onChange={setSearchQuery}
+                onClear={() => setSearchQuery('')}
+                styles={style({ width: '[100%]' })}
+              />
+            </div>
+          </div>
+        )}
+      </div>
 
       {/* Campaigns Table */}
       <div style={{ minHeight: 480, display: 'flex', flexDirection: 'column' }}>
         <DataTable
           columns={columns}
-          data={campaigns}
+          data={filteredCampaigns}
           getItemKey={(item) => item.campaignId}
-          pageSize={10}
-          emptyState={
-            <ResourceEmptyState
-              fillContainer
-              illustration={<ChannelIllustration aria-hidden />}
-              title="No campaigns yet"
-              description="Create campaigns to track registrations from different sources like email, social media, or partner promotions."
-            />
-          }
+          pageSize={tablePageSize}
+          emptyState={campaignsTableEmptyState}
         />
       </div>
 

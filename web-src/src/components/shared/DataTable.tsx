@@ -178,11 +178,11 @@ export function DataTable<T extends Record<string, any>>({
     }
   }, [paginatedData, onVisibleItemsChange])
 
-  // Reset to page 1 when data changes
+  // Reset to page 1 when result count or page size changes (keeps currentPage valid)
   React.useEffect(() => {
     setCurrentPage(1)
     setPageInputValue('1')
-  }, [data.length])
+  }, [data.length, pageSize])
 
   // Pagination handlers
   const handlePrevPage = useCallback(() => {
