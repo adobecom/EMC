@@ -10,8 +10,9 @@ import React, {
   useRef,
   useEffect,
   useMemo,
+  useState,
 } from 'react'
-import { EventFormData, EventApiResponse } from '../types/domain'
+import { EventFormData, EventApiResponse, SeriesSpeaker } from '../types/domain'
 import { saveFormDraft, loadFormDraft, clearFormDraft } from '../utils/formPersistence'
 import {
   applyLocaleMetadataToFormData,
@@ -172,6 +173,12 @@ export interface EventFormContextValue {
   persistToStorage: () => void
   loadFromStorage: () => boolean
   clearStorage: () => void
+
+  // Event-level data shared across form steps
+  venueLocations: any[]
+  seriesSpeakers: SeriesSpeaker[]
+  setVenueLocations: (locations: any[]) => void
+  setSeriesSpeakers: (speakers: SeriesSpeaker[]) => void
 }
 
 // ============================================================================
@@ -410,6 +417,10 @@ export const EventFormProvider: React.FC<EventFormProviderProps> = ({
   
   // Component registry
   const componentsRef = useRef<Map<string, RegisteredComponent>>(new Map())
+
+  // Event-level data shared across form steps
+  const [venueLocations, setVenueLocations] = useState<any[]>([])
+  const [seriesSpeakers, setSeriesSpeakers] = useState<SeriesSpeaker[]>([])
   
   // ============================================================================
   // ACTIONS
@@ -613,8 +624,16 @@ export const EventFormProvider: React.FC<EventFormProviderProps> = ({
     persistToStorage,
     loadFromStorage,
     clearStorage,
+
+    // Event-level data shared across form steps
+    venueLocations,
+    seriesSpeakers,
+    setVenueLocations,
+    setSeriesSpeakers,
   }), [
     state,
+    venueLocations,
+    seriesSpeakers,
     updateFormData,
     populateFormDataFromResponse,
     setEventResponse,

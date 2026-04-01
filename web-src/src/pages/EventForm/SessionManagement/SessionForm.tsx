@@ -11,11 +11,12 @@ import {
   DatePicker,
   TimeField,
   Checkbox,
-  ProgressCircle,
   SearchField,
   Form,
   SegmentedControl,
   SegmentedControlItem,
+  ComboBox,
+  ComboBoxItem,
 } from "@react-spectrum/s2"
 import {
   CalendarDate,
@@ -23,7 +24,7 @@ import {
 } from "@internationalized/date";
 import { Session } from "../../../types/sessions";
 import { EventTag, SeriesSpeaker } from "../../../types/domain";
-import { apiService, cachedApi } from "../../../services/api";
+import { apiService } from "../../../services/api";
 import { useEventFormContext } from "../../../contexts";
 import { RichTextEditor, TagSelector } from "../../../components/shared";
 import {
@@ -32,6 +33,7 @@ import {
   safeParseDateTimeString,
 } from "../../../utils/dateTime";
 import { SpeakerPickerDialog } from "../SpeakerPickerDialog";
+import { VenueLocation } from "../LocationDialog";
 
 // ============================================================================
 // SHARED TYPES
@@ -47,6 +49,8 @@ export interface SessionFormData {
   modificationTime?: number;
   /** Speaker IDs; applied after session create/update on save */
   speakerIds?: string[];
+  /** Original speaker IDs loaded for edit-mode change detection */
+  originalSpeakerIds?: string[];
   /** When true, attendees are auto-registered; when false, registration is required */
   isAutoRegistrationEnabled?: boolean;
   /** Maximum attendee capacity when registration is required */
@@ -59,6 +63,8 @@ export interface SessionFormData {
   sessionTimeModificationTime?: number;
   /** IANA timezone inherited from the event (e.g. "America/Los_Angeles") */
   timezone?: string;
+  /** Selected venue location ID for this session */
+  locationId?: string;
 }
 
 type SessionTimeRegistrationFields = {
@@ -121,12 +127,21 @@ interface SessionFormProps {
   session: Session | null;
   onSave: (data: SessionFormData) => Promise<void>;
   onCancel: () => void;
+  /** Pre-fetched venue locations from parent — avoids refetch on each expand */
+  venueLocations?: VenueLocation[];
+  /** Pre-fetched series speakers from parent — avoids refetch on each expand */
+  seriesSpeakers?: SeriesSpeaker[];
+  /** Callback to refresh series speakers (e.g. after creating a new speaker) */
+  onSpeakersRefresh?: () => Promise<void>;
 }
 
 export const SessionForm: React.FC<SessionFormProps> = ({
   session,
   onSave,
   onCancel,
+  venueLocations: venueLocationsProp,
+  seriesSpeakers: seriesSpeakersProp,
+  onSpeakersRefresh: onSpeakersRefreshProp,
 }) => {
   const isEditMode = session !== null;
   const { seriesId: contextSeriesId, formData, locale } = useEventFormContext();
@@ -169,34 +184,19 @@ export const SessionForm: React.FC<SessionFormProps> = ({
     modificationTime?: number;
   }>({});
 
-  // Speaker picker state
-  const [seriesSpeakers, setSeriesSpeakers] = useState<SeriesSpeaker[]>([]);
+  // Speaker picker state — use props from parent, no internal fetch
+  const seriesSpeakers = seriesSpeakersProp ?? [];
   const [selectedSpeakers, setSelectedSpeakers] = useState<SeriesSpeaker[]>([]);
-  const [isLoadingSpeakers, setIsLoadingSpeakers] = useState(false);
+  const [originalSpeakerIds, setOriginalSpeakerIds] = useState<string[]>([]);
   const [pickerOpen, setPickerOpen] = useState(false);
+
+  // Location state — use props from parent, no internal fetch
+  const venueLocations = venueLocationsProp ?? [];
+  const [selectedLocationId, setSelectedLocationId] = useState<string | null>(session?.locationId ?? null);
+
   const selectedSpeakerIds = new Set(
     selectedSpeakers.map((s) => s.speakerId),
   );
-
-  const loadSeriesSpeakers = useCallback(async () => {
-    if (!seriesId) return;
-    setIsLoadingSpeakers(true);
-    try {
-      const response = await cachedApi.getSpeakers(seriesId);
-      if (response && !("error" in response)) {
-        const list = response.speakers || response || [];
-        setSeriesSpeakers(Array.isArray(list) ? list : []);
-      }
-    } catch (err) {
-      console.error("Failed to load series speakers:", err);
-    } finally {
-      setIsLoadingSpeakers(false);
-    }
-  }, [seriesId]);
-
-  useEffect(() => {
-    loadSeriesSpeakers();
-  }, [loadSeriesSpeakers]);
 
   useEffect(() => {
     if (!session?.id) return;
@@ -205,6 +205,10 @@ export const SessionForm: React.FC<SessionFormProps> = ({
       if (cancelled) return;
       if (res && !("error" in res)) {
         const list = (res as any)?.speakers ?? [];
+        if (Array.isArray(list)) {
+          const ids = list.map((s: any) => String(s.speakerId));
+          setOriginalSpeakerIds(ids);
+        }
         if (Array.isArray(list) && list.length > 0) {
           const ids = list.map((s: any) => String(s.speakerId));
           setSelectedSpeakers((prev) => {
@@ -231,8 +235,8 @@ export const SessionForm: React.FC<SessionFormProps> = ({
   }, []);
 
   const refreshSeriesSpeakers = useCallback(async () => {
-    await loadSeriesSpeakers();
-  }, [loadSeriesSpeakers]);
+    if (onSpeakersRefreshProp) await onSpeakersRefreshProp();
+  }, [onSpeakersRefreshProp]);
 
   useEffect(() => {
     if (!session?.id) {
@@ -243,10 +247,9 @@ export const SessionForm: React.FC<SessionFormProps> = ({
     let cancelled = false;
     setLoadingDetails(true);
     setDetailError(null);
-    Promise.all([
-      apiService.getSingleSession(session.id),
-      apiService.getSessionTimes(session.id),
-    ]).then(([res, timesRes]) => {
+
+    // Only fetch session detail — session-time data is already cached on session.sessionTime
+    apiService.getSingleSession(session.id).then((res) => {
       if (cancelled) return;
       setLoadingDetails(false);
       if (res && "error" in res) {
@@ -255,13 +258,7 @@ export const SessionForm: React.FC<SessionFormProps> = ({
       }
       const raw = res as Record<string, unknown>;
       const mapped = mapApiToSession(raw);
-      const timesRaw =
-        timesRes && !("error" in timesRes)
-          ? ((timesRes as any)?.sessionTimes ?? [])
-          : [];
-      const sessionTimes = Array.isArray(timesRaw) ? timesRaw : [];
-      // Current UI supports exactly one session-time per session, so we use the first item.
-      const sessionTime = sessionTimes[0] ?? null;
+      const sessionTime = session.sessionTime ?? null;
 
       setName(mapped.name);
       setDescription(mapped.description ?? "");
@@ -329,13 +326,9 @@ export const SessionForm: React.FC<SessionFormProps> = ({
         endDateTime,
         tags: tagsToString(selectedTags),
         isAutoRegistrationEnabled,
-        attendeeLimit:
-          attendeeLimitEnabled && attendeeLimit
-            ? (() => {
-                const n = parseInt(attendeeLimit, 10);
-                return !Number.isNaN(n) ? n : undefined;
-              })()
-            : undefined,
+        attendeeLimit: !isAutoRegistrationEnabled && attendeeLimitEnabled && attendeeLimit
+          ? Number(attendeeLimit)
+          : undefined,
         ...(isEditMode &&
         (sessionTimestamps.creationTime != null ||
           sessionTimestamps.modificationTime != null)
@@ -352,7 +345,9 @@ export const SessionForm: React.FC<SessionFormProps> = ({
             }
           : {}),
         speakerIds: selectedSpeakers.map((s) => s.speakerId),
+        ...(isEditMode ? { originalSpeakerIds } : {}),
         timezone: formData.timezone || undefined,
+        locationId: selectedLocationId ?? undefined,
       });
       onCancel(); // unmounts this component — no state updates after this
     } catch (err) {
@@ -399,21 +394,20 @@ export const SessionForm: React.FC<SessionFormProps> = ({
       (endTime.hour === startTime.hour && endTime.minute <= startTime.minute)),
   );
 
+  const isCapacityMissing = Boolean(
+    !isAutoRegistrationEnabled && attendeeLimitEnabled &&
+    (!attendeeLimit.trim() || Number(attendeeLimit) <= 0),
+  );
+
   const canSave = Boolean(
     name.trim() && description.trim() && date && startTime && endTime &&
     !isDateOutOfRange && !isEndTimeInvalid &&
-    !isStartTimeBeforeEventStart && !isEndTimeAfterEventEnd,
+    !isStartTimeBeforeEventStart && !isEndTimeAfterEventEnd &&
+    !isCapacityMissing,
   );
 
   const renderSpeakers = () => (
     <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
-      {isLoadingSpeakers && (
-        <ProgressCircle
-          size="S"
-          isIndeterminate
-          aria-label="Loading speakers"
-        />
-      )}
 
       <div
         onClick={() => setPickerOpen(true)}
@@ -511,6 +505,28 @@ export const SessionForm: React.FC<SessionFormProps> = ({
         locale={locale}
         onSpeakersRefresh={refreshSeriesSpeakers}
       />
+    </div>
+  );
+
+  const renderLocations = () => (
+    <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+      <ComboBox
+        label="Location"
+        placeholder="Select session location"
+        UNSAFE_style={{ width: "100%" }}
+        selectedKey={selectedLocationId ?? undefined}
+        onSelectionChange={(key) => setSelectedLocationId(key ? String(key) : null)}
+        isDisabled={venueLocations.length === 0}
+      >
+        {venueLocations.map((loc) => (
+          <ComboBoxItem key={loc.locationId} id={loc.locationId}>{loc.name}</ComboBoxItem>
+        ))}
+      </ComboBox>
+      {venueLocations.length === 0 && (
+        <Text UNSAFE_style={{ fontSize: "12px", color: "var(--spectrum-global-color-gray-600)" }}>
+          No locations available for the selected venue.
+        </Text>
+      )}
     </div>
   );
 
@@ -650,8 +666,14 @@ export const SessionForm: React.FC<SessionFormProps> = ({
           <div style={{ display: "flex", flexDirection: "row", gap: "16px", alignItems: "center", flexWrap: "wrap" }}>
             <SegmentedControl
               selectedKey={isAutoRegistrationEnabled ? "automatic" : "registration"}
-              onSelectionChange={(key) => setIsAutoRegistrationEnabled(key !== "registration")}
-              isDisabled
+              onSelectionChange={(key) => {
+                const isAuto = key !== "registration"
+                setIsAutoRegistrationEnabled(isAuto)
+                if (isAuto) {
+                  setAttendeeLimitEnabled(false)
+                  setAttendeeLimit("")
+                }
+              }}
             >
               <SegmentedControlItem id="automatic">Automatic</SegmentedControlItem>
               <SegmentedControlItem id="registration">Registration required</SegmentedControlItem>
@@ -659,23 +681,26 @@ export const SessionForm: React.FC<SessionFormProps> = ({
             <Checkbox
               isSelected={attendeeLimitEnabled}
               onChange={setAttendeeLimitEnabled}
-              isDisabled={true}
+              isDisabled={isAutoRegistrationEnabled}
             >
               Set capacity limit
             </Checkbox>
             <TextField
               aria-label="Capacity"
               isRequired={attendeeLimitEnabled}
-              isDisabled={true}
-              type="number"
+              inputMode="numeric"
               UNSAFE_style={{ width: "96px" }}
               value={attendeeLimit}
-              onChange={setAttendeeLimit}
+              onChange={(v) => setAttendeeLimit(v)}
+              isDisabled={!attendeeLimitEnabled}
+              isInvalid={isCapacityMissing}
+              errorMessage="Capacity is required"
             />
           </div>
         </div>
 
         {renderSpeakers()}
+        {renderLocations()}
         {renderTags()}
       </Form>
 

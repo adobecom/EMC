@@ -1,22 +1,12 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { ProgressCircle, Button, Heading, Text, InlineAlert } from "@react-spectrum/s2";
 import AddCircle from "@react-spectrum/s2/icons/AddCircle";
-import { Session } from "../../../types/sessions";
+import { Session, SessionTimeInfo } from "../../../types/sessions";
 import { SessionsList } from "./SessionList";
 import type { SessionFormData } from "./SessionForm";
 import { useEventFormContext } from "../../../contexts";
 import { EventApiResponse } from "../../../types/domain";
 import { apiService, cachedApi } from "../../../services/api";
-
-interface SessionTimeData {
-  sessionTimeId?: string;
-  startTimeMillis?: number;
-  endTimeMillis?: number;
-  attendeeLimit?: number;
-  isAutoRegistrationEnabled?: boolean;
-  creationTime?: number;
-  modificationTime?: number;
-}
 
 function parseTagsFromApi(tags: unknown): string[] {
   if (typeof tags === "string") return tags.split(",").map((t) => t.trim()).filter(Boolean);
@@ -26,6 +16,89 @@ function parseTagsFromApi(tags: unknown): string[] {
 
 function serializeTagsForApi(tags: string[] | undefined): string {
   return (tags ?? []).join(",");
+}
+
+function normalizeOptionalString(value: string | undefined): string {
+  return (value ?? "").trim();
+}
+
+function normalizeOptionalNumber(value: number | undefined): number | undefined {
+  return typeof value === "number" ? value : undefined;
+}
+
+function normalizeIdList(values: string[] | undefined): string[] {
+  return [...new Set((values ?? []).map((value) => String(value).trim()).filter(Boolean))].sort();
+}
+
+function getNormalizedSessionFields(session: Session) {
+  return {
+    name: normalizeOptionalString(session.name),
+    description: normalizeOptionalString(session.description),
+    tags: serializeTagsForApi(session.tags),
+  };
+}
+
+function getNormalizedSessionFieldsFromForm(data: SessionFormData) {
+  return {
+    name: normalizeOptionalString(data.name),
+    description: normalizeOptionalString(data.description),
+    tags: serializeTagsForApi(data.tags),
+  };
+}
+
+function getNormalizedSessionTimeFields(session: Session) {
+  return {
+    startDateTime: session.startDateTime,
+    endDateTime: session.endDateTime,
+    isAutoRegistrationEnabled: session.sessionTime?.isAutoRegistrationEnabled !== false,
+    attendeeLimit:
+      session.sessionTime?.isAutoRegistrationEnabled === false
+        ? normalizeOptionalNumber(session.sessionTime?.attendeeLimit)
+        : undefined,
+    locationId: session.locationId ?? undefined,
+  };
+}
+
+function getNormalizedSessionTimeFieldsFromForm(data: SessionFormData) {
+  return {
+    startDateTime: data.startDateTime,
+    endDateTime: data.endDateTime,
+    isAutoRegistrationEnabled: data.isAutoRegistrationEnabled !== false,
+    attendeeLimit:
+      data.isAutoRegistrationEnabled === false
+        ? normalizeOptionalNumber(data.attendeeLimit)
+        : undefined,
+    locationId: data.locationId ?? undefined,
+  };
+}
+
+function hasSessionFieldChanges(session: Session, data: SessionFormData): boolean {
+  const current = getNormalizedSessionFields(session);
+  const next = getNormalizedSessionFieldsFromForm(data);
+  return (
+    current.name !== next.name ||
+    current.description !== next.description ||
+    current.tags !== next.tags
+  );
+}
+
+function hasSessionTimeFieldChanges(session: Session, data: SessionFormData): boolean {
+  const current = getNormalizedSessionTimeFields(session);
+  const next = getNormalizedSessionTimeFieldsFromForm(data);
+  return (
+    current.startDateTime !== next.startDateTime ||
+    current.endDateTime !== next.endDateTime ||
+    current.isAutoRegistrationEnabled !== next.isAutoRegistrationEnabled ||
+    current.attendeeLimit !== next.attendeeLimit ||
+    current.locationId !== next.locationId
+  );
+}
+
+function hasSessionSpeakersChanges(data: SessionFormData): boolean {
+  const current = normalizeIdList(data.originalSpeakerIds);
+  const next = normalizeIdList(data.speakerIds);
+  if (current.length !== next.length) return true;
+  return current.some((id, index) => id !== next[index]);
 }
 
 function mapApiSessionToSession(item: Record<string, unknown>): Session {
@@ -52,7 +125,7 @@ async function hydrateSessionWithTime(session: Session): Promise<Session> {
   if (timesRes && "error" in timesRes) return session;
 
   const times = Array.isArray((timesRes as any)?.sessionTimes)
-    ? ((timesRes as any).sessionTimes as SessionTimeData[])
+    ? ((timesRes as any).sessionTimes as SessionTimeInfo[])
     : [];
 
   // Current UI supports exactly one session-time per session, so we use the first item.
@@ -77,6 +150,8 @@ async function hydrateSessionWithTime(session: Session): Promise<Session> {
       sessionTime.attendeeLimit != null
         ? Number(sessionTime.attendeeLimit)
         : session.capacity,
+    locationId: sessionTime.locationId,
+    sessionTime,
   };
 }
 
@@ -93,10 +168,11 @@ async function createSessionTimeForSession(
     startTimeMillis,
     endTimeMillis,
     isAutoRegistrationEnabled: data.isAutoRegistrationEnabled !== false,
-    ...(data.isAutoRegistrationEnabled === false && data.attendeeLimit != null
-      ? { attendeeLimit: data.attendeeLimit }
+    ...(data.attendeeLimit && Number(data.attendeeLimit) > 0
+      ? { attendeeLimit: Number(data.attendeeLimit) }
       : {}),
     ...(data.timezone ? { timezone: data.timezone } : {}),
+    ...(data.locationId ? { locationId: data.locationId } : {}),
   });
 
   if ("error" in sessionTimeRes) {
@@ -118,14 +194,6 @@ async function upsertSessionTimeForSession(
     return;
   }
 
-  const existingTimeRes = await apiService.getSessionTime(data.sessionTimeId);
-  if ("error" in existingTimeRes) {
-    throw new Error(
-      existingTimeRes.error?.message || String(existingTimeRes.error),
-    );
-  }
-
-  const existingTime = existingTimeRes as SessionTimeData;
   const updateTimeRes = await apiService.updateSessionTime(
     data.sessionTimeId,
     {
@@ -133,22 +201,14 @@ async function upsertSessionTimeForSession(
       eventId,
       startTimeMillis,
       endTimeMillis,
+      creationTime: data.sessionTimeCreationTime,
+      modificationTime: data.sessionTimeModificationTime,
       isAutoRegistrationEnabled: data.isAutoRegistrationEnabled !== false,
-      ...(data.isAutoRegistrationEnabled === false
-        ? (data.attendeeLimit != null
-            ? { attendeeLimit: data.attendeeLimit }
-            : (existingTime.attendeeLimit != null
-                ? { attendeeLimit: existingTime.attendeeLimit }
-                : {}))
+      ...(data.attendeeLimit != null && data.attendeeLimit > 0
+        ? { attendeeLimit: data.attendeeLimit }
         : {}),
-      allowWaitlisting: (existingTime as any).allowWaitlisting ?? false,
-      waitlistAttendeeLimit:
-        (existingTime as any).waitlistAttendeeLimit ?? 100,
-      creationTime:
-        data.sessionTimeCreationTime ?? existingTime.creationTime,
-      modificationTime:
-        data.sessionTimeModificationTime ?? existingTime.modificationTime,
       ...(data.timezone ? { timezone: data.timezone } : {}),
+      ...(data.locationId ? { locationId: data.locationId } : {}),
     },
   );
 
@@ -188,11 +248,47 @@ async function syncSessionSpeakers(
 }
 
 export const Sessions: React.FC = () => {
-  const { eventId, mergeEventResponse } = useEventFormContext();
+  const {
+    eventId,
+    mergeEventResponse,
+    venueLocations,
+    seriesSpeakers,
+    setSeriesSpeakers,
+    seriesId: contextSeriesId,
+    formData,
+  } = useEventFormContext();
   const [sessions, setSessions] = useState<Session[]>([]);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [isAddingNew, setIsAddingNew] = useState(false);
+  const seriesId = contextSeriesId || formData.seriesId || "";
+
+  const loadSeriesSpeakersIfNeeded = useCallback(async () => {
+    if (!seriesId) return;
+    if (seriesSpeakers.length > 0) return;
+    try {
+      const response = await cachedApi.getSpeakers(seriesId);
+      if (response && !("error" in response)) {
+        const speakers = response.speakers || response || [];
+        setSeriesSpeakers(Array.isArray(speakers) ? speakers : []);
+      }
+    } catch (err) {
+      console.error("Failed to load series speakers:", err);
+    }
+  }, [seriesId, seriesSpeakers.length, setSeriesSpeakers]);
+
+  const refreshSeriesSpeakers = useCallback(async () => {
+    if (!seriesId) return;
+    try {
+      const response = await cachedApi.getSpeakers(seriesId);
+      if (response && !("error" in response)) {
+        const speakers = response.speakers || response || [];
+        setSeriesSpeakers(Array.isArray(speakers) ? speakers : []);
+      }
+    } catch (err) {
+      console.error("Failed to load series speakers:", err);
+    }
+  }, [seriesId, setSeriesSpeakers]);
 
   const loadSessions = useCallback(async () => {
     if (!eventId) {
@@ -228,7 +324,7 @@ export const Sessions: React.FC = () => {
   const refreshEventConcurrencyMetadata = useCallback(
     async (id: string) => {
       cachedApi.invalidateCache(id);
-      const refreshed = await apiService.getEventFull(id);
+      const refreshed = await apiService.getEventExternal(id);
       if ("error" in refreshed) return;
       const r = refreshed as EventApiResponse;
       const patch: Partial<EventApiResponse> = {};
@@ -242,6 +338,10 @@ export const Sessions: React.FC = () => {
   useEffect(() => {
     loadSessions();
   }, [loadSessions]);
+
+  useEffect(() => {
+    loadSeriesSpeakersIfNeeded();
+  }, [loadSeriesSpeakersIfNeeded]);
 
   const handleDeleteSession = async (sessionId: string) => {
     if (!eventId) return;
@@ -294,6 +394,14 @@ export const Sessions: React.FC = () => {
       ...(data.isAutoRegistrationEnabled === false && data.attendeeLimit != null
         ? { capacity: data.attendeeLimit }
         : {}),
+      locationId: data.locationId,
+      sessionTime: {
+        startTimeMillis: new Date(data.startDateTime + 'Z').getTime(),
+        endTimeMillis: new Date(data.endDateTime + 'Z').getTime(),
+        isAutoRegistrationEnabled: data.isAutoRegistrationEnabled,
+        attendeeLimit: data.attendeeLimit != null ? Number(data.attendeeLimit) : undefined,
+        locationId: data.locationId,
+      },
     };
     setSessions((prev) => sortSessionsByDate([...prev, sessionWithTime]));
     setIsAddingNew(false);
@@ -304,36 +412,68 @@ export const Sessions: React.FC = () => {
     data: SessionFormData,
   ) => {
     if (!eventId) throw new Error("Event ID is required to update a session");
-    const payload: Record<string, unknown> = {
-      name: data.name,
-      description: data.description,
-      tags: serializeTagsForApi(data.tags),
-    };
-    if (data.creationTime != null) payload.creationTime = data.creationTime;
-    if (data.modificationTime != null)
-      payload.modificationTime = data.modificationTime;
-    const res = await apiService.updateSession(sessionId, eventId, payload);
-    if ("error" in res) {
-      const msg = res.error?.message || String(res.error);
-      throw new Error(msg);
+    const existingSession = sessions.find((s) => s.id === sessionId);
+    if (!existingSession) {
+      throw new Error("Session not found in current state");
     }
 
-    await upsertSessionTimeForSession(eventId, sessionId, data);
+    const shouldUpdateSession = hasSessionFieldChanges(existingSession, data);
+    const shouldUpdateSessionTime = hasSessionTimeFieldChanges(existingSession, data);
 
-    await syncSessionSpeakers(sessionId, data.speakerIds ?? []);
+    let updatedSessionApi = existingSession;
+    if (shouldUpdateSession) {
+      const payload: Record<string, unknown> = {
+        name: data.name,
+        description: data.description,
+        tags: serializeTagsForApi(data.tags),
+        creationTime: data.creationTime,
+        modificationTime: data.modificationTime,
+      };
+      const res = await apiService.updateSession(sessionId, eventId, payload);
+      if ("error" in res) {
+        const msg = res.error?.message || String(res.error);
+        throw new Error(msg);
+      }
+      updatedSessionApi = mapApiSessionToSession(res as any);
+    }
 
-    await refreshEventConcurrencyMetadata(eventId);
+    if (shouldUpdateSessionTime) {
+      await upsertSessionTimeForSession(eventId, sessionId, data);
+    }
+
+    const shouldUpdateSpeakers = hasSessionSpeakersChanges(data);
+    if (shouldUpdateSpeakers) {
+      await syncSessionSpeakers(sessionId, data.speakerIds ?? []);
+    }
+
+    if (shouldUpdateSession || shouldUpdateSessionTime || shouldUpdateSpeakers) {
+      await refreshEventConcurrencyMetadata(eventId);
+    }
 
     setSessions((prev) => {
       const updated = prev.map((s) =>
         s.id === sessionId
           ? {
-              ...mapApiSessionToSession(res as any),
+              ...updatedSessionApi,
               startDateTime: data.startDateTime,
               endDateTime: data.endDateTime,
-              ...(data.isAutoRegistrationEnabled === false && data.attendeeLimit != null
-                ? { capacity: data.attendeeLimit }
-                : {}),
+              capacity:
+                data.isAutoRegistrationEnabled === false && data.attendeeLimit != null
+                  ? Number(data.attendeeLimit)
+                  : undefined,
+              locationId: data.locationId,
+              sessionTime: {
+                ...s.sessionTime,
+                startTimeMillis: new Date(data.startDateTime + 'Z').getTime(),
+                endTimeMillis: new Date(data.endDateTime + 'Z').getTime(),
+                isAutoRegistrationEnabled: data.isAutoRegistrationEnabled,
+                attendeeLimit:
+                  data.isAutoRegistrationEnabled === false && data.attendeeLimit != null
+                    ? Number(data.attendeeLimit)
+                    : undefined,
+                locationId: data.locationId,
+                sessionTimeId: data.sessionTimeId ?? s.sessionTime?.sessionTimeId,
+              },
             }
           : s,
       );
@@ -394,6 +534,9 @@ export const Sessions: React.FC = () => {
           onAdd={handleAddSession}
           onDelete={handleDeleteSession}
           onSave={handleUpdateSession}
+          venueLocations={venueLocations}
+          seriesSpeakers={seriesSpeakers}
+          onSpeakersRefresh={refreshSeriesSpeakers}
         />
       )}
     </div>

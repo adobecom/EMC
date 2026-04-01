@@ -438,6 +438,8 @@ class ApiService {
     })
   }
 
+
+
   /** GET /v1/sessions/{sessionId}/speakers */
   async getSessionSpeakers(sessionId: string): Promise<any | ErrorResponse> {
     validateString(sessionId, 'session ID')
@@ -1568,6 +1570,29 @@ class ApiService {
     validateString(eventId, 'eventId')
     return this.callExternalApi('esp', `/v1/events/${eventId}/venues`, 'GET', undefined,
       { operationName: 'getEventVenue', transformResponse: (data) => data.venues?.[0] || null }
+    )
+  }
+
+  async listVenueLocations(venueId: string): Promise<any | ErrorResponse> {
+    validateString(venueId, 'venue ID')
+    return this.callExternalApi('esp', `/v1/venues/${encodeURIComponent(venueId)}/locations`, 'GET', undefined,
+      { operationName: 'listVenueLocations', shouldReturnFullResponse: true }
+    )
+  }
+
+  async createVenueLocation(venueId: string, locationData: any): Promise<any | ErrorResponse> {
+    validateString(venueId, 'venue ID')
+    validateObject(locationData, 'location data')
+    return this.callExternalApi('esp', `/v1/venues/${encodeURIComponent(venueId)}/locations`, 'POST', locationData,
+      { operationName: 'createVenueLocation', shouldReturnFullResponse: true }
+    )
+  }
+
+  async deleteVenueLocation(venueId: string, locationId: string): Promise<any | ErrorResponse> {
+    validateString(venueId, 'venue ID')
+    validateString(locationId, 'location ID')
+    return this.callExternalApi('esp', `/v1/venues/${encodeURIComponent(venueId)}/locations/${encodeURIComponent(locationId)}`, 'DELETE', undefined,
+      { operationName: 'deleteVenueLocation' }
     )
   }
 
