@@ -4,12 +4,10 @@
 
 /**
  * SpeakerFormDialog - Modal dialog for creating/editing speakers
- * 
- * Features:
- * - Full speaker profile editing (name, title, bio, image, social links)
- * - Image upload support with deferred upload pattern
- * - Social media link management with platform detection
- * - Localization support for title and bio fields
+ *
+ * Deferred profile image: same contract as EventForm `PartnerDialog` / `PartnerPickerDialog` —
+ * the API payload is built without any `File`; `pendingFile` is passed as a separate argument
+ * to `onSubmit`, then the parent saves the speaker and uploads via `uploadSpeakerSeriesImage`.
  */
 
 import React, { useState, useCallback, useEffect } from 'react'
@@ -37,10 +35,19 @@ import { RichTextEditor, ImageUploader } from '../../components/shared'
 import { detectSocialPlatform, isValidUrl, toApiSocialLink, fromApiSocialLink } from '../../utils/socialPlatformDetector'
 import { TYPOGRAPHY } from '../../styles/designSystem'
 
+/** Mirrors `PartnerDialogSaveOptions` shape: serializable payload first, `File` second, options last */
+export interface SpeakerFormSaveOptions {
+  cascadeToEvents?: boolean
+}
+
 interface SpeakerFormDialogProps {
   isOpen: boolean
   onClose: () => void
-  onSubmit: (data: any, cascadeToEvents?: boolean) => Promise<void>
+  onSubmit: (
+    speakerPayload: Record<string, unknown>,
+    pendingFile?: File,
+    options?: SpeakerFormSaveOptions
+  ) => Promise<void>
   speaker: SpeakerDashboardItem | null
   seriesId: string
   isSubmitting: boolean
@@ -143,8 +150,7 @@ export const SpeakerFormDialog: React.FC<SpeakerFormDialogProps> = ({
       return
     }
     
-    // Build speaker data payload
-    const speakerData: any = {
+    const speakerPayload: Record<string, unknown> = {
       firstName: formState.firstName.trim(),
       lastName: formState.lastName.trim(),
       socialLinks: formState.socialLinks
@@ -152,8 +158,7 @@ export const SpeakerFormDialog: React.FC<SpeakerFormDialogProps> = ({
         .map(link => toApiSocialLink(link))
     }
     
-    // Add localizable fields
-    const localizableFields: Record<string, any> = {}
+    const localizableFields: Record<string, string> = {}
     if (formState.title.trim()) {
       localizableFields.title = formState.title.trim()
     }
@@ -162,17 +167,12 @@ export const SpeakerFormDialog: React.FC<SpeakerFormDialogProps> = ({
     }
     
     if (Object.keys(localizableFields).length > 0) {
-      speakerData.localizations = {
+      speakerPayload.localizations = {
         'en-US': localizableFields // Default to en-US for now
       }
     }
-    
-    // Handle pending image file (to be uploaded after speaker creation/update)
-    if (pendingFile) {
-      speakerData._pendingFile = pendingFile
-    }
-    
-    await onSubmit(speakerData, shouldCascade)
+
+    await onSubmit(speakerPayload, pendingFile ?? undefined, { cascadeToEvents: shouldCascade })
   }, [formState, pendingFile, shouldCascade, onSubmit])
   
   const isFormValid = formState.firstName.trim() && formState.lastName.trim()
