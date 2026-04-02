@@ -14,10 +14,9 @@ import { speakerHasLocalization } from '../../utils/eventFormMappers'
 import { RichTextEditor, ImageUploader } from '../../components/shared'
 import { TYPOGRAPHY, COLORS } from '../../styles/designSystem'
 import { detectSocialPlatform, isValidUrl, toApiSocialLink } from '../../utils/socialPlatformDetector'
-import { cachedApi, apiService } from '../../services/api'
+import { cachedApi } from '../../services/api'
 import { getSpeakerPayload } from '../../services/payloadBuilders'
-import { uploadImage, UploadTracker } from '../../services/requestHelpers'
-import { getCurrentEnvironment, getApiHost } from '../../config/constants'
+import { uploadSpeakerSeriesImage } from '../../services/speakerImageUpload'
 
 interface SpeakerPickerDialogProps {
   isOpen: boolean
@@ -197,39 +196,6 @@ export const SpeakerPickerDialog: React.FC<SpeakerPickerDialogProps> = ({
     })
   }, [])
 
-  const uploadSpeakerImage = async (
-    file: File,
-    speakerId: string,
-    altText: string
-  ): Promise<{ imageUrl: string; imageId: string } | null> => {
-    try {
-      const token = apiService.getAuthTokenForExternalUse()
-      if (!token) throw new Error('No authentication token available')
-
-      const env = getCurrentEnvironment()
-      const host = getApiHost('esp', env)
-      const uploadUrl = `${host}/v1/series/${seriesId}/speakers/${speakerId}/images`
-
-      const tracker: UploadTracker = { progress: 0 }
-      const config = {
-        targetUrl: uploadUrl,
-        altText,
-        type: 'speaker-photo',
-      }
-
-      const result = await uploadImage(file, config, token, tracker)
-      const imageData = result.image || result
-
-      if (imageData.imageUrl && imageData.imageId) {
-        return { imageUrl: imageData.imageUrl, imageId: imageData.imageId }
-      }
-      return null
-    } catch (err) {
-      console.error('Failed to upload speaker image:', err)
-      return null
-    }
-  }
-
   const handleCreateSpeaker = useCallback(async () => {
     if (!createForm.firstName.trim() || !createForm.lastName.trim()) return
 
@@ -260,7 +226,7 @@ export const SpeakerPickerDialog: React.FC<SpeakerPickerDialogProps> = ({
         let photo: SeriesSpeaker['photo'] | undefined
         if (pendingFile) {
           const altText = `${createForm.firstName} ${createForm.lastName}`
-          const uploaded = await uploadSpeakerImage(pendingFile, speakerId, altText)
+          const uploaded = await uploadSpeakerSeriesImage(pendingFile, seriesId, speakerId, altText)
           if (uploaded) {
             photo = { imageUrl: uploaded.imageUrl, imageId: uploaded.imageId }
           }

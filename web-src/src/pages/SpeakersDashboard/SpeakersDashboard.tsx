@@ -43,12 +43,13 @@ import MicrophoneIllustration from '@react-spectrum/s2/illustrations/linear/Micr
 import LayersIllustration from '@react-spectrum/s2/illustrations/linear/Layers'
 import { SeriesSpeaker, SeriesApiResponse, EventApiResponse } from '../../types/domain'
 import { apiService, cachedApi } from '../../services/api'
+import { uploadSpeakerSeriesImage } from '../../services/speakerImageUpload'
 import { IMS } from '../../types'
 import { useToast, useGroup } from '../../contexts'
 import { createShimmerStyle, COLORS } from '../../styles/designSystem'
 import { useSafeState, useRBACFilter } from '../../hooks'
 import { useHasPermission } from '../../hooks/useHasPermission'
-import { SpeakerFormDialog } from './SpeakerFormDialog'
+import { SpeakerFormDialog, SpeakerFormSaveOptions } from './SpeakerFormDialog'
 import { CascadeConfirmDialog, CascadeAction } from './CascadeConfirmDialog'
 import { SpeakerEventConnectionsDialog } from './SpeakerEventConnectionsDialog'
 
@@ -60,6 +61,12 @@ export interface SpeakerDashboardItem extends SeriesSpeaker {
 }
 
 const SPEAKERS_SEARCH_KEYS = ['firstName', 'lastName', 'title']
+
+function speakerImageAltText(payload: Record<string, unknown>): string {
+  const fn = typeof payload.firstName === 'string' ? payload.firstName.trim() : ''
+  const ln = typeof payload.lastName === 'string' ? payload.lastName.trim() : ''
+  return `${fn} ${ln}`.trim() || 'Speaker'
+}
 
 interface SpeakersDashboardProps {
   ims: IMS
@@ -282,23 +289,42 @@ export const SpeakersDashboard: React.FC<SpeakersDashboardProps> = () => {
     setSpeakerForConnections(speaker)
   }, [])
   
-  const handleFormSubmit = useCallback(async (speakerData: any, cascadeToEvents: boolean = false) => {
+  const handleFormSubmit = useCallback(async (
+    speakerPayload: Record<string, unknown>,
+    pendingFile?: File,
+    options?: SpeakerFormSaveOptions
+  ) => {
     if (!selectedSeriesId) return
+
+    const cascadeToEvents = options?.cascadeToEvents ?? false
     
     setActionInProgress(editingSpeaker?.speakerId || 'new')
     
     try {
       let result
-      
+      const altText = pendingFile ? speakerImageAltText(speakerPayload) : ''
+
       if (editingSpeaker) {
         // Update existing speaker
         result = await apiService.updateSpeaker(
-          { ...speakerData, speakerId: editingSpeaker.speakerId, modificationTime: editingSpeaker.modificationTime },
+          { ...speakerPayload, speakerId: editingSpeaker.speakerId, modificationTime: editingSpeaker.modificationTime },
           selectedSeriesId
         )
         
         if ('error' in result) {
           throw new Error(result.error)
+        }
+
+        if (pendingFile) {
+          const uploaded = await uploadSpeakerSeriesImage(
+            pendingFile,
+            selectedSeriesId,
+            editingSpeaker.speakerId,
+            altText
+          )
+          if (!uploaded) {
+            toast.error('Speaker saved, but profile image upload failed.')
+          }
         }
         
         // If cascade is enabled, update speaker in all linked events
@@ -323,10 +349,28 @@ export const SpeakersDashboard: React.FC<SpeakersDashboardProps> = () => {
         toast.success('Speaker updated successfully!')
       } else {
         // Create new speaker
-        result = await apiService.createSpeaker(speakerData, selectedSeriesId)
+        result = await apiService.createSpeaker(speakerPayload, selectedSeriesId)
         
         if ('error' in result) {
           throw new Error(result.error)
+        }
+
+        if (pendingFile) {
+          const saved = result.speaker ?? result
+          const speakerId = saved.speakerId as string | undefined
+          if (speakerId) {
+            const uploaded = await uploadSpeakerSeriesImage(
+              pendingFile,
+              selectedSeriesId,
+              speakerId,
+              altText
+            )
+            if (!uploaded) {
+              toast.error('Speaker created, but profile image upload failed.')
+            }
+          } else {
+            toast.error('Speaker created, but profile image could not be uploaded.')
+          }
         }
         
         toast.success('Speaker created successfully!')
