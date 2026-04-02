@@ -28,7 +28,7 @@ import { SPACING } from '../../styles/designSystem'
 import { seriesEnrichmentManager, SeriesInfo } from '../../services/seriesEnrichment'
 import { IMS } from '../../types'
 import { useToast, useGroup } from '../../contexts'
-import { filterEventData, EVENT_DATA_ESL_PUBLISH_EXCLUDE_KEYS } from '../../utils/dataFilters'
+import { filterEventData } from '../../utils/dataFilters'
 import { useSafeState, useRBACFilter } from '../../hooks'
 import { useHasPermission } from '../../hooks/useHasPermission'
 import { getEspEnvParam } from '../../config/constants'
@@ -370,24 +370,10 @@ export const EventsDashboard: React.FC<EventsDashboardProps> = () => {
             break
           }
 
-          // Filter the event data to only include submittable fields
-          // filterEventData preserves ALL localizations (unlike getEventPayload which only keeps one locale)
-          const filteredPayload = filterEventData(eventResponse, 'submission', {
-            excludeKeys: [...EVENT_DATA_ESL_PUBLISH_EXCLUDE_KEYS],
-          })
-
-          // Prepare final payload with publish flags
-          const payload = {
-            ...filteredPayload,
-            published: isPublish,
-            liveUpdate: true,
-            forceSpWrite: false
-          }
-
-          // Call publish or unpublish API
+          // ApiService.publishEvent / unpublishEvent run prepareEslEventPutPayload (submission filter + ESL excludes)
           const result = isPublish
-            ? await apiService.publishEvent(item.eventId, payload)
-            : await apiService.unpublishEvent(item.eventId, payload)
+            ? await apiService.publishEvent(item.eventId, eventResponse)
+            : await apiService.unpublishEvent(item.eventId, eventResponse)
 
           if ('error' in result) {
             toast.error(`Failed to ${isPublish ? 'publish' : 'unpublish'} event: ${result.error}`)

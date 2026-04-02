@@ -24,6 +24,7 @@ import { getCurrentEnvironment, getApiHost, SUPPORTED_CLOUDS } from '../config/c
 import { env } from '../config/env'
 import { apiCache } from './cacheUtils'
 import { deduplicateBy } from '../utils/deduplication'
+import { prepareEslEventPutPayload } from '../utils/dataFilters'
 import type {
   RBACApiScope,
   RBACApiGroup,
@@ -957,8 +958,9 @@ class ApiService {
   async updateEventExternal(eventId: string, payload: any, policies = { forceSpWrite: false, liveUpdate: false }): Promise<any | ErrorResponse> {
     validateString(eventId, 'event ID')
     validateObject(payload, 'event payload')
+    const body = prepareEslEventPutPayload(payload)
     return this.callExternalApi('esl', `/v1/events/${eventId}`, 'PUT',
-      { ...payload, ...policies },
+      { ...body, ...policies },
       { operationName: `updateEvent(${eventId})`, shouldReturnFullResponse: true }
     )
   }
@@ -966,8 +968,9 @@ class ApiService {
   async publishEvent(eventId: string, payload: any): Promise<any | ErrorResponse> {
     validateString(eventId, 'event ID')
     validateObject(payload, 'event payload')
+    const body = prepareEslEventPutPayload(payload)
     return this.callExternalApi('esl', `/v1/events/${eventId}`, 'PUT',
-      { ...payload, published: true, liveUpdate: true, forceSpWrite: false },
+      { ...body, published: true, liveUpdate: true, forceSpWrite: false },
       { operationName: `publishEvent(${eventId})`, shouldReturnFullResponse: true }
     )
   }
@@ -975,8 +978,9 @@ class ApiService {
   async unpublishEvent(eventId: string, payload: any): Promise<any | ErrorResponse> {
     validateString(eventId, 'event ID')
     validateObject(payload, 'event payload')
+    const body = prepareEslEventPutPayload(payload)
     return this.callExternalApi('esl', `/v1/events/${eventId}`, 'PUT',
-      { ...payload, published: false, liveUpdate: true, forceSpWrite: false },
+      { ...body, published: false, liveUpdate: true, forceSpWrite: false },
       { operationName: `unpublishEvent(${eventId})`, shouldReturnFullResponse: true }
     )
   }
@@ -984,8 +988,9 @@ class ApiService {
   async previewEvent(eventId: string, payload: any): Promise<any | ErrorResponse> {
     validateString(eventId, 'event ID')
     validateObject(payload, 'event payload')
+    const body = prepareEslEventPutPayload(payload)
     return this.callExternalApi('esl', `/v1/events/${eventId}`, 'PUT',
-      { ...payload, liveUpdate: false, forceSpWrite: true },
+      { ...body, liveUpdate: false, forceSpWrite: true },
       { operationName: `previewEvent(${eventId})` }
     )
   }
