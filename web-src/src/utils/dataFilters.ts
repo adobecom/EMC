@@ -272,6 +272,9 @@ const EVENT_FILTER_STRATEGIES: Record<EventFilterMode, (descriptor: DataFieldDes
   clone: (descriptor) => descriptor?.submittable === true && descriptor?.cloneable !== false,
 }
 
+/** Fields omitted from ESL publish/unpublish PUT when re-sending a full GET-derived event (read-only on ESL). */
+export const EVENT_DATA_ESL_PUBLISH_EXCLUDE_KEYS: readonly string[] = ['inviteOnly']
+
 /**
  * Filter event data based on mode (submission, clone)
  * 

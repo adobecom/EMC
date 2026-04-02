@@ -28,7 +28,7 @@ import { SPACING } from '../../styles/designSystem'
 import { seriesEnrichmentManager, SeriesInfo } from '../../services/seriesEnrichment'
 import { IMS } from '../../types'
 import { useToast, useGroup } from '../../contexts'
-import { filterEventData } from '../../utils/dataFilters'
+import { filterEventData, EVENT_DATA_ESL_PUBLISH_EXCLUDE_KEYS } from '../../utils/dataFilters'
 import { useSafeState, useRBACFilter } from '../../hooks'
 import { useHasPermission } from '../../hooks/useHasPermission'
 import { getEspEnvParam } from '../../config/constants'
@@ -372,7 +372,9 @@ export const EventsDashboard: React.FC<EventsDashboardProps> = () => {
 
           // Filter the event data to only include submittable fields
           // filterEventData preserves ALL localizations (unlike getEventPayload which only keeps one locale)
-          const filteredPayload = filterEventData(eventResponse, 'submission')
+          const filteredPayload = filterEventData(eventResponse, 'submission', {
+            excludeKeys: [...EVENT_DATA_ESL_PUBLISH_EXCLUDE_KEYS],
+          })
 
           // Prepare final payload with publish flags
           const payload = {
