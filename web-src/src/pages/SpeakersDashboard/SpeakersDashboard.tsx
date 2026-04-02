@@ -59,6 +59,14 @@ export interface SpeakerDashboardItem extends SeriesSpeaker {
 
 const SPEAKERS_SEARCH_KEYS = ['firstName', 'lastName', 'title']
 
+const SPEAKERS_DASHBOARD_TABLE_TEST_IDS = {
+  root: 'speakers-dashboard-table',
+  emptyState: 'speakers-dashboard-table-empty-state',
+  pageInput: 'speakers-dashboard-table-page-input',
+  header: (columnKey: string) => `speakers-dashboard-table-header-${columnKey}`,
+  row: (itemKey: string) => `speakers-dashboard-table-row-${itemKey}`,
+}
+
 interface SpeakersDashboardProps {
   ims: IMS
 }
@@ -834,6 +842,7 @@ export const SpeakersDashboard: React.FC<SpeakersDashboardProps> = () => {
             emptyStateIllustration={<MicrophoneIllustration aria-hidden />}
             emptyStateTitle="No Speakers Found"
             emptyStateDescription="Get started by adding your first speaker to this series"
+            dataTableTestIds={SPEAKERS_DASHBOARD_TABLE_TEST_IDS}
             searchPlaceholder="Search speakers..."
             searchKeys={SPEAKERS_SEARCH_KEYS}
             searchFilter={(speaker, query) => {

@@ -8,7 +8,7 @@ import { style } from '@react-spectrum/s2/style' with { type: 'macro' }
 import Refresh from "@react-spectrum/s2/icons/Refresh"
 import NoSearchResults from '@react-spectrum/s2/illustrations/linear/NoSearchResults'
 import BuildTable from '@react-spectrum/s2/illustrations/linear/BuildTable'
-import { DataTable, TableColumn, TableAction } from './DataTable'
+import { DataTable, DataTableTestIds, TableColumn, TableAction } from './DataTable'
 import { ResourceEmptyState } from './ResourceEmptyState'
 import { LoadingSpinner } from './LoadingSpinner'
 import { debounceCancellable } from '../../services/cacheUtils'
@@ -38,6 +38,7 @@ interface ResourceDashboardLayoutProps<T> {
   createButtonTestId?: string // data-testid for the default create button
   onVisibleItemsChange?: (items: T[]) => void
   onVisibleIdsChange?: (ids: string[]) => void // Callback for visible item IDs
+  dataTableTestIds?: DataTableTestIds
 
   // Empty state
   emptyStateTitle?: string
@@ -75,6 +76,7 @@ export function ResourceDashboardLayout<T extends Record<string, any>>({
   createButtonTestId,
   onVisibleItemsChange,
   onVisibleIdsChange,
+  dataTableTestIds,
   emptyStateTitle = 'No Items Found',
   emptyStateDescription = 'Get started by creating your first item',
   emptyStateIllustration,
@@ -255,6 +257,7 @@ export function ResourceDashboardLayout<T extends Record<string, any>>({
                 renderExpandedContent={renderExpandedContent}
                 expandedKeys={expandedKeys}
                 onToggleExpand={onToggleExpand}
+                testIds={dataTableTestIds}
                 emptyState={
                   debouncedQuery ? (
                     <ResourceEmptyState

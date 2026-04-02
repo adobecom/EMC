@@ -52,6 +52,14 @@ const SCOPE_TYPE_VARIANTS: Record<ScopeType, 'positive' | 'informative' | 'neutr
 
 const GROUP_SEARCH_KEYS = ['name', 'description']
 
+const GROUP_MANAGEMENT_TABLE_TEST_IDS = {
+  root: 'scope-group-management-groups-table',
+  emptyState: 'scope-group-management-groups-table-empty-state',
+  pageInput: 'scope-group-management-groups-table-page-input',
+  header: (columnKey: string) => `scope-group-management-groups-table-header-${columnKey}`,
+  row: (itemKey: string) => `scope-group-management-groups-table-row-${itemKey}`,
+}
+
 export const ScopeGroupManagement: React.FC<ScopeGroupManagementProps> = () => {
   const apiService = useApi()
   const toast = useToast()
@@ -880,6 +888,7 @@ export const ScopeGroupManagement: React.FC<ScopeGroupManagementProps> = () => {
             emptyStateIllustration={<FolderSharedIllustration aria-hidden />}
             emptyStateTitle="No Groups"
             emptyStateDescription="Create a group in this scope to manage user access"
+            dataTableTestIds={GROUP_MANAGEMENT_TABLE_TEST_IDS}
             searchPlaceholder="Search groups..."
             searchKeys={GROUP_SEARCH_KEYS}
             renderExpandedContent={renderGroupExpandedContent}

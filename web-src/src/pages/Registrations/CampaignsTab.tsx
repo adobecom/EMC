@@ -17,6 +17,14 @@ import { DataTable, TableColumn, ResourceEmptyState } from '../../components/sha
 import { COLORS } from '../../styles/designSystem'
 import { useHasPermission } from '../../hooks/useHasPermission'
 
+const CAMPAIGNS_TABLE_TEST_IDS = {
+  root: 'campaigns-table',
+  emptyState: 'campaigns-table-empty-state',
+  pageInput: 'campaigns-table-page-input',
+  header: (columnKey: string) => `campaigns-table-header-${columnKey}`,
+  row: (itemKey: string) => `campaigns-table-row-${itemKey}`,
+}
+
 interface CampaignsTabProps {
   eventId: string
   event: EventApiResponse | null
@@ -262,6 +270,7 @@ export const CampaignsTab: React.FC<CampaignsTabProps> = ({
           data={campaigns}
           getItemKey={(item) => item.campaignId}
           pageSize={10}
+          testIds={CAMPAIGNS_TABLE_TEST_IDS}
           emptyState={
             <ResourceEmptyState
               fillContainer

@@ -39,6 +39,14 @@ const FILTER_ALL = '__all__'
 const FILTER_NONE_SERIES = '__none__'
 const FILTER_EMPTY_CLOUD = '__empty__'
 
+const EVENTS_DASHBOARD_TABLE_TEST_IDS = {
+  root: 'events-dashboard-table',
+  emptyState: 'events-dashboard-table-empty-state',
+  pageInput: 'events-dashboard-table-page-input',
+  header: (columnKey: string) => `events-dashboard-table-header-${columnKey}`,
+  row: (itemKey: string) => `events-dashboard-table-row-${itemKey}`,
+}
+
 function getEventCreatorForFilter(
   item: EventDashboardItem,
   historyMap: Map<string, EventHistoryInfo>
@@ -1152,6 +1160,7 @@ export const EventsDashboard: React.FC<EventsDashboardProps> = () => {
           emptyStateIllustration={<CalendarIllustration aria-hidden />}
           emptyStateTitle="No Events Found"
           emptyStateDescription="Get started by creating your first event"
+          dataTableTestIds={EVENTS_DASHBOARD_TABLE_TEST_IDS}
           searchPlaceholder="Search events..."
           searchKeys={EVENTS_SEARCH_KEYS}
         />

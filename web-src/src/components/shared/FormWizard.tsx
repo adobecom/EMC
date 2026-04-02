@@ -32,6 +32,22 @@ export type EventTypeLabel = 'In-person event' | 'Webinar' | 'Hybrid event' | st
 /** Event status for the status badge */
 export type EventStatus = 'draft' | 'published' | 'archived' | 'cancelled' | string
 
+export interface FormWizardTestIds {
+  root?: string
+  sideNav?: string
+  dashboardButton?: string
+  step?: (stepId: string) => string
+  progress?: string
+  backButton?: string
+  previewPre?: string
+  previewPost?: string
+  publishButton?: string
+  saveButton?: string
+  nextButton?: string
+  stepHeading?: string
+  statusBadge?: string
+}
+
 interface FormWizardProps {
   steps: WizardStep[]
   /** Called when Publish / Re-publish is clicked */
@@ -57,6 +73,7 @@ interface FormWizardProps {
   eventStatus?: EventStatus
   /** Optional actions to render in the header (e.g., history button) */
   headerActions?: React.ReactNode
+  testIds?: FormWizardTestIds
 }
 
 /** Side nav: Dashboard row hover */
@@ -85,7 +102,8 @@ export const FormWizard: React.FC<FormWizardProps> = ({
   onMaxStepChange,
   eventTypeLabel,
   eventStatus,
-  headerActions
+  headerActions,
+  testIds
 }) => {
   const [currentStepIndex, setCurrentStepIndex] = useState(0)
   const [isNavigating, setIsNavigating] = useState(false)
@@ -201,7 +219,7 @@ export const FormWizard: React.FC<FormWizardProps> = ({
         backgroundColor: COLORS.GRAY_100,
       }}
     >
-      <div data-testid="wizard-side-nav" style={{ padding: 24, flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0, overflow: 'auto' }}>
+      <div data-testid={testIds?.sideNav} style={{ padding: 24, flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0, overflow: 'auto' }}>
         <Text UNSAFE_style={{
           fontSize: '12px',
           fontWeight: 500,
@@ -216,7 +234,7 @@ export const FormWizard: React.FC<FormWizardProps> = ({
         <div className={style({ display: 'flex', flexDirection: 'column', gap: 8 })}>
           <button
             type="button"
-            data-testid="wizard-dashboard-button"
+            data-testid={testIds?.dashboardButton}
             onClick={handleDashboardClick}
             disabled={isSubmitting || isNavigating}
             style={{
@@ -286,7 +304,7 @@ export const FormWizard: React.FC<FormWizardProps> = ({
                   <button
                     type="button"
                     key={step.id}
-                    data-testid={`wizard-step-${step.id}`}
+                    data-testid={testIds?.step?.(step.id)}
                     onClick={() => handleStepClick(index)}
                     disabled={isDisabled}
                     style={{
@@ -350,7 +368,7 @@ export const FormWizard: React.FC<FormWizardProps> = ({
             Step {currentStepIndex + 1} of {steps.length}
           </Text>
           <ProgressBar
-            data-testid="wizard-progress"
+            data-testid={testIds?.progress}
             label="Progress"
             value={progress}
             size="S"
@@ -400,7 +418,7 @@ export const FormWizard: React.FC<FormWizardProps> = ({
       <div style={actionBarRowStyle}>
         <div style={{ flexShrink: 0 }}>
           <Button
-            data-testid="wizard-back-button"
+            data-testid={testIds?.backButton}
             variant="secondary"
             fillStyle="outline"
             staticColor="white"
@@ -428,7 +446,7 @@ export const FormWizard: React.FC<FormWizardProps> = ({
                 style={{ flexWrap: 'wrap' }}
               >
                 <Button
-                  data-testid="wizard-preview-pre"
+                  data-testid={testIds?.previewPre}
                   variant="secondary"
                   fillStyle="fill"
                   staticColor="white"
@@ -439,7 +457,7 @@ export const FormWizard: React.FC<FormWizardProps> = ({
                   <Text>Pre-event</Text>
                 </Button>
                 <Button
-                  data-testid="wizard-preview-post"
+                  data-testid={testIds?.previewPost}
                   variant="secondary"
                   fillStyle="fill"
                   staticColor="white"
@@ -465,7 +483,7 @@ export const FormWizard: React.FC<FormWizardProps> = ({
 
           <div className={style({ display: 'flex', gap: 8, alignItems: 'center' })}>
             <Button
-              data-testid="wizard-publish-button"
+              data-testid={testIds?.publishButton}
               variant="accent"
               fillStyle="fill"
               onPress={handlePublish}
@@ -475,7 +493,7 @@ export const FormWizard: React.FC<FormWizardProps> = ({
               <RocketQuickActions aria-hidden />
             </Button>
             <Button
-              data-testid="wizard-save-button"
+              data-testid={testIds?.saveButton}
               variant="secondary"
               fillStyle="outline"
               staticColor="white"
@@ -486,7 +504,7 @@ export const FormWizard: React.FC<FormWizardProps> = ({
             </Button>
             {!isLastStep && (
               <Button
-                data-testid="wizard-next-button"
+                data-testid={testIds?.nextButton}
                 variant="accent"
                 fillStyle="fill"
                 onPress={handleNext}
@@ -555,7 +573,7 @@ export const FormWizard: React.FC<FormWizardProps> = ({
         )}
 
         <div className={style({ display: 'flex', alignItems: 'center', gap: 32 })}>
-          <Heading data-testid="wizard-step-heading" level={2} UNSAFE_style={TYPOGRAPHY.STEP_HEADING}>{currentStep.title}</Heading>
+          <Heading data-testid={testIds?.stepHeading} level={2} UNSAFE_style={TYPOGRAPHY.STEP_HEADING}>{currentStep.title}</Heading>
 
           <div
             style={{
@@ -578,7 +596,7 @@ export const FormWizard: React.FC<FormWizardProps> = ({
               }}
             />
             <Text
-              data-testid="wizard-status-badge"
+              data-testid={testIds?.statusBadge}
               UNSAFE_style={{
                 fontSize: '14px',
                 fontWeight: 500,
@@ -624,7 +642,7 @@ export const FormWizard: React.FC<FormWizardProps> = ({
 
   if (showSideNav) {
     return (
-      <div data-testid="form-wizard" style={shellStyle}>
+      <div data-testid={testIds?.root} style={shellStyle}>
         <div style={bodyRowStyle}>
           {renderSideNav()}
           <div style={mainColumnStyle}>
@@ -637,7 +655,7 @@ export const FormWizard: React.FC<FormWizardProps> = ({
   }
 
   return (
-    <div data-testid="form-wizard" style={shellStyle}>
+    <div data-testid={testIds?.root} style={shellStyle}>
       <div style={{ ...bodyRowStyle, flexDirection: 'column' }}>
         <div style={{ ...mainColumnStyle, flex: 1 }}>{mainContent}</div>
       </div>
