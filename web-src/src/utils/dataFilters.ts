@@ -273,15 +273,16 @@ const EVENT_FILTER_STRATEGIES: Record<EventFilterMode, (descriptor: DataFieldDes
 }
 
 /**
- * Fields omitted from ESL `PUT /v1/events/:id` in {@link prepareEslEventPutPayload}.
+ * Keys stripped on every ESL **event** `PUT /v1/events/:id` (update, publish, unpublish, preview)
+ * inside {@link prepareEslEventPutPayload} — not publish-specific.
  * - inviteOnly: read-only on ESL update.
  * - detailPagePath: POST (create) only; must not be sent on PUT.
  */
-export const EVENT_DATA_ESL_PUBLISH_EXCLUDE_KEYS: readonly string[] = ['inviteOnly', 'detailPagePath']
+export const EVENT_DATA_ESL_EVENT_PUT_EXCLUDE_KEYS: readonly string[] = ['inviteOnly', 'detailPagePath']
 
 /**
  * Normalize any object intended for ESL `PUT /v1/events/:id` (update, publish, unpublish, preview).
- * Applies submission filtering plus {@link EVENT_DATA_ESL_PUBLISH_EXCLUDE_KEYS}.
+ * Applies submission filtering plus {@link EVENT_DATA_ESL_EVENT_PUT_EXCLUDE_KEYS}.
  */
 export function prepareEslEventPutPayload(
   data: Record<string, any>,
@@ -290,7 +291,7 @@ export function prepareEslEventPutPayload(
   if (!data || typeof data !== 'object') return {}
 
   const excludeKeys = [
-    ...EVENT_DATA_ESL_PUBLISH_EXCLUDE_KEYS,
+    ...EVENT_DATA_ESL_EVENT_PUT_EXCLUDE_KEYS,
     ...(options.excludeKeys ?? []),
   ]
   return filterEventData(data, 'submission', { excludeKeys })
