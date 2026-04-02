@@ -15,6 +15,7 @@ import {
   EVENT_DATA_FILTER,
   filterEventData,
   isValidAttribute,
+  prepareEslEventPutPayload,
 } from '../utils/dataFilters'
 
 describe('EVENT_DATA_FILTER field configurations', () => {
@@ -59,6 +60,40 @@ describe('filterEventData excludes non-submittable fields', () => {
     expect(result.cloudType).toBe('CreativeCloud')
     expect(result.seriesId).toBe('series-123')
     expect(result.enTitle).toBe('My Event')
+  })
+})
+
+describe('prepareEslEventPutPayload (ESL PUT egress)', () => {
+  it('drops inviteOnly by default', () => {
+    const result = prepareEslEventPutPayload({
+      cloudType: 'CreativeCloud',
+      seriesId: 's1',
+      inviteOnly: true,
+      enTitle: 'T',
+    })
+    expect(result).not.toHaveProperty('inviteOnly')
+    expect(result.enTitle).toBe('T')
+  })
+
+  it('restores detailPagePath from input after filter', () => {
+    const url = 'https://www.adobe.com/events/my-event/overview'
+    const result = prepareEslEventPutPayload({
+      cloudType: 'CreativeCloud',
+      seriesId: 's1',
+      detailPagePath: url,
+      enTitle: 'T',
+    })
+    expect(result.detailPagePath).toBe(url)
+    expect(result.enTitle).toBe('T')
+  })
+
+  it('does not add detailPagePath when missing or empty', () => {
+    expect(prepareEslEventPutPayload({ cloudType: 'CreativeCloud', seriesId: 's1' })).not.toHaveProperty(
+      'detailPagePath'
+    )
+    expect(
+      prepareEslEventPutPayload({ cloudType: 'CreativeCloud', seriesId: 's1', detailPagePath: '' })
+    ).not.toHaveProperty('detailPagePath')
   })
 })
 

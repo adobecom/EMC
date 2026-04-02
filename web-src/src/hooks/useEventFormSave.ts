@@ -475,7 +475,7 @@ export function useEventFormSave() {
           payload.creationTime = eventDataResp.creationTime
         }
         
-        // Update existing event
+        // Update existing event (ApiService applies prepareEslEventPutPayload before ESL PUT)
         const result = await apiService.updateEventExternal(eventId, payload, {
           forceSpWrite: false,
           liveUpdate: publish // Only live update when publishing
