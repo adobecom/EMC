@@ -138,7 +138,7 @@ export const EVENT_DATA_FILTER: DataFilter = {
   creationTime: { type: 'string', localizable: false, cloneable: false, submittable: true },
   modificationTime: { type: 'string', localizable: false, cloneable: false, submittable: true },
   isPrivate: { type: 'boolean', localizable: false, cloneable: true, submittable: true },
-  inviteOnly: { type: 'boolean', localizable: false, cloneable: true, submittable: true },
+  inviteOnly: { type: 'boolean', localizable: false, cloneable: true, submittable: true, updatable: false },
   detailPagePath: { type: 'string', localizable: false, cloneable: false, submittable: false },
   useLegacyDetailPagePath: { type: 'boolean', localizable: false, cloneable: false, submittable: true },
   video: { type: 'object', localizable: false, cloneable: true, submittable: true, ref: VIDEO_DATA_REF_FILTER },
@@ -265,11 +265,12 @@ export function filterSeriesData(
 // EVENT FILTERING
 // ============================================================================
 
-export type EventFilterMode = 'submission' | 'clone'
+export type EventFilterMode = 'submission' | 'clone' | 'update'
 
 const EVENT_FILTER_STRATEGIES: Record<EventFilterMode, (descriptor: DataFieldDescriptor | undefined) => boolean> = {
   submission: (descriptor) => descriptor?.submittable === true,
   clone: (descriptor) => descriptor?.submittable === true && descriptor?.cloneable !== false,
+  update: (descriptor) => descriptor?.submittable === true && descriptor?.updatable !== false,
 }
 
 /**

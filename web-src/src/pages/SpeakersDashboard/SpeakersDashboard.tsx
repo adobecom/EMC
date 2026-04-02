@@ -597,19 +597,19 @@ export const SpeakersDashboard: React.FC<SpeakersDashboardProps> = () => {
             disabledKeys={eventCount === 0 ? ['view-connections'] : []}
           >
             {canWriteEvent && (
-              <MenuItem key="edit">
+              <MenuItem id="edit" textValue="Edit Speaker">
                 <Edit />
-                <Text>Edit Speaker</Text>
+                <Text slot="label">Edit Speaker</Text>
               </MenuItem>
             )}
-            <MenuItem key="view-connections">
+            <MenuItem id="view-connections" textValue={`View Connections (${eventCount})`}>
               <Link />
-              <Text>View Connections ({eventCount})</Text>
+              <Text slot="label">View Connections ({eventCount})</Text>
             </MenuItem>
             {canDeleteEvent && (
-              <MenuItem key="delete">
+              <MenuItem id="delete" textValue="Delete Speaker">
                 <RemoveCircle />
-                <Text>Delete Speaker</Text>
+                <Text slot="label">Delete Speaker</Text>
               </MenuItem>
             )}
           </ActionMenu>

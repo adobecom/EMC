@@ -372,7 +372,7 @@ export const EventsDashboard: React.FC<EventsDashboardProps> = () => {
 
           // Filter the event data to only include submittable fields
           // filterEventData preserves ALL localizations (unlike getEventPayload which only keeps one locale)
-          const filteredPayload = filterEventData(eventResponse, 'submission')
+          const filteredPayload = filterEventData(eventResponse, 'update')
 
           // Prepare final payload with publish flags
           const payload = {
