@@ -3,30 +3,20 @@
 */
 
 import React, { useState, useEffect, useCallback, useRef } from 'react'
-import {
-  View,
-  Flex,
-  Picker,
-  Item,
-  Button,
-  Heading,
-  Text,
-  ActionButton,
-  ProgressCircle,
-  TooltipTrigger,
-  Tooltip,
-} from '@adobe/react-spectrum'
+import { Button, Heading, Text, Picker, PickerItem, ActionButton, ProgressCircle, TooltipTrigger, Tooltip } from '@react-spectrum/s2'
+import { style } from '@react-spectrum/s2/style' with { type: 'macro' }
 import { ProfileData, SeriesSpeaker, SpeakerType, EventApiResponse } from '../../types/domain'
 import { SpeakerPickerDialog } from './SpeakerPickerDialog'
-import { TYPOGRAPHY, FLEX_GAP, COLORS } from '../../styles/designSystem'
+import { TYPOGRAPHY, COLORS } from '../../styles/designSystem'
 import { speakerHasLocalization } from '../../utils/eventFormMappers'
-import Add from '@spectrum-icons/workflow/Add'
-import Alert from '@spectrum-icons/workflow/Alert'
-import Delete from '@spectrum-icons/workflow/Delete'
-import DragHandle from '@spectrum-icons/workflow/DragHandle'
+import Add from '@react-spectrum/s2/icons/Add'
+import AlertTriangle from '@react-spectrum/s2/icons/AlertTriangle'
+import RemoveCircle from '@react-spectrum/s2/icons/RemoveCircle'
+import Move from '@react-spectrum/s2/icons/Move'
 import { apiService, cachedApi } from '../../services/api'
 import { useToast } from '../../contexts'
 import { useEventFormComponent } from '../../hooks/useEventFormComponent'
+import { useEventFormContext } from '../../contexts'
 
 const SPEAKER_TYPE_OPTIONS: { key: SpeakerType; label: string }[] = [
   { key: 'host', label: 'Host' },
@@ -237,7 +227,12 @@ export const SpeakersComponent: React.FC = () => {
     profilesRef.current = profiles
   }, [profiles])
 
-  const [seriesSpeakers, setSeriesSpeakers] = useState<SeriesSpeaker[]>([])
+  const { setSeriesSpeakers: setContextSeriesSpeakers } = useEventFormContext()
+  const [seriesSpeakers, setSeriesSpeakersLocal] = useState<SeriesSpeaker[]>([])
+  const setSeriesSpeakers = useCallback((speakers: SeriesSpeaker[]) => {
+    setSeriesSpeakersLocal(speakers)
+    setContextSeriesSpeakers(speakers)
+  }, [setContextSeriesSpeakers])
   const [isLoadingSpeakers, setIsLoadingSpeakers] = useState(false)
   const [pickerOpen, setPickerOpen] = useState(false)
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null)
@@ -273,7 +268,7 @@ export const SpeakersComponent: React.FC = () => {
     return () => {
       isMounted = false
     }
-  }, [seriesId])
+  }, [seriesId, setSeriesSpeakers])
 
   const selectedSpeakerIds = new Set(profiles.map(p => p.speakerId).filter(Boolean) as string[])
 
@@ -284,7 +279,7 @@ export const SpeakersComponent: React.FC = () => {
       const speakers = response.speakers || response || []
       setSeriesSpeakers(Array.isArray(speakers) ? speakers : [])
     }
-  }, [seriesId])
+  }, [seriesId, setSeriesSpeakers])
 
   const handlePickerSelect = useCallback(
     (speaker: SeriesSpeaker) => {
@@ -353,35 +348,37 @@ export const SpeakersComponent: React.FC = () => {
   }
 
   return (
-    <Flex direction="column" gap={FLEX_GAP.SECTION}>
-      <Flex alignItems="center" gap="size-150">
+    <div className={style({display: 'flex', flexDirection: 'column', gap: 24})}>
+      <div className={style({display: 'flex', alignItems: 'center', gap: 12})}>
         <Heading level={3} UNSAFE_style={TYPOGRAPHY.COMPONENT_HEADING}>
           Speakers & Hosts
         </Heading>
         {isLoadingSpeakers && (
-          <ProgressCircle size="S" isIndeterminate aria-label="Loading speakers" />
+          <ProgressCircle isIndeterminate aria-label="Loading speakers" />
         )}
-      </Flex>
+      </div>
 
       <Text>
         Add speaker and event host details. Drag to reorder. You can change each speaker&apos;s role for this event.
       </Text>
 
       {profiles.length === 0 && (
-        <View
-          padding="size-400"
-          backgroundColor="gray-100"
-          borderRadius="medium"
-          UNSAFE_style={{ textAlign: 'center' }}
+        <div
+          style={{
+            padding: '32px',
+            backgroundColor: '#F5F5F5',
+            borderRadius: '4px',
+            textAlign: 'center',
+          }}
         >
-          <Flex direction="column" alignItems="center" gap="size-200">
+          <div className={style({display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 16})}>
             <Text>Add speakers to your event using the button below.</Text>
-            <Button variant="secondary" onPress={() => setPickerOpen(true)}>
+            <Button data-testid="add-speaker-button" variant="secondary" onPress={() => setPickerOpen(true)}>
               <Add />
               <Text>Add Speaker</Text>
             </Button>
-          </Flex>
-        </View>
+          </div>
+        </div>
       )}
 
       {profiles.map((profile, index) => {
@@ -419,18 +416,20 @@ export const SpeakersComponent: React.FC = () => {
             style={{
               padding: '16px',
               border: isDragOver
-                ? '2px solid var(--spectrum-global-color-blue-500)'
-                : '1px solid var(--spectrum-global-color-gray-300)',
+                ? '2px solid #1473E6'
+                : '1px solid #D3D3D3',
               borderRadius: '8px',
               backgroundColor: isDragging
-                ? 'var(--spectrum-global-color-gray-100)'
-                : 'var(--spectrum-global-color-gray-50)',
+                ? '#F5F5F5'
+                : '#FFFFFF',
               opacity: isDragging ? 0.5 : 1,
               transition: 'border-color 0.2s, background-color 0.2s',
             }}
           >
-            <Flex alignItems="center" gap="size-200">
-              <DragHandle UNSAFE_style={{ flexShrink: 0, cursor: 'grab' }} />
+            <div className={style({display: 'flex', alignItems: 'center', gap: 16})}>
+              <span style={{ flexShrink: 0, cursor: 'grab', display: 'flex' }} aria-hidden>
+                <Move />
+              </span>
 
               {profile.imageUrl ? (
                 <img
@@ -441,53 +440,52 @@ export const SpeakersComponent: React.FC = () => {
                     height: '40px',
                     borderRadius: '50%',
                     objectFit: 'cover',
-                    border: '1px solid var(--spectrum-global-color-gray-300)',
+                    border: '1px solid #D3D3D3',
                     flexShrink: 0,
                   }}
                 />
               ) : (
-                <View
-                  UNSAFE_style={{
+                <div
+                  style={{
                     width: '40px',
                     height: '40px',
                     borderRadius: '50%',
-                    backgroundColor: 'var(--spectrum-global-color-gray-300)',
+                    backgroundColor: '#D3D3D3',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    color: 'var(--spectrum-global-color-gray-600)',
+                    color: '#6E6E6E',
                     fontSize: '14px',
                     fontWeight: 'bold',
                     flexShrink: 0,
                   }}
                 >
                   {profile.firstName?.[0] ?? ''}{profile.lastName?.[0] ?? ''}
-                </View>
+                </div>
               )}
 
-              <Flex direction="column" flex={1} minWidth={0}>
-                <Flex alignItems="center" gap="size-100">
+              <div className={style({display: 'flex', flexDirection: 'column', flexGrow: 1})} style={{minWidth: 0}}>
+                <div className={style({display: 'flex', alignItems: 'center', gap: 8})}>
                   <Text UNSAFE_style={{ fontWeight: 600, fontSize: '14px' }}>{displayName}</Text>
                   {missingLocalization && (
                     <TooltipTrigger delay={0}>
                       <ActionButton isQuiet aria-label={`Missing ${locale} content`}>
-                        <Alert
-                          size="S"
-                          UNSAFE_style={{ color: COLORS.ADOBE_RED }}
+                        <AlertTriangle
+                          UNSAFE_style={{ color: COLORS.RED_600 }}
                         />
                       </ActionButton>
-                      <Tooltip variant="negative">
+                      <Tooltip>
                         This speaker is missing a localized title for {locale}. Add it in the
                         Speakers dashboard or when adding the speaker to avoid display issues.
                       </Tooltip>
                     </TooltipTrigger>
                   )}
-                </Flex>
+                </div>
                 {profile.title && (
                   <Text
                     UNSAFE_style={{
                       fontSize: '12px',
-                      color: 'var(--spectrum-global-color-gray-600)',
+                      color: '#6E6E6E',
                       overflow: 'hidden',
                       textOverflow: 'ellipsis',
                       whiteSpace: 'nowrap',
@@ -497,41 +495,42 @@ export const SpeakersComponent: React.FC = () => {
                   </Text>
                 )}
                 {hasTitleNoBio && (
-                  <Text UNSAFE_style={{ fontSize: '11px', color: 'var(--spectrum-global-color-gray-500)', fontStyle: 'italic' }}>
+                  <Text UNSAFE_style={{ fontSize: '11px', color: '#909090', fontStyle: 'italic' }}>
                     No bio for this locale
                   </Text>
                 )}
-              </Flex>
+              </div>
 
               <Picker
                 label="Role"
                 labelPosition="side"
                 selectedKey={profile.type}
                 onSelectionChange={(key) => updateProfile(index, { type: key as SpeakerType })}
-                width="size-2400"
+                styles={style({ width: 192 })}
               >
                 {SPEAKER_TYPE_OPTIONS.map(option => (
-                  <Item key={option.key}>{option.label}</Item>
+                  <PickerItem key={option.key} id={option.key}>{option.label}</PickerItem>
                 ))}
               </Picker>
 
               <ActionButton onPress={() => removeProfile(index)} isQuiet aria-label="Remove speaker">
-                <Delete size="S" />
+                <RemoveCircle />
               </ActionButton>
-            </Flex>
+            </div>
           </div>
         )
       })}
 
       {profiles.length > 0 && (
         <Button
+          data-testid="add-speaker-button"
           variant="secondary"
           onPress={() => setPickerOpen(true)}
-          width="100%"
+          styles={style({ width: '[100%]' })}
           UNSAFE_style={{
-            backgroundColor: 'var(--spectrum-global-color-gray-200)',
+            backgroundColor: '#E1E1E1',
             border: 'none',
-            color: 'var(--spectrum-global-color-gray-800)',
+            color: '#2C2C2C',
             justifyContent: 'flex-start',
             paddingLeft: '16px',
           }}
@@ -551,6 +550,6 @@ export const SpeakersComponent: React.FC = () => {
         locale={locale}
         onSpeakersRefresh={refreshSeriesSpeakers}
       />
-    </Flex>
+    </div>
   )
 }

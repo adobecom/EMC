@@ -3,14 +3,12 @@
 */
 
 import React from 'react'
-import {
-  TextField,
-  Flex,
-  Text
-} from '@adobe/react-spectrum'
+import { TextField, Text } from '@react-spectrum/s2'
+import { style } from '@react-spectrum/s2/style' with { type: 'macro' }
 import { HeadingWithTooltip } from '../../components/shared'
-import { FLEX_GAP } from '../../styles/designSystem'
+import { SPACING } from '../../styles/designSystem'
 import { useSeriesFormComponent } from '../../hooks/useSeriesFormComponent'
+import { normalizeRelatedDomain, normalizeContentRoot } from '../../utils/seriesFormAutoCorrect'
 
 /**
  * SeriesAdditionalInfoComponent - Manages additional series settings
@@ -43,7 +41,7 @@ export const SeriesAdditionalInfoComponent: React.FC = () => {
   // ============================================================================
 
   return (
-    <Flex direction="column" gap={FLEX_GAP.SECTION}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: SPACING.LG }}>
       {/* Additional Information Header */}
       <HeadingWithTooltip 
         level={3}
@@ -53,8 +51,8 @@ export const SeriesAdditionalInfoComponent: React.FC = () => {
       </HeadingWithTooltip>
       
       {/* Form Fields */}
-      <Flex direction="column" gap={FLEX_GAP.FIELD}>
-        <Flex direction="row" gap="size-400" alignItems="start">
+      <div style={{ display: 'flex', flexDirection: 'column', gap: SPACING.MD }}>
+        <div style={{ display: 'flex', flexDirection: 'row', gap: 32, alignItems: 'flex-start' }}>
           <Text UNSAFE_style={{ width: '150px', flexShrink: 0, fontWeight: 600 }}>
             SUSI context ID:
           </Text>
@@ -63,11 +61,11 @@ export const SeriesAdditionalInfoComponent: React.FC = () => {
             placeholder="Add path"
             value={susiContextId}
             onChange={(value) => updateFormData({ susiContextId: value })}
-            width="100%"
+            styles={style({ width: '[100%]' })}
           />
-        </Flex>
-        
-        <Flex direction="row" gap="size-400" alignItems="start">
+        </div>
+
+        <div style={{ display: 'flex', flexDirection: 'row', gap: 32, alignItems: 'flex-start' }}>
           <Text UNSAFE_style={{ width: '150px', flexShrink: 0, fontWeight: 600 }}>
             Related domain:
           </Text>
@@ -76,11 +74,17 @@ export const SeriesAdditionalInfoComponent: React.FC = () => {
             placeholder="Add related domain"
             value={relatedDomain}
             onChange={(value) => updateFormData({ relatedDomain: value })}
-            width="100%"
+            onBlur={() => {
+              const normalized = normalizeRelatedDomain(relatedDomain)
+              if (normalized !== relatedDomain) {
+                updateFormData({ relatedDomain: normalized })
+              }
+            }}
+            styles={style({ width: '[100%]' })}
           />
-        </Flex>
-        
-        <Flex direction="row" gap="size-400" alignItems="start">
+        </div>
+
+        <div style={{ display: 'flex', flexDirection: 'row', gap: 32, alignItems: 'flex-start' }}>
           <Text UNSAFE_style={{ width: '150px', flexShrink: 0, fontWeight: 600 }}>
             Content root:
           </Text>
@@ -89,11 +93,17 @@ export const SeriesAdditionalInfoComponent: React.FC = () => {
             placeholder="Add content root"
             value={contentRoot}
             onChange={(value) => updateFormData({ contentRoot: value })}
-            width="100%"
+            onBlur={() => {
+              const normalized = normalizeContentRoot(contentRoot)
+              if (normalized !== contentRoot) {
+                updateFormData({ contentRoot: normalized })
+              }
+            }}
+            styles={style({ width: '[100%]' })}
           />
-        </Flex>
-        
-        <Flex direction="row" gap="size-400" alignItems="start">
+        </div>
+
+        <div style={{ display: 'flex', flexDirection: 'row', gap: 32, alignItems: 'flex-start' }}>
           <Text UNSAFE_style={{ width: '150px', flexShrink: 0, fontWeight: 600 }}>
             External theme ID:
           </Text>
@@ -102,10 +112,10 @@ export const SeriesAdditionalInfoComponent: React.FC = () => {
             placeholder="Add external theme ID"
             value={externalThemeId}
             onChange={(value) => updateFormData({ externalThemeId: value })}
-            width="100%"
+            styles={style({ width: '[100%]' })}
           />
-        </Flex>
-      </Flex>
-    </Flex>
+        </div>
+      </div>
+    </div>
   )
 }

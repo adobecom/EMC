@@ -10,6 +10,7 @@ import {
   EventApiResponse,
   SeriesSpeaker,
 } from '../types/domain'
+import { getLanguageKeyFromLocale } from '../config/localeMapping'
 import { fromApiSocialLink } from './socialPlatformDetector'
 
 /**
@@ -96,6 +97,11 @@ export function mapApiResponseToFormData(event: EventApiResponse, locale: string
   const cta = localized.cta?.[0]
 
   const venueLocalized = event.venue?.localizations?.[locale] || {}
+  const imgs = event.images || []
+  const venueStepImageRow =
+    imgs.find((i: { imageKind?: string }) => i.imageKind === 'venue-additional-image')
+    ?? imgs.find((i: { imageKind?: string }) => i.imageKind === 'venue-map-image')
+
   const venueData = event.venue ? {
     venueName: event.venue.venueName || '',
     formattedAddress: event.venue.formattedAddress || event.venue.address || '',
@@ -107,8 +113,8 @@ export function mapApiResponseToFormData(event: EventApiResponse, locale: string
       ?? event.venue.additionalInformation
       ?? event.venue.additionalInfo
       ?? '',
-    venueImageUrl: event.venue.imageUrl,
-    venueImageId: event.venue.imageId,
+    venueAdditionalImageUrl: (venueStepImageRow as { imageUrl?: string } | undefined)?.imageUrl,
+    venueAdditionalImageId: (venueStepImageRow as { imageId?: string } | undefined)?.imageId,
     showVenuePostEvent: event.showVenuePostEvent ?? true,
     showAdditionalInfoPostEvent: event.showVenueAdditionalInfoPostEvent ?? true,
     googlePlaceName: event.venue.venueName || ''
@@ -125,9 +131,10 @@ export function mapApiResponseToFormData(event: EventApiResponse, locale: string
     urlTitle: event.detailPagePath?.split('/').slice(-5, -4).join('/') || '',
     description: localized.eventDetails || '',
     shortDescription: localized.description || '',
-    language: locale.split('-')[0] || 'en',
+    language: getLanguageKeyFromLocale(locale),
     defaultLocale: locale,
     isPrivate: event.isPrivate || false,
+    inviteOnly: event.inviteOnly || false,
     tags: parsedTags,
     startDateTime: event.localStartDate && event.localStartTime
       ? `${event.localStartDate}T${event.localStartTime.slice(0, 5)}`

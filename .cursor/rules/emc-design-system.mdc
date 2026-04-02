@@ -9,7 +9,7 @@ alwaysApply: false
 ## Token Source
 
 All design tokens live in `web-src/src/styles/designSystem.ts`.
-Import tokens from there — **do not use magic numbers**.
+Import tokens from there — **do not use magic numbers**, except where the S2 **`style()` macro** requires literals (see below).
 
 ```tsx
 import {
@@ -20,6 +20,12 @@ import {
   LAYOUT_PATTERNS, FLEX_GAP,
 } from '../../styles/designSystem'
 ```
+
+### Exception: S2 `style()` macro
+
+The React Spectrum `style` macro from `@react-spectrum/s2/style` must receive **compile-time literals** inside `style({ ... })`. Using `SPACING.SM`, `FORM_SPACING.*`, or any imported constant breaks the build with **`Could not statically evaluate macro argument`**.
+
+Use a **numeric literal** on the 4px grid that matches the token (see table below), or apply tokens via **`UNSAFE_style`** / global CSS instead. Full detail: **`react-spectrum-style-macro-s2.mdc`** → *Static evaluation*.
 
 ## Spacing System (8px grid)
 

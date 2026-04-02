@@ -10,10 +10,14 @@ import React, {
   useRef,
   useEffect,
   useMemo,
+  useState,
 } from 'react'
-import { EventFormData, EventApiResponse } from '../types/domain'
+import { EventFormData, EventApiResponse, SeriesSpeaker } from '../types/domain'
 import { saveFormDraft, loadFormDraft, clearFormDraft } from '../utils/formPersistence'
-import { mapApiResponseToFormData } from '../utils/eventFormMappers'
+import {
+  applyLocaleMetadataToFormData,
+  buildLocaleSwitchResult,
+} from '../utils/eventLocaleSwitch'
 
 // ============================================================================
 // TYPES
@@ -100,6 +104,7 @@ type EventFormAction =
   | { type: 'SET_LOCALE'; payload: string }
   | { type: 'SET_EDIT_MODE'; payload: boolean }
   | { type: 'SET_EVENT_RESPONSE'; payload: EventApiResponse | null }
+  | { type: 'MERGE_EVENT_RESPONSE'; payload: Partial<EventApiResponse> }
   | { type: 'UPDATE_FORM_DATA'; payload: Partial<EventFormData> }
   | { type: 'POPULATE_FORM_DATA'; payload: Partial<EventFormData> }
   | { type: 'RESET_FORM_DATA'; payload: EventFormData }
@@ -112,6 +117,7 @@ type EventFormAction =
   | { type: 'SET_MAX_STEP_REACHED'; payload: number }
   | { type: 'SET_FORMAT_CONFIRMED'; payload: boolean }
   | { type: 'RESET_FOR_RESELECT'; payload: { eventType: 'in-person' | 'webinar' } }
+  | { type: 'SWITCH_LOCALE_FORM_DATA'; payload: { locale: string; formData: EventFormData; isDirty: boolean } }
   | { type: 'RESET_TO_SAVED' }
 
 /**
@@ -140,10 +146,12 @@ export interface EventFormContextValue {
   /** Populate form from API response without marking dirty (for load/edit) */
   populateFormDataFromResponse: (updates: Partial<EventFormData>) => void
   setEventResponse: (response: EventApiResponse | null) => void
+  /** Shallow-merge into eventDataResp without changing isDirty (e.g. sync modificationTime after child mutations) */
+  mergeEventResponse: (partial: Partial<EventApiResponse>) => void
   setEventId: (id: string | null) => void
   setSeriesId: (id: string) => void
   setLocale: (locale: string) => void
-  /** Switch locale and re-map form data from eventDataResp for the new locale */
+  /** Switch locale and update formData for the new locale */
   setLocaleAndRemapFormData: (locale: string) => void
   setEditMode: (isEdit: boolean) => void
   resetToSaved: () => void
@@ -165,6 +173,12 @@ export interface EventFormContextValue {
   persistToStorage: () => void
   loadFromStorage: () => boolean
   clearStorage: () => void
+
+  // Event-level data shared across form steps
+  venueLocations: any[]
+  seriesSpeakers: SeriesSpeaker[]
+  setVenueLocations: (locations: any[]) => void
+  setSeriesSpeakers: (speakers: SeriesSpeaker[]) => void
 }
 
 // ============================================================================
@@ -185,6 +199,7 @@ export const createDefaultFormData = (): EventFormData => ({
   language: 'en',
   defaultLocale: DEFAULT_LOCALE,
   isPrivate: false,
+  inviteOnly: false,
   tags: [],
   startDateTime: '',
   endDateTime: '',
@@ -250,7 +265,11 @@ function eventFormReducer(state: EventFormState, action: EventFormAction): Event
       }
     
     case 'SET_LOCALE':
-      return { ...state, locale: action.payload }
+      return {
+        ...state,
+        locale: action.payload,
+        formData: applyLocaleMetadataToFormData(state.formData, action.payload),
+      }
     
     case 'SET_EDIT_MODE':
       return { ...state, isEditMode: action.payload }
@@ -260,6 +279,13 @@ function eventFormReducer(state: EventFormState, action: EventFormAction): Event
         ...state,
         eventDataResp: action.payload,
         isDirty: false // Response just set means we're in sync
+      }
+
+    case 'MERGE_EVENT_RESPONSE':
+      if (!state.eventDataResp) return state
+      return {
+        ...state,
+        eventDataResp: { ...state.eventDataResp, ...action.payload },
       }
     
     case 'UPDATE_FORM_DATA':
@@ -279,6 +305,8 @@ function eventFormReducer(state: EventFormState, action: EventFormAction): Event
     case 'RESET_FORM_DATA':
       return {
         ...state,
+        locale: action.payload.defaultLocale || DEFAULT_LOCALE,
+        seriesId: action.payload.seriesId || state.seriesId,
         formData: action.payload,
         isDirty: false
       }
@@ -306,6 +334,14 @@ function eventFormReducer(state: EventFormState, action: EventFormAction): Event
     
     case 'SET_FORMAT_CONFIRMED':
       return { ...state, isFormatConfirmed: action.payload }
+
+    case 'SWITCH_LOCALE_FORM_DATA':
+      return {
+        ...state,
+        locale: action.payload.locale,
+        formData: action.payload.formData,
+        isDirty: action.payload.isDirty,
+      }
     
     case 'RESET_FOR_RESELECT':
       return {
@@ -381,6 +417,10 @@ export const EventFormProvider: React.FC<EventFormProviderProps> = ({
   
   // Component registry
   const componentsRef = useRef<Map<string, RegisteredComponent>>(new Map())
+
+  // Event-level data shared across form steps
+  const [venueLocations, setVenueLocations] = useState<any[]>([])
+  const [seriesSpeakers, setSeriesSpeakers] = useState<SeriesSpeaker[]>([])
   
   // ============================================================================
   // ACTIONS
@@ -396,6 +436,10 @@ export const EventFormProvider: React.FC<EventFormProviderProps> = ({
   
   const setEventResponse = useCallback((response: EventApiResponse | null) => {
     dispatch({ type: 'SET_EVENT_RESPONSE', payload: response })
+  }, [])
+
+  const mergeEventResponse = useCallback((partial: Partial<EventApiResponse>) => {
+    dispatch({ type: 'MERGE_EVENT_RESPONSE', payload: partial })
   }, [])
   
   const setEventId = useCallback((id: string | null) => {
@@ -414,12 +458,21 @@ export const EventFormProvider: React.FC<EventFormProviderProps> = ({
   }, [])
 
   const setLocaleAndRemapFormData = useCallback((newLocale: string) => {
-    dispatch({ type: 'SET_LOCALE', payload: newLocale })
-    if (state.eventDataResp) {
-      const mapped = mapApiResponseToFormData(state.eventDataResp, newLocale)
-      dispatch({ type: 'POPULATE_FORM_DATA', payload: mapped })
-    }
-  }, [state.eventDataResp])
+    const nextState = buildLocaleSwitchResult(
+      state.formData,
+      newLocale,
+      state.eventDataResp
+    )
+
+    dispatch({
+      type: 'SWITCH_LOCALE_FORM_DATA',
+      payload: {
+        locale: newLocale,
+        formData: nextState.formData,
+        isDirty: nextState.isDirty,
+      },
+    })
+  }, [state.eventDataResp, state.formData])
 
   const setEditMode = useCallback((isEdit: boolean) => {
     dispatch({ type: 'SET_EDIT_MODE', payload: isEdit })
@@ -546,6 +599,7 @@ export const EventFormProvider: React.FC<EventFormProviderProps> = ({
     updateFormData,
     populateFormDataFromResponse,
     setEventResponse,
+    mergeEventResponse,
     setEventId,
     setSeriesId,
     setLocale,
@@ -570,11 +624,20 @@ export const EventFormProvider: React.FC<EventFormProviderProps> = ({
     persistToStorage,
     loadFromStorage,
     clearStorage,
+
+    // Event-level data shared across form steps
+    venueLocations,
+    seriesSpeakers,
+    setVenueLocations,
+    setSeriesSpeakers,
   }), [
     state,
+    venueLocations,
+    seriesSpeakers,
     updateFormData,
     populateFormDataFromResponse,
     setEventResponse,
+    mergeEventResponse,
     setEventId,
     setSeriesId,
     setLocale,
@@ -628,4 +691,3 @@ export function useFormData() {
   const { formData, updateFormData, locale } = useEventFormContext()
   return { formData, updateFormData, locale }
 }
-

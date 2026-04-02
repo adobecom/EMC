@@ -1,19 +1,22 @@
-/* 
+/*
 * <license header>
 */
 
 import React, { useState, useMemo, useCallback } from 'react'
-import {
-  Flex,
-  ActionButton,
-  Text
-} from '@adobe/react-spectrum'
-import Edit from '@spectrum-icons/workflow/Edit'
-import Delete from '@spectrum-icons/workflow/Delete'
-import ViewDetail from '@spectrum-icons/workflow/ViewDetail'
-import ChevronLeft from '@spectrum-icons/workflow/ChevronLeft'
-import ChevronRight from '@spectrum-icons/workflow/ChevronRight'
+import { ActionButton, Text } from '@react-spectrum/s2'
+import { style } from '@react-spectrum/s2/style' with { type: 'macro' }
+import Sort from "@react-spectrum/s2/icons/Sort"
+import SortUp from "@react-spectrum/s2/icons/SortUp"
+import SortDown from "@react-spectrum/s2/icons/SortDown"
+import Edit from '@react-spectrum/s2/icons/Edit'
+import RemoveCircle from '@react-spectrum/s2/icons/RemoveCircle'
+import Visibility from '@react-spectrum/s2/icons/Visibility'
+import ChevronDown from '@react-spectrum/s2/icons/ChevronDown'
+import ChevronLeft from '@react-spectrum/s2/icons/ChevronLeft'
+import ChevronRight from '@react-spectrum/s2/icons/ChevronRight'
 import { deduplicateBy } from '../../utils/deduplication'
+import BuildTable from '@react-spectrum/s2/illustrations/linear/BuildTable'
+import { ResourceEmptyState, RESOURCE_EMPTY_STATE_MIN_HEIGHT_PX } from './ResourceEmptyState'
 
 export interface TableColumn<T> {
   key: string
@@ -23,6 +26,8 @@ export interface TableColumn<T> {
   sortable?: boolean
   sortFn?: (a: T, b: T) => number
   isSticky?: boolean
+  /** Keep cell on one line (e.g. actions); default is wrap-friendly for stable column widths */
+  cellNoWrap?: boolean
 }
 
 export interface TableAction<T> {
@@ -40,12 +45,15 @@ interface DataTableProps<T> {
   getItemKey: (item: T) => string
   pageSize?: number
   onVisibleItemsChange?: (items: T[]) => void
+  renderExpandedContent?: (item: T) => React.ReactNode
+  expandedKeys?: Set<string>
+  onToggleExpand?: (key: string) => void
 }
 
 const iconMap = {
-  view: ViewDetail,
+  view: Visibility,
   edit: Edit,
-  delete: Delete
+  delete: RemoveCircle
 }
 
 export function DataTable<T extends Record<string, any>>({
@@ -56,8 +64,31 @@ export function DataTable<T extends Record<string, any>>({
   isLoading = false,
   getItemKey,
   pageSize = 20,
-  onVisibleItemsChange
+  onVisibleItemsChange,
+  renderExpandedContent,
+  expandedKeys,
+  onToggleExpand
 }: DataTableProps<T>): React.ReactElement {
+  const isExpandable = !!renderExpandedContent
+
+  const [internalExpandedKeys, setInternalExpandedKeys] = useState<Set<string>>(new Set())
+  const effectiveExpandedKeys = expandedKeys ?? internalExpandedKeys
+
+  const handleToggleExpand = useCallback((key: string) => {
+    if (onToggleExpand) {
+      onToggleExpand(key)
+    } else {
+      setInternalExpandedKeys(prev => {
+        const next = new Set(prev)
+        if (next.has(key)) {
+          next.delete(key)
+        } else {
+          next.add(key)
+        }
+        return next
+      })
+    }
+  }, [onToggleExpand])
   const [sortColumn, setSortColumn] = useState<string | null>(null)
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc')
   const [currentPage, setCurrentPage] = useState(1)
@@ -118,7 +149,7 @@ export function DataTable<T extends Record<string, any>>({
       if (typeof aVal === 'string' && typeof bVal === 'string') {
         return aVal.localeCompare(bVal)
       }
-      
+
       if (typeof aVal === 'number' && typeof bVal === 'number') {
         return aVal - bVal
       }
@@ -132,7 +163,7 @@ export function DataTable<T extends Record<string, any>>({
 
   // Calculate pagination
   const totalPages = Math.ceil(sortedData.length / pageSize)
-  
+
   // Paginated data
   const paginatedData = useMemo(() => {
     const startIndex = (currentPage - 1) * pageSize
@@ -147,11 +178,11 @@ export function DataTable<T extends Record<string, any>>({
     }
   }, [paginatedData, onVisibleItemsChange])
 
-  // Reset to page 1 when data changes
+  // Reset to page 1 when result count or page size changes (keeps currentPage valid)
   React.useEffect(() => {
     setCurrentPage(1)
     setPageInputValue('1')
-  }, [data.length])
+  }, [data.length, pageSize])
 
   // Pagination handlers
   const handlePrevPage = useCallback(() => {
@@ -194,10 +225,12 @@ export function DataTable<T extends Record<string, any>>({
   const allColumns = React.useMemo(() => {
     const cols = [...columns]
     if (actions && actions.length > 0) {
-      cols.push({ key: 'actions', name: 'Actions', sortable: false })
+      cols.push({ key: 'actions', name: 'Actions', sortable: false, cellNoWrap: true })
     }
     return cols
   }, [columns, actions])
+
+  const totalColumnCount = allColumns.length + (isExpandable ? 1 : 0)
 
   // Get sticky column classes
   const getStickyClass = (columnKey: string): string => {
@@ -219,18 +252,37 @@ export function DataTable<T extends Record<string, any>>({
   // Empty state check AFTER all hooks are defined
   if (data.length === 0 && !isLoading) {
     return (
-      <div style={{ width: '100%', minHeight: '400px' }}>
-        {emptyState || <Text>No data available</Text>}
+      <div
+        data-testid="data-table-empty-state"
+        className={style({
+          display: 'flex',
+          flexDirection: 'column',
+          width: '[100%]',
+          flex: 1,
+        })}
+        style={{ minHeight: RESOURCE_EMPTY_STATE_MIN_HEIGHT_PX }}
+      >
+        {emptyState ?? (
+          <ResourceEmptyState
+            fillContainer
+            illustration={<BuildTable aria-hidden />}
+            title="No data to show"
+            description="There is nothing in this list yet. Add or import items elsewhere in the app to see them here."
+          />
+        )}
       </div>
     )
   }
 
   return (
-    <Flex direction="column" gap="size-150" height="100%" width="100%">
+    <div data-testid="data-table" className={style({ display: 'flex', flexDirection: 'column', gap: 12, height: '[100%]', width: '[100%]' })}>
       <div className="custom-data-table" style={{ overflowX: 'auto', width: '100%', maxWidth: '100%' }}>
         <table>
           <thead>
             <tr>
+              {isExpandable && (
+                <th style={{ width: '40px', minWidth: '40px', padding: '0 8px' }} />
+              )}
               {allColumns.map((column) => {
                 const isSortable = column.sortable !== false && column.key !== 'actions'
                 const isSorted = sortColumn === column.key
@@ -240,25 +292,24 @@ export function DataTable<T extends Record<string, any>>({
                   isSortable ? 'sortable' : '',
                   stickyClass
                 ].filter(Boolean).join(' ')
-                
+
                 return (
-                  <th 
+                  <th
                     key={column.key}
+                    data-testid={`data-table-header-${column.key}`}
                     onClick={() => isSortable && handleSort(column.key)}
                     className={className}
-                    style={{ 
+                    style={{
                       textAlign: column.key === 'actions' ? 'right' : 'left',
                       minWidth: `${minWidth}px`,
                       width: column.width ? `${column.width}px` : 'auto'
                     }}
                   >
-                    <Flex 
-                      direction="row" 
-                      alignItems="center" 
-                      gap="size-75"
-                      justifyContent={column.key === 'actions' ? 'end' : 'start'}
+                    <div
+                      className={style({ display: 'flex', alignItems: 'center', gap: 8 })}
+                      style={{ justifyContent: column.key === 'actions' ? 'flex-end' : 'flex-start' }}
                     >
-                      <Text UNSAFE_style={{ 
+                      <Text UNSAFE_style={{
                         fontWeight: 600,
                         fontSize: '12px',
                         color: isSorted ? 'var(--spectrum-global-color-gray-900)' : 'var(--spectrum-global-color-gray-600)'
@@ -266,73 +317,100 @@ export function DataTable<T extends Record<string, any>>({
                         {column.name}
                       </Text>
                       {isSortable && (
-                        <span style={{ 
+                        <span style={{
                           opacity: isSorted ? 1 : 0.3,
                           display: 'flex',
-                          alignItems: 'center',
-                          fontSize: '12px'
+                          alignItems: 'center'
                         }}>
-                          {isSorted ? (sortDirection === 'asc' ? '↑' : '↓') : '↕'}
+                          {isSorted
+                            ? (sortDirection === 'asc' ? <SortUp /> : <SortDown />)
+                            : <Sort />}
                         </span>
                       )}
-                    </Flex>
+                    </div>
                   </th>
                 )
               })}
             </tr>
           </thead>
           <tbody>
-            {paginatedData.map((item) => (
-              <tr key={getItemKey(item)}>
-                {allColumns.map((column) => {
-                  const minWidth = Math.max(column.width || 100, 100)
-                  const stickyClass = column.isSticky ? getStickyClass(column.key) : ''
-                  return (
-                  <td 
-                    key={column.key}
-                    className={stickyClass}
-                    style={{ 
-                      textAlign: column.key === 'actions' ? 'right' : 'left',
-                      minWidth: `${minWidth}px`,
-                      width: column.width ? `${column.width}px` : 'auto'
-                    }}
-                  >
-                    {column.key === 'actions' && actions ? (
-                      <Flex gap="size-100" justifyContent="end">
-                        {actions.map((action, idx) => {
-                          const Icon = iconMap[action.icon]
-                          return (
-                            <ActionButton
-                              key={idx}
-                              isQuiet
-                              onPress={() => action.onAction(item)}
-                              aria-label={action.label}
-                            >
-                              <Icon />
-                            </ActionButton>
-                          )
-                        })}
-                      </Flex>
-                    ) : (
-                      renderCell(item, column)
+            {paginatedData.map((item) => {
+              const itemKey = getItemKey(item)
+              const isExpanded = isExpandable && effectiveExpandedKeys.has(itemKey)
+              return (
+                <React.Fragment key={itemKey}>
+                  <tr data-testid={`data-table-row-${itemKey}`} className={isExpanded ? 'expanded-parent' : ''}>
+                    {isExpandable && (
+                      <td className="data-table-td-nowrap" style={{ width: '40px', minWidth: '40px', padding: '0 8px', verticalAlign: 'middle' }}>
+                        <ActionButton
+                          isQuiet
+                          onPress={() => handleToggleExpand(itemKey)}
+                          aria-label={isExpanded ? 'Collapse row' : 'Expand row'}
+                          UNSAFE_style={{ padding: 0 }}
+                        >
+                          {isExpanded ? <ChevronDown /> : <ChevronRight />}
+                        </ActionButton>
+                      </td>
                     )}
-                  </td>
-                  )
-                })}
-              </tr>
-            ))}
+                    {allColumns.map((column) => {
+                      const minWidth = Math.max(column.width || 100, 100)
+                      const stickyClass = column.isSticky ? getStickyClass(column.key) : ''
+                      const nowrapClass = column.cellNoWrap ? 'data-table-td-nowrap' : ''
+                      const cellClass = [stickyClass, nowrapClass].filter(Boolean).join(' ')
+                      return (
+                      <td
+                        key={column.key}
+                        className={cellClass || undefined}
+                        style={{
+                          textAlign: column.key === 'actions' ? 'right' : 'left',
+                          minWidth: `${minWidth}px`,
+                          width: column.width ? `${column.width}px` : 'auto'
+                        }}
+                      >
+                        {column.key === 'actions' && actions ? (
+                          <div className={style({ display: 'flex', gap: 8 })} style={{ justifyContent: 'flex-end' }}>
+                            {actions.map((action, idx) => {
+                              const Icon = iconMap[action.icon]
+                              return (
+                                <ActionButton
+                                  key={idx}
+                                  isQuiet
+                                  onPress={() => action.onAction(item)}
+                                  aria-label={action.label}
+                                >
+                                  <Icon />
+                                </ActionButton>
+                              )
+                            })}
+                          </div>
+                        ) : (
+                          renderCell(item, column)
+                        )}
+                      </td>
+                      )
+                    })}
+                  </tr>
+                  {isExpanded && renderExpandedContent && (
+                    <tr className="expanded-content-row">
+                      <td colSpan={totalColumnCount} style={{ padding: 0 }}>
+                        <div className="expanded-content-panel">
+                          {renderExpandedContent(item)}
+                        </div>
+                      </td>
+                    </tr>
+                  )}
+                </React.Fragment>
+              )
+            })}
           </tbody>
         </table>
       </div>
-      
+
       {/* Pagination */}
       {totalPages > 1 && (
-        <Flex 
-          direction="row" 
-          gap="size-150" 
-          alignItems="center" 
-          justifyContent="center"
-          UNSAFE_style={{ padding: '8px 0' }}
+        <div
+          className={style({ display: 'flex', gap: 12, alignItems: 'center', justifyContent: 'center' })}
+          style={{ padding: '8px 0' }}
         >
           <ActionButton
             onPress={handlePrevPage}
@@ -342,10 +420,11 @@ export function DataTable<T extends Record<string, any>>({
           >
             <ChevronLeft />
           </ActionButton>
-          
-          <Flex direction="row" gap="size-100" alignItems="center">
+
+          <div className={style({ display: 'flex', gap: 8, alignItems: 'center' })}>
             <input
               type="text"
+              data-testid="data-table-page-input"
               value={pageInputValue}
               onChange={(e) => handlePageInputChange(e.target.value)}
               onBlur={handlePageInputBlur}
@@ -361,8 +440,8 @@ export function DataTable<T extends Record<string, any>>({
               aria-label="Current page"
             />
             <Text>of {totalPages} pages</Text>
-          </Flex>
-          
+          </div>
+
           <ActionButton
             onPress={handleNextPage}
             isDisabled={currentPage === totalPages}
@@ -371,8 +450,8 @@ export function DataTable<T extends Record<string, any>>({
           >
             <ChevronRight />
           </ActionButton>
-        </Flex>
+        </div>
       )}
-    </Flex>
+    </div>
   )
 }

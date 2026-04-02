@@ -1,54 +1,62 @@
-/* 
+/*
 * <license header>
 */
 
 import React, { useState, useMemo, useEffect, useCallback } from 'react'
-import {
-  Flex,
-  Heading,
-  View,
-  Text,
-  ActionButton,
-  Button,
-  SearchField
-} from '@adobe/react-spectrum'
-import Refresh from '@spectrum-icons/workflow/Refresh'
+import { Text, Button, SearchField, Heading } from '@react-spectrum/s2'
+import { style } from '@react-spectrum/s2/style' with { type: 'macro' }
+import Refresh from "@react-spectrum/s2/icons/Refresh"
+import NoSearchResults from '@react-spectrum/s2/illustrations/linear/NoSearchResults'
+import BuildTable from '@react-spectrum/s2/illustrations/linear/BuildTable'
 import { DataTable, TableColumn, TableAction } from './DataTable'
+import { ResourceEmptyState } from './ResourceEmptyState'
 import { LoadingSpinner } from './LoadingSpinner'
 import { debounceCancellable } from '../../services/cacheUtils'
+import { SPACING } from '../../styles/designSystem'
 
 interface ResourceDashboardLayoutProps<T> {
   // Header props
   title: string
   description?: string // deprecated - no longer displayed
   totalCount: number
-  
+
   // State
   error: string | null
   data: T[]
-  
+
   // Table configuration
   columns: TableColumn<T>[]
   getItemKey: (item: T) => string
   actions?: TableAction<T>[]
   pageSize?: number
-  
+
   // Action handlers
   onRefresh: () => void
   onCreate?: () => void
   createLabel?: string
   createButton?: React.ReactNode // Custom create button (overrides onCreate/createLabel)
+  createButtonTestId?: string // data-testid for the default create button
   onVisibleItemsChange?: (items: T[]) => void
   onVisibleIdsChange?: (ids: string[]) => void // Callback for visible item IDs
-  
+
   // Empty state
   emptyStateTitle?: string
   emptyStateDescription?: string
-  
+  /** Linear illustration when the list is empty (not search). Defaults to BuildTable. */
+  emptyStateIllustration?: React.ReactNode
+
   // Search configuration
   searchPlaceholder?: string
   searchKeys?: (keyof T)[] | string[]
   searchFilter?: (item: T, query: string) => boolean
+
+  /** Shown after Refresh/Create, preceded by a vertical divider (e.g. filter trigger) */
+  toolbarEnd?: React.ReactNode
+
+  // Expandable row support
+  renderExpandedContent?: (item: T) => React.ReactNode
+  expandedKeys?: Set<string>
+  onToggleExpand?: (key: string) => void
 }
 
 export function ResourceDashboardLayout<T extends Record<string, any>>({
@@ -64,13 +72,19 @@ export function ResourceDashboardLayout<T extends Record<string, any>>({
   onCreate,
   createLabel = 'Create',
   createButton,
+  createButtonTestId,
   onVisibleItemsChange,
   onVisibleIdsChange,
   emptyStateTitle = 'No Items Found',
   emptyStateDescription = 'Get started by creating your first item',
+  emptyStateIllustration,
   searchPlaceholder = 'Search...',
   searchKeys = [],
   searchFilter,
+  toolbarEnd,
+  renderExpandedContent,
+  expandedKeys,
+  onToggleExpand,
 }: ResourceDashboardLayoutProps<T>): React.ReactElement {
   const [inputValue, setInputValue] = useState('')
   const [debouncedQuery, setDebouncedQuery] = useState('')
@@ -88,7 +102,7 @@ export function ResourceDashboardLayout<T extends Record<string, any>>({
   useEffect(() => {
     debouncedSetQuery.call(inputValue)
   }, [inputValue, debouncedSetQuery])
-  
+
   // Cleanup debounce on unmount
   useEffect(() => {
     return () => {
@@ -109,7 +123,7 @@ export function ResourceDashboardLayout<T extends Record<string, any>>({
     }
 
     const query = debouncedQuery.toLowerCase()
-    
+
     return data.filter(item => {
       if (searchFilter) {
         return searchFilter(item, query)
@@ -122,7 +136,7 @@ export function ResourceDashboardLayout<T extends Record<string, any>>({
           return String(value).toLowerCase().includes(query)
         })
       }
-      
+
       return Object.values(item).some(value => {
         if (value == null) return false
         if (typeof value === 'string' || typeof value === 'number') {
@@ -132,7 +146,7 @@ export function ResourceDashboardLayout<T extends Record<string, any>>({
       })
     })
   }, [data, debouncedQuery, searchKeys, searchFilter])
-  
+
   // Handle visible items change and extract IDs
   const handleVisibleItemsChange = useCallback((items: T[]) => {
     if (onVisibleItemsChange) {
@@ -143,19 +157,19 @@ export function ResourceDashboardLayout<T extends Record<string, any>>({
       onVisibleIdsChange(ids)
     }
   }, [onVisibleItemsChange, onVisibleIdsChange, getItemKey])
-  
+
   if (error) {
     return (
-      <View height="100%">
-        <Flex direction="column" gap="size-150" alignItems="center" justifyContent="center" height="100%">
+      <div style={{height: '100%'}}>
+        <div className={style({ display: 'flex', flexDirection: 'column', gap: 12, alignItems: 'center', justifyContent: 'center', height: '[100%]' })}>
           <Heading level={3}>Error Loading Data</Heading>
           <Text>{error}</Text>
-          <ActionButton onPress={onRefresh}>
+          <Button variant="secondary" fillStyle="outline" onPress={onRefresh}>
             <Refresh />
             <Text>Retry</Text>
-          </ActionButton>
-        </Flex>
-      </View>
+          </Button>
+        </div>
+      </div>
     )
   }
 
@@ -163,12 +177,12 @@ export function ResourceDashboardLayout<T extends Record<string, any>>({
   const isSearching = inputValue !== debouncedQuery
 
   return (
-    <View padding="size-400">
-      <Flex direction="column" gap="size-150" height="100%">
+    <div>
+      <div className={style({ display: 'flex', flexDirection: 'column', gap: 12, height: '[100%]' })}>
         {/* Header */}
-        <Flex direction="row" justifyContent="space-between" alignItems="center">
-          <Flex direction="row" gap="size-100" alignItems="baseline">
-            <Heading level={2} marginBottom="size-0">{title}</Heading>
+        <div className={style({ display: 'flex', justifyContent: 'space-between', alignItems: 'center' })}>
+          <div className={style({ display: 'flex', gap: 8, alignItems: 'baseline' })}>
+            <Heading level={2}>{title}</Heading>
             {debouncedQuery ? (
               <Text UNSAFE_style={{ fontSize: '14px', color: 'var(--spectrum-global-color-gray-700)' }}>
                 (Showing {displayCount} of {totalCount})
@@ -178,44 +192,59 @@ export function ResourceDashboardLayout<T extends Record<string, any>>({
                 ({totalCount} {totalCount === 1 ? 'item' : 'items'})
               </Text>
             )}
-          </Flex>
-          <Flex direction="row" gap="size-150" alignItems="center">
+          </div>
+          <div className={style({ display: 'flex', gap: 12, alignItems: 'center' })}>
             <SearchField
               placeholder={searchPlaceholder}
               value={inputValue}
               onChange={setInputValue}
               onClear={handleClear}
-              width="size-3000"
+              styles={style({ width: 240 })}
               aria-label="Search"
             />
-            <Flex direction="row" gap="size-150">
-              <ActionButton onPress={onRefresh} isQuiet>
+            <div className={style({ display: 'flex', gap: 12 })}>
+              <Button variant="secondary" fillStyle="outline" onPress={onRefresh}>
                 <Refresh />
-              </ActionButton>
+                <Text>Refresh</Text>
+              </Button>
               {createButton ? (
                 createButton
               ) : onCreate && (
-                <Button onPress={onCreate} variant="accent">
+                <Button data-testid={createButtonTestId} onPress={onCreate} variant="accent">
                   {createLabel}
                 </Button>
               )}
-            </Flex>
-          </Flex>
-        </Flex>
+              {toolbarEnd && (
+                <>
+                  <div
+                    aria-hidden
+                    className={style({ flexShrink: 0 })}
+                    style={{
+                      width: 1,
+                      height: 28,
+                      marginLeft: SPACING.XS,
+                      marginRight: SPACING.XS,
+                      backgroundColor: 'var(--spectrum-global-color-gray-300)',
+                      alignSelf: 'center',
+                    }}
+                  />
+                  <div className={style({ display: 'flex', alignItems: 'center' })}>{toolbarEnd}</div>
+                </>
+              )}
+            </div>
+          </div>
+        </div>
 
-        {/* Table */}
-        <View flex="1" borderRadius="medium">
+        {/* Table — min height so empty IllustratedMessage centers in the band */}
+        <div className={style({ flex: 1, minHeight: '[480px]', display: 'flex', flexDirection: 'column' })}>
           {isSearching ? (
-            <Flex 
-              justifyContent="center" 
-              alignItems="center" 
-              height="100%"
-              UNSAFE_className="fade-in"
+            <div
+              className={`${style({ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '[100%]' })} fade-in`}
             >
               <LoadingSpinner message="Searching..." />
-            </Flex>
+            </div>
           ) : (
-            <div className="fade-in">
+            <div className={`${style({ flex: 1, display: 'flex', flexDirection: 'column', minHeight: '[100%]' })} fade-in`}>
               <DataTable
                 columns={columns}
                 data={filteredData}
@@ -223,36 +252,33 @@ export function ResourceDashboardLayout<T extends Record<string, any>>({
                 actions={actions}
                 pageSize={pageSize}
                 onVisibleItemsChange={handleVisibleItemsChange}
-              emptyState={
-                <Flex direction="column" gap="size-150" alignItems="center">
-                  <Heading level={3}>
-                    {debouncedQuery ? 'No Results Found' : emptyStateTitle}
-                  </Heading>
-                  <Text>
-                    {debouncedQuery 
-                      ? `No items match "${debouncedQuery}"`
-                      : emptyStateDescription
-                    }
-                  </Text>
-                  {debouncedQuery ? (
-                    <ActionButton onPress={handleClear}>
-                      Clear Search
-                    </ActionButton>
+                renderExpandedContent={renderExpandedContent}
+                expandedKeys={expandedKeys}
+                onToggleExpand={onToggleExpand}
+                emptyState={
+                  debouncedQuery ? (
+                    <ResourceEmptyState
+                      fillContainer
+                      illustration={<NoSearchResults aria-hidden />}
+                      title="No Results Found"
+                      description={`No items match "${debouncedQuery}"`}
+                    />
                   ) : (
-                    createButton ? createButton : onCreate && (
-                      <Button onPress={onCreate} variant="accent">
-                        {createLabel}
-                      </Button>
-                    )
-                  )}
-                </Flex>
-              }
+                    <ResourceEmptyState
+                      fillContainer
+                      illustration={
+                        emptyStateIllustration ?? <BuildTable aria-hidden />
+                      }
+                      title={emptyStateTitle}
+                      description={emptyStateDescription}
+                    />
+                  )
+                }
               />
             </div>
           )}
-        </View>
-      </Flex>
-    </View>
+        </div>
+      </div>
+    </div>
   )
 }
-

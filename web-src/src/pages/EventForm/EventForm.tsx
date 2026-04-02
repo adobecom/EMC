@@ -4,19 +4,24 @@
 
 import React, { useEffect, useCallback, useRef, useState } from 'react'
 import {
-  View,
-  Flex,
-  Picker,
-  Item,
   Button,
+  Picker,
+  PickerItem,
   Text,
   Heading,
   Divider,
-  ProgressCircle
-} from '@adobe/react-spectrum'
+  ProgressCircle,
+  Dialog,
+  DialogTrigger,
+  Content,
+  ButtonGroup,
+  AlertDialog,
+} from '@react-spectrum/s2'
+import { style } from "@react-spectrum/s2/style" with { type: "macro" }
 import { useNavigate, useParams } from 'react-router-dom'
-import ChevronRight from '@spectrum-icons/workflow/ChevronRight'
-import ChevronLeft from '@spectrum-icons/workflow/ChevronLeft'
+import ChevronRight from "@react-spectrum/s2/icons/ChevronRight"
+import ChevronLeft from "@react-spectrum/s2/icons/ChevronLeft"
+import AlertTriangle from '@react-spectrum/s2/icons/AlertTriangle'
 import {
   EventApiResponse,
   SeriesApiResponse,
@@ -39,12 +44,14 @@ import {
   PageMetadataComponent,
   PromotionalContentComponent,
   MarketoIntegrationComponent,
+  SessionManagementComponent,
   VideoContentComponent
 } from './index'
 import { mapApiResponseToFormData } from '../../utils/eventFormMappers'
 import { useEventFeatureFlags } from '../../hooks/useEventTypeFeatures'
-import { EventFormProvider, useEventFormContext, useToast } from '../../contexts'
+import { EventFormProvider, useEventFormContext, useToast, useGroup } from '../../contexts'
 import { useEventFormSave } from '../../hooks/useEventFormSave'
+import { useCustomDetailPagePath } from '../../hooks/useCustomDetailPagePath'
 import { COLORS, Z_INDEX, TYPOGRAPHY } from '../../styles/designSystem'
 import { getEspEnvParam } from '../../config/constants'
 
@@ -71,9 +78,11 @@ interface SeriesOption {
  */
 const FormatSelectionOverlay: React.FC<{
   eventType: 'in-person' | 'webinar'
+  /** Re-fetch series when RBAC group changes */
+  activeGroupId: string | null
   onConfirm: (cloudType: 'CreativeCloud' | 'ExperienceCloud', seriesId: string) => void
   onCancel: () => void
-}> = ({ eventType, onConfirm, onCancel }) => {
+}> = ({ eventType, activeGroupId, onConfirm, onCancel }) => {
   // Local state for selections — only committed to context on confirm
   const [selectedCloud, setSelectedCloud] = useState<string | null>(null)
   const [selectedSeries, setSelectedSeries] = useState<string | null>(null)
@@ -130,7 +139,7 @@ const FormatSelectionOverlay: React.FC<{
 
     loadData()
     return () => { isMounted = false }
-  }, [])
+  }, [activeGroupId])
 
   // ============================================================================
   // SERIES FILTERING
@@ -168,6 +177,7 @@ const FormatSelectionOverlay: React.FC<{
   useEffect(() => {
     if (!selectedCloud || allSeries.length === 0) {
       setFilteredSeries([])
+      setSelectedSeries(null)
       return
     }
 
@@ -191,10 +201,12 @@ const FormatSelectionOverlay: React.FC<{
 
     setFilteredSeries(options)
 
-    // Clear series selection if the previously selected series is no longer available
-    if (selectedSeries && !options.some(s => s.id === selectedSeries)) {
+    if (options.length === 0) {
+      setSelectedSeries(null)
+    } else if (selectedSeries && !options.some(s => s.id === selectedSeries)) {
       setSelectedSeries(null)
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- only reset series when filter inputs change; including selectedSeries would re-run on every pick
   }, [selectedCloud, allSeries, seriesTemplates, eventType])
 
   // ============================================================================
@@ -210,8 +222,12 @@ const FormatSelectionOverlay: React.FC<{
     setSelectedSeries(key ? String(key) : null)
   }
 
+  const hasValidSeriesSelection = Boolean(
+    selectedSeries && filteredSeries.some(s => s.id === selectedSeries)
+  )
+
   const handleConfirm = () => {
-    if (selectedCloud && selectedSeries) {
+    if (selectedCloud && hasValidSeriesSelection && selectedSeries) {
       onConfirm(
         selectedCloud as 'CreativeCloud' | 'ExperienceCloud',
         selectedSeries
@@ -219,7 +235,7 @@ const FormatSelectionOverlay: React.FC<{
     }
   }
 
-  const isConfirmDisabled = !selectedCloud || !selectedSeries
+  const isConfirmDisabled = !selectedCloud || !hasValidSeriesSelection
 
   // ============================================================================
   // RENDER
@@ -229,6 +245,7 @@ const FormatSelectionOverlay: React.FC<{
 
   return (
     <div
+      data-testid="format-selection-overlay"
       style={{
         position: 'fixed',
         top: 0,
@@ -243,19 +260,19 @@ const FormatSelectionOverlay: React.FC<{
         justifyContent: 'center',
       }}
     >
-      <View
-        backgroundColor="gray-50"
-        borderRadius="medium"
-        padding="size-500"
-        width="520px"
-        UNSAFE_style={{
+      <div
+        style={{
+          backgroundColor: 'var(--spectrum-global-color-gray-50)',
+          borderRadius: 8,
+          padding: 40,
+          width: 520,
           zIndex: Z_INDEX.MODAL,
           boxShadow: '0 8px 32px rgba(0, 0, 0, 0.18)',
           maxWidth: '90vw',
         }}
       >
         {/* Header */}
-        <Flex direction="column" gap="size-100" marginBottom="size-300">
+        <div className={style({display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 24})}>
           <Text UNSAFE_style={{ 
             fontSize: '13px', 
             fontWeight: 500, 
@@ -274,107 +291,136 @@ const FormatSelectionOverlay: React.FC<{
             Choose the cloud and series for this event. This determines
             where your event will be published and what metadata it inherits.
           </Text>
-        </Flex>
+        </div>
 
-        <Divider size="S" marginBottom="size-300" />
+        <Divider size="S" styles={style({ marginBottom: 24 })} />
 
         {/* Content */}
         {isLoading ? (
-          <Flex 
-            alignItems="center" 
-            justifyContent="center" 
-            minHeight="size-2000"
-            direction="column"
-            gap="size-200"
-          >
+          <div className={style({display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: 16})} style={{minHeight: 'var(--spectrum-global-dimension-size-2000)'}}>
             <ProgressCircle aria-label="Loading format options..." isIndeterminate size="M" />
             <Text UNSAFE_style={{ color: COLORS.GRAY_600, fontSize: '14px' }}>
               Loading format options...
             </Text>
-          </Flex>
+          </div>
         ) : error ? (
-          <View
-            padding="size-200"
-            backgroundColor="negative"
-            borderRadius="medium"
-            marginBottom="size-300"
+          <div
+            style={{
+              padding: 16,
+              background: 'var(--spectrum-semantic-negative-color-default, #d7373f)',
+              borderRadius: 8,
+              marginBottom: 24,
+            }}
           >
             <Text UNSAFE_style={{ color: 'white' }}>Error: {error}</Text>
-          </View>
+          </div>
         ) : (
-          <Flex direction="column" gap="size-300" marginBottom="size-400">
+          <div className={style({display: 'flex', flexDirection: 'column', gap: 24, marginBottom: 32})}>
             <Picker
+              data-testid="format-cloud-picker"
               label="Cloud"
               isRequired
               selectedKey={selectedCloud}
               onSelectionChange={handleCloudChange}
               placeholder="Choose a cloud..."
-              width="100%"
+              styles={style({ width: '[100%]' })}
             >
               {clouds.map((cloud) => (
-                <Item key={cloud.key}>{cloud.label}</Item>
+                <PickerItem key={cloud.key} id={cloud.key}>{cloud.label}</PickerItem>
               ))}
             </Picker>
 
-            <Picker
-              label="Series"
-              isRequired
-              selectedKey={selectedSeries}
-              onSelectionChange={handleSeriesChange}
-              isDisabled={!selectedCloud}
-              placeholder={!selectedCloud ? 'Select a cloud first' : 'Choose a series...'}
-              width="100%"
-              description={
-                selectedSeries
-                  ? filteredSeries.find(s => s.id === selectedSeries)?.description || undefined
-                  : undefined
-              }
-            >
-              {filteredSeries.length === 0 ? (
-                <Item key="no-series">No series available for this cloud</Item>
-              ) : (
-                filteredSeries.map((s) => (
-                  <Item key={s.id}>{s.name}</Item>
-                ))
-              )}
-            </Picker>
+            {!selectedCloud ? (
+              <div className={style({ display: 'flex', flexDirection: 'column', gap: 8 })}>
+                <Text
+                  UNSAFE_style={{
+                    fontSize: '12px',
+                    fontWeight: 600,
+                    color: 'var(--spectrum-global-color-gray-800)',
+                  }}
+                >
+                  Series <span aria-hidden="true">*</span>
+                </Text>
+                <Text UNSAFE_style={{ fontSize: '14px', color: COLORS.GRAY_600 }}>
+                  Select a cloud first.
+                </Text>
+              </div>
+            ) : filteredSeries.length === 0 ? (
+              <div className={style({ display: 'flex', flexDirection: 'column', gap: 8 })}>
+                <Text
+                  UNSAFE_style={{
+                    fontSize: '12px',
+                    fontWeight: 600,
+                    color: 'var(--spectrum-global-color-gray-800)',
+                  }}
+                >
+                  Series <span aria-hidden="true">*</span>
+                </Text>
+                <Text UNSAFE_style={{ fontSize: '14px', color: COLORS.GRAY_600 }}>
+                  No series available for this cloud and event type.
+                </Text>
+              </div>
+            ) : (
+              <Picker
+                data-testid="format-series-picker"
+                label="Series"
+                isRequired
+                selectedKey={selectedSeries}
+                onSelectionChange={handleSeriesChange}
+                placeholder="Choose a series..."
+                styles={style({ width: '[100%]' })}
+                description={
+                  selectedSeries
+                    ? filteredSeries.find(s => s.id === selectedSeries)?.description || undefined
+                    : undefined
+                }
+              >
+                {filteredSeries.map((s) => (
+                  <PickerItem key={s.id} id={s.id}>{s.name}</PickerItem>
+                ))}
+              </Picker>
+            )}
 
             {selectedCloud && filteredSeries.length === 0 && (
-              <View
-                padding="size-150"
-                backgroundColor="notice"
-                borderRadius="medium"
+              <div
+                style={{
+                  padding: 12,
+                  backgroundColor: 'rgba(230, 134, 25, 0.15)',
+                  borderRadius: 8,
+                }}
               >
                 <Text UNSAFE_style={{ fontSize: '13px' }}>
                   No event series available for this cloud and event type combination. 
                   Please create a series first or contact your administrator.
                 </Text>
-              </View>
+              </div>
             )}
-          </Flex>
+          </div>
         )}
 
-        <Divider size="S" marginBottom="size-300" />
+        <Divider size="S" styles={style({ marginBottom: 24 })} />
 
         {/* Actions */}
-        <Flex direction="row" justifyContent="end" gap="size-200">
+        <div className={style({display: 'flex', justifyContent: 'end', gap: 16})}>
           <Button
+            data-testid="format-cancel-button"
             variant="secondary"
             onPress={onCancel}
           >
-            <ChevronLeft size="S" />
+            <ChevronLeft />
             <Text>Back to Dashboard</Text>
           </Button>
           <Button
+            data-testid="format-confirm-button"
             variant="accent"
             onPress={handleConfirm}
             isDisabled={isConfirmDisabled || isLoading}
           >
             <Text>Confirm & Continue</Text>
-            <ChevronRight size="S" />
+            <ChevronRight />
           </Button>
-        </Flex>
-      </View>
+        </div>
+      </div>
     </div>
   )
 }
@@ -391,10 +437,20 @@ const EventFormInner: React.FC<EventFormInnerProps> = ({ ims: _ims }) => {
   const navigate = useNavigate()
   const { id: eventIdParam } = useParams<{ id: string }>()
   const toast = useToast()
-  
+  const { activeGroup, setActiveGroup } = useGroup()
+
   // Track the last error shown to prevent duplicate toasts
   const lastErrorShownRef = useRef<string | null>(null)
-  
+
+  // RBAC group switch: avoid stale dirty reads inside effects
+  const isDirtyRef = useRef(false)
+  const lastStableGroupIdRef = useRef<string | null>(null)
+  const groupSwitchDialogOpenRef = useRef(false)
+  const pendingRevertGroupIdRef = useRef<string | null>(null)
+  /** Set synchronously on primary action so Dialog onOpenChange does not revert the group */
+  const groupSwitchDiscardChosenRef = useRef(false)
+  const [groupSwitchDirtyOpen, setGroupSwitchDirtyOpen] = useState(false)
+
   // Get context
   const {
     formData,
@@ -404,6 +460,7 @@ const EventFormInner: React.FC<EventFormInnerProps> = ({ ims: _ims }) => {
     isPublished,
     maxStepReached,
     isFormatConfirmed,
+    isDirty,
     updateFormData,
     setEventId,
     setEditMode,
@@ -420,9 +477,22 @@ const EventFormInner: React.FC<EventFormInnerProps> = ({ ims: _ims }) => {
     persistToStorage,
     state,
   } = useEventFormContext()
+
+  isDirtyRef.current = isDirty
   
   // Get save hook
   const { publishEvent, saveDraft, isSaving, saveError } = useEventFormSave()
+
+  // Custom URL pattern hook
+  const { getDetailPagePathForSave } = useCustomDetailPagePath()
+
+  // Dialog state for custom detailPagePath confirmation
+  const [urlDialogState, setUrlDialogState] = useState<{
+    url: string
+    collision: EventApiResponse | null
+    pendingAction: 'save' | 'publish'
+  } | null>(null)
+  const [isCheckingUrl, setIsCheckingUrl] = useState(false)
   
   // Show toast when saveError changes
   useEffect(() => {
@@ -442,56 +512,121 @@ const EventFormInner: React.FC<EventFormInnerProps> = ({ ims: _ims }) => {
   // ============================================================================
   // LOAD EVENT DATA
   // ============================================================================
-  
-  useEffect(() => {
-    if (eventIdParam) {
-      setEventId(eventIdParam)
-      setEditMode(true)
-      setFormatConfirmed(true) // Edit mode: format is already set
-      loadEvent(eventIdParam)
-    } else {
-      loadFromStorage()
-    }
-  }, [eventIdParam])
-  
-  // Auto-confirm format when loading a draft that already has cloud + series selected
-  useEffect(() => {
-    if (!isEditMode && !isFormatConfirmed && formData.cloudType && formData.seriesId) {
-      setFormatConfirmed(true)
-    }
-  }, [isEditMode, isFormatConfirmed, formData.cloudType, formData.seriesId, setFormatConfirmed])
-  
-  const loadEvent = async (eventIdToLoad: string) => {
+
+  const loadEvent = useCallback(async (eventIdToLoad: string) => {
     setLoading(true)
     try {
       const response = await cachedApi.getEventFull(eventIdToLoad)
-      
+
       if ('error' in response) {
         console.error('Failed to load event:', response)
         setLoadError('Failed to load event data')
         return
       }
-      
+
       setEventResponse(response as EventApiResponse)
-      
-      // Set published status
+
       setPublished(response.published ?? false)
-      
-      // When editing an existing event, all steps are accessible
-      setMaxStepReached(3) // 0-indexed, so 3 is the last step (RSVP)
-      
+
+      setMaxStepReached(3)
+
       const eventLocale = response.defaultLocale || 'en-US'
       setLocale(eventLocale)
       const mappedData = mapApiResponseToFormData(response as EventApiResponse, eventLocale)
       populateFormDataFromResponse(mappedData)
-      
     } catch (err) {
       console.error('Failed to load event:', err)
       setLoadError('Failed to load event data')
     } finally {
       setLoading(false)
     }
-  }
+  }, [
+    setLoading,
+    setLoadError,
+    setEventResponse,
+    setPublished,
+    setMaxStepReached,
+    setLocale,
+    populateFormDataFromResponse,
+  ])
+
+  const reloadAfterGroupChange = useCallback(async () => {
+    if (eventIdParam) {
+      await loadEvent(eventIdParam)
+    } else {
+      loadFromStorage()
+    }
+  }, [eventIdParam, loadEvent, loadFromStorage])
+
+  useEffect(() => {
+    if (eventIdParam) {
+      setEventId(eventIdParam)
+      setEditMode(true)
+      setFormatConfirmed(true)
+      void loadEvent(eventIdParam)
+    } else {
+      loadFromStorage()
+    }
+  }, [eventIdParam, loadEvent, loadFromStorage, setEventId, setEditMode, setFormatConfirmed])
+
+  useEffect(() => {
+    const gid = activeGroup?.groupId ?? null
+    if (!gid) return
+
+    if (lastStableGroupIdRef.current === null) {
+      lastStableGroupIdRef.current = gid
+      return
+    }
+
+    if (lastStableGroupIdRef.current === gid) return
+
+    if (groupSwitchDialogOpenRef.current) return
+
+    if (isDirtyRef.current) {
+      groupSwitchDialogOpenRef.current = true
+      pendingRevertGroupIdRef.current = lastStableGroupIdRef.current
+      setGroupSwitchDirtyOpen(true)
+      return
+    }
+
+    void (async () => {
+      await reloadAfterGroupChange()
+      lastStableGroupIdRef.current = gid
+    })()
+  }, [activeGroup?.groupId, reloadAfterGroupChange])
+
+  const handleGroupSwitchDiscard = useCallback(async () => {
+    const newGid = activeGroup?.groupId ?? null
+    pendingRevertGroupIdRef.current = null
+    groupSwitchDialogOpenRef.current = false
+    setGroupSwitchDirtyOpen(false)
+    try {
+      await reloadAfterGroupChange()
+      if (newGid) lastStableGroupIdRef.current = newGid
+    } finally {
+      groupSwitchDiscardChosenRef.current = false
+    }
+  }, [activeGroup?.groupId, reloadAfterGroupChange])
+
+  const handleGroupSwitchCancel = useCallback(() => {
+    if (groupSwitchDiscardChosenRef.current) {
+      groupSwitchDiscardChosenRef.current = false
+      pendingRevertGroupIdRef.current = null
+      return
+    }
+    const revert = pendingRevertGroupIdRef.current
+    groupSwitchDialogOpenRef.current = false
+    pendingRevertGroupIdRef.current = null
+    setGroupSwitchDirtyOpen(false)
+    if (revert) setActiveGroup(revert)
+  }, [setActiveGroup])
+
+  // Auto-confirm format when loading a draft that already has cloud + series selected
+  useEffect(() => {
+    if (!isEditMode && !isFormatConfirmed && formData.cloudType && formData.seriesId) {
+      setFormatConfirmed(true)
+    }
+  }, [isEditMode, isFormatConfirmed, formData.cloudType, formData.seriesId, setFormatConfirmed])
   
   // ============================================================================
   // FORMAT SELECTION HANDLERS
@@ -521,59 +656,109 @@ const EventFormInner: React.FC<EventFormInnerProps> = ({ ims: _ims }) => {
   // ============================================================================
   
   /**
+   * Check whether the selected series requires a custom detailPagePath.
+   * If so, show a confirmation/collision dialog instead of saving immediately.
+   * Returns true when save should proceed directly (no pattern or edit mode).
+   */
+  const checkUrlPatternBeforeSave = useCallback(async (
+    action: 'save' | 'publish'
+  ): Promise<{ proceed: boolean; extraPayload?: Record<string, any> }> => {
+    // Only intercept on first creation (no eventId yet)
+    if (isEditMode || eventId) return { proceed: true }
+
+    setIsCheckingUrl(true)
+    try {
+      const result = await getDetailPagePathForSave(formData.seriesId, formData)
+      if (!result) return { proceed: true }
+
+      // Pattern found — show confirmation dialog
+      setUrlDialogState({ url: result.url, collision: result.collision, pendingAction: action })
+      return { proceed: false }
+    } catch (err) {
+      console.error('URL pattern check failed:', err)
+      // On error, let the save through without a custom path
+      return { proceed: true }
+    } finally {
+      setIsCheckingUrl(false)
+    }
+  }, [isEditMode, eventId, formData, getDetailPagePathForSave])
+
+  /**
+   * Execute the actual save/publish after URL confirmation
+   */
+  const executeSaveWithUrl = useCallback(async (
+    action: 'save' | 'publish',
+    detailPagePath: string
+  ) => {
+    setUrlDialogState(null)
+    persistToStorage()
+
+    const extra = { detailPagePath }
+
+    if (action === 'publish') {
+      await publishEvent({
+        extraPayload: extra,
+        onSuccess: () => {
+          setPublished(true)
+          toast.success(
+            isPublished ? 'Event re-published successfully!' : 'Event published successfully!',
+            {
+              duration: 3000,
+              action: { label: 'View Events', onPress: () => navigate('/events') }
+            }
+          )
+        },
+        onError: (error) => {
+          console.error('Failed to publish event:', error)
+        }
+      })
+    } else {
+      await saveDraft({
+        extraPayload: extra,
+        onSuccess: () => {
+          toast.success('Event saved successfully!')
+        },
+        onError: (error) => {
+          console.error('Failed to save event:', error)
+        }
+      })
+    }
+  }, [publishEvent, saveDraft, persistToStorage, setPublished, navigate, toast, isPublished])
+
+  /**
    * Handle Save button click - saves to API + sessionStorage without advancing
    * Returns true on success, false on failure
    */
   const handleSave = useCallback(async (): Promise<boolean> => {
-    // First persist to sessionStorage immediately
+    const { proceed, extraPayload } = await checkUrlPatternBeforeSave('save')
+    if (!proceed) return false // Dialog will handle continuation
+
     persistToStorage()
-    
-    // Then save to API
+
     const result = await saveDraft({
+      extraPayload,
       onSuccess: () => {
         toast.success(isEditMode ? 'Event updated successfully!' : 'Event saved successfully!')
       },
       onError: (error) => {
         console.error('Failed to save event:', error)
-        // Error toast is handled by the useEffect watching saveError
       }
     })
     
     return result.success
-  }, [saveDraft, persistToStorage, toast, isEditMode])
+  }, [checkUrlPatternBeforeSave, saveDraft, persistToStorage, toast, isEditMode])
   
   /**
-   * Handle Next Step button click - saves to API + sessionStorage then advances
-   * Returns true on success (so FormWizard can advance), false on failure
-   */
-  const handleNextStep = useCallback(async (): Promise<boolean> => {
-    // First persist to sessionStorage immediately
-    persistToStorage()
-    
-    // Then save to API
-    const result = await saveDraft({
-      onSuccess: () => {
-        // Show a subtle success toast for auto-save during navigation
-        toast.success('Progress saved', { duration: 2000 })
-      },
-      onError: (error) => {
-        console.error('Failed to save event:', error)
-        // Error toast is handled by the useEffect watching saveError
-      }
-    })
-    
-    return result.success
-  }, [saveDraft, persistToStorage, toast])
-  
-  /**
-   * Handle Publish/Re-publish button click (last step completion)
+   * Handle Publish/Re-publish button click
    */
   const handleComplete = useCallback(async () => {
-    // Persist to sessionStorage first
+    const { proceed, extraPayload } = await checkUrlPatternBeforeSave('publish')
+    if (!proceed) return
+
     persistToStorage()
     
-    // Save and publish
     await publishEvent({
+      extraPayload,
       onSuccess: () => {
         setPublished(true)
         toast.success(
@@ -586,17 +771,12 @@ const EventFormInner: React.FC<EventFormInnerProps> = ({ ims: _ims }) => {
             }
           }
         )
-        // Navigate after a short delay to let user see the success message
-        setTimeout(() => {
-          navigate('/events')
-        }, 2000)
       },
       onError: (error) => {
         console.error('Failed to publish event:', error)
-        // Error toast is handled by the useEffect watching saveError
       }
     })
-  }, [publishEvent, persistToStorage, setPublished, navigate, toast, isPublished])
+  }, [checkUrlPatternBeforeSave, publishEvent, persistToStorage, setPublished, navigate, toast, isPublished])
   
   /**
    * Handle max step change from FormWizard
@@ -635,6 +815,7 @@ const EventFormInner: React.FC<EventFormInnerProps> = ({ ims: _ims }) => {
     
     window.open(previewUrl.toString(), '_blank')
   }, [state.eventDataResp])
+
   
   // ============================================================================
   // STEP 1: Basic Info
@@ -650,8 +831,8 @@ const EventFormInner: React.FC<EventFormInnerProps> = ({ ims: _ims }) => {
     Boolean(formData.timezone && formData.timezone.trim() !== '') && // Timezone is required
     (hasVenue ? Boolean(formData.venue?.placeId) : true)
   
-  const step1Component = (
-    <Flex direction="column" gap="size-0">
+  const basicInfoComponent = (
+    <div className={style({display: 'flex', flexDirection: 'column', gap: 0})}>
       <FormCard>
         <EventFormatComponent />
       </FormCard>
@@ -685,13 +866,13 @@ const EventFormInner: React.FC<EventFormInnerProps> = ({ ims: _ims }) => {
           <MarketoIntegrationComponent />
         </FormCard>
       )}
-    </Flex>
+    </div>
   )
-  
+
   // ============================================================================
   // STEP 2: Speakers & Hosts
   // ============================================================================
-  const step2Component = (
+  const speakersHostsComponent = (
     <FormCard>
       <SpeakersComponent />
     </FormCard>
@@ -702,7 +883,7 @@ const EventFormInner: React.FC<EventFormInnerProps> = ({ ims: _ims }) => {
   // ============================================================================
   const isWebinarEvent = formData.eventType === 'webinar'
 
-  const step3Component = (
+  const additionalContentComponent = (
     <>
       <FormCard>
         <PromotionalContentComponent />
@@ -727,9 +908,19 @@ const EventFormInner: React.FC<EventFormInnerProps> = ({ ims: _ims }) => {
   // ============================================================================
   // STEP 4: RSVP
   // ============================================================================
-  const step4Component = (
+  const rsvpComponent = (
     <FormCard>
       <RegistrationConfigComponent />
+    </FormCard>
+  )
+
+
+  // ============================================================================
+  // STEP 0: Session management
+  // ============================================================================
+  const sessionManagementComponent = (
+    <FormCard>
+      <SessionManagementComponent />
     </FormCard>
   )
   
@@ -741,28 +932,28 @@ const EventFormInner: React.FC<EventFormInnerProps> = ({ ims: _ims }) => {
       id: 'basic-info',
       title: 'Basic Info',
       description: 'Event format, tags, information, date/time, and venue',
-      component: step1Component,
+      component: basicInfoComponent,
       isValid: step1IsValid
     },
     {
       id: 'speakers-hosts',
       title: 'Speakers & Hosts',
       description: 'Add speaker and host profiles (optional)',
-      component: step2Component,
+      component: speakersHostsComponent,
       isValid: true
     },
     {
       id: 'additional-content',
       title: 'Additional Content',
       description: 'Add event images and visual content (optional)',
-      component: step3Component,
+      component: additionalContentComponent,
       isValid: true
     },
     {
       id: 'rsvp',
       title: 'RSVP',
       description: 'Configure attendance capacity and registration settings',
-      component: step4Component,
+      component: rsvpComponent,
       isValid: true
     }
   ]
@@ -799,16 +990,23 @@ const EventFormInner: React.FC<EventFormInnerProps> = ({ ims: _ims }) => {
   const showFormatOverlay = !isFormatConfirmed && !isEditMode
 
   return (
-    <View 
-      UNSAFE_style={{
-        backgroundColor: 'var(--spectrum-global-color-gray-100)',
+    <div
+      style={{
+        backgroundColor: '#F5F5F5',
+        display: 'flex',
+        flexDirection: 'column',
+        flex: 1,
+        minHeight: 0,
+        width: '100%',
+        height: '100%',
+        alignSelf: 'stretch',
+        overflow: 'hidden',
       }}
     >
       <FormWizard
         steps={steps}
         onComplete={handleComplete}
         onSave={handleSave}
-        onNextStep={handleNextStep}
         onCancel={handleCancel}
         onPreview={handlePreview}
         isSubmitting={isSaving}
@@ -819,17 +1017,112 @@ const EventFormInner: React.FC<EventFormInnerProps> = ({ ims: _ims }) => {
         onMaxStepChange={handleMaxStepChange}
         eventTypeLabel={getEventTypeLabel()}
         headerActions={renderHeaderActions()}
+        sessionContent={sessionManagementComponent}
       />
 
       {/* Format Selection Overlay — frosted glass + dialog */}
       {showFormatOverlay && (
         <FormatSelectionOverlay
           eventType={formData.eventType}
+          activeGroupId={activeGroup?.groupId ?? null}
           onConfirm={handleFormatConfirm}
           onCancel={handleFormatCancel}
         />
       )}
-    </View>
+
+      <DialogTrigger
+        isOpen={groupSwitchDirtyOpen}
+        onOpenChange={(open) => { if (!open) handleGroupSwitchCancel() }}
+      >
+        <div style={{ display: 'none' }} />
+        <AlertDialog
+          title="Switch group with unsaved changes?"
+          variant="destructive"
+          primaryActionLabel="Discard changes & switch"
+          cancelLabel="Cancel"
+          onPrimaryAction={() => {
+            groupSwitchDiscardChosenRef.current = true
+            void handleGroupSwitchDiscard()
+          }}
+          onCancel={handleGroupSwitchCancel}
+        >
+          <Text>
+            You have unsaved changes. Save your work first, or discard to load this form for the
+            selected group (your edits will be lost).
+          </Text>
+        </AlertDialog>
+      </DialogTrigger>
+
+      {/* Custom URL Pattern Confirmation Dialog */}
+      <DialogTrigger
+        isOpen={urlDialogState !== null}
+        onOpenChange={(open) => { if (!open) setUrlDialogState(null) }}
+      >
+        <div style={{ display: 'none' }} />
+        <Dialog size="M">
+          <Heading slot="title">{urlDialogState?.collision ? 'URL Conflict Detected' : 'Confirm Event URL'}</Heading>
+          <Divider />
+          <Content>
+            <div className={style({display: 'flex', flexDirection: 'column', gap: 16})}>
+              <Text>The following detail page URL will be assigned to this event:</Text>
+              <div
+                style={{
+                  background: 'var(--spectrum-global-color-gray-75)',
+                  padding: 12,
+                  borderRadius: 4,
+                  wordBreak: 'break-all',
+                  fontFamily: 'monospace',
+                  fontSize: 13,
+                }}
+              >
+                <Text>{urlDialogState?.url}</Text>
+              </div>
+
+              {urlDialogState?.collision && (
+                <div className={style({display: 'flex', flexDirection: 'column', gap: 8})}>
+                  <div className={style({display: 'flex', alignItems: 'center', gap: 8})}>
+                    <AlertTriangle />
+                    <Text UNSAFE_style={{ color: COLORS.RED_600, fontWeight: 600 }}>
+                      This URL is already in use by another event.
+                    </Text>
+                  </div>
+                  <Text>
+                    The event <strong>{urlDialogState.collision.title || urlDialogState.collision.enTitle || urlDialogState.collision.eventId}</strong> already
+                    uses this URL. Please go back and change the fields that affect the URL
+                    (e.g. title or start date) before saving.
+                  </Text>
+                </div>
+              )}
+            </div>
+          </Content>
+          <ButtonGroup>
+            <Button
+              variant="secondary"
+              onPress={() => setUrlDialogState(null)}
+            >
+              {urlDialogState?.collision ? 'Go Back' : 'Cancel'}
+            </Button>
+            {!urlDialogState?.collision && (
+              <Button
+                variant="accent"
+                onPress={() => {
+                  if (urlDialogState) {
+                    executeSaveWithUrl(urlDialogState.pendingAction, urlDialogState.url)
+                  }
+                }}
+              >
+                Confirm & Save
+              </Button>
+            )}
+          </ButtonGroup>
+        </Dialog>
+      </DialogTrigger>
+
+      {/* URL pattern check loading overlay */}
+      {isCheckingUrl && (
+        <BlurredLoadingOverlay visible={true} message="Checking URL pattern..." ariaLabel="Checking URL" />
+      )}
+    </div>
   )
 }
 

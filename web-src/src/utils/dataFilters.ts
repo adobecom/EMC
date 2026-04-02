@@ -138,6 +138,8 @@ export const EVENT_DATA_FILTER: DataFilter = {
   creationTime: { type: 'string', localizable: false, cloneable: false, submittable: true },
   modificationTime: { type: 'string', localizable: false, cloneable: false, submittable: true },
   isPrivate: { type: 'boolean', localizable: false, cloneable: true, submittable: true },
+  inviteOnly: { type: 'boolean', localizable: false, cloneable: true, submittable: true },
+  detailPagePath: { type: 'string', localizable: false, cloneable: false, submittable: false },
   useLegacyDetailPagePath: { type: 'boolean', localizable: false, cloneable: false, submittable: true },
   video: { type: 'object', localizable: false, cloneable: true, submittable: true, ref: VIDEO_DATA_REF_FILTER },
   registration: { type: 'object', localizable: false, cloneable: true, submittable: true, ref: REGISTRATION_DATA_REF_FILTER },
@@ -268,6 +270,31 @@ export type EventFilterMode = 'submission' | 'clone'
 const EVENT_FILTER_STRATEGIES: Record<EventFilterMode, (descriptor: DataFieldDescriptor | undefined) => boolean> = {
   submission: (descriptor) => descriptor?.submittable === true,
   clone: (descriptor) => descriptor?.submittable === true && descriptor?.cloneable !== false,
+}
+
+/**
+ * Keys stripped on every ESL **event** `PUT /v1/events/:id` (update, publish, unpublish, preview)
+ * inside {@link prepareEslEventPutPayload} — not publish-specific.
+ * - inviteOnly: read-only on ESL update.
+ * - detailPagePath: POST (create) only; must not be sent on PUT.
+ */
+export const EVENT_DATA_ESL_EVENT_PUT_EXCLUDE_KEYS: readonly string[] = ['inviteOnly', 'detailPagePath']
+
+/**
+ * Normalize any object intended for ESL `PUT /v1/events/:id` (update, publish, unpublish, preview).
+ * Applies submission filtering plus {@link EVENT_DATA_ESL_EVENT_PUT_EXCLUDE_KEYS}.
+ */
+export function prepareEslEventPutPayload(
+  data: Record<string, any>,
+  options: FilterOptions = {}
+): Record<string, any> {
+  if (!data || typeof data !== 'object') return {}
+
+  const excludeKeys = [
+    ...EVENT_DATA_ESL_EVENT_PUT_EXCLUDE_KEYS,
+    ...(options.excludeKeys ?? []),
+  ]
+  return filterEventData(data, 'submission', { excludeKeys })
 }
 
 /**

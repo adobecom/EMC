@@ -1,15 +1,20 @@
-/* 
+/*
 * <license header>
 */
 
 import React, { useEffect, useState } from 'react'
-import { View, Flex, Text, Button } from '@adobe/react-spectrum'
-import Close from '@spectrum-icons/workflow/Close'
-import CheckmarkCircle from '@spectrum-icons/workflow/CheckmarkCircle'
-import AlertCircle from '@spectrum-icons/workflow/AlertCircle'
-import InfoOutline from '@spectrum-icons/workflow/InfoOutline'
+import { Button, Text } from '@react-spectrum/s2'
+import { style } from '@react-spectrum/s2/style' with { type: 'macro' }
+import Close from '@react-spectrum/s2/icons/Close'
+import CheckmarkCircle from '@react-spectrum/s2/icons/CheckmarkCircle'
+import AlertDiamond from '@react-spectrum/s2/icons/AlertDiamond'
+import InfoCircle from '@react-spectrum/s2/icons/InfoCircle'
 import { useToast, Toast, ToastVariant } from '../../contexts/ToastContext'
-import { Z_INDEX } from '../../styles/designSystem'
+import { COLORS, Z_INDEX } from '../../styles/designSystem'
+
+/** Foreground on colored toast surfaces (icons use --iconPrimary, not inherited color) */
+const TOAST_ON_SURFACE = COLORS.WHITE
+const TOAST_ICON_MUTED = 'rgba(255, 255, 255, 0.85)'
 
 // ============================================================================
 // STYLES
@@ -38,7 +43,7 @@ const getToastStyles = (variant: ToastVariant, isExiting: boolean): React.CSSPro
     transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
     minWidth: 320,
   }
-  
+
   // Variant-specific styles
   const variantStyles: Record<ToastVariant, React.CSSProperties> = {
     positive: {
@@ -62,19 +67,26 @@ const getToastStyles = (variant: ToastVariant, isExiting: boolean): React.CSSPro
       borderLeft: '4px solid #9ca3af',
     },
   }
-  
+
   return { ...baseStyles, ...variantStyles[variant] }
 }
 
-const ICON_STYLES: React.CSSProperties = {
+const TOAST_ICON_STYLES = {
   flexShrink: 0,
-}
+  '--iconPrimary': TOAST_ON_SURFACE,
+} as React.CSSProperties
+
+const CLOSE_ICON_STYLES = {
+  flexShrink: 0,
+  '--iconPrimary': TOAST_ICON_MUTED,
+} as React.CSSProperties
 
 const MESSAGE_STYLES: React.CSSProperties = {
   flex: 1,
   fontSize: 14,
   lineHeight: '20px',
   fontWeight: 500,
+  color: TOAST_ON_SURFACE,
 }
 
 const CLOSE_BUTTON_STYLES: React.CSSProperties = {
@@ -103,36 +115,36 @@ interface ToastItemProps {
 const ToastItem: React.FC<ToastItemProps> = ({ toast, onDismiss }) => {
   const [isExiting, setIsExiting] = useState(false)
   const [isEntering, setIsEntering] = useState(true)
-  
+
   // Entry animation
   useEffect(() => {
     const timer = setTimeout(() => setIsEntering(false), 50)
     return () => clearTimeout(timer)
   }, [])
-  
+
   const handleDismiss = () => {
     setIsExiting(true)
     setTimeout(onDismiss, 300) // Wait for exit animation
   }
-  
+
   const getIcon = () => {
-    const iconProps = { size: 'S' as const, UNSAFE_style: ICON_STYLES }
-    
+    const iconProps = { UNSAFE_style: TOAST_ICON_STYLES }
+
     switch (toast.variant) {
       case 'positive':
         return <CheckmarkCircle {...iconProps} />
       case 'negative':
-        return <AlertCircle {...iconProps} />
+        return <AlertDiamond {...iconProps} />
       case 'info':
-        return <InfoOutline {...iconProps} />
+        return <InfoCircle {...iconProps} />
       case 'neutral':
       default:
-        return <InfoOutline {...iconProps} />
+        return <InfoCircle {...iconProps} />
     }
   }
-  
+
   const entryTransform = isEntering ? 'translateX(120%)' : 'translateX(0)'
-  
+
   return (
     <div
       style={{
@@ -142,21 +154,18 @@ const ToastItem: React.FC<ToastItemProps> = ({ toast, onDismiss }) => {
       role="alert"
       aria-live={toast.variant === 'negative' ? 'assertive' : 'polite'}
     >
-      <Flex direction="row" alignItems="start" gap="size-150">
-        {/* Icon */}
-        <View UNSAFE_style={{ marginTop: 2 }}>
-          {getIcon()}
-        </View>
-        
+      <div className={style({ display: 'flex', alignItems: 'center', gap: 12 })}>
+        {getIcon()}
+
         {/* Message */}
-        <View flex UNSAFE_style={{ minWidth: 0 }}>
+        <div style={{ flex: 1, minWidth: 0 }}>
           <Text UNSAFE_style={MESSAGE_STYLES}>
             {toast.message}
           </Text>
-          
+
           {/* Action button if provided */}
           {toast.action && (
-            <View marginTop="size-100">
+            <div style={{ marginTop: 8 }}>
               <Button
                 variant="secondary"
                 staticColor="white"
@@ -164,17 +173,13 @@ const ToastItem: React.FC<ToastItemProps> = ({ toast, onDismiss }) => {
                   toast.action?.onPress()
                   handleDismiss()
                 }}
-                UNSAFE_style={{ 
-                  fontSize: 13,
-                  fontWeight: 600,
-                }}
               >
                 {toast.action.label}
               </Button>
-            </View>
+            </div>
           )}
-        </View>
-        
+        </div>
+
         {/* Close button */}
         {toast.dismissible && (
           <button
@@ -188,10 +193,10 @@ const ToastItem: React.FC<ToastItemProps> = ({ toast, onDismiss }) => {
               e.currentTarget.style.backgroundColor = 'transparent'
             }}
           >
-            <Close size="S" />
+            <Close UNSAFE_style={CLOSE_ICON_STYLES} />
           </button>
         )}
-      </Flex>
+      </div>
     </div>
   )
 }
@@ -202,10 +207,10 @@ const ToastItem: React.FC<ToastItemProps> = ({ toast, onDismiss }) => {
 
 /**
  * ToastContainer - Renders all active toasts
- * 
+ *
  * Place this component once at the app root level, inside the ToastProvider.
  * Toasts will automatically appear here when triggered via useToast().
- * 
+ *
  * @example
  * ```tsx
  * // In App.tsx
@@ -219,11 +224,11 @@ const ToastItem: React.FC<ToastItemProps> = ({ toast, onDismiss }) => {
  */
 export const ToastContainer: React.FC = () => {
   const { toasts, dismiss } = useToast()
-  
+
   if (toasts.length === 0) {
     return null
   }
-  
+
   return (
     <div style={TOAST_CONTAINER_STYLES} aria-label="Notifications">
       {toasts.map((toast) => (
@@ -236,4 +241,3 @@ export const ToastContainer: React.FC = () => {
     </div>
   )
 }
-

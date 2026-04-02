@@ -15,37 +15,39 @@
 
 import React, { useEffect, useState, useMemo, useCallback, useRef } from 'react'
 import {
-  Flex,
-  Text,
-  View,
   ActionButton,
   MenuTrigger,
   Menu,
-  Item,
-  ComboBox,
+  MenuItem,
+  Badge,
   Button,
+  ComboBox,
+  ComboBoxItem,
+  Text,
   DialogTrigger,
   AlertDialog,
   ProgressCircle,
-  Badge,
   Tooltip,
   TooltipTrigger,
-  Well
-} from '@adobe/react-spectrum'
-import MoreSmallList from '@spectrum-icons/workflow/MoreSmallList'
-import Edit from '@spectrum-icons/workflow/Edit'
-import Delete from '@spectrum-icons/workflow/Delete'
-import Add from '@spectrum-icons/workflow/Add'
-import Link from '@spectrum-icons/workflow/Link'
-import User from '@spectrum-icons/workflow/User'
+} from '@react-spectrum/s2'
+import { style } from "@react-spectrum/s2/style" with { type: "macro" }
+import Edit from '@react-spectrum/s2/icons/Edit'
+import RemoveCircle from '@react-spectrum/s2/icons/RemoveCircle'
+import RotateCCW from '@react-spectrum/s2/icons/RotateCCW'
+import Add from '@react-spectrum/s2/icons/Add'
+import Link from '@react-spectrum/s2/icons/Link'
+import More from '@react-spectrum/s2/icons/More'
 import { TableColumn } from '../../components/shared/DataTable'
-import { ResourceDashboardLayout, BlurredLoadingOverlay } from '../../components/shared'
+import { ResourceDashboardLayout, BlurredLoadingOverlay, ResourceEmptyState } from '../../components/shared'
+import MicrophoneIllustration from '@react-spectrum/s2/illustrations/linear/Microphone'
+import LayersIllustration from '@react-spectrum/s2/illustrations/linear/Layers'
 import { SeriesSpeaker, SeriesApiResponse, EventApiResponse } from '../../types/domain'
 import { apiService, cachedApi } from '../../services/api'
 import { IMS } from '../../types'
-import { useToast } from '../../contexts'
+import { useToast, useGroup } from '../../contexts'
 import { createShimmerStyle, COLORS } from '../../styles/designSystem'
-import { useSafeState } from '../../hooks'
+import { useSafeState, useRBACFilter } from '../../hooks'
+import { useHasPermission } from '../../hooks/useHasPermission'
 import { SpeakerFormDialog } from './SpeakerFormDialog'
 import { CascadeConfirmDialog, CascadeAction } from './CascadeConfirmDialog'
 import { SpeakerEventConnectionsDialog } from './SpeakerEventConnectionsDialog'
@@ -65,6 +67,10 @@ interface SpeakersDashboardProps {
 
 export const SpeakersDashboard: React.FC<SpeakersDashboardProps> = () => {
   const toast = useToast()
+  const { groupVersion } = useGroup()
+  const { filterSeries } = useRBACFilter()
+  const canWriteEvent = useHasPermission('event', 'write')
+  const canDeleteEvent = useHasPermission('event', 'delete')
   
   // ============================================================================
   // STATE
@@ -109,7 +115,7 @@ export const SpeakersDashboard: React.FC<SpeakersDashboardProps> = () => {
       try {
         const data = await cachedApi.getSeriesList()
         
-        setSeriesList(data)
+        setSeriesList(filterSeries(data))
         
         // Auto-select first series if available
         if (data.length > 0 && !selectedSeriesId) {
@@ -124,8 +130,8 @@ export const SpeakersDashboard: React.FC<SpeakersDashboardProps> = () => {
     }
 
     loadSeriesList()
-  }, [])
-  
+  }, [groupVersion]) // eslint-disable-line react-hooks/exhaustive-deps
+
   // Load speakers when series changes
   const loadSpeakers = useCallback(async () => {
     if (!selectedSeriesId) {
@@ -429,16 +435,16 @@ export const SpeakersDashboard: React.FC<SpeakersDashboardProps> = () => {
         const initials = `${item.firstName?.[0] || ''}${item.lastName?.[0] || ''}`
         
         return (
-          <View
-            UNSAFE_style={{
-              width: '44px',
-              height: '44px',
+          <div
+            style={{
+              width: 44,
+              height: 44,
               borderRadius: '50%',
               overflow: 'hidden',
               backgroundColor: 'var(--spectrum-global-color-gray-300)',
               display: 'flex',
               alignItems: 'center',
-              justifyContent: 'center'
+              justifyContent: 'center',
             }}
           >
             {photoUrl ? (
@@ -460,7 +466,7 @@ export const SpeakersDashboard: React.FC<SpeakersDashboardProps> = () => {
                 {initials}
               </Text>
             )}
-          </View>
+          </div>
         )
       }
     },
@@ -475,7 +481,7 @@ export const SpeakersDashboard: React.FC<SpeakersDashboardProps> = () => {
         return aName.localeCompare(bName)
       },
       render: (item) => (
-        <Flex direction="column" gap="size-50">
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
           <Text UNSAFE_style={{ fontWeight: 'bold' }}>
             {item.firstName} {item.lastName}
           </Text>
@@ -484,7 +490,7 @@ export const SpeakersDashboard: React.FC<SpeakersDashboardProps> = () => {
               {item.title.length > 40 ? `${item.title.substring(0, 40)}...` : item.title}
             </Text>
           )}
-        </Flex>
+        </div>
       )
     },
     {
@@ -503,25 +509,19 @@ export const SpeakersDashboard: React.FC<SpeakersDashboardProps> = () => {
         
         return (
           <TooltipTrigger delay={0}>
-            <ActionButton 
-              isQuiet 
+            <ActionButton
+              isQuiet
               onPress={() => handleViewConnections(item)}
               isDisabled={eventCount === 0}
             >
-              <Flex alignItems="center" gap="size-100">
-                <Link size="S" />
-                <Text UNSAFE_style={{ 
-                  color: eventCount > 0 
-                    ? 'var(--spectrum-global-color-blue-600)' 
-                    : 'var(--spectrum-global-color-gray-500)'
-                }}>
-                  {eventCount} {eventCount === 1 ? 'event' : 'events'}
-                </Text>
-              </Flex>
+              <Link />
+              <Text>
+                {eventCount} {eventCount === 1 ? 'event' : 'events'}
+              </Text>
             </ActionButton>
             <Tooltip>
-              {eventCount > 0 
-                ? 'Click to view linked events' 
+              {eventCount > 0
+                ? 'Click to view linked events'
                 : 'Not linked to any events'}
             </Tooltip>
           </TooltipTrigger>
@@ -588,33 +588,41 @@ export const SpeakersDashboard: React.FC<SpeakersDashboardProps> = () => {
       render: (item) => {
         const eventCount = item.eventCount ?? 0
         
+        const hasAnyAction = canWriteEvent || canDeleteEvent || eventCount > 0
+        if (!hasAnyAction) return null
+
         return (
           <MenuTrigger>
             <ActionButton isQuiet aria-label="Actions menu">
-              <MoreSmallList />
+              <More />
             </ActionButton>
-            <Menu 
-              onAction={(key) => handleMenuAction(key as string, item)}
-              disabledKeys={eventCount === 0 ? ['view-connections'] : []}
-            >
-              <Item key="edit">
-                <Edit />
-                <Text>Edit Speaker</Text>
-              </Item>
-              <Item key="view-connections">
+            <Menu onAction={(key) => handleMenuAction(key as string, item)}>
+              {canWriteEvent && (
+                <MenuItem id="edit" textValue="Edit Speaker">
+                  <Edit />
+                  <Text slot="label">Edit Speaker</Text>
+                </MenuItem>
+              )}
+              <MenuItem
+                id="view-connections"
+                textValue={`View Connections (${eventCount})`}
+                isDisabled={eventCount === 0}
+              >
                 <Link />
-                <Text>View Connections ({eventCount})</Text>
-              </Item>
-              <Item key="delete">
-                <Delete />
-                <Text>Delete Speaker</Text>
-              </Item>
+                <Text slot="label">View Connections ({eventCount})</Text>
+              </MenuItem>
+              {canDeleteEvent && (
+                <MenuItem id="delete" textValue="Delete Speaker">
+                  <RemoveCircle />
+                  <Text slot="label">Delete Speaker</Text>
+                </MenuItem>
+              )}
             </Menu>
           </MenuTrigger>
         )
       }
     }
-  ], [loadingEventCounts, handleMenuAction, handleViewConnections])
+  ], [loadingEventCounts, handleMenuAction, handleViewConnections, canWriteEvent, canDeleteEvent])
   
   // ============================================================================
   // RENDER
@@ -669,38 +677,63 @@ export const SpeakersDashboard: React.FC<SpeakersDashboardProps> = () => {
     }
   }, [])
 
+  const handleSeriesReset = useCallback(() => {
+    setSelectedSeriesId(null)
+    setSeriesFilterText('')
+    setEventConnections(new Map())
+    loadedSpeakerIdsRef.current.clear()
+  }, [])
+
   // Series selector header with searchable ComboBox
   const seriesSelectorHeader = useMemo(() => (
-    <Well UNSAFE_style={{ marginBottom: '16px', padding: '20px' }}>
-      <Flex justifyContent="space-between" alignItems="center" gap="size-200">
+    <div
+      style={{
+        marginBottom: 16,
+        padding: 20,
+        background: 'var(--spectrum-global-color-gray-75)',
+        borderRadius: 8,
+        border: '1px solid var(--spectrum-global-color-gray-200)',
+      }}
+    >
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 16 }}>
         {/* ComboBox Row */}
-        <Flex alignItems="end" gap="size-200">
+        <div className={style({ display: 'flex', alignItems: 'end', gap: 8 })}>
           {isLoadingSeries ? (
-            <Flex alignItems="center" gap="size-200">
+            <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
               <Text UNSAFE_style={{ fontWeight: 600 }}>Loading series...</Text>
               <ProgressCircle size="S" isIndeterminate aria-label="Loading series" />
-            </Flex>
+            </div>
           ) : (
             <ComboBox
+              data-testid="series-selector"
               label="Select Series"
               selectedKey={selectedSeriesId}
               onSelectionChange={handleSeriesComboBoxChange}
               onInputChange={setSeriesFilterText}
-              width="size-6000"
+              styles={style({ width: 480 })}
               isDisabled={seriesList.length === 0}
-              items={filteredSeriesItems}
+              defaultItems={filteredSeriesItems}
               menuTrigger="input"
+              menuWidth={480}
               allowsCustomValue={false}
             >
               {(item) => (
-                <Item key={item.id} textValue={item.name}>
-                  <Text>{item.name}</Text>
+                <ComboBoxItem id={item.id} textValue={item.name}>
+                  <Text slot="label">{item.name}</Text>
                   <Text slot="description">
                     {formatCloudType(item.cloudType)} • {truncateDescription(item.description, 50)}
                   </Text>
-                </Item>
+                </ComboBoxItem>
               )}
             </ComboBox>
+          )}
+          {!isLoadingSeries && selectedSeriesId && (
+            <div className={style({ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 4 })}>
+              <Button size="S" variant="secondary" onPress={handleSeriesReset}>
+                <RotateCCW />
+                <Text>Reset series</Text>
+              </Button>
+            </div>
           )}
           {seriesList.length > 0 && (
             <Text UNSAFE_style={{ 
@@ -711,23 +744,23 @@ export const SpeakersDashboard: React.FC<SpeakersDashboardProps> = () => {
               {seriesList.length} series available
             </Text>
           )}
-        </Flex>
-        
+        </div>
+
         {/* Selected Series Info Card */}
         {selectedSeries && (
-          <View
-            backgroundColor="gray-50"
-            borderRadius="medium"
-            padding="size-200"
-            UNSAFE_style={{
+          <div
+            style={{
+              backgroundColor: 'var(--spectrum-global-color-gray-50)',
+              borderRadius: 8,
+              padding: 16,
               border: '1px solid var(--spectrum-global-color-gray-300)',
-              marginTop: '8px'
+              marginTop: 8,
             }}
           >
-            <Flex direction="column" gap="size-100">
-              <Flex alignItems="center" gap="size-150">
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
                 <Badge 
-                  variant={selectedSeries.cloudType === 'CreativeCloud' ? 'positive' : 'info'}
+                  variant={selectedSeries.cloudType === 'CreativeCloud' ? 'positive' : 'informative'}
                 >
                   {formatCloudType(selectedSeries.cloudType)}
                 </Badge>
@@ -741,7 +774,7 @@ export const SpeakersDashboard: React.FC<SpeakersDashboardProps> = () => {
                 }}>
                   {speakers.length} speaker{speakers.length !== 1 ? 's' : ''} in this series
                 </Text>
-              </Flex>
+              </div>
               {selectedSeries.seriesDescription && (
                 <Text UNSAFE_style={{ 
                   fontSize: '13px', 
@@ -751,68 +784,70 @@ export const SpeakersDashboard: React.FC<SpeakersDashboardProps> = () => {
                   {selectedSeries.seriesDescription}
                 </Text>
               )}
-            </Flex>
-          </View>
+            </div>
+          </div>
         )}
-      </Flex>
-    </Well>
-  ), [isLoadingSeries, selectedSeriesId, handleSeriesComboBoxChange, seriesList, filteredSeriesItems, selectedSeries, speakers.length])
+      </div>
+    </div>
+  ), [isLoadingSeries, selectedSeriesId, handleSeriesComboBoxChange, handleSeriesReset, seriesList, filteredSeriesItems, selectedSeries, speakers.length])
   
-  // Custom create button
-  const createButton = useMemo(() => (
-    <Button
-      variant="accent"
-      onPress={handleCreateSpeaker}
-      isDisabled={!selectedSeriesId}
-    >
-      <Add />
-      <Text>Add Speaker</Text>
-    </Button>
-  ), [handleCreateSpeaker, selectedSeriesId])
+  // Custom create button — only shown when user has event:write
+  const createButton = useMemo(() => {
+    if (!canWriteEvent) return undefined
+    return (
+      <Button
+        data-testid="add-speaker-button"
+        variant="accent"
+        onPress={handleCreateSpeaker}
+        isDisabled={!selectedSeriesId}
+      >
+        <Add />
+        <Text>Add Speaker</Text>
+      </Button>
+    )
+  }, [canWriteEvent, handleCreateSpeaker, selectedSeriesId])
   
   return (
-    <View>
+    <div data-testid="speakers-dashboard">
       {/* Series Selector */}
-      <View paddingX="size-400" paddingTop="size-400">
+      <div style={{ paddingLeft: 32, paddingRight: 32, paddingTop: 32 }}>
         {seriesSelectorHeader}
-      </View>
-      
-      {/* Speakers Table */}
-      {!selectedSeriesId ? (
-        <View padding="size-400">
-          <Flex
-            direction="column"
-            alignItems="center"
-            justifyContent="center"
-            height="size-3000"
-            gap="size-200"
-          >
-            <User size="XXL" UNSAFE_style={{ color: 'var(--spectrum-global-color-gray-400)' }} />
-            <Text UNSAFE_style={{ fontSize: '18px', color: 'var(--spectrum-global-color-gray-600)' }}>
-              Select a series to manage speakers
-            </Text>
-          </Flex>
-        </View>
+      </div>
+
+      {/* Speakers Table — avoid legacy empty UI under BlurredLoadingOverlay while series list loads */}
+      {isLoadingSeries ? (
+        <div style={{ minHeight: 480 }} aria-hidden />
+      ) : !selectedSeriesId ? (
+        <div style={{ padding: 32 }}>
+          <ResourceEmptyState
+            illustration={<LayersIllustration aria-hidden />}
+            title="No series available"
+            description="Create a series first, then you can add and manage speakers for it here."
+          />
+        </div>
       ) : (
-        <ResourceDashboardLayout
-          title="Speakers"
-          totalCount={enrichedSpeakers.length}
-          error={error}
-          data={enrichedSpeakers}
-          columns={columns}
-          getItemKey={(item) => item.speakerId}
-          onVisibleIdsChange={handleVisibleIdsChange}
-          onRefresh={loadSpeakers}
-          createButton={createButton}
-          emptyStateTitle="No Speakers Found"
-          emptyStateDescription="Get started by adding your first speaker to this series"
-          searchPlaceholder="Search speakers..."
-          searchKeys={SPEAKERS_SEARCH_KEYS}
-          searchFilter={(speaker, query) => {
-            const fullName = `${speaker.firstName || ''} ${speaker.lastName || ''}`.toLowerCase()
-            return fullName.includes(query) || (speaker.title || '').toLowerCase().includes(query)
-          }}
-        />
+        <div className={style({padding: 32})}>
+          <ResourceDashboardLayout
+            title="Speakers"
+            totalCount={enrichedSpeakers.length}
+            error={error}
+            data={enrichedSpeakers}
+            columns={columns}
+            getItemKey={(item) => item.speakerId}
+            onVisibleIdsChange={handleVisibleIdsChange}
+            onRefresh={loadSpeakers}
+            createButton={createButton}
+            emptyStateIllustration={<MicrophoneIllustration aria-hidden />}
+            emptyStateTitle="No Speakers Found"
+            emptyStateDescription="Get started by adding your first speaker to this series"
+            searchPlaceholder="Search speakers..."
+            searchKeys={SPEAKERS_SEARCH_KEYS}
+            searchFilter={(speaker, query) => {
+              const fullName = `${speaker.firstName || ''} ${speaker.lastName || ''}`.toLowerCase()
+              return fullName.includes(query) || (speaker.title || '').toLowerCase().includes(query)
+            }}
+          />
+        </div>
       )}
       
       {/* Speaker Form Dialog */}
@@ -848,23 +883,20 @@ export const SpeakersDashboard: React.FC<SpeakersDashboardProps> = () => {
         onOpenChange={(isOpen) => !isOpen && setSpeakerToDelete(null)}
       >
         <div style={{ display: 'none' }} />
-        {(close) => (
-          <AlertDialog
-            title="Delete Speaker"
-            variant="destructive"
-            primaryActionLabel="Delete"
-            secondaryActionLabel="Cancel"
-            onPrimaryAction={() => {
-              handleConfirmDelete(false)
-              close()
-            }}
-            onSecondaryAction={close}
-            isPrimaryActionDisabled={!!actionInProgress}
-          >
-            Are you sure you want to delete <strong>{speakerToDelete?.firstName} {speakerToDelete?.lastName}</strong>?
-            This action cannot be undone.
-          </AlertDialog>
-        )}
+        <AlertDialog
+          title="Delete Speaker"
+          variant="destructive"
+          primaryActionLabel="Delete"
+          cancelLabel="Cancel"
+          onPrimaryAction={() => {
+            handleConfirmDelete(false)
+          }}
+          onCancel={() => setSpeakerToDelete(null)}
+          isPrimaryActionDisabled={!!actionInProgress}
+        >
+          Are you sure you want to delete <strong>{speakerToDelete?.firstName} {speakerToDelete?.lastName}</strong>?
+          This action cannot be undone.
+        </AlertDialog>
       </DialogTrigger>
       
       {/* Cascade Delete Confirmation */}
@@ -873,34 +905,31 @@ export const SpeakersDashboard: React.FC<SpeakersDashboardProps> = () => {
         onOpenChange={(isOpen) => !isOpen && setSpeakerToDelete(null)}
       >
         <div style={{ display: 'none' }} />
-        {(close) => (
-          <AlertDialog
-            title="Delete Speaker & Remove from Events"
-            variant="destructive"
-            primaryActionLabel="Delete & Remove from Events"
-            secondaryActionLabel="Cancel"
-            onPrimaryAction={() => {
-              handleConfirmDelete(true)
-              close()
-            }}
-            onSecondaryAction={close}
-            isPrimaryActionDisabled={!!actionInProgress}
-          >
-            <Flex direction="column" gap="size-200">
-              <Text>
-                <strong>{speakerToDelete?.firstName} {speakerToDelete?.lastName}</strong> is linked to {
-                  eventConnections.get(speakerToDelete?.speakerId || '')?.length || 0
-                } events.
-              </Text>
-              <Text>
-                This will permanently delete the speaker from the series AND remove them from all linked events.
-              </Text>
-              <Text UNSAFE_style={{ color: COLORS.RED_600, fontWeight: 'bold' }}>
-                This action cannot be undone.
-              </Text>
-            </Flex>
-          </AlertDialog>
-        )}
+        <AlertDialog
+          title="Delete Speaker & Remove from Events"
+          variant="destructive"
+          primaryActionLabel="Delete & Remove from Events"
+          cancelLabel="Cancel"
+          onPrimaryAction={() => {
+            handleConfirmDelete(true)
+          }}
+          onCancel={() => setSpeakerToDelete(null)}
+          isPrimaryActionDisabled={!!actionInProgress}
+        >
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+            <Text>
+              <strong>{speakerToDelete?.firstName} {speakerToDelete?.lastName}</strong> is linked to {
+                eventConnections.get(speakerToDelete?.speakerId || '')?.length || 0
+              } events.
+            </Text>
+            <Text>
+              This will permanently delete the speaker from the series AND remove them from all linked events.
+            </Text>
+            <Text UNSAFE_style={{ color: COLORS.RED_600, fontWeight: 'bold' }}>
+              This action cannot be undone.
+            </Text>
+          </div>
+        </AlertDialog>
       </DialogTrigger>
       
       {/* Event Connections Dialog */}
@@ -922,6 +951,6 @@ export const SpeakersDashboard: React.FC<SpeakersDashboardProps> = () => {
         ariaLabel="Processing"
         zIndex={9999}
       />
-    </View>
+    </div>
   )
 }

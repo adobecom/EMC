@@ -3,18 +3,10 @@
 */
 
 import React, { useState, useEffect, useCallback, useRef } from 'react'
-import {
-  View,
-  Flex,
-  Text,
-  ActionButton,
-  Button,
-  ProgressCircle,
-  Picker,
-  Item
-} from '@adobe/react-spectrum'
-import Remove from '@spectrum-icons/workflow/Remove'
-import Add from '@spectrum-icons/workflow/Add'
+import { Button, Text, Picker, PickerItem, ActionButton, ProgressCircle } from '@react-spectrum/s2'
+import { style } from '@react-spectrum/s2/style' with { type: 'macro' }
+import RemoveCircle from '@react-spectrum/s2/icons/RemoveCircle'
+import Add from "@react-spectrum/s2/icons/Add"
 import { useEventFormComponent } from '../../hooks/useEventFormComponent'
 import { configService } from '../../services/configService'
 import { HeadingWithTooltip } from '../../components/shared'
@@ -224,77 +216,62 @@ export const PromotionalContentComponent: React.FC = () => {
   // ============================================================================
   
   return (
-    <Flex direction="column" gap="size-200">
-      <Flex alignItems="center" gap="size-150">
-        <HeadingWithTooltip 
+    <div data-testid="promo-content-rte" className={style({display: 'flex', flexDirection: 'column', gap: 16})}>
+      <div className={style({display: 'flex', alignItems: 'center', gap: 12})}>
+        <HeadingWithTooltip
           level={3}
           tooltip="Select promotional content to feature on your event page. These items help highlight relevant Adobe products and resources."
         >
           Promotional Content
         </HeadingWithTooltip>
         {isLoading && (
-          <ProgressCircle size="S" isIndeterminate aria-label="Loading promotional content" />
+          <ProgressCircle isIndeterminate aria-label="Loading promotional content" />
         )}
-      </Flex>
-      
+      </div>
+
       {loadError && (
-        <View 
-          padding="size-200" 
-          backgroundColor="negative" 
-          borderRadius="medium"
-          UNSAFE_style={{ backgroundColor: 'var(--spectrum-global-color-red-100)' }}
-        >
-          <Text UNSAFE_style={{ color: 'var(--spectrum-global-color-red-700)' }}>
+        <div style={{ padding: '16px', backgroundColor: '#FFE5E5', borderRadius: '4px' }}>
+          <Text UNSAFE_style={{ color: '#C9252D' }}>
             {loadError}
           </Text>
-        </View>
+        </div>
       )}
       
       {/* Empty State */}
       {!isLoading && !loadError && selectedItems.length === 0 && (
-        <View 
-          padding="size-400" 
-          backgroundColor="gray-100" 
-          borderRadius="medium"
-          UNSAFE_style={{ textAlign: 'center' }}
-        >
-          <Flex direction="column" alignItems="center" gap="size-200">
+        <div style={{ padding: '32px', backgroundColor: 'var(--spectrum-global-color-gray-100)', borderRadius: '4px', textAlign: 'center' }}>
+          <div className={style({display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 16})}>
             <Text>Add promotional content to feature on your event page</Text>
-            <Button 
-              variant="secondary" 
+            <Button
+              variant="secondary"
               onPress={addPromotionalItem}
               isDisabled={isLoading || availablePromotions.length === 0}
             >
               <Add />
               <Text>Add promotional item</Text>
             </Button>
-          </Flex>
-        </View>
+          </div>
+        </div>
       )}
-      
+
       {/* Selected Promotional Items */}
       {selectedItems.map((item, index) => {
         const promotionDetails = item.name ? getPromotionDetails(item.name) : undefined
         const availableOptions = getAvailableOptions(item.name)
         
         return (
-          <Flex 
-            key={item.id} 
-            alignItems="center" 
-            gap="size-200"
-            UNSAFE_style={{
-              padding: '12px 0',
-            }}
+          <div
+            key={item.id}
+            className={style({display: 'flex', alignItems: 'center', gap: 16})}
+            style={{padding: '12px 0'}}
           >
             {/* Promotion Icon/Image */}
-            <View
-              UNSAFE_style={{
+            <div
+              style={{
                 width: '48px',
                 height: '48px',
                 borderRadius: '8px',
-                backgroundColor: promotionDetails?.thumbnail 
-                  ? 'transparent' 
-                  : 'var(--spectrum-global-color-gray-200)',
+                backgroundColor: promotionDetails?.thumbnail ? 'transparent' : '#E1E1E1',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
@@ -303,17 +280,17 @@ export const PromotionalContentComponent: React.FC = () => {
               }}
             >
               {promotionDetails?.thumbnail && (
-                <img 
-                  src={promotionDetails.thumbnail} 
+                <img
+                  src={promotionDetails.thumbnail}
                   alt={promotionDetails.name}
-                  style={{ 
-                    width: '100%', 
-                    height: '100%', 
-                    objectFit: 'contain' 
+                  style={{
+                    width: '100%',
+                    height: '100%',
+                    objectFit: 'contain'
                   }}
                 />
               )}
-            </View>
+            </div>
             
             {/* Promotion Picker */}
             <Picker
@@ -321,11 +298,11 @@ export const PromotionalContentComponent: React.FC = () => {
               placeholder="Select a promotion"
               selectedKey={item.name || null}
               onSelectionChange={(key) => handlePromotionSelect(index, key as string)}
-              width="size-3000"
+              styles={style({ width: 240 })}
               isDisabled={isLoading}
             >
               {availableOptions.map(promo => (
-                <Item key={promo.name}>{promo.name}</Item>
+                <PickerItem key={promo.name} id={promo.name}>{promo.name}</PickerItem>
               ))}
             </Picker>
             
@@ -342,30 +319,30 @@ export const PromotionalContentComponent: React.FC = () => {
                 padding: 0,
               }}
             >
-              <Remove size="S" />
+              <RemoveCircle />
             </ActionButton>
-          </Flex>
+          </div>
         )
       })}
-      
+
       {/* Add Promotional Item Button - only show when items exist */}
       {selectedItems.length > 0 && (
-        <Button 
-          variant="secondary" 
+        <Button
+          variant="secondary"
           onPress={addPromotionalItem}
           isDisabled={isLoading || availablePromotions.length === 0}
-          width="100%"
+          styles={style({ width: '[100%]' })}
           UNSAFE_style={{
             backgroundColor: 'var(--spectrum-global-color-gray-200)',
             border: 'none',
-            color: 'var(--spectrum-global-color-gray-800)'
+            color: 'var(--spectrum-global-color-gray-800)',
           }}
         >
           <Add />
           <Text>Add promotional item</Text>
         </Button>
       )}
-    </Flex>
+    </div>
   )
 }
 

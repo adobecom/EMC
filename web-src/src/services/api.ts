@@ -12,7 +12,6 @@ import {
   Event,
   EventFormData,
   EventApiResponse,
-  Session,
   Registration,
   Venue,
   EventHistoryResponse,
@@ -20,11 +19,29 @@ import {
   ApiListResponse
 } from '../types/domain'
 import { tokenStorage } from './tokenStorage'
-import { constructRequestHeaders, safeFetch } from './requestHelpers'
+import { constructRequestHeaders, safeFetch, setUploadGroupId } from './requestHelpers'
 import { getCurrentEnvironment, getApiHost, SUPPORTED_CLOUDS } from '../config/constants'
 import { env } from '../config/env'
 import { apiCache } from './cacheUtils'
 import { deduplicateBy } from '../utils/deduplication'
+import { prepareEslEventPutPayload } from '../utils/dataFilters'
+import type {
+  RBACApiScope,
+  RBACApiGroup,
+  RBACApiRole,
+  RBACPermission,
+  ScopeUser,
+  ScopeCreateBody,
+  GroupCreateBody,
+  GroupUpdateBody,
+  ScopeUserCreateBody,
+  ScopeUserUpdateBody,
+  RoleCreateBody,
+  ScopeChildListResponse,
+  ScopeParentRef,
+  PermissionsListResponse,
+  ScopeType,
+} from '../types/rbacApi'
 
 // ============================================================================
 // TYPES
@@ -56,6 +73,12 @@ interface ScheduleData {
   [key: string]: any
 }
 
+export type PingResult =
+  | { ok: true }
+  | { ok: false; reason: 'auth'; status: number }
+  | { ok: false; reason: 'network' }
+  | { ok: false; reason: 'no-token' }
+
 interface ApiServiceConfig {
   headers?: Record<string, string>
 }
@@ -83,7 +106,10 @@ function validateObject(value: any, name: string): void {
 class ApiService {
   private config: ApiServiceConfig
   private actionUrls: Record<string, string>
-  
+  private activeGroupId: string | null = null
+  private onStaleGroup: (() => void) | null = null
+  private staleGroupCooldown = false
+
   /**
    * Dry-run mode: when enabled, POST/PUT/DELETE calls are logged but not executed
    * Enable via console: apiService.enableDryRun() or window.enableDryRun()
@@ -151,6 +177,28 @@ class ApiService {
       ...(token && { authorization: `Bearer ${token}` }),
       ...(org && { 'x-gw-ims-org-id': org })
     }
+  }
+
+  /**
+   * Set the active RBAC group ID. When set, all ESP requests
+   * include the x-adobe-esp-group-id header (unless skipGroupHeader is used).
+   */
+  setGroupId(groupId: string | null): void {
+    this.activeGroupId = groupId
+    // Keep requestHelpers in sync for XHR-based uploads
+    setUploadGroupId(groupId)
+  }
+
+  getGroupId(): string | null {
+    return this.activeGroupId
+  }
+
+  /**
+   * Register a callback for stale-group 403 recovery.
+   * GroupContext uses this to auto-refresh groups on permission errors.
+   */
+  setOnStaleGroup(callback: (() => void) | null): void {
+    this.onStaleGroup = callback
   }
 
   // ============================================================================
@@ -265,24 +313,181 @@ class ApiService {
   }
 
   // Session APIs
-  async getSessions(eventId?: string): Promise<ApiListResponse<Session>> {
-    return this.callAction<ApiListResponse<Session>>('getSessions', { eventId })
+
+  async getAllEventSessions(eventId: string): Promise<any | ErrorResponse> {
+    validateString(eventId, 'event ID')
+    return this.callExternalApi('esp', `/v1/sessions?eventId=${encodeURIComponent(eventId)}`, 'GET', undefined, {
+      operationName: 'getAllEventSessions',
+      shouldReturnFullResponse: true,
+    })
   }
 
-  async getSession(id: string): Promise<ApiResponse<Session>> {
-    return this.callAction<ApiResponse<Session>>('getSession', { id })
+  async getSingleSession(id: string): Promise<any | ErrorResponse> {
+    validateString(id, 'session ID')
+    return this.callExternalApi('esp', `/v1/sessions/${encodeURIComponent(id)}`, 'GET', undefined, {
+      operationName: 'getSingleSession',
+      shouldReturnFullResponse: true,
+    })
   }
 
-  async createSession(data: Omit<Session, 'id' | 'createdAt' | 'updatedAt'>): Promise<ApiResponse<Session>> {
-    return this.callAction<ApiResponse<Session>>('createSession', data)
+  async createSession(eventId: string, data: Record<string, unknown>): Promise<any | ErrorResponse> {
+    validateString(eventId, 'event ID')
+    validateObject(data, 'session data')
+    const sessionCode = (String(data.name ?? '').replace(/\s+/g, '-').toLowerCase()).substring(0, 50) || 'session'
+    const tagsStr = typeof data.tags === 'string' ? data.tags.trim() : ''
+    const body: Record<string, unknown> = {
+      eventId,
+      enTitle: data.name ?? '',
+      title: data.name ?? '',
+      description: data.description ?? '',
+      sessionCode,
+      sessionType: 'Session',
+      published: false,
+    }
+    if (tagsStr.length > 0) {
+      body.tags = tagsStr
+    }
+    return this.callExternalApi('esp', '/v1/sessions', 'POST', body, {
+      operationName: 'createSession',
+      shouldReturnFullResponse: true,
+    })
   }
 
-  async updateSession(id: string, data: Partial<Session>): Promise<ApiResponse<Session>> {
-    return this.callAction<ApiResponse<Session>>('updateSession', { id, ...data })
+  async updateSession(id: string, eventId: string, data: Record<string, unknown>): Promise<any | ErrorResponse> {
+    validateString(id, 'session ID')
+    validateString(eventId, 'event ID')
+    validateObject(data, 'session data')
+    const sessionCode = (String(data.name ?? '').replace(/\s+/g, '-').toLowerCase()).substring(0, 50) || 'session'
+    const now = Date.now()
+    const tagsStr = typeof data.tags === 'string' ? data.tags.trim() : ''
+    const body: Record<string, unknown> = {
+      sessionId: id,
+      eventId,
+      enTitle: data.name ?? '',
+      title: data.name ?? '',
+      description: data.description ?? '',
+      sessionCode,
+      sessionType: 'Session',
+      published: false,
+      creationTime: (data.creationTime as number) ?? now,
+      modificationTime: (data.modificationTime as number) ?? now,
+    }
+    if (tagsStr.length > 0) {
+      body.tags = tagsStr
+    }
+    return this.callExternalApi('esp', `/v1/sessions/${encodeURIComponent(id)}`, 'PUT', body, {
+      operationName: 'updateSession',
+      shouldReturnFullResponse: true,
+    })
   }
 
-  async deleteSession(id: string): Promise<ApiResponse<void>> {
-    return this.callAction<ApiResponse<void>>('deleteSession', { id })
+  async deleteSession(id: string): Promise<SuccessResponse | ErrorResponse> {
+    validateString(id, 'session ID')
+    return this.callExternalApi('esp', `/v1/sessions/${encodeURIComponent(id)}`, 'DELETE', undefined, {
+      operationName: 'deleteSession',
+    })
+  }
+
+  // Session Time APIs
+
+  async getSessionTimes(sessionId?: string): Promise<any | ErrorResponse> {
+    const endpoint = sessionId
+      ? `/v1/session-times?sessionId=${encodeURIComponent(sessionId)}`
+      : '/v1/session-times'
+    return this.callExternalApi('esp', endpoint, 'GET', undefined, {
+      operationName: 'getSessionTimes',
+      shouldReturnFullResponse: true,
+    })
+  }
+
+  async getSessionTime(id: string): Promise<any | ErrorResponse> {
+    validateString(id, 'session time ID')
+    return this.callExternalApi('esp', `/v1/session-times/${encodeURIComponent(id)}`, 'GET', undefined, {
+      operationName: 'getSessionTime',
+      shouldReturnFullResponse: true,
+    })
+  }
+
+  async createSessionTime(data: Record<string, unknown>): Promise<any | ErrorResponse> {
+    validateObject(data, 'session time data')
+    return this.callExternalApi('esp', '/v1/session-times', 'POST', data, {
+      operationName: 'createSessionTime',
+      shouldReturnFullResponse: true,
+    })
+  }
+
+  async updateSessionTime(id: string, data: Record<string, unknown>): Promise<any | ErrorResponse> {
+    validateString(id, 'session time ID')
+    validateObject(data, 'session time data')
+    const now = Date.now()
+    const body = {
+      ...data,
+      sessionTimeId: id,
+      creationTime: (data.creationTime as number) ?? now,
+      modificationTime: (data.modificationTime as number) ?? now,
+    }
+    return this.callExternalApi('esp', `/v1/session-times/${encodeURIComponent(id)}`, 'PUT', body, {
+      operationName: 'updateSessionTime',
+      shouldReturnFullResponse: true,
+    })
+  }
+
+  async deleteSessionTime(id: string): Promise<SuccessResponse | ErrorResponse> {
+    validateString(id, 'session time ID')
+    return this.callExternalApi('esp', `/v1/session-times/${encodeURIComponent(id)}`, 'DELETE', undefined, {
+      operationName: 'deleteSessionTime',
+    })
+  }
+
+
+
+  /** GET /v1/sessions/{sessionId}/speakers */
+  async getSessionSpeakers(sessionId: string): Promise<any | ErrorResponse> {
+    validateString(sessionId, 'session ID')
+    return this.callExternalApi('esp', `/v1/sessions/${encodeURIComponent(sessionId)}/speakers`, 'GET', undefined, {
+      operationName: 'getSessionSpeakers',
+      shouldReturnFullResponse: true,
+    })
+  }
+
+  /** POST /v1/sessions/{sessionId}/speakers - body: { speakerId, speakerType (PascalCase), ordinal } */
+  async addSessionSpeaker(
+    sessionId: string,
+    body: { speakerId: string; speakerType: string; ordinal: number }
+  ): Promise<any | ErrorResponse> {
+    validateString(sessionId, 'session ID')
+    validateObject(body, 'speaker data')
+    return this.callExternalApi('esp', `/v1/sessions/${encodeURIComponent(sessionId)}/speakers`, 'POST', body, {
+      operationName: 'addSessionSpeaker',
+      shouldReturnFullResponse: true,
+    })
+  }
+
+  /** PUT /v1/sessions/{sessionId}/speakers/{speakerId} - body: { speakerId, speakerType, ordinal, modificationTime } */
+  async updateSessionSpeaker(
+    sessionId: string,
+    speakerId: string,
+    body: { speakerId: string; speakerType: string; ordinal: number; modificationTime: number }
+  ): Promise<any | ErrorResponse> {
+    validateString(sessionId, 'session ID')
+    validateString(speakerId, 'speaker ID')
+    validateObject(body, 'speaker data')
+    return this.callExternalApi('esp', `/v1/sessions/${encodeURIComponent(sessionId)}/speakers/${encodeURIComponent(speakerId)}`, 'PUT', body, {
+      operationName: 'updateSessionSpeaker',
+      shouldReturnFullResponse: true,
+    })
+  }
+
+  /** DELETE /v1/sessions/{sessionId}/speakers/{speakerId} */
+  async deleteSessionSpeaker(
+    sessionId: string,
+    speakerId: string
+  ): Promise<SuccessResponse | ErrorResponse> {
+    validateString(sessionId, 'session ID')
+    validateString(speakerId, 'speaker ID')
+    return this.callExternalApi('esp', `/v1/sessions/${encodeURIComponent(sessionId)}/speakers/${encodeURIComponent(speakerId)}`, 'DELETE', undefined, {
+      operationName: 'deleteSessionSpeaker',
+    })
   }
 
   // Registration APIs
@@ -352,6 +557,7 @@ class ApiService {
       operationName?: string
       transformResponse?: (data: any) => T
       shouldReturnFullResponse?: boolean
+      skipGroupHeader?: boolean
     }
   ): Promise<T | ErrorResponse> {
     const operationName = options?.operationName || `${method} ${endpoint}`
@@ -381,7 +587,13 @@ class ApiService {
     }
 
     try {
-      const headers = constructRequestHeaders(token, method)
+      // RequestHeaders interface is narrower than Record<string,string>; widen for dynamic header injection below
+      const headers: Record<string, string> = constructRequestHeaders(token, method) as unknown as Record<string, string>
+
+      // Inject RBAC group header for ESP requests
+      if (this.activeGroupId && !options?.skipGroupHeader) {
+        headers['x-adobe-esp-group-id'] = this.activeGroupId
+      }
 
       const response = await safeFetch(url, {
         method,
@@ -398,6 +610,15 @@ class ApiService {
 
       if (!response.ok) {
         console.error(`❌ ${operationName} failed. Status: ${response.status}`, data)
+
+        // Stale-group recovery: 403 likely means the user's group membership changed.
+        // Cooldown prevents infinite loops (e.g. if getRoleById also returns 403).
+        if (response.status === 403 && this.onStaleGroup && !this.staleGroupCooldown) {
+          this.staleGroupCooldown = true
+          setTimeout(() => { this.staleGroupCooldown = false }, 5000)
+          this.onStaleGroup()
+        }
+
         return { status: response.status, error: data }
       }
 
@@ -447,6 +668,7 @@ class ApiService {
     baseParams?: Record<string, string>
     operationName?: string
     maxPages?: number
+    skipGroupHeader?: boolean
   }): Promise<T[] | ErrorResponse> {
     const {
       service,
@@ -454,7 +676,8 @@ class ApiService {
       listKey,
       baseParams = {},
       operationName = `fetchAllPages(${baseEndpoint})`,
-      maxPages = 100
+      maxPages = 100,
+      skipGroupHeader
     } = options
 
     const items: T[] = []
@@ -471,7 +694,8 @@ class ApiService {
 
       const result = await this.callExternalApi<any>(service, endpoint, 'GET', undefined, {
         operationName: `${operationName} (page ${pageCount + 1})`,
-        shouldReturnFullResponse: true
+        shouldReturnFullResponse: true,
+        skipGroupHeader
       })
 
       if ('error' in result) {
@@ -605,6 +829,9 @@ class ApiService {
     try {
       const env = getCurrentEnvironment()
       const headers = constructRequestHeaders(token, 'GET')
+      if (this.activeGroupId) {
+        (headers as any)['x-adobe-esp-group-id'] = this.activeGroupId
+      }
       const host = getApiHost('esp', env)
 
       const promises = seriesIds.map(async (seriesId) => {
@@ -653,6 +880,9 @@ class ApiService {
     try {
       const env = getCurrentEnvironment()
       const headers = constructRequestHeaders(token, 'GET')
+      if (this.activeGroupId) {
+        (headers as any)['x-adobe-esp-group-id'] = this.activeGroupId
+      }
       const host = getApiHost('esp', env)
 
       const promises = seriesIds.map(async (seriesId) => {
@@ -728,8 +958,9 @@ class ApiService {
   async updateEventExternal(eventId: string, payload: any, policies = { forceSpWrite: false, liveUpdate: false }): Promise<any | ErrorResponse> {
     validateString(eventId, 'event ID')
     validateObject(payload, 'event payload')
+    const body = prepareEslEventPutPayload(payload)
     return this.callExternalApi('esl', `/v1/events/${eventId}`, 'PUT',
-      { ...payload, ...policies },
+      { ...body, ...policies },
       { operationName: `updateEvent(${eventId})`, shouldReturnFullResponse: true }
     )
   }
@@ -737,8 +968,9 @@ class ApiService {
   async publishEvent(eventId: string, payload: any): Promise<any | ErrorResponse> {
     validateString(eventId, 'event ID')
     validateObject(payload, 'event payload')
+    const body = prepareEslEventPutPayload(payload)
     return this.callExternalApi('esl', `/v1/events/${eventId}`, 'PUT',
-      { ...payload, published: true, liveUpdate: true, forceSpWrite: false },
+      { ...body, published: true, liveUpdate: true, forceSpWrite: false },
       { operationName: `publishEvent(${eventId})`, shouldReturnFullResponse: true }
     )
   }
@@ -746,8 +978,9 @@ class ApiService {
   async unpublishEvent(eventId: string, payload: any): Promise<any | ErrorResponse> {
     validateString(eventId, 'event ID')
     validateObject(payload, 'event payload')
+    const body = prepareEslEventPutPayload(payload)
     return this.callExternalApi('esl', `/v1/events/${eventId}`, 'PUT',
-      { ...payload, published: false, liveUpdate: true, forceSpWrite: false },
+      { ...body, published: false, liveUpdate: true, forceSpWrite: false },
       { operationName: `unpublishEvent(${eventId})`, shouldReturnFullResponse: true }
     )
   }
@@ -755,8 +988,9 @@ class ApiService {
   async previewEvent(eventId: string, payload: any): Promise<any | ErrorResponse> {
     validateString(eventId, 'event ID')
     validateObject(payload, 'event payload')
+    const body = prepareEslEventPutPayload(payload)
     return this.callExternalApi('esl', `/v1/events/${eventId}`, 'PUT',
-      { ...payload, liveUpdate: false, forceSpWrite: true },
+      { ...body, liveUpdate: false, forceSpWrite: true },
       { operationName: `previewEvent(${eventId})` }
     )
   }
@@ -793,6 +1027,9 @@ class ApiService {
     try {
       const env = getCurrentEnvironment()
       const headers = constructRequestHeaders(token, 'GET')
+      if (this.activeGroupId) {
+        (headers as any)['x-adobe-esp-group-id'] = this.activeGroupId
+      }
       const host = getApiHost('esp', env)
       const url = `${host}/v1/events/${encodeURIComponent(eventId)}`
 
@@ -934,6 +1171,9 @@ class ApiService {
     try {
       const env = getCurrentEnvironment()
       const headers = constructRequestHeaders(token, 'GET')
+      if (this.activeGroupId) {
+        (headers as any)['x-adobe-esp-group-id'] = this.activeGroupId
+      }
       const host = getApiHost('esp', env)
 
       const promises = eventIds.map(async (eventId) => {
@@ -982,6 +1222,9 @@ class ApiService {
     try {
       const env = getCurrentEnvironment()
       const headers = constructRequestHeaders(token, 'GET')
+      if (this.activeGroupId) {
+        (headers as any)['x-adobe-esp-group-id'] = this.activeGroupId
+      }
       const host = getApiHost('esp', env)
 
       const promises = eventIds.map(async (eventId) => {
@@ -1029,6 +1272,9 @@ class ApiService {
     try {
       const env = getCurrentEnvironment()
       const headers = constructRequestHeaders(token, 'GET')
+      if (this.activeGroupId) {
+        (headers as any)['x-adobe-esp-group-id'] = this.activeGroupId
+      }
       const host = getApiHost('esp', env)
 
       const promises = eventIds.map(async (eventId) => {
@@ -1291,6 +1537,19 @@ class ApiService {
     )
   }
 
+  async deleteSponsorImage(seriesId: string, sponsorId: string, imageId: string): Promise<any | ErrorResponse> {
+    validateString(seriesId, 'series ID')
+    validateString(sponsorId, 'sponsor ID')
+    validateString(imageId, 'image ID')
+    return this.callExternalApi(
+      'esp',
+      `/v1/series/${seriesId}/sponsors/${sponsorId}/images/${imageId}`,
+      'DELETE',
+      undefined,
+      { operationName: 'deleteSponsorImage', shouldReturnFullResponse: true }
+    )
+  }
+
   // ============================================================================
   // VENUE APIs
   // ============================================================================
@@ -1316,6 +1575,29 @@ class ApiService {
     validateString(eventId, 'eventId')
     return this.callExternalApi('esp', `/v1/events/${eventId}/venues`, 'GET', undefined,
       { operationName: 'getEventVenue', transformResponse: (data) => data.venues?.[0] || null }
+    )
+  }
+
+  async listVenueLocations(venueId: string): Promise<any | ErrorResponse> {
+    validateString(venueId, 'venue ID')
+    return this.callExternalApi('esp', `/v1/venues/${encodeURIComponent(venueId)}/locations`, 'GET', undefined,
+      { operationName: 'listVenueLocations', shouldReturnFullResponse: true }
+    )
+  }
+
+  async createVenueLocation(venueId: string, locationData: any): Promise<any | ErrorResponse> {
+    validateString(venueId, 'venue ID')
+    validateObject(locationData, 'location data')
+    return this.callExternalApi('esp', `/v1/venues/${encodeURIComponent(venueId)}/locations`, 'POST', locationData,
+      { operationName: 'createVenueLocation', shouldReturnFullResponse: true }
+    )
+  }
+
+  async deleteVenueLocation(venueId: string, locationId: string): Promise<any | ErrorResponse> {
+    validateString(venueId, 'venue ID')
+    validateString(locationId, 'location ID')
+    return this.callExternalApi('esp', `/v1/venues/${encodeURIComponent(venueId)}/locations/${encodeURIComponent(locationId)}`, 'DELETE', undefined,
+      { operationName: 'deleteVenueLocation' }
     )
   }
 
@@ -1420,25 +1702,29 @@ class ApiService {
 
   /**
    * Ping ESP to verify API reachability and token validity.
-   * Used by the gate screen as the final step of the access check.
-   *
-   * TODO: Whitelist /v1/ping on CGW (Cluster Gateway) to fix CORS, then revert
-   * to using GET /v1/ping and checking for "pong" response instead of locales.
+   * Uses GET /v1/users/me/groups which validates the token and confirms
+   * the user exists in the RBAC system without requiring any group header.
    */
-  async pingEsp(): Promise<boolean> {
+  async pingEsp(): Promise<PingResult> {
     const token = this.getAuthToken()
     if (!token) {
-      return false
+      return { ok: false, reason: 'no-token' }
     }
 
     try {
-      // Temporarily use locales as health check (ping has CORS issues)
-      const result = await this.callExternalApi('esp', '/v1/locales', 'GET', undefined,
-        { operationName: 'pingEsp (via locales)', shouldReturnFullResponse: true }
+      const result = await this.callExternalApi('esp', '/v1/users/me/groups', 'GET', undefined,
+        { operationName: 'pingEsp (via groups)', shouldReturnFullResponse: true }
       )
-      return !('error' in result)
+      if ('error' in result) {
+        const status = typeof result.status === 'number' ? result.status : 0
+        if (status === 401 || status === 403) {
+          return { ok: false, reason: 'auth', status }
+        }
+        return { ok: false, reason: 'network' }
+      }
+      return { ok: true }
     } catch {
-      return false
+      return { ok: false, reason: 'network' }
     }
   }
 
@@ -1449,27 +1735,6 @@ class ApiService {
   async getLocales(): Promise<any | ErrorResponse> {
     return this.callExternalApi('esp', '/v1/locales', 'GET', undefined,
       { operationName: 'getLocales', shouldReturnFullResponse: true }
-    )
-  }
-
-  async getClouds(): Promise<any[] | ErrorResponse> {
-    return this.callExternalApi('esp', '/v1/clouds', 'GET', undefined,
-      { operationName: 'getClouds', transformResponse: (data) => data.clouds }
-    )
-  }
-
-  async getCloud(cloudType: string): Promise<any | ErrorResponse> {
-    validateString(cloudType, 'cloud ID')
-    return this.callExternalApi('esp', `/v1/clouds/${cloudType}`, 'GET', undefined,
-      { operationName: 'getCloud', shouldReturnFullResponse: true }
-    )
-  }
-
-  async updateCloud(cloudType: string, cloudData: any): Promise<any | ErrorResponse> {
-    validateString(cloudType, 'cloud Type')
-    validateObject(cloudData, 'cloud data')
-    return this.callExternalApi('esp', `/v1/clouds/${cloudType}`, 'PUT', cloudData,
-      { operationName: 'updateCloud', shouldReturnFullResponse: true }
     )
   }
 
@@ -1533,6 +1798,9 @@ class ApiService {
       xhr.setRequestHeader('x-api-key', 'acom_event_service')
       xhr.setRequestHeader('Authorization', `Bearer ${token}`)
       xhr.setRequestHeader('x-request-id', `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`)
+      if (this.activeGroupId) {
+        xhr.setRequestHeader('x-adobe-esp-group-id', this.activeGroupId)
+      }
 
       if (tracker) {
         xhr.upload.onprogress = (event) => {
@@ -1800,6 +2068,240 @@ class ApiService {
       { operationName: 'deleteCampaign', shouldReturnFullResponse: true }
     )
   }
+
+  // ============================================================================
+  // RBAC EXTERNAL APIs (Scopes, Groups, Roles, Permissions)
+  // ============================================================================
+
+  /**
+   * Get the current user's group memberships.
+   * This endpoint does NOT require x-adobe-esp-group-id.
+   */
+  async getMyGroups(): Promise<RBACApiGroup[] | ErrorResponse> {
+    return this.fetchAllPages<RBACApiGroup>({
+      service: 'esp',
+      baseEndpoint: '/v1/users/me/groups',
+      listKey: 'groups',
+      operationName: 'getMyGroups',
+      skipGroupHeader: true
+    })
+  }
+
+  // --- Scopes ---
+
+  async getScopes(type?: string): Promise<RBACApiScope[] | ErrorResponse> {
+    const baseParams: Record<string, string> = {}
+    if (type) baseParams.type = type
+    return this.fetchAllPages<RBACApiScope>({
+      service: 'esp',
+      baseEndpoint: '/v1/scopes',
+      listKey: 'scopes',
+      baseParams,
+      operationName: 'getScopes'
+    })
+  }
+
+  async getScopeById(scopeId: string): Promise<RBACApiScope | ErrorResponse> {
+    validateString(scopeId, 'scope ID')
+    return this.callExternalApi<RBACApiScope>('esp', `/v1/scopes/${scopeId}`, 'GET', undefined, {
+      operationName: 'getScopeById',
+      shouldReturnFullResponse: true
+    })
+  }
+
+  async createScope(data: ScopeCreateBody): Promise<RBACApiScope | ErrorResponse> {
+    validateObject(data, 'scope create body')
+    return this.callExternalApi<RBACApiScope>('esp', '/v1/scopes', 'POST', data, {
+      operationName: 'createScope',
+      shouldReturnFullResponse: true
+    })
+  }
+
+  async updateScope(scopeId: string, data: RBACApiScope): Promise<RBACApiScope | ErrorResponse> {
+    validateString(scopeId, 'scope ID')
+    validateObject(data, 'scope update body')
+    return this.callExternalApi<RBACApiScope>('esp', `/v1/scopes/${scopeId}`, 'PUT', data, {
+      operationName: 'updateScope',
+      shouldReturnFullResponse: true
+    })
+  }
+
+  async deleteScope(scopeId: string): Promise<SuccessResponse | ErrorResponse> {
+    validateString(scopeId, 'scope ID')
+    return this.callExternalApi('esp', `/v1/scopes/${scopeId}`, 'DELETE', undefined, {
+      operationName: 'deleteScope'
+    })
+  }
+
+  async getScopeChildren(scopeId: string): Promise<ScopeChildListResponse | ErrorResponse> {
+    validateString(scopeId, 'scope ID')
+    return this.callExternalApi<ScopeChildListResponse>('esp', `/v1/scopes/${scopeId}/children`, 'GET', undefined, {
+      operationName: 'getScopeChildren',
+      shouldReturnFullResponse: true
+    })
+  }
+
+  async getScopeParent(scopeId: string): Promise<ScopeParentRef | ErrorResponse> {
+    validateString(scopeId, 'scope ID')
+    return this.callExternalApi<ScopeParentRef>('esp', `/v1/scopes/${scopeId}/parent`, 'GET', undefined, {
+      operationName: 'getScopeParent',
+      shouldReturnFullResponse: true
+    })
+  }
+
+  // --- Groups within a Scope ---
+
+  async getGroupsForScope(scopeId: string): Promise<RBACApiGroup[] | ErrorResponse> {
+    validateString(scopeId, 'scope ID')
+    return this.fetchAllPages<RBACApiGroup>({
+      service: 'esp',
+      baseEndpoint: `/v1/scopes/${scopeId}/groups`,
+      listKey: 'groups',
+      operationName: 'getGroupsForScope'
+    })
+  }
+
+  async getGroupById(scopeId: string, groupId: string): Promise<RBACApiGroup | ErrorResponse> {
+    validateString(scopeId, 'scope ID')
+    validateString(groupId, 'group ID')
+    return this.callExternalApi<RBACApiGroup>('esp', `/v1/scopes/${scopeId}/groups/${groupId}`, 'GET', undefined, {
+      operationName: 'getGroupById',
+      shouldReturnFullResponse: true
+    })
+  }
+
+  async createGroup(scopeId: string, data: GroupCreateBody): Promise<RBACApiGroup | ErrorResponse> {
+    validateString(scopeId, 'scope ID')
+    validateObject(data, 'group create body')
+    return this.callExternalApi<RBACApiGroup>('esp', `/v1/scopes/${scopeId}/groups`, 'POST', data, {
+      operationName: 'createGroup',
+      shouldReturnFullResponse: true
+    })
+  }
+
+  async updateGroup(scopeId: string, groupId: string, data: GroupUpdateBody): Promise<RBACApiGroup | ErrorResponse> {
+    validateString(scopeId, 'scope ID')
+    validateString(groupId, 'group ID')
+    validateObject(data, 'group update body')
+    return this.callExternalApi<RBACApiGroup>('esp', `/v1/scopes/${scopeId}/groups/${groupId}`, 'PUT', data, {
+      operationName: 'updateGroup',
+      shouldReturnFullResponse: true
+    })
+  }
+
+  async deleteGroup(scopeId: string, groupId: string): Promise<SuccessResponse | ErrorResponse> {
+    validateString(scopeId, 'scope ID')
+    validateString(groupId, 'group ID')
+    return this.callExternalApi('esp', `/v1/scopes/${scopeId}/groups/${groupId}`, 'DELETE', undefined, {
+      operationName: 'deleteGroup'
+    })
+  }
+
+  // --- Users within a Group ---
+
+  async getGroupUsers(scopeId: string, groupId: string): Promise<ScopeUser[] | ErrorResponse> {
+    validateString(scopeId, 'scope ID')
+    validateString(groupId, 'group ID')
+    return this.fetchAllPages<ScopeUser>({
+      service: 'esp',
+      baseEndpoint: `/v1/scopes/${scopeId}/groups/${groupId}/users`,
+      listKey: 'users',
+      operationName: 'getGroupUsers'
+    })
+  }
+
+  async addGroupUser(scopeId: string, groupId: string, data: ScopeUserCreateBody): Promise<ScopeUser | ErrorResponse> {
+    validateString(scopeId, 'scope ID')
+    validateString(groupId, 'group ID')
+    validateObject(data, 'user create body')
+    return this.callExternalApi<ScopeUser>('esp', `/v1/scopes/${scopeId}/groups/${groupId}/users`, 'POST', data, {
+      operationName: 'addGroupUser',
+      shouldReturnFullResponse: true
+    })
+  }
+
+  async updateGroupUser(scopeId: string, groupId: string, email: string, data: ScopeUserUpdateBody): Promise<ScopeUser | ErrorResponse> {
+    validateString(scopeId, 'scope ID')
+    validateString(groupId, 'group ID')
+    validateString(email, 'email')
+    validateObject(data, 'user update body')
+    return this.callExternalApi<ScopeUser>('esp', `/v1/scopes/${scopeId}/groups/${groupId}/users/${encodeURIComponent(email)}`, 'PUT', data, {
+      operationName: 'updateGroupUser',
+      shouldReturnFullResponse: true
+    })
+  }
+
+  async removeGroupUser(scopeId: string, groupId: string, email: string): Promise<SuccessResponse | ErrorResponse> {
+    validateString(scopeId, 'scope ID')
+    validateString(groupId, 'group ID')
+    validateString(email, 'email')
+    return this.callExternalApi('esp', `/v1/scopes/${scopeId}/groups/${groupId}/users/${encodeURIComponent(email)}`, 'DELETE', undefined, {
+      operationName: 'removeGroupUser'
+    })
+  }
+
+  // --- Roles ---
+
+  async getRoles(scopeType?: ScopeType): Promise<RBACApiRole[] | ErrorResponse> {
+    return this.fetchAllPages<RBACApiRole>({
+      service: 'esp',
+      baseEndpoint: '/v1/roles',
+      listKey: 'roles',
+      baseParams: scopeType ? { 'scope-type': scopeType } : undefined,
+      operationName: 'getRoles'
+    })
+  }
+
+  async getRoleById(roleId: string): Promise<RBACApiRole | ErrorResponse> {
+    validateString(roleId, 'role ID')
+    return this.callExternalApi<RBACApiRole>('esp', `/v1/roles/${roleId}`, 'GET', undefined, {
+      operationName: 'getRoleById',
+      shouldReturnFullResponse: true
+    })
+  }
+
+  async createRole(data: RoleCreateBody): Promise<RBACApiRole | ErrorResponse> {
+    validateObject(data, 'role create body')
+    return this.callExternalApi<RBACApiRole>('esp', '/v1/roles', 'POST', data, {
+      operationName: 'createRole',
+      shouldReturnFullResponse: true
+    })
+  }
+
+  async updateRole(roleId: string, data: RBACApiRole): Promise<RBACApiRole | ErrorResponse> {
+    validateString(roleId, 'role ID')
+    validateObject(data, 'role update body')
+    return this.callExternalApi<RBACApiRole>('esp', `/v1/roles/${roleId}`, 'PUT', data, {
+      operationName: 'updateRole',
+      shouldReturnFullResponse: true
+    })
+  }
+
+  async deleteRole(roleId: string): Promise<SuccessResponse | ErrorResponse> {
+    validateString(roleId, 'role ID')
+    return this.callExternalApi('esp', `/v1/roles/${roleId}`, 'DELETE', undefined, {
+      operationName: 'deleteRole'
+    })
+  }
+
+  async getRoleGroups(roleId: string): Promise<RBACApiGroup[] | ErrorResponse> {
+    validateString(roleId, 'role ID')
+    return this.fetchAllPages<RBACApiGroup>({
+      service: 'esp',
+      baseEndpoint: `/v1/roles/${roleId}/groups`,
+      listKey: 'groups',
+      operationName: 'getRoleGroups'
+    })
+  }
+
+  async getPermissionsList(): Promise<RBACPermission[] | ErrorResponse> {
+    const result = await this.callExternalApi<PermissionsListResponse>('esp', '/v1/roles/permissions', 'GET', undefined, {
+      operationName: 'getPermissionsList',
+      shouldReturnFullResponse: true
+    })
+    if ('error' in result) return result
+    return result.permissions
+  }
 }
 
 // ============================================================================
@@ -1953,8 +2455,6 @@ export const cachedApi = {
   },
 
   // === OTHER GET Operations (Cached) ===
-  getClouds: () => apiCache.get(() => apiService.getClouds()),
-  getCloud: (cloudType: string) => apiCache.get((ct: string) => apiService.getCloud(ct), cloudType),
   getLocales: () => apiCache.get(() => apiService.getLocales()),
   getPublishingProfiles: () => apiCache.get(() => apiService.getPublishingProfiles()),
   getPublishingProfile: (profileId: string) => apiCache.get((id: string) => apiService.getPublishingProfile(id), profileId),
@@ -2047,20 +2547,25 @@ export const cachedApi = {
     return result
   },
 
+  async createSponsor(data: any, seriesId: string, locale: string) {
+    const result = await apiService.createSponsor(data, seriesId, locale)
+    apiCache.invalidate(seriesId)
+    apiCache.invalidate('getSponsors')
+    return result
+  },
+  async deleteSponsorImage(seriesId: string, sponsorId: string, imageId: string) {
+    const result = await apiService.deleteSponsorImage(seriesId, sponsorId, imageId)
+    apiCache.invalidate(seriesId)
+    apiCache.invalidate('getSponsors')
+    return result
+  },
+
   // Attendee Mutations
   async removeAttendeeFromEvent(eventId: string, attendeeId: string) {
     const result = await apiService.removeAttendeeFromEvent(eventId, attendeeId)
     apiCache.invalidate(eventId)
     apiCache.invalidate('getEventAttendees')
     apiCache.invalidate('getAllEventAttendees')
-    return result
-  },
-
-  // Cloud Mutations
-  async updateCloud(cloudType: string, data: any) {
-    const result = await apiService.updateCloud(cloudType, data)
-    apiCache.invalidate(cloudType)
-    apiCache.invalidate('getClouds')
     return result
   },
 

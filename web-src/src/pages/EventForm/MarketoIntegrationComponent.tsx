@@ -3,15 +3,10 @@
 */
 
 import React from 'react'
-import {
-  Flex,
-  TextField,
-  Picker,
-  Item,
-  Text,
-} from '@adobe/react-spectrum'
+import { TextField, Picker, PickerItem, Text } from '@react-spectrum/s2'
+import { style } from '@react-spectrum/s2/style' with { type: 'macro' }
 import { HeadingWithTooltip } from '../../components/shared'
-import { TYPOGRAPHY, FLEX_GAP } from '../../styles/designSystem'
+import { TYPOGRAPHY } from '../../styles/designSystem'
 import { useEventFormComponent } from '../../hooks/useEventFormComponent'
 import { MarketoIntegrationData } from '../../types/domain'
 
@@ -59,7 +54,7 @@ const EVENT_POI_OPTIONS = [
  * MarketoIntegrationComponent - Manages Marketo integration settings for events
  * 
  * Exclusivity rules:
- * - Only visible for ExperienceCloud events (not CreativeCloud)
+ * - Only visible for Experience Cloud in-person events (not webinars, not Creative Cloud)
  * - All fields are locked once the event is created (eventId exists)
  * 
  * Features:
@@ -148,9 +143,9 @@ export const MarketoIntegrationComponent: React.FC = () => {
   // ============================================================================
 
   return (
-    <Flex direction="column" gap={FLEX_GAP.SECTION}>
+    <div className={style({display: 'flex', flexDirection: 'column', gap: 24})}>
       {/* Header */}
-      <Flex direction="column" gap={FLEX_GAP.TIGHT}>
+      <div className={style({display: 'flex', flexDirection: 'column', gap: 8})}>
         <HeadingWithTooltip
           level={3}
           tooltip="Configure Marketo integration for lead tracking and marketing automation. Select your region and provide campaign details."
@@ -161,54 +156,57 @@ export const MarketoIntegrationComponent: React.FC = () => {
           Set up Marketo integration for your event to enable lead capture and marketing automation.
           {isLocked && ' All fields are locked after the event is created.'}
         </Text>
-      </Flex>
+      </div>
 
       {/* Event Type Selector */}
       <Picker
+        data-testid="marketo-event-type-picker"
         label="Event type"
         isRequired
         selectedKey={eventType || 'no-integration'}
         onSelectionChange={handleEventTypeChange}
         isDisabled={isLocked}
-        width="size-3600"
+        styles={style({ width: 288 })}
       >
         {EVENT_TYPE_OPTIONS.map((option) => (
-          <Item key={option.key}>{option.label}</Item>
+          <PickerItem key={option.key} id={option.key}>{option.label}</PickerItem>
         ))}
       </Picker>
 
       {/* Two-column layout for main fields */}
-      <Flex direction="row" gap="size-400" wrap>
+      <div className={style({display: 'flex', gap: 32, flexWrap: 'wrap'})}>
         <TextField
+          data-testid="marketo-campaign-id-input"
           label="Salesforce campaign ID"
           isRequired={!isNoIntegration && !isLocked}
           value={marketoIntegration.salesforceCampaignId || ''}
           onChange={(value) => updateMarketoField('salesforceCampaignId', value)}
           placeholder="Add Salesforce campaign ID"
           isDisabled={isNoIntegration || isLocked}
-          width="size-3600"
+          styles={style({ width: 288 })}
         />
 
         <TextField
+          data-testid="marketo-program-name-input"
           label="MCZ program name"
           isRequired={!isNoIntegration && !isLocked}
           value={marketoIntegration.mczProgramName || ''}
           onChange={(value) => updateMarketoField('mczProgramName', value)}
           placeholder="Add MCZ program name"
           isDisabled={isNoIntegration || isLocked}
-          width="size-3600"
+          styles={style({ width: 288 })}
         />
-      </Flex>
+      </div>
 
       {/* Second row */}
-      <Flex direction="row" gap="size-400" wrap>
+      <div className={style({display: 'flex', gap: 32, flexWrap: 'wrap'})}>
         <TextField
           label="Co-marketing partner"
           value={marketoIntegration.coMarketingPartner || ''}
           onChange={(value) => updateMarketoField('coMarketingPartner', value)}
           placeholder="Add co-marketing partner name"
           isDisabled={isNoIntegration || isLocked}
-          width="size-3600"
+          styles={style({ width: 288 })}
         />
 
         <Picker
@@ -216,14 +214,14 @@ export const MarketoIntegrationComponent: React.FC = () => {
           selectedKey={marketoIntegration.eventPoi || 'no-poi'}
           onSelectionChange={handlePoiChange}
           isDisabled={isNoIntegration || isLocked}
-          width="size-3600"
+          styles={style({ width: 288 })}
         >
           {EVENT_POI_OPTIONS.map((option) => (
-            <Item key={option.key}>{option.label}</Item>
+            <PickerItem key={option.key} id={option.key}>{option.label}</PickerItem>
           ))}
         </Picker>
-      </Flex>
-    </Flex>
+      </div>
+    </div>
   )
 }
 

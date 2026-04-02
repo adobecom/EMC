@@ -1,28 +1,24 @@
-/* 
+/*
 * <license header>
 */
 
 import React, { useEffect, useMemo } from 'react'
-import {
-  View,
-  Flex,
-  Heading,
-  Text,
-  ActionButton
-} from '@adobe/react-spectrum'
-import Refresh from '@spectrum-icons/workflow/Refresh'
-import Events from '@spectrum-icons/workflow/Events'
-import Collection from '@spectrum-icons/workflow/Collection'
-import UserGroup from '@spectrum-icons/workflow/UserGroup'
-import Globe from '@spectrum-icons/workflow/Globe'
-import Location from '@spectrum-icons/workflow/Location'
-import Data from '@spectrum-icons/workflow/Data'
+import { Text, Button, Heading } from '@react-spectrum/s2'
+import { style } from '@react-spectrum/s2/style' with { type: 'macro' }
+import Refresh from '@react-spectrum/s2/icons/Refresh'
+import Calendar from '@react-spectrum/s2/icons/Calendar'
+import Collection from '@react-spectrum/s2/icons/Collection'
+import UserGroup from '@react-spectrum/s2/icons/UserGroup'
+import GlobeGrid from '@react-spectrum/s2/icons/GlobeGrid'
+import Location from '@react-spectrum/s2/icons/Location'
+import Data from '@react-spectrum/s2/icons/Data'
 import { cachedApi } from '../../services/api'
 import { BlurredLoadingOverlay } from '../../components/shared'
 import { EventApiResponse, SeriesApiResponse } from '../../types/domain'
-import { COLORS, SPACING, TYPOGRAPHY } from '../../styles/designSystem'
+import { COLORS, GRADIENT_BACKGROUND, SPACING, TYPOGRAPHY } from '../../styles/designSystem'
 import { IMS } from '../../types'
-import { useSafeState } from '../../hooks'
+import { useSafeState, useRBACFilter, useHasPermission } from '../../hooks'
+import { useGroup } from '../../contexts/GroupContext'
 
 interface OverviewDashboardProps {
   ims: IMS
@@ -33,53 +29,45 @@ interface StatCardProps {
   title: string
   value: number | string
   subtitle?: string
-  color?: string
   onClick?: () => void
 }
 
 /**
  * Stat Card component for displaying individual metrics
  */
-const StatCard: React.FC<StatCardProps> = ({ icon, title, value, subtitle, color = COLORS.ADOBE_RED, onClick }) => (
-  <View
-    backgroundColor="gray-50"
-    borderWidth="thin"
-    borderColor="gray-200"
-    borderRadius="medium"
-    padding="size-300"
-    UNSAFE_style={{
+const StatCard: React.FC<StatCardProps> = ({ icon, title, value, subtitle, onClick }) => (
+  <div
+    style={{
+      backgroundColor: 'var(--spectrum-global-color-gray-50)',
+      border: '1px solid var(--spectrum-global-color-gray-200)',
+      borderRadius: '8px',
+      padding: 24,
       cursor: onClick ? 'pointer' : 'default',
       transition: 'all 0.2s ease',
       minHeight: '140px',
       position: 'relative',
       overflow: 'hidden'
     }}
-    UNSAFE_className="stat-card"
+    className="stat-card"
   >
-    <div onClick={onClick} style={{ height: '100%' }}>
-      {/* Accent bar on top */}
-      <div
-        style={{
-          position: 'absolute',
-          top: 0,
-          left: 0,
-          right: 0,
-          height: '4px',
-          backgroundColor: color
-        }}
-      />
-      
-      <Flex direction="column" gap="size-150" height="100%">
+    <div
+      onClick={onClick}
+      onKeyDown={onClick ? (e) => { if (e.key === 'Enter' || e.key === ' ') onClick() } : undefined}
+      role={onClick ? 'button' : undefined}
+      tabIndex={onClick ? 0 : undefined}
+      style={{ height: '100%' }}
+    >
+      <div className={style({ display: 'flex', flexDirection: 'column', gap: 12 })}>
         {/* Icon and Title Row */}
-        <Flex direction="row" gap="size-100" alignItems="center">
-          <View UNSAFE_style={{ color: 'var(--spectrum-global-color-gray-700)' }}>
+        <div className={style({ display: 'flex', gap: 8, alignItems: 'center' })}>
+          <div style={{ color: 'var(--spectrum-global-color-gray-700)' }}>
             {icon}
-          </View>
+          </div>
           <Text UNSAFE_style={{ ...TYPOGRAPHY.FIELD_LABEL, color: 'var(--spectrum-global-color-gray-700)' }}>
             {title}
           </Text>
-        </Flex>
-        
+        </div>
+
         {/* Value */}
         <Text UNSAFE_style={{
           fontSize: '42px',
@@ -89,16 +77,16 @@ const StatCard: React.FC<StatCardProps> = ({ icon, title, value, subtitle, color
         }}>
           {value}
         </Text>
-        
+
         {/* Subtitle */}
         {subtitle && (
           <Text UNSAFE_style={{ ...TYPOGRAPHY.HELPER_TEXT, color: 'var(--spectrum-global-color-gray-600)' }}>
             {subtitle}
           </Text>
         )}
-      </Flex>
+      </div>
     </div>
-  </View>
+  </div>
 )
 
 /**
@@ -111,11 +99,11 @@ interface DistributionBarProps {
 
 const DistributionBar: React.FC<DistributionBarProps> = ({ items, total }) => {
   if (total === 0) return null
-  
+
   return (
-    <View marginTop="size-200">
+    <div style={{ marginTop: 16 }}>
       {/* Bar */}
-      <Flex direction="row" height="size-100" UNSAFE_style={{ borderRadius: '4px', overflow: 'hidden' }}>
+      <div className={style({ display: 'flex' })} style={{ height: 8, borderRadius: '4px', overflow: 'hidden' }}>
         {items.map((item, idx) => (
           <div
             key={idx}
@@ -126,12 +114,12 @@ const DistributionBar: React.FC<DistributionBarProps> = ({ items, total }) => {
             }}
           />
         ))}
-      </Flex>
-      
+      </div>
+
       {/* Legend */}
-      <Flex direction="row" gap="size-200" marginTop="size-150" wrap="wrap">
+      <div className={style({ display: 'flex', gap: 16, marginTop: 12, flexWrap: 'wrap' })}>
         {items.map((item, idx) => (
-          <Flex key={idx} direction="row" gap="size-75" alignItems="center">
+          <div key={idx} className={style({ display: 'flex', gap: 8, alignItems: 'center' })}>
             <div
               style={{
                 width: '10px',
@@ -143,10 +131,10 @@ const DistributionBar: React.FC<DistributionBarProps> = ({ items, total }) => {
             <Text UNSAFE_style={{ fontSize: '12px', color: 'var(--spectrum-global-color-gray-700)' }}>
               {item.label}: {item.value}
             </Text>
-          </Flex>
+          </div>
         ))}
-      </Flex>
-    </View>
+      </div>
+    </div>
   )
 }
 
@@ -176,7 +164,7 @@ const TemplateBreakdown: React.FC<TemplateBreakdownProps> = ({ templateCounts })
       '#6E6E6E', // Gray
       '#8B5CF6', // Violet
     ]
-    
+
     const colorMap = new Map<string, string>()
     sortedTemplates.forEach(([template], idx) => {
       colorMap.set(template, colors[idx % colors.length])
@@ -195,34 +183,35 @@ const TemplateBreakdown: React.FC<TemplateBreakdownProps> = ({ templateCounts })
   const totalEvents = Array.from(templateCounts.values()).reduce((sum, t) => sum + t.count, 0)
 
   return (
-    <View
-      backgroundColor="gray-50"
-      borderWidth="thin"
-      borderColor="gray-200"
-      borderRadius="medium"
-      padding="size-300"
+    <div
+      style={{
+        backgroundColor: 'var(--spectrum-global-color-gray-50)',
+        border: '1px solid var(--spectrum-global-color-gray-200)',
+        borderRadius: '8px',
+        padding: 24
+      }}
     >
-      <Flex direction="column" gap="size-200">
-        <Flex direction="row" gap="size-100" alignItems="center">
-          <Data size="S" />
-          <Heading level={4} margin="size-0">Events by Template</Heading>
-        </Flex>
-        
+      <div className={style({ display: 'flex', flexDirection: 'column', gap: 16 })}>
+        <div className={style({ display: 'flex', gap: 8, alignItems: 'center' })}>
+          <Data />
+          <Heading level={4} UNSAFE_style={{ margin: 0 }}>Events by Template</Heading>
+        </div>
+
         {sortedTemplates.length === 0 ? (
           <Text UNSAFE_style={{ color: 'var(--spectrum-global-color-gray-600)' }}>
             No template data available
           </Text>
         ) : (
-          <View>
+          <div>
             {/* Visual bar chart */}
-            <Flex direction="column" gap="size-150">
+            <div className={style({ display: 'flex', flexDirection: 'column', gap: 12 })}>
               {sortedTemplates.map(([template, data]) => {
                 const percentage = totalEvents > 0 ? (data.count / totalEvents) * 100 : 0
                 const displayName = getTemplateName(template)
-                
+
                 return (
-                  <View key={template}>
-                    <Flex direction="row" justifyContent="space-between" alignItems="center" marginBottom="size-50">
+                  <div key={template}>
+                    <div className={style({ display: 'flex', justifyContent: 'space-between', alignItems: 'center' })} style={{ marginBottom: 4 }}>
                       <Text
                         UNSAFE_style={{
                           fontSize: '13px',
@@ -239,14 +228,16 @@ const TemplateBreakdown: React.FC<TemplateBreakdownProps> = ({ templateCounts })
                       <Text UNSAFE_style={{ fontSize: '13px', fontWeight: 600, color: templateColors.get(template) }}>
                         {data.count} events
                       </Text>
-                    </Flex>
-                    
+                    </div>
+
                     {/* Progress bar */}
-                    <View
-                      backgroundColor="gray-200"
-                      borderRadius="small"
-                      height="size-75"
-                      overflow="hidden"
+                    <div
+                      style={{
+                        backgroundColor: 'var(--spectrum-global-color-gray-200)',
+                        borderRadius: '4px',
+                        height: 8,
+                        overflow: 'hidden'
+                      }}
                     >
                       <div
                         style={{
@@ -257,19 +248,19 @@ const TemplateBreakdown: React.FC<TemplateBreakdownProps> = ({ templateCounts })
                           transition: 'width 0.3s ease'
                         }}
                       />
-                    </View>
-                    
+                    </div>
+
                     <Text UNSAFE_style={{ fontSize: '11px', color: 'var(--spectrum-global-color-gray-600)', marginTop: '4px' }}>
                       {data.seriesCount} series using this template
                     </Text>
-                  </View>
+                  </div>
                 )
               })}
-            </Flex>
-          </View>
+            </div>
+          </div>
         )}
-      </Flex>
-    </View>
+      </div>
+    </div>
   )
 }
 
@@ -278,6 +269,10 @@ const TemplateBreakdown: React.FC<TemplateBreakdownProps> = ({ templateCounts })
  * Displays comprehensive statistics and metrics for events and series
  */
 export const OverviewDashboard: React.FC<OverviewDashboardProps> = () => {
+  const { filterEvents, filterSeries } = useRBACFilter()
+  const { groupVersion } = useGroup()
+  const canReadEvents = useHasPermission('event', 'read')
+  const canReadSeries = useHasPermission('series', 'read')
   const [events, setEvents] = useSafeState<EventApiResponse[]>([])
   const [series, setSeries] = useSafeState<SeriesApiResponse[]>([])
   const [isLoading, setIsLoading] = useSafeState(true)
@@ -287,15 +282,15 @@ export const OverviewDashboard: React.FC<OverviewDashboardProps> = () => {
   const loadData = async () => {
     setIsLoading(true)
     setError(null)
-    
+
     try {
       const [eventsData, seriesData] = await Promise.all([
-        cachedApi.getEventsList(),
-        cachedApi.getSeriesList()
+        canReadEvents ? cachedApi.getEventsList() : Promise.resolve([]),
+        canReadSeries ? cachedApi.getSeriesList() : Promise.resolve([])
       ])
-      
-      setEvents(eventsData)
-      setSeries(seriesData)
+
+      setEvents(filterEvents(eventsData))
+      setSeries(filterSeries(seriesData))
       setLastUpdated(new Date())
     } catch (err) {
       console.error('Error loading overview data:', err)
@@ -307,39 +302,39 @@ export const OverviewDashboard: React.FC<OverviewDashboardProps> = () => {
 
   useEffect(() => {
     loadData()
-  }, [])
+  }, [groupVersion]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Calculate statistics
   const stats = useMemo(() => {
     // Basic counts
     const totalEvents = events.length
     const totalSeries = series.length
-    
+
     // Event status distribution
     const publishedEvents = events.filter(e => e.published).length
     const draftEvents = events.filter(e => !e.published).length
-    
+
     // Series status distribution
     const publishedSeries = series.filter(s => s.seriesStatus === 'published').length
     const draftSeries = series.filter(s => s.seriesStatus === 'draft').length
     const archivedSeries = series.filter(s => s.seriesStatus === 'archived').length
-    
+
     // Event type distribution
     const inPersonEvents = events.filter(e => e.eventType === 'in-person' || e.eventType === 'InPerson').length
     const webinarEvents = events.filter(e => e.eventType === 'webinar' || e.eventType === 'Webinar').length
     const otherEvents = totalEvents - inPersonEvents - webinarEvents
-    
+
     // Cloud type distribution
     const creativeCloudEvents = events.filter(e => e.cloudType === 'CreativeCloud').length
     const experienceCloudEvents = events.filter(e => e.cloudType === 'ExperienceCloud').length
-    
+
     const creativeCloudSeries = series.filter(s => s.cloudType === 'CreativeCloud').length
     const experienceCloudSeries = series.filter(s => s.cloudType === 'ExperienceCloud').length
-    
+
     // Calculate total attendees
     const totalAttendees = events.reduce((sum, e) => sum + (e.attendeeCount || 0), 0)
     const totalCapacity = events.reduce((sum, e) => sum + (e.attendeeLimit || 0), 0)
-    
+
     // Events by templateId (via series)
     // First, create a map of seriesId -> templateId
     const seriesTemplateMap = new Map<string, string>()
@@ -348,10 +343,10 @@ export const OverviewDashboard: React.FC<OverviewDashboardProps> = () => {
         seriesTemplateMap.set(s.seriesId, s.templateId)
       }
     })
-    
+
     // Then count events per template
     const templateCounts = new Map<string, { count: number; seriesCount: number }>()
-    
+
     // First, count series per template
     series.forEach(s => {
       if (s.templateId) {
@@ -360,7 +355,7 @@ export const OverviewDashboard: React.FC<OverviewDashboardProps> = () => {
         templateCounts.set(s.templateId, existing)
       }
     })
-    
+
     // Then count events per template (via their series)
     events.forEach(e => {
       if (e.seriesId) {
@@ -372,7 +367,7 @@ export const OverviewDashboard: React.FC<OverviewDashboardProps> = () => {
         }
       }
     })
-    
+
     // Upcoming events (events with start date in the future)
     const now = Date.now()
     const upcomingEvents = events.filter(e => {
@@ -380,10 +375,10 @@ export const OverviewDashboard: React.FC<OverviewDashboardProps> = () => {
       if (e.startDate) return new Date(e.startDate).getTime() > now
       return false
     }).length
-    
+
     // Past events
     const pastEvents = totalEvents - upcomingEvents
-    
+
     return {
       totalEvents,
       totalSeries,
@@ -409,144 +404,151 @@ export const OverviewDashboard: React.FC<OverviewDashboardProps> = () => {
 
   if (error) {
     return (
-      <View padding="size-400">
-        <Flex direction="column" gap="size-200" alignItems="center" justifyContent="center" minHeight="size-6000">
+      <div style={{ padding: 32 }}>
+        <div className={style({ display: 'flex', flexDirection: 'column', gap: 16, alignItems: 'center', justifyContent: 'center' })} style={{ minHeight: 480 }}>
           <Heading level={3}>Error Loading Dashboard</Heading>
           <Text>{error}</Text>
-          <ActionButton onPress={loadData}>
+          <Button variant="secondary" onPress={loadData}>
             <Refresh />
             <Text>Retry</Text>
-          </ActionButton>
-        </Flex>
-      </View>
+          </Button>
+        </div>
+      </div>
     )
   }
 
   return (
-    <View padding="size-400" maxWidth="1400px" marginX="auto">
-      <Flex direction="column" gap="size-400">
+    <div style={{ padding: 32, background: GRADIENT_BACKGROUND }}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 32, maxWidth: '1400px', margin: '0 auto' }}>
         {/* Header */}
-        <Flex direction="row" justifyContent="space-between" alignItems="center">
-          <View>
-            <Heading level={1} marginBottom="size-50">Overview Dashboard</Heading>
+        <div className={style({ display: 'flex', justifyContent: 'space-between', alignItems: 'center' })}>
+          <div>
+            <Heading level={1} UNSAFE_style={{ marginBottom: 4 }}>Overview Dashboard</Heading>
             <Text UNSAFE_style={{ color: 'var(--spectrum-global-color-gray-700)', fontSize: '14px' }}>
-              Event Management Cloud statistics and metrics
+              Event Management Console statistics and metrics
             </Text>
-          </View>
-          
-          <Flex direction="row" gap="size-150" alignItems="center">
+          </div>
+
+          <div className={style({ display: 'flex', gap: 12, alignItems: 'center' })}>
             {lastUpdated && (
               <Text UNSAFE_style={{ fontSize: '12px', color: 'var(--spectrum-global-color-gray-600)' }}>
                 Last updated: {lastUpdated.toLocaleTimeString()}
               </Text>
             )}
-            <ActionButton onPress={loadData} isQuiet isDisabled={isLoading}>
+            <Button variant="secondary" onPress={loadData} isPending={isLoading}>
               <Refresh />
               <Text>Refresh</Text>
-            </ActionButton>
-          </Flex>
-        </Flex>
+            </Button>
+          </div>
+        </div>
 
         <>
             {/* Primary Stats Row */}
-            <View
-              UNSAFE_style={{
+            <div
+              style={{
                 display: 'grid',
                 gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
                 gap: `${SPACING.MD}px`
               }}
             >
-              <StatCard
-                icon={<Events size="S" />}
-                title="Total Events"
-                value={stats.totalEvents}
-                subtitle={`${stats.upcomingEvents} upcoming, ${stats.pastEvents} past`}
-                color={COLORS.ADOBE_RED}
-                onClick={() => window.location.hash = '#/events'}
-              />
-              
-              <StatCard
-                icon={<Collection size="S" />}
-                title="Total Series"
-                value={stats.totalSeries}
-                subtitle={`${stats.publishedSeries} published`}
-                color="#0D66D0"
-                onClick={() => window.location.hash = '#/series'}
-              />
-              
-              <StatCard
-                icon={<UserGroup size="S" />}
-                title="Total Attendees"
-                value={stats.totalAttendees.toLocaleString()}
-                subtitle={stats.totalCapacity > 0 ? `of ${stats.totalCapacity.toLocaleString()} capacity` : 'registered'}
-                color="#268E6C"
-                onClick={() => window.location.hash = '#/registrations'}
-              />
-              
-              <StatCard
-                icon={<Events size="S" />}
-                title="Published Events"
-                value={stats.publishedEvents}
-                subtitle={`${stats.draftEvents} drafts`}
-                color={COLORS.STATUS_PUBLISHED}
-              />
-            </View>
+              {canReadEvents && (
+                <StatCard
+                  icon={<Calendar />}
+                  title="Total Events"
+                  value={stats.totalEvents}
+                  subtitle={`${stats.upcomingEvents} upcoming, ${stats.pastEvents} past`}
+                  onClick={() => window.location.hash = '#/events'}
+                />
+              )}
+
+              {canReadSeries && (
+                <StatCard
+                  icon={<Collection />}
+                  title="Total Series"
+                  value={stats.totalSeries}
+                  subtitle={`${stats.publishedSeries} published`}
+                  onClick={() => window.location.hash = '#/series'}
+                />
+              )}
+
+              {canReadEvents && (
+                <StatCard
+                  icon={<UserGroup />}
+                  title="Total Attendees"
+                  value={stats.totalAttendees.toLocaleString()}
+                  subtitle={stats.totalCapacity > 0 ? `of ${stats.totalCapacity.toLocaleString()} capacity` : 'registered'}
+                  onClick={() => window.location.hash = '#/registrations'}
+                />
+              )}
+
+              {canReadEvents && (
+                <StatCard
+                  icon={<Calendar />}
+                  title="Published Events"
+                  value={stats.publishedEvents}
+                  subtitle={`${stats.draftEvents} drafts`}
+                />
+              )}
+            </div>
 
             {/* Secondary Stats - Two Column Layout */}
-            <Flex direction="row" gap="size-300" wrap="wrap">
-              {/* Left Column - Event Distributions */}
-              <View flex="1" minWidth="size-4600">
-                <Flex direction="column" gap="size-300">
+            {(canReadEvents || canReadSeries) && (
+            <div className={style({ display: 'flex', gap: 24, flexWrap: 'wrap' })}>
+              {/* Left Column - Event & Series Distributions */}
+              <div style={{ flex: 1, minWidth: 368 }}>
+                <div className={style({ display: 'flex', flexDirection: 'column', gap: 24 })}>
                   {/* Event Type Distribution */}
-                  <View
-                    backgroundColor="gray-50"
-                    borderWidth="thin"
-                    borderColor="gray-200"
-                    borderRadius="medium"
-                    padding="size-300"
+                  {canReadEvents && (
+                  <div
+                    style={{
+                      backgroundColor: 'var(--spectrum-global-color-gray-50)',
+                      border: '1px solid var(--spectrum-global-color-gray-200)',
+                      borderRadius: '8px',
+                      padding: 24
+                    }}
                   >
-                    <Flex direction="row" gap="size-100" alignItems="center" marginBottom="size-100">
-                      <Location size="S" />
-                      <Heading level={4} margin="size-0">Events by Type</Heading>
-                    </Flex>
-                    
-                    <Flex direction="row" gap="size-400" marginTop="size-200">
-                      <Flex direction="column" alignItems="center" gap="size-50">
+                    <div className={style({ display: 'flex', gap: 8, alignItems: 'center' })} style={{ marginBottom: 8 }}>
+                      <Location />
+                      <Heading level={4} UNSAFE_style={{ margin: 0 }}>Events by Type</Heading>
+                    </div>
+
+                    <div className={style({ display: 'flex', gap: 32 })} style={{ marginTop: 16 }}>
+                      <div className={style({ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 })}>
                         <Text UNSAFE_style={{ fontSize: '32px', fontWeight: 700, color: '#0D66D0' }}>
                           {stats.inPersonEvents}
                         </Text>
-                        <Flex direction="row" gap="size-50" alignItems="center">
-                          <Location size="XS" />
+                        <div className={style({ display: 'flex', gap: 4, alignItems: 'center' })}>
+                          <Location />
                           <Text UNSAFE_style={{ fontSize: '13px', color: 'var(--spectrum-global-color-gray-700)' }}>
                             In-Person
                           </Text>
-                        </Flex>
-                      </Flex>
-                      
-                      <Flex direction="column" alignItems="center" gap="size-50">
+                        </div>
+                      </div>
+
+                      <div className={style({ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 })}>
                         <Text UNSAFE_style={{ fontSize: '32px', fontWeight: 700, color: '#2D9D92' }}>
                           {stats.webinarEvents}
                         </Text>
-                        <Flex direction="row" gap="size-50" alignItems="center">
-                          <Globe size="XS" />
+                        <div className={style({ display: 'flex', gap: 4, alignItems: 'center' })}>
+                          <GlobeGrid />
                           <Text UNSAFE_style={{ fontSize: '13px', color: 'var(--spectrum-global-color-gray-700)' }}>
                             Webinar
                           </Text>
-                        </Flex>
-                      </Flex>
-                      
+                        </div>
+                      </div>
+
                       {stats.otherEvents > 0 && (
-                        <Flex direction="column" alignItems="center" gap="size-50">
+                        <div className={style({ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 })}>
                           <Text UNSAFE_style={{ fontSize: '32px', fontWeight: 700, color: '#6E6E6E' }}>
                             {stats.otherEvents}
                           </Text>
                           <Text UNSAFE_style={{ fontSize: '13px', color: 'var(--spectrum-global-color-gray-700)' }}>
                             Other
                           </Text>
-                        </Flex>
+                        </div>
                       )}
-                    </Flex>
-                    
+                    </div>
+
                     <DistributionBar
                       items={[
                         { label: 'In-Person', value: stats.inPersonEvents, color: '#0D66D0' },
@@ -555,38 +557,41 @@ export const OverviewDashboard: React.FC<OverviewDashboardProps> = () => {
                       ]}
                       total={stats.totalEvents}
                     />
-                  </View>
+                  </div>
+                  )}
 
                   {/* Cloud Type Distribution */}
-                  <View
-                    backgroundColor="gray-50"
-                    borderWidth="thin"
-                    borderColor="gray-200"
-                    borderRadius="medium"
-                    padding="size-300"
+                  {canReadEvents && (
+                  <div
+                    style={{
+                      backgroundColor: 'var(--spectrum-global-color-gray-50)',
+                      border: '1px solid var(--spectrum-global-color-gray-200)',
+                      borderRadius: '8px',
+                      padding: 24
+                    }}
                   >
-                    <Heading level={4} margin="size-0" marginBottom="size-200">Events by Cloud</Heading>
-                    
-                    <Flex direction="row" gap="size-400">
-                      <Flex direction="column" gap="size-50">
+                    <Heading level={4} UNSAFE_style={{ margin: 0, marginBottom: 16 }}>Events by Cloud</Heading>
+
+                    <div className={style({ display: 'flex', gap: 32 })}>
+                      <div className={style({ display: 'flex', flexDirection: 'column', gap: 4 })}>
                         <Text UNSAFE_style={{ fontSize: '28px', fontWeight: 700, color: '#E68619' }}>
                           {stats.creativeCloudEvents}
                         </Text>
                         <Text UNSAFE_style={{ fontSize: '13px', color: 'var(--spectrum-global-color-gray-700)' }}>
                           Creative Cloud
                         </Text>
-                      </Flex>
-                      
-                      <Flex direction="column" gap="size-50">
+                      </div>
+
+                      <div className={style({ display: 'flex', flexDirection: 'column', gap: 4 })}>
                         <Text UNSAFE_style={{ fontSize: '28px', fontWeight: 700, color: '#EB1000' }}>
                           {stats.experienceCloudEvents}
                         </Text>
                         <Text UNSAFE_style={{ fontSize: '13px', color: 'var(--spectrum-global-color-gray-700)' }}>
                           Experience Cloud
                         </Text>
-                      </Flex>
-                    </Flex>
-                    
+                      </div>
+                    </div>
+
                     <DistributionBar
                       items={[
                         { label: 'Creative Cloud', value: stats.creativeCloudEvents, color: '#E68619' },
@@ -594,47 +599,50 @@ export const OverviewDashboard: React.FC<OverviewDashboardProps> = () => {
                       ]}
                       total={stats.totalEvents}
                     />
-                  </View>
+                  </div>
+                  )}
 
                   {/* Series Status Distribution */}
-                  <View
-                    backgroundColor="gray-50"
-                    borderWidth="thin"
-                    borderColor="gray-200"
-                    borderRadius="medium"
-                    padding="size-300"
+                  {canReadSeries && (
+                  <div
+                    style={{
+                      backgroundColor: 'var(--spectrum-global-color-gray-50)',
+                      border: '1px solid var(--spectrum-global-color-gray-200)',
+                      borderRadius: '8px',
+                      padding: 24
+                    }}
                   >
-                    <Heading level={4} margin="size-0" marginBottom="size-200">Series by Status</Heading>
-                    
-                    <Flex direction="row" gap="size-300">
-                      <Flex direction="column" gap="size-50">
+                    <Heading level={4} UNSAFE_style={{ margin: 0, marginBottom: 16 }}>Series by Status</Heading>
+
+                    <div className={style({ display: 'flex', gap: 24 })}>
+                      <div className={style({ display: 'flex', flexDirection: 'column', gap: 4 })}>
                         <Text UNSAFE_style={{ fontSize: '28px', fontWeight: 700, color: COLORS.STATUS_PUBLISHED }}>
                           {stats.publishedSeries}
                         </Text>
                         <Text UNSAFE_style={{ fontSize: '13px', color: 'var(--spectrum-global-color-gray-700)' }}>
                           Published
                         </Text>
-                      </Flex>
-                      
-                      <Flex direction="column" gap="size-50">
+                      </div>
+
+                      <div className={style({ display: 'flex', flexDirection: 'column', gap: 4 })}>
                         <Text UNSAFE_style={{ fontSize: '28px', fontWeight: 700, color: COLORS.STATUS_DRAFT }}>
                           {stats.draftSeries}
                         </Text>
                         <Text UNSAFE_style={{ fontSize: '13px', color: 'var(--spectrum-global-color-gray-700)' }}>
                           Draft
                         </Text>
-                      </Flex>
-                      
-                      <Flex direction="column" gap="size-50">
+                      </div>
+
+                      <div className={style({ display: 'flex', flexDirection: 'column', gap: 4 })}>
                         <Text UNSAFE_style={{ fontSize: '28px', fontWeight: 700, color: COLORS.STATUS_ARCHIVED }}>
                           {stats.archivedSeries}
                         </Text>
                         <Text UNSAFE_style={{ fontSize: '13px', color: 'var(--spectrum-global-color-gray-700)' }}>
                           Archived
                         </Text>
-                      </Flex>
-                    </Flex>
-                    
+                      </div>
+                    </div>
+
                     <DistributionBar
                       items={[
                         { label: 'Published', value: stats.publishedSeries, color: COLORS.STATUS_PUBLISHED },
@@ -643,52 +651,68 @@ export const OverviewDashboard: React.FC<OverviewDashboardProps> = () => {
                       ]}
                       total={stats.totalSeries}
                     />
-                  </View>
-                </Flex>
-              </View>
+                  </div>
+                  )}
+                </div>
+              </div>
 
               {/* Right Column - Template Breakdown */}
-              <View flex="1" minWidth="size-4600">
+              {canReadEvents && (
+              <div style={{ flex: 1, minWidth: 368 }}>
                 <TemplateBreakdown templateCounts={stats.templateCounts} />
-              </View>
-            </Flex>
+              </div>
+              )}
+            </div>
+            )}
 
             {/* Quick Actions */}
-            <View
-              backgroundColor="gray-100"
-              borderRadius="medium"
-              padding="size-300"
-              marginTop="size-200"
+            {(canReadEvents || canReadSeries) && (
+            <div
+              style={{
+                backgroundColor: 'var(--spectrum-global-color-gray-100)',
+                borderRadius: '8px',
+                padding: 24,
+                marginTop: 16
+              }}
             >
-              <Heading level={4} margin="size-0" marginBottom="size-200">Quick Actions</Heading>
-              <Flex direction="row" gap="size-200" wrap="wrap">
-                <ActionButton onPress={() => window.location.hash = '#/events/new/in-person'}>
-                  <Location />
-                  <Text>Create In-Person Event</Text>
-                </ActionButton>
-                <ActionButton onPress={() => window.location.hash = '#/events/new/webinar'}>
-                  <Globe />
-                  <Text>Create Webinar</Text>
-                </ActionButton>
-                <ActionButton onPress={() => window.location.hash = '#/series/new'}>
-                  <Collection />
-                  <Text>Create Series</Text>
-                </ActionButton>
-                <ActionButton onPress={() => window.location.hash = '#/events'}>
-                  <Events />
-                  <Text>View All Events</Text>
-                </ActionButton>
-              </Flex>
-            </View>
+              <Heading level={4} UNSAFE_style={{ margin: 0, marginBottom: 16 }}>Quick Actions</Heading>
+              <div className={style({ display: 'flex', gap: 16, flexWrap: 'wrap' })}>
+                {canReadEvents && (
+                  <Button variant="secondary" onPress={() => window.location.hash = '#/events/new/in-person'}>
+                    <Location />
+                    <Text>Create In-Person Event</Text>
+                  </Button>
+                )}
+                {canReadEvents && (
+                  <Button variant="secondary" onPress={() => window.location.hash = '#/events/new/webinar'}>
+                    <GlobeGrid />
+                    <Text>Create Webinar</Text>
+                  </Button>
+                )}
+                {canReadSeries && (
+                  <Button variant="secondary" onPress={() => window.location.hash = '#/series/new'}>
+                    <Collection />
+                    <Text>Create Series</Text>
+                  </Button>
+                )}
+                {canReadEvents && (
+                  <Button variant="secondary" onPress={() => window.location.hash = '#/events'}>
+                    <Calendar />
+                    <Text>View All Events</Text>
+                  </Button>
+                )}
+              </div>
+            </div>
+            )}
         </>
-      </Flex>
+      </div>
 
       <BlurredLoadingOverlay
         visible={isLoading}
         message="Loading dashboard data..."
         ariaLabel="Loading dashboard"
       />
-    </View>
+    </div>
   )
 }
 

@@ -12,22 +12,11 @@
  */
 
 import React from 'react'
-import {
-  Dialog,
-  DialogTrigger,
-  Heading,
-  Divider,
-  Content,
-  ButtonGroup,
-  Button,
-  View,
-  Flex,
-  Text,
-  ActionButton
-} from '@adobe/react-spectrum'
-import Edit from '@spectrum-icons/workflow/Edit'
-import Calendar from '@spectrum-icons/workflow/Calendar'
-import Link from '@spectrum-icons/workflow/Link'
+import { ActionButton, Text, Button, ButtonGroup, Dialog, DialogTrigger, Content, Heading } from '@react-spectrum/s2'
+import { style } from '@react-spectrum/s2/style' with { type: 'macro' }
+import Edit from '@react-spectrum/s2/icons/Edit'
+import Calendar from '@react-spectrum/s2/icons/Calendar'
+import Link from '@react-spectrum/s2/icons/Link'
 import { SpeakerDashboardItem } from './SpeakersDashboard'
 import { EventApiResponse } from '../../types/domain'
 import { StatusBadge } from '../../components/shared'
@@ -69,138 +58,135 @@ export const SpeakerEventConnectionsDialog: React.FC<SpeakerEventConnectionsDial
     <DialogTrigger isOpen={isOpen} onOpenChange={(open) => !open && onClose()}>
       <div style={{ display: 'none' }} />
       <Dialog size="L">
-        <Heading>Event Connections</Heading>
-        <Divider />
-        <Content>
-          <Flex direction="column" gap="size-300">
-            {/* Speaker Info Header */}
-            <View
-              padding="size-200"
-              borderRadius="medium"
-              backgroundColor="gray-100"
-            >
-              <Flex alignItems="center" gap="size-200">
-                {/* Speaker Avatar */}
-                <View
-                  UNSAFE_style={{
-                    width: '48px',
-                    height: '48px',
-                    borderRadius: '50%',
-                    overflow: 'hidden',
-                    backgroundColor: 'var(--spectrum-global-color-gray-300)',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    flexShrink: 0
+        {({close}) => (
+          <>
+            <Heading slot="title">Event Connections</Heading>
+            <Content>
+              <div className={style({display: 'flex', flexDirection: 'column', gap: 24})}>
+                {/* Speaker Info Header */}
+                <div
+                  style={{
+                    padding: 16,
+                    borderRadius: 8,
+                    backgroundColor: 'var(--spectrum-global-color-gray-100)',
                   }}
                 >
-                  {speaker?.photo?.imageUrl ? (
-                    <img
-                      src={speaker.photo.imageUrl}
-                      alt={speakerName}
+                  <div className={style({display: 'flex', alignItems: 'center', gap: 16})}>
+                    {/* Speaker Avatar */}
+                    <div
                       style={{
-                        width: '100%',
-                        height: '100%',
-                        objectFit: 'cover'
+                        width: 48,
+                        height: 48,
+                        borderRadius: '50%',
+                        overflow: 'hidden',
+                        backgroundColor: 'var(--spectrum-global-color-gray-300)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        flexShrink: 0,
                       }}
-                    />
-                  ) : (
-                    <Text UNSAFE_style={{ fontWeight: 'bold', color: 'var(--spectrum-global-color-gray-600)' }}>
-                      {speaker?.firstName?.[0]}{speaker?.lastName?.[0]}
-                    </Text>
-                  )}
-                </View>
-                
-                <Flex direction="column" gap="size-50" flex={1}>
-                  <Text UNSAFE_style={{ fontWeight: 'bold', fontSize: '16px' }}>
-                    {speakerName}
-                  </Text>
-                  {speaker?.title && (
-                    <Text UNSAFE_style={{ fontSize: '14px', color: 'var(--spectrum-global-color-gray-600)' }}>
-                      {speaker.title}
-                    </Text>
-                  )}
-                </Flex>
-                
-                <Flex alignItems="center" gap="size-100">
-                  <Link size="S" />
-                  <Text UNSAFE_style={{ fontWeight: 'bold' }}>
-                    {events.length} {events.length === 1 ? 'event' : 'events'}
-                  </Text>
-                </Flex>
-              </Flex>
-            </View>
-            
-            {/* Events List */}
-            {events.length === 0 ? (
-              <View
-                padding="size-400"
-                UNSAFE_style={{ textAlign: 'center' }}
-              >
-                <Text UNSAFE_style={{ color: 'var(--spectrum-global-color-gray-600)' }}>
-                  This speaker is not linked to any events.
-                </Text>
-              </View>
-            ) : (
-              <View
-                maxHeight="size-4600"
-                UNSAFE_style={{ overflowY: 'auto' }}
-              >
-                <Flex direction="column" gap="size-100">
-                  {events.map(event => (
-                    <View
-                      key={event.eventId}
-                      padding="size-200"
-                      borderWidth="thin"
-                      borderColor="gray-300"
-                      borderRadius="medium"
-                      UNSAFE_style={{
-                        transition: 'background-color 0.15s ease',
-                        cursor: 'pointer'
-                      }}
-                      // @ts-ignore - Spectrum View doesn't expose these but they work
-                      onMouseEnter={(e: any) => e.currentTarget.style.backgroundColor = 'var(--spectrum-global-color-gray-100)'}
-                      onMouseLeave={(e: any) => e.currentTarget.style.backgroundColor = 'transparent'}
                     >
-                      <Flex alignItems="center" gap="size-200">
-                        {/* Event Info */}
-                        <Flex direction="column" gap="size-50" flex={1}>
-                          <Text UNSAFE_style={{ fontWeight: 'bold' }}>
-                            {event.enTitle || event.title || 'Untitled Event'}
-                          </Text>
-                          <Flex alignItems="center" gap="size-150">
-                            <Flex alignItems="center" gap="size-75">
-                              <Calendar size="XS" UNSAFE_style={{ color: 'var(--spectrum-global-color-gray-500)' }} />
-                              <Text UNSAFE_style={{ fontSize: '12px', color: 'var(--spectrum-global-color-gray-600)' }}>
-                                {formatDate(event.localStartDate)}
-                              </Text>
-                            </Flex>
-                            <StatusBadge status={event.published ? 'published' : 'draft'} />
-                          </Flex>
-                        </Flex>
-                        
-                        {/* Actions */}
-                        <ActionButton
-                          isQuiet
-                          onPress={() => handleEditEvent(event.eventId)}
-                          aria-label={`Edit ${event.enTitle || 'event'}`}
+                      {speaker?.photo?.imageUrl ? (
+                        <img
+                          src={speaker.photo.imageUrl}
+                          alt={speakerName}
+                          style={{
+                            width: '100%',
+                            height: '100%',
+                            objectFit: 'cover'
+                          }}
+                        />
+                      ) : (
+                        <Text UNSAFE_style={{ fontWeight: 'bold', color: 'var(--spectrum-global-color-gray-600)' }}>
+                          {speaker?.firstName?.[0]}{speaker?.lastName?.[0]}
+                        </Text>
+                      )}
+                    </div>
+
+                    <div className={style({display: 'flex', flexDirection: 'column', gap: 4, flexGrow: 1})}>
+                      <Text UNSAFE_style={{ fontWeight: 'bold', fontSize: '16px' }}>
+                        {speakerName}
+                      </Text>
+                      {speaker?.title && (
+                        <Text UNSAFE_style={{ fontSize: '14px', color: 'var(--spectrum-global-color-gray-600)' }}>
+                          {speaker.title}
+                        </Text>
+                      )}
+                    </div>
+
+                    <div className={style({display: 'flex', alignItems: 'center', gap: 8})}>
+                      <Link />
+                      <Text UNSAFE_style={{ fontWeight: 'bold' }}>
+                        {events.length} {events.length === 1 ? 'event' : 'events'}
+                      </Text>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Events List */}
+                {events.length === 0 ? (
+                  <div style={{ padding: 32, textAlign: 'center' }}>
+                    <Text UNSAFE_style={{ color: 'var(--spectrum-global-color-gray-600)' }}>
+                      This speaker is not linked to any events.
+                    </Text>
+                  </div>
+                ) : (
+                  <div style={{ maxHeight: 368, overflowY: 'auto' }}>
+                    <div className={style({display: 'flex', flexDirection: 'column', gap: 8})}>
+                      {events.map(event => (
+                        <div
+                          key={event.eventId}
+                          style={{
+                            padding: 16,
+                            border: '1px solid var(--spectrum-global-color-gray-300)',
+                            borderRadius: 8,
+                            transition: 'background-color 0.15s ease',
+                            cursor: 'pointer',
+                          }}
+                          onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = 'var(--spectrum-global-color-gray-100)' }}
+                          onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'transparent' }}
                         >
-                          <Edit />
-                          <Text>Edit</Text>
-                        </ActionButton>
-                      </Flex>
-                    </View>
-                  ))}
-                </Flex>
-              </View>
-            )}
-          </Flex>
-        </Content>
-        <ButtonGroup>
-          <Button variant="primary" onPress={onClose}>
-            Close
-          </Button>
-        </ButtonGroup>
+                          <div className={style({display: 'flex', alignItems: 'center', gap: 16})}>
+                            {/* Event Info */}
+                            <div className={style({display: 'flex', flexDirection: 'column', gap: 4, flexGrow: 1})}>
+                              <Text UNSAFE_style={{ fontWeight: 'bold' }}>
+                                {event.enTitle || event.title || 'Untitled Event'}
+                              </Text>
+                              <div className={style({display: 'flex', alignItems: 'center', gap: 12})}>
+                                <div className={style({display: 'flex', alignItems: 'center', gap: 8})}>
+                                  <Calendar aria-hidden />
+                                  <Text UNSAFE_style={{ fontSize: '12px', color: 'var(--spectrum-global-color-gray-600)' }}>
+                                    {formatDate(event.localStartDate)}
+                                  </Text>
+                                </div>
+                                <StatusBadge status={event.published ? 'published' : 'draft'} />
+                              </div>
+                            </div>
+
+                            {/* Actions */}
+                            <ActionButton
+                              isQuiet
+                              onPress={() => handleEditEvent(event.eventId)}
+                              aria-label={`Edit ${event.enTitle || 'event'}`}
+                            >
+                              <Edit />
+                              <Text>Edit</Text>
+                            </ActionButton>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </Content>
+            <ButtonGroup>
+              <Button variant="accent" onPress={() => { onClose(); close() }}>
+                Close
+              </Button>
+            </ButtonGroup>
+          </>
+        )}
       </Dialog>
     </DialogTrigger>
   )

@@ -3,26 +3,22 @@
 */
 
 import React, { useEffect, useRef, useState, useCallback } from 'react'
-import {
-  View,
-  Flex,
-  Heading,
-  Text,
-  TextField,
-  ActionButton,
-  Switch
-} from '@adobe/react-spectrum'
-import Add from '@spectrum-icons/workflow/Add'
-import Remove from '@spectrum-icons/workflow/Remove'
+import { TextField, Text, Heading, ActionButton, Button } from '@react-spectrum/s2'
+import { Switch } from '@react-spectrum/s2'
+import { style } from "@react-spectrum/s2/style" with { type: "macro" }
+import Add from '@react-spectrum/s2/icons/Add'
+import RemoveCircle from '@react-spectrum/s2/icons/RemoveCircle'
 import { ImageUploader, RichTextEditor } from '../../components/shared'
 import { TYPOGRAPHY, COLORS } from '../../styles/designSystem'
 import { VenueData, EventApiResponse } from '../../types/domain'
 import { loadGooglePlacesAPI } from '../../utils/loadGooglePlaces'
 import { useEventFormComponent } from '../../hooks/useEventFormComponent'
+import { useEventFormContext } from '../../contexts'
 import { apiService } from '../../services/api'
 import { getVenuePayload } from '../../utils/dataFilters'
 import { uploadImage } from '../../services/requestHelpers'
 import { getCurrentEnvironment, getApiHost } from '../../config/constants'
+import { LocationDialog, VenueLocation } from './LocationDialog'
 import '../../../src/types/google-places.d.ts'
 
 // ============================================================================
@@ -84,7 +80,7 @@ export const VenueComponent: React.FC = () => {
       const venueData = formData.venue
       
       // ========================================================================
-      // 1. Upload pending venue image (if any)
+      // 1. Upload pending venue additional image (ESP venue-additional-image)
       // ========================================================================
       const pendingFile = pendingImageFileRef.current
       if (pendingFile) {
@@ -97,8 +93,8 @@ export const VenueComponent: React.FC = () => {
             
             const config = {
               targetUrl: uploadUrl,
-              altText: `Venue image for ${venueData?.venueName || 'event'}`,
-              type: 'venue-image'
+              altText: `Venue additional image for ${venueData?.venueName || 'event'}`,
+              type: 'venue-additional-image'
             }
             
             const result = await uploadImage(pendingFile, config, token)
@@ -109,8 +105,8 @@ export const VenueComponent: React.FC = () => {
                 venue: {
                   ...venueData,
                   venueName: venueData?.venueName || '',
-                  venueImageUrl: result.imageUrl,
-                  venueImageId: result.imageId
+                  venueAdditionalImageUrl: result.imageUrl,
+                  venueAdditionalImageId: result.imageId
                 }
               })
             }
@@ -136,8 +132,8 @@ export const VenueComponent: React.FC = () => {
         if (venueResult && !('error' in venueResult)) {
           existingVenue = venueResult
         }
-      } catch {
-        // No existing venue or fetch failed — treat as new
+      } catch (err) {
+        console.error('Failed to fetch existing venue:', err)
       }
       
       // --- Detect changes -------------------------------------------------------
@@ -189,6 +185,7 @@ export const VenueComponent: React.FC = () => {
         }
       }
       
+      let savedVenueId: string | null = existingVenue?.venueId ?? null
       try {
         if (!existingVenue) {
           // ---- CREATE (POST) ----
@@ -197,6 +194,7 @@ export const VenueComponent: React.FC = () => {
             console.error('Failed to create venue:', result)
             return
           }
+          savedVenueId = result?.venueId ?? null
         } else {
           // ---- UPDATE (PUT) — include venueId + timestamps as required by API ----
           const putPayload = {
@@ -205,13 +203,13 @@ export const VenueComponent: React.FC = () => {
             creationTime: existingVenue.creationTime,
             modificationTime: existingVenue.modificationTime,
           }
-          
+
           const result = await apiService.replaceVenue(
             savedEventId,
             existingVenue.venueId,
             putPayload
           )
-          
+
           if ('error' in result) {
             console.error('Failed to update venue:', result)
             return
@@ -219,6 +217,44 @@ export const VenueComponent: React.FC = () => {
         }
       } catch (error) {
         console.error('Error saving venue:', error)
+        return
+      }
+
+      // ========================================================================
+      // 3. Create any pending locations, then set venueApiId to trigger fetch
+      // ========================================================================
+      if (savedVenueId) {
+        // Create any pending locations added before the venue existed.
+        // Replace each pending location with the real one from the API response,
+        // or remove it on failure.
+        const pendingLocations = venueLocationsRef.current.filter(
+          loc => loc.locationId.startsWith('pending-')
+        )
+        for (const loc of pendingLocations) {
+          try {
+            const payload: Record<string, any> = {
+              name: loc.name,
+              locationType: loc.locationType,
+            }
+            if (loc.locationCode) payload.locationCode = loc.locationCode
+            if (loc.capacity != null) payload.capacity = loc.capacity
+            const res = await apiService.createVenueLocation(savedVenueId, payload)
+            if (res && !('error' in res)) {
+              const created: VenueLocation = res.location ?? res
+              setVenueLocations(prev => prev.map(l =>
+                l.locationId === loc.locationId ? created : l
+              ))
+            } else {
+              const msg = (res as any)?.error?.message || 'Failed to create location'
+              console.error(`Location "${loc.name}": ${msg}`)
+              setVenueLocations(prev => prev.filter(l => l.locationId !== loc.locationId))
+            }
+          } catch (err) {
+            console.error('Failed to create pending location:', loc.name, err)
+            setVenueLocations(prev => prev.filter(l => l.locationId !== loc.locationId))
+          }
+        }
+        setVenueApiId(savedVenueId)
       }
     },
     
@@ -274,11 +310,47 @@ export const VenueComponent: React.FC = () => {
   // Deferred image upload state - used when creating new events (no eventId yet)
   const [pendingImageFile, setPendingImageFile] = useState<File | null>(null)
   const pendingImageFileRef = useRef<File | null>(null)
-  
-  // Keep ref in sync with state for use in onAfterSave callback
+
+  // Location management state
+  const [venueApiId, setVenueApiId] = useState<string | null>(null)
+  const [venueLocations, setVenueLocations] = useState<VenueLocation[]>([])
+  const [isLocationDialogOpen, setIsLocationDialogOpen] = useState(false)
+  const venueLocationsRef = useRef<VenueLocation[]>([])
+
+  // Keep refs in sync with state for use in onAfterSave callback
   useEffect(() => {
     pendingImageFileRef.current = pendingImageFile
   }, [pendingImageFile])
+  useEffect(() => {
+    venueLocationsRef.current = venueLocations
+  }, [venueLocations])
+
+  // Fetch venue + locations on initial load (edit mode only).
+  // Skip if venueApiId is already set (e.g. after a save via onAfterSave).
+  const { setVenueLocations: setContextVenueLocations } = useEventFormContext()
+  useEffect(() => {
+    if (!eventId || venueApiId) return
+    apiService.getEventVenue(eventId).then(async (res) => {
+      if (res && !('error' in res) && res?.venueId) {
+        const vid = res.venueId
+        // Fetch locations before setting venueApiId so both update together
+        try {
+          const locRes = await apiService.listVenueLocations(vid)
+          if (locRes && !('error' in locRes)) {
+            const list = (locRes as any).locations ?? locRes ?? []
+            const locations = Array.isArray(list) ? list : []
+            setVenueLocations(locations)
+            setContextVenueLocations(locations)
+          }
+        } catch (err) {
+          console.error('Failed to load venue locations:', err)
+        }
+        setVenueApiId(vid)
+      }
+    }).catch((err) => {
+      console.error('Failed to fetch event venue:', err)
+    })
+  }, [eventId, venueApiId, setContextVenueLocations])
   
   // ============================================================================
   // REFS FOR CALLBACK STABILITY
@@ -516,13 +588,32 @@ export const VenueComponent: React.FC = () => {
   const handleAdditionalInfoChange = (value: string) => {
     updateVenueStable({ additionalInformation: value })
   }
+
+  const handleLocationAdded = useCallback((location: VenueLocation) => {
+    setVenueLocations(prev => {
+      const exists = prev.some(l => l.locationId === location.locationId)
+      return exists ? prev : [...prev, location]
+    })
+  }, [])
+
+  const handleLocationRemove = useCallback(async (locationId: string) => {
+    // Pending locations (not yet saved to API) can be removed locally
+    if (!locationId.startsWith('pending-') && venueApiId) {
+      try {
+        await apiService.deleteVenueLocation(venueApiId, locationId)
+      } catch (err) {
+        console.error('Failed to delete location:', err)
+      }
+    }
+    setVenueLocations(prev => prev.filter(l => l.locationId !== locationId))
+  }, [venueApiId])
   
   const handleImageChange = (imageUrl: string | undefined, imageId: string | undefined) => {
     // Clear pending file since we now have an uploaded image
     setPendingImageFile(null)
     updateVenueStable({ 
-      venueImageUrl: imageUrl, 
-      venueImageId: imageId 
+      venueAdditionalImageUrl: imageUrl, 
+      venueAdditionalImageId: imageId 
     })
   }
   
@@ -530,8 +621,8 @@ export const VenueComponent: React.FC = () => {
     // Clear both pending file and uploaded image
     setPendingImageFile(null)
     updateVenueStable({ 
-      venueImageUrl: undefined, 
-      venueImageId: undefined 
+      venueAdditionalImageUrl: undefined, 
+      venueAdditionalImageId: undefined 
     })
   }
   
@@ -555,14 +646,15 @@ export const VenueComponent: React.FC = () => {
   // ============================================================================
 
   return (
-    <Flex direction="column" gap="size-300">
+    <div className={style({display: 'flex', flexDirection: 'column', gap: 24})}>
       {/* Section Heading */}
       <Heading level={3} UNSAFE_style={TYPOGRAPHY.COMPONENT_HEADING}>
-        Venue information<span style={{ color: COLORS.ADOBE_RED }}>*</span>
+        Venue information<span style={{ color: COLORS.RED_600 }}>*</span>
       </Heading>
 
       {/* Post-event visibility toggle */}
       <Switch
+        data-testid="venue-visible-switch"
         isSelected={venue.showVenuePostEvent || false}
         onChange={handleShowVenuePostEventChange}
         UNSAFE_style={{
@@ -573,8 +665,8 @@ export const VenueComponent: React.FC = () => {
       </Switch>
 
       {/* Venue Name Field */}
-      <View width="100%">
-        <Flex justifyContent="space-between" alignItems="center" marginBottom="size-50">
+      <div style={{ width: '100%' }}>
+        <div className={style({display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4})}>
           <Text UNSAFE_style={{ 
             fontSize: '14px',
             color: COLORS.GRAY_700
@@ -587,10 +679,11 @@ export const VenueComponent: React.FC = () => {
           }}>
             {VENUE_NAME_MAX_LENGTH} characters max
           </Text>
-        </Flex>
-        
+        </div>
+
         <input
           id="venue-name-input"
+          data-testid="venue-name-input"
           ref={venueNameInputRef}
           type="text"
           value={venueNameValue}
@@ -604,13 +697,10 @@ export const VenueComponent: React.FC = () => {
             width: '100%',
             padding: '10px 12px',
             fontSize: '14px',
-            border: showVenueNameError
-              ? `2px solid ${COLORS.ADOBE_RED}` 
-              : '1px solid var(--spectrum-global-color-gray-400)',
-            borderRadius: '4px',
-            backgroundColor: 'var(--spectrum-global-color-gray-50)',
+            border: '2px solid rgb(218, 218, 218)',
+            borderRadius: '8px',
+            backgroundColor: COLORS.WHITE,
             color: COLORS.GRAY_800,
-            fontFamily: 'adobe-clean, sans-serif',
             boxSizing: 'border-box'
           }}
         />
@@ -620,7 +710,7 @@ export const VenueComponent: React.FC = () => {
             id="venue-name-error"
             UNSAFE_style={{ 
               fontSize: '12px', 
-              color: COLORS.ADOBE_RED,
+              color: COLORS.RED_600,
               marginTop: '4px',
               display: 'block'
             }}
@@ -630,29 +720,29 @@ export const VenueComponent: React.FC = () => {
         )}
         
         {placesApiError && (
-          <Text UNSAFE_style={{ 
-            fontSize: '12px', 
-            color: COLORS.ADOBE_RED,
+          <Text UNSAFE_style={{
+            fontSize: '12px',
+            color: COLORS.RED_600,
             marginTop: '4px',
             display: 'block'
           }}>
             {placesApiError}
           </Text>
         )}
-      </View>
+      </div>
 
       {/* Alternative Venue Name Toggle */}
-      <View>
+      <div>
         <ActionButton
           isQuiet
           onPress={handleAlternativeNameToggle}
           UNSAFE_style={{
             color: COLORS.GRAY_800,
-            padding: 0,
+            padding: '0 12px',
             marginLeft: '-8px'
           }}
         >
-          {showAlternativeNameField ? <Remove size="S" /> : <Add size="S" />}
+          {showAlternativeNameField ? <RemoveCircle /> : <Add />}
           <Text UNSAFE_style={{ marginLeft: '4px', color: COLORS.GRAY_800 }}>
             {showAlternativeNameField 
               ? 'Remove alternative venue name' 
@@ -661,40 +751,40 @@ export const VenueComponent: React.FC = () => {
         </ActionButton>
         
         {showAlternativeNameField && (
-          <View marginTop="size-200">
+          <div style={{ marginTop: '16px' }}>
             <TextField
+              data-testid="venue-alt-name-input"
               label="Alternative venue name"
-              width="100%"
+              styles={style({ width: '[100%]' })}
               value={alternativeVenueName}
               onChange={handleAlternativeNameChange}
               maxLength={VENUE_NAME_MAX_LENGTH}
               description="This name will be displayed instead of the Google Places name"
             />
-          </View>
+          </div>
         )}
-      </View>
+      </div>
 
       {/* Venue Image Section */}
-      <View marginTop="size-200">
+      <div className={style({display: 'flex', flexDirection: 'column', gap: 16})}>
         <Heading level={4} UNSAFE_style={TYPOGRAPHY.SUBSECTION_HEADING}>
           Venue image or map
         </Heading>
-        
+
         <Switch
+          data-testid="venue-instructions-visible-switch"
           isSelected={venue.showVenueImagePostEvent || false}
           onChange={handleShowVenueImagePostEventChange}
-          marginTop="size-100"
-          marginBottom="size-200"
         >
           Display image and instructions post-event.
         </Switch>
         
         <ImageUploader
           label=""
-          imageUrl={venue.venueImageUrl}
-          imageId={venue.venueImageId}
-          imageKind="venue-image"
-          altText={`Venue image for ${venue.venueName}`}
+          imageUrl={venue.venueAdditionalImageUrl}
+          imageId={venue.venueAdditionalImageId}
+          imageKind="venue-additional-image"
+          altText={`Venue additional image for ${venue.venueName}`}
           eventId={eventId ?? undefined}
           maxSizeMB={25}
           onChange={handleImageChange}
@@ -707,17 +797,92 @@ export const VenueComponent: React.FC = () => {
           onFileSelected={handleImageFileSelected}
           pendingFile={pendingImageFile ?? undefined}
         />
-      </View>
+      </div>
 
       {/* Instructions for Attendees */}
-      <View marginTop="size-200">
+      <div style={{ marginTop: '16px' }}>
         <RichTextEditor
           label="Instructions for attendees"
           value={venue.additionalInformation || ''}
           onChange={handleAdditionalInfoChange}
           height="200px"
         />
-      </View>
-    </Flex>
+      </div>
+
+      {/* Locations inside the venue */}
+      <div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+          <Heading level={4} UNSAFE_style={TYPOGRAPHY.SUBSECTION_HEADING}>
+            Locations inside the venue
+          </Heading>
+
+          {venueLocations.length === 0 && (
+            <div style={{ padding: '2rem', backgroundColor: '#F5F5F5', borderRadius: '4px', textAlign: 'center', marginTop: '1rem' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '16px' }}>
+                <Text>Add locations to your venue using the button below.</Text>
+                <Button variant="secondary" onPress={() => setIsLocationDialogOpen(true)}>
+                  <Add />
+                  <Text>Add Location</Text>
+                </Button>
+              </div>
+            </div>
+          )}
+
+          {venueLocations.map(loc => (
+            <div key={loc.locationId} style={{ padding: '16px', border: '1px solid #D3D3D3', borderRadius: '8px', backgroundColor: '#FFFFFF' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', flexGrow: 1, gap: '4px' }}>
+                  <Text UNSAFE_style={{ fontWeight: 600, fontSize: '14px' }}>{loc.name}</Text>
+                  <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+                    <span style={{ fontSize: '11px', padding: '2px 8px', borderRadius: '10px', backgroundColor: '#E1E1E1', color: COLORS.GRAY_700, fontWeight: 500 }}>
+                      {loc.locationType.charAt(0).toUpperCase() + loc.locationType.slice(1)}
+                    </span>
+                    {loc.locationCode && (
+                      <Text UNSAFE_style={{ fontSize: '12px', color: '#6E6E6E' }}>
+                        Code: {loc.locationCode}
+                      </Text>
+                    )}
+                    {loc.capacity != null && (
+                      <Text UNSAFE_style={{ fontSize: '12px', color: '#6E6E6E' }}>
+                        Capacity: {loc.capacity}
+                      </Text>
+                    )}
+                  </div>
+                </div>
+                <ActionButton onPress={() => handleLocationRemove(loc.locationId)} isQuiet aria-label={`Remove ${loc.name}`}>
+                  <RemoveCircle />
+                </ActionButton>
+              </div>
+            </div>
+          ))}
+
+          {venueLocations.length > 0 && (
+            <Button
+              variant="secondary"
+              onPress={() => setIsLocationDialogOpen(true)}
+              styles={style({ width: '[100%]' })}
+              UNSAFE_style={{
+                backgroundColor: '#E1E1E1',
+                border: 'none',
+                color: '#2C2C2C',
+                justifyContent: 'flex-start',
+                paddingLeft: '16px',
+              }}
+            >
+              <Add />
+              <Text>Add Location</Text>
+            </Button>
+          )}
+        </div>
+      </div>
+
+      <LocationDialog
+        isOpen={isLocationDialogOpen}
+        onClose={() => setIsLocationDialogOpen(false)}
+        onSelect={handleLocationAdded}
+        venueId={venueApiId}
+      />
+      
+    </div>
   )
 }

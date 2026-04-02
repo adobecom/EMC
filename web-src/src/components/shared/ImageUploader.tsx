@@ -1,19 +1,18 @@
-/* 
+/*
 * <license header>
 */
 
 import React, { useState, useRef } from 'react'
 import {
-  View,
-  Flex,
-  Text,
   ProgressCircle,
   ActionButton,
   AlertDialog,
-  DialogTrigger
-} from '@adobe/react-spectrum'
-import Delete from '@spectrum-icons/workflow/Delete'
-import ImageAdd from '@spectrum-icons/workflow/ImageAdd'
+  DialogTrigger,
+  Text
+} from '@react-spectrum/s2'
+import { style } from '@react-spectrum/s2/style' with { type: 'macro' }
+import RemoveCircle from '@react-spectrum/s2/icons/RemoveCircle'
+import DropToUpload from '@react-spectrum/s2/illustrations/linear/DropToUpload'
 import { uploadImage, UploadTracker } from '../../services/requestHelpers'
 import { getCurrentEnvironment, getApiHost } from '../../config/constants'
 import { apiService } from '../../services/api'
@@ -37,7 +36,7 @@ async function isImageTypeValid(file: File): Promise<{ valid: boolean; detectedT
   const blob = file.slice(0, 128)
   const arrayBuffer = await blob.arrayBuffer()
   const bytes = new Uint8Array(arrayBuffer)
-  
+
   let detectedType: string | null = null
 
   // Magic byte signatures for image formats
@@ -110,7 +109,7 @@ interface ImageUploaderProps {
   dropzoneTitle?: string
   /** Custom dropzone text - line 2 (e.g., "Dimensions 584 x 300 px") */
   dropzoneDimensions?: string
-  /** 
+  /**
    * If true, doesn't upload immediately. Instead stores file and calls onFileSelected.
    * Use uploadPendingFile() to upload later.
    */
@@ -190,7 +189,7 @@ export const ImageUploader: React.FC<ImageUploaderProps> = ({
 
   const handleFile = async (file: File) => {
     setError(null)
-    
+
     // Validate file size first (quick check)
     const maxSizeBytes = maxSizeMB * 1024 * 1024
     if (!isImageSizeValid(file, maxSizeBytes)) {
@@ -201,7 +200,7 @@ export const ImageUploader: React.FC<ImageUploaderProps> = ({
     // Validate image type using magic byte signature checking
     // This prevents spoofed file extensions from bypassing validation
     const { valid, detectedType } = await isImageTypeValid(file)
-    
+
     if (!valid) {
       const allowedTypesStr = VALID_IMAGE_TYPES.join(', ').toUpperCase()
       if (detectedType) {
@@ -236,12 +235,12 @@ export const ImageUploader: React.FC<ImageUploaderProps> = ({
 
       const env = getCurrentEnvironment()
       const host = getApiHost('esp', env)
-      const uploadUrl = eventId 
+      const uploadUrl = eventId
         ? `${host}/v1/events/${eventId}/images`
         : `${host}/v1/images`
 
       const tracker: UploadTracker = { progress: 0 }
-      
+
       // Update progress in real-time
       const progressInterval = setInterval(() => {
         setUploadProgress(tracker.progress)
@@ -254,7 +253,7 @@ export const ImageUploader: React.FC<ImageUploaderProps> = ({
       }
 
       const result = await uploadImage(file, config, token, tracker, imageId)
-      
+
       clearInterval(progressInterval)
       setUploadProgress(100)
 
@@ -278,60 +277,55 @@ export const ImageUploader: React.FC<ImageUploaderProps> = ({
     fileInputRef.current?.click()
   }
 
-  const handleRemoveClick = () => {
-    // For pending files (not yet uploaded), just remove without dialog
-    if (pendingFile && !imageUrl) {
-      if (onRemove) {
-        onRemove()
-      }
-      setError(null)
-      return
-    }
-    // For uploaded images, show confirmation dialog
-    setIsDeleteDialogOpen(true)
-  }
-
-  const handleDeleteConfirm = async () => {
-    // If we have an uploaded image with an ID, make the DELETE API call
+  /**
+   * Perform delete: event images call DELETE when eventId is set; otherwise clear parent state only.
+   * With deferUpload (or no eventId), removal is not committed until the parent saves — no confirm dialog,
+   * so we avoid nesting AlertDialog inside DialogContainer (which dismissed the parent modal).
+   */
+  const performDelete = async (): Promise<void> => {
     if (imageId && eventId) {
       setIsDeleting(true)
       setError(null)
-      
       try {
-        // Note: targetUrl should be relative path - callExternalApi adds the host
         const config = {
           targetUrl: `/v1/events/${eventId}/images`,
           type: imageKind
         }
-        
         const result = await apiService.deleteImage(config, imageId)
-        
         if ('error' in result) {
           console.error('Failed to delete image:', result.error)
           setError(result.error || 'Failed to delete image')
-          setIsDeleting(false)
           return
         }
-        
-        // Success - call onRemove to update local state
-        if (onRemove) {
-          onRemove()
-        }
+        onRemove?.()
       } catch (err) {
         console.error('Delete image error:', err)
         setError(err instanceof Error ? err.message : 'Failed to delete image')
       } finally {
         setIsDeleting(false)
-        setIsDeleteDialogOpen(false)
       }
     } else {
-      // No imageId or eventId - just remove from local state
-      if (onRemove) {
-        onRemove()
-      }
-      setIsDeleteDialogOpen(false)
+      onRemove?.()
     }
     setError(null)
+  }
+
+  const handleRemoveClick = () => {
+    if (deferUpload || !eventId) {
+      void performDelete()
+      return
+    }
+    if (pendingFile && !imageUrl) {
+      onRemove?.()
+      setError(null)
+      return
+    }
+    setIsDeleteDialogOpen(true)
+  }
+
+  const handleDeleteConfirm = async () => {
+    await performDelete()
+    setIsDeleteDialogOpen(false)
   }
 
   const handleDeleteCancel = () => {
@@ -341,37 +335,34 @@ export const ImageUploader: React.FC<ImageUploaderProps> = ({
   const containerWidth = width ?? '100%'
 
   return (
-    <View UNSAFE_style={{ width: typeof containerWidth === 'number' ? `${containerWidth}px` : containerWidth }}>
+    <div style={{ width: typeof containerWidth === 'number' ? `${containerWidth}px` : containerWidth }}>
       <Text UNSAFE_style={{ fontWeight: 'bold', marginBottom: '8px', display: 'block' }}>
         {label}
       </Text>
-      
+
       {description && (
-        <Text UNSAFE_style={{ fontSize: '14px', color: 'var(--spectrum-global-color-gray-700)', marginBottom: '8px', display: 'block' }}>
+        <Text UNSAFE_style={{ fontSize: '14px', color: '#4B4B4B', marginBottom: '8px', display: 'block' }}>
           {description}
         </Text>
       )}
 
       {imageUrl || previewUrl ? (
         // Show uploaded image or pending file preview
-        <View
-          borderWidth="thin"
-          borderColor="default"
-          borderRadius="medium"
-          UNSAFE_style={{ position: 'relative', overflow: 'hidden' }}
+        <div
+          style={{ position: 'relative', overflow: 'hidden', border: '1px solid var(--spectrum-global-color-gray-400)', borderRadius: '4px' }}
         >
-          <img 
-            src={imageUrl || previewUrl || ''} 
+          <img
+            src={imageUrl || previewUrl || ''}
             alt={altText || label}
-            style={{ 
-              width: '100%', 
+            style={{
+              width: '100%',
               height: 'auto',
               display: 'block'
             }}
           />
           {previewUrl && !imageUrl && (
-            <View
-              UNSAFE_style={{
+            <div
+              style={{
                 position: 'absolute',
                 bottom: 0,
                 left: 0,
@@ -384,11 +375,11 @@ export const ImageUploader: React.FC<ImageUploaderProps> = ({
               <Text UNSAFE_style={{ fontSize: '12px', fontWeight: 'bold' }}>
                 Pending upload - save to upload
               </Text>
-            </View>
+            </div>
           )}
           {!isDisabled && (
-            <ActionButton 
-              onPress={handleRemoveClick} 
+            <ActionButton
+              onPress={handleRemoveClick}
               isQuiet
               aria-label="Remove image"
               isDisabled={isDeleting}
@@ -400,12 +391,12 @@ export const ImageUploader: React.FC<ImageUploaderProps> = ({
                 borderRadius: '4px'
               }}
             >
-              <Delete />
+              <RemoveCircle />
             </ActionButton>
           )}
           {isDeleting && (
-            <View
-              UNSAFE_style={{
+            <div
+              style={{
                 position: 'absolute',
                 top: 0,
                 left: 0,
@@ -418,9 +409,9 @@ export const ImageUploader: React.FC<ImageUploaderProps> = ({
               }}
             >
               <ProgressCircle aria-label="Deleting image" isIndeterminate size="M" />
-            </View>
+            </div>
           )}
-        </View>
+        </div>
       ) : (
         // Show dropzone - entire area is clickable and droppable
         <div
@@ -429,11 +420,11 @@ export const ImageUploader: React.FC<ImageUploaderProps> = ({
           onDrop={isDisabled ? undefined : handleDrop}
           onClick={isUploading || isDisabled ? undefined : handleBrowseClick}
           style={{
-            border: isDragging 
-              ? '2px dashed var(--spectrum-global-color-blue-600)' 
-              : '2px dotted var(--spectrum-global-color-gray-500)',
-            backgroundColor: isDragging 
-              ? 'var(--spectrum-global-color-blue-100)' 
+            border: isDragging
+              ? '2px dashed #1473E6'
+              : '2px dotted #909090',
+            backgroundColor: isDragging
+              ? '#E5F0FF'
               : 'transparent',
             cursor: isUploading || isDisabled ? 'default' : 'pointer',
             opacity: isDisabled ? 0.5 : 1,
@@ -443,36 +434,36 @@ export const ImageUploader: React.FC<ImageUploaderProps> = ({
           }}
         >
           {isUploading ? (
-            <Flex direction="column" alignItems="center" gap="size-200">
-              <ProgressCircle 
-                aria-label="Uploading image" 
+            <div className={style({ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 16 })}>
+              <ProgressCircle
+                aria-label="Uploading image"
                 value={uploadProgress}
                 size="L"
               />
               <Text>Uploading... {Math.round(uploadProgress)}%</Text>
-            </Flex>
+            </div>
           ) : (
-            <Flex direction="column" alignItems="center" gap="size-150">
-              <ImageAdd size="XXL" UNSAFE_style={{ color: 'var(--spectrum-global-color-gray-600)' }} />
-              <Text UNSAFE_style={{ fontSize: '14px', color: 'var(--spectrum-global-color-gray-700)' }}>
+            <div className={style({ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12 })}>
+              <DropToUpload aria-hidden />
+              <Text UNSAFE_style={{ fontSize: '14px', color: '#4B4B4B' }}>
                 {dropzoneTitle || 'Drop image here or click to browse'}
               </Text>
-              <Flex direction="column" alignItems="center" gap="size-50">
+              <div className={style({ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 })}>
                 {(dropzoneDimensions || recommendedDimensions) && (
-                  <Text UNSAFE_style={{ fontSize: '12px', color: 'var(--spectrum-global-color-gray-500)' }}>
+                  <Text UNSAFE_style={{ fontSize: '12px', color: '#909090' }}>
                     {dropzoneDimensions || recommendedDimensions}
                   </Text>
                 )}
-                <Text UNSAFE_style={{ fontSize: '12px', color: 'var(--spectrum-global-color-gray-500)' }}>
+                <Text UNSAFE_style={{ fontSize: '12px', color: '#909090' }}>
                   Supported formats: <strong>JPG, PNG, SVG</strong>
                 </Text>
-                <Text UNSAFE_style={{ fontSize: '12px', color: 'var(--spectrum-global-color-gray-500)' }}>
+                <Text UNSAFE_style={{ fontSize: '12px', color: '#909090' }}>
                   Max size: <strong>{maxSizeMB}</strong> MB
                 </Text>
-              </Flex>
-            </Flex>
+              </div>
+            </div>
           )}
-          
+
           <input
             ref={fileInputRef}
             type="file"
@@ -484,30 +475,31 @@ export const ImageUploader: React.FC<ImageUploaderProps> = ({
       )}
 
       {error && (
-        <Text UNSAFE_style={{ color: 'var(--spectrum-global-color-red-600)', marginTop: '8px', display: 'block' }}>
+        <Text UNSAFE_style={{ color: '#D7373F', marginTop: '8px', display: 'block' }}>
           {error}
         </Text>
       )}
 
       {/* Delete Confirmation Dialog */}
-      <DialogTrigger
-        isOpen={isDeleteDialogOpen}
-        onOpenChange={(isOpen) => !isOpen && handleDeleteCancel()}
-      >
-        <div style={{ display: 'none' }} />
-        <AlertDialog
-          title="You are deleting this image."
-          variant="destructive"
-          primaryActionLabel="Yes, I want to delete this image"
-          cancelLabel="Do not delete"
-          onPrimaryAction={handleDeleteConfirm}
-          onCancel={handleDeleteCancel}
-          isPrimaryActionDisabled={isDeleting}
+      {isDeleteDialogOpen && (
+        <DialogTrigger
+          isOpen
+          onOpenChange={(isOpen) => !isOpen && handleDeleteCancel()}
         >
-          Are you sure you want to do this? This cannot be undone.
-        </AlertDialog>
-      </DialogTrigger>
-    </View>
+          <div style={{ display: 'none' }} />
+          <AlertDialog
+            title="You are deleting this image."
+            variant="destructive"
+            primaryActionLabel="Yes, I want to delete this image"
+            cancelLabel="Do not delete"
+            onPrimaryAction={handleDeleteConfirm}
+            onCancel={handleDeleteCancel}
+            isPrimaryActionDisabled={isDeleting}
+          >
+            Are you sure you want to do this? This cannot be undone.
+          </AlertDialog>
+        </DialogTrigger>
+      )}
+    </div>
   )
 }
-

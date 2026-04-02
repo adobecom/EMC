@@ -19,7 +19,7 @@
 
 ## Overview
 
-The Event Form is a comprehensive, production-ready multi-step wizard for creating and editing events in the EMC (Event Management Cloud) application. Built with React, TypeScript, and Adobe Spectrum components, it provides a modern, type-safe alternative to the v1 reference HTML implementation.
+The Event Form is a comprehensive, production-ready multi-step wizard for creating and editing events in the EMC (Event Management Console) application. Built with React, TypeScript, and Adobe Spectrum components, it provides a modern, type-safe alternative to the v1 reference HTML implementation.
 
 ### Key Features
 
@@ -464,26 +464,26 @@ const basicEventData = {
 }
 ```
 
-### Adobe Spectrum Components Used
+### Adobe React Spectrum S2 components used
+
+Imports from `@react-spectrum/s2` (and the `style()` macro for layout) include:
 
 - **TextField** - Single-line text inputs
 - **TextArea** - Multi-line text inputs
-- **Picker** - Dropdown selectors
+- **Picker** / **PickerItem** - Dropdown selectors
 - **DatePicker** - Date/time selection with granularity
 - **NumberField** - Numeric inputs with min/max
 - **Switch** - Boolean toggles
 - **Checkbox** - Individual checkboxes
 - **Button** - Action buttons
 - **ActionButton** - Toggle-style buttons for tags
-- **Flex** - Layout container
-- **View** - Generic container with styling
 - **Heading** - Section titles
 - **Text** - Text content
 - **Divider** - Visual separators
 
 ### Icons
-- `@spectrum-icons/workflow/Add` - Add profile button
-- `@spectrum-icons/workflow/Delete` - Remove profile button
+- `@react-spectrum/s2/icons/Add` - Add profile button
+- `@react-spectrum/s2/icons/Delete` - Remove profile button
 
 ## Validation
 

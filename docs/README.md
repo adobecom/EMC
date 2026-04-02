@@ -1,6 +1,6 @@
 # EMC Documentation Index
 
-Welcome to the Event Management Cloud (EMC) documentation! This index will help you find the information you need.
+Welcome to the Event Management Console (EMC) documentation! This index will help you find the information you need.
 
 ## 🚀 Getting Started
 

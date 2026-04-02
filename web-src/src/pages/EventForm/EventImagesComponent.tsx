@@ -3,11 +3,7 @@
 */
 
 import React, { useCallback } from 'react'
-import {
-  Flex,
-  Heading,
-  Text
-} from '@adobe/react-spectrum'
+import { Heading, Text } from '@react-spectrum/s2'
 import type { EventImageData as _EventImageData } from '../../types/domain'
 import { ImageUploader } from '../../components/shared'
 import { TYPOGRAPHY } from '../../styles/designSystem'
@@ -62,43 +58,47 @@ export const EventImagesComponent: React.FC = () => {
   // ============================================================================
 
   return (
-    <Flex direction="column" gap="size-300">
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
       <Heading level={3} UNSAFE_style={TYPOGRAPHY.COMPONENT_HEADING}>Event Images</Heading>
       <Text>
         Add images for your event. These images will be displayed on the event page and listing.
       </Text>
 
       {/* Hero Image */}
-      <ImageUploader
-        label="Hero Image"
-        imageUrl={images?.find((img) => img.imageKind === 'event-hero-image')?.imageUrl}
-        imageId={images?.find((img) => img.imageKind === 'event-hero-image')?.imageId}
-        imageKind="event-hero-image"
-        altText="Event hero image"
-        eventId={eventId ?? undefined}
-        description="Main banner image displayed at the top of the event page"
-        recommendedDimensions="1920px x 1080px"
-        maxSizeMB={25}
-        width={600}
-        onChange={(imageUrl, imageId) => handleImageChange('event-hero-image', imageUrl, imageId)}
-        onRemove={() => handleImageRemove('event-hero-image')}
-      />
+      <div data-testid="hero-image-uploader">
+        <ImageUploader
+          label="Hero Image"
+          imageUrl={images?.find((img) => img.imageKind === 'event-hero-image')?.imageUrl}
+          imageId={images?.find((img) => img.imageKind === 'event-hero-image')?.imageId}
+          imageKind="event-hero-image"
+          altText="Event hero image"
+          eventId={eventId ?? undefined}
+          description="Main banner image displayed at the top of the event page"
+          recommendedDimensions="1920px x 1080px"
+          maxSizeMB={25}
+          width={600}
+          onChange={(imageUrl, imageId) => handleImageChange('event-hero-image', imageUrl, imageId)}
+          onRemove={() => handleImageRemove('event-hero-image')}
+        />
+      </div>
 
       {/* Thumbnail Image */}
-      <ImageUploader
-        label="Thumbnail Image"
-        imageUrl={images?.find((img) => img.imageKind === 'event-card-image')?.imageUrl}
-        imageId={images?.find((img) => img.imageKind === 'event-card-image')?.imageId}
-        imageKind="event-card-image"
-        altText="Event thumbnail image"
-        eventId={eventId ?? undefined}
-        description="Thumbnail image displayed in event listings and cards"
-        recommendedDimensions="460px x 460px"
-        maxSizeMB={10}
-        width={300}
-        onChange={(imageUrl, imageId) => handleImageChange('event-card-image', imageUrl, imageId)}
-        onRemove={() => handleImageRemove('event-card-image')}
-      />
+      <div data-testid="card-image-uploader">
+        <ImageUploader
+          label="Thumbnail Image"
+          imageUrl={images?.find((img) => img.imageKind === 'event-card-image')?.imageUrl}
+          imageId={images?.find((img) => img.imageKind === 'event-card-image')?.imageId}
+          imageKind="event-card-image"
+          altText="Event thumbnail image"
+          eventId={eventId ?? undefined}
+          description="Thumbnail image displayed in event listings and cards"
+          recommendedDimensions="460px x 460px"
+          maxSizeMB={10}
+          width={300}
+          onChange={(imageUrl, imageId) => handleImageChange('event-card-image', imageUrl, imageId)}
+          onRemove={() => handleImageRemove('event-card-image')}
+        />
+      </div>
 
       {/* Venue Image */}
       <ImageUploader
@@ -115,6 +115,6 @@ export const EventImagesComponent: React.FC = () => {
         onChange={(imageUrl, imageId) => handleImageChange('venue-image', imageUrl, imageId)}
         onRemove={() => handleImageRemove('venue-image')}
       />
-    </Flex>
+    </div>
   )
 }

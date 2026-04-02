@@ -94,7 +94,7 @@ export interface SeriesTemplatesConfig {
 
 // Event image types
 export interface EventImage {
-  imageKind: 'event-card-image' | 'event-hero-image' | 'venue-image' | string
+  imageKind: 'event-card-image' | 'event-hero-image' | 'venue-image' | 'venue-additional-image' | 'venue-map-image' | string
   imageUrl?: string
   imageId?: string
   altText?: string
@@ -249,6 +249,7 @@ export interface EventApiResponse {
   waitlistAttendeeCount?: number
   hostEmail?: string
   isPrivate?: boolean
+  inviteOnly?: boolean
   allowWaitlisting?: boolean
   allowGuestRegistration?: boolean
   tags?: string
@@ -518,7 +519,7 @@ export interface SponsorData {
 
 // Image types for events
 export interface EventImageData {
-  imageKind: 'event-card-image' | 'event-hero-image' | 'venue-image' | string
+  imageKind: 'event-card-image' | 'event-hero-image' | 'venue-image' | 'venue-additional-image' | 'venue-map-image' | string
   imageUrl?: string
   imageId?: string
   altText?: string
@@ -544,8 +545,9 @@ export interface VenueData {
   gmtOffset?: number
   addressComponents?: AddressComponent[] // Required by OpenAPI for venue creation
   additionalInformation?: string // "Instructions for attendees" in UI
-  venueImageUrl?: string
-  venueImageId?: string
+  /** Venue step only — ESP imageKind `venue-additional-image` / `venue-map-image`; not `venue-image` (Additional Content). */
+  venueAdditionalImageUrl?: string
+  venueAdditionalImageId?: string
   showVenuePostEvent?: boolean
   showVenueImagePostEvent?: boolean // Display image and instructions post-event
   showAdditionalInfoPostEvent?: boolean
@@ -570,7 +572,8 @@ export interface EventFormData {
   language: string
   defaultLocale?: string
   isPrivate: boolean
-  
+  inviteOnly: boolean
+
   // Step 2: Tags & Topics
   tags?: EventTag[]
   topics?: string[]
@@ -714,5 +717,22 @@ export interface PublishingProfileFormData {
   description?: string
   metadata?: Record<string, string>
   status?: string
+}
+
+// URL Pattern types (for custom detailPagePath construction)
+export interface UrlPatternEntry {
+  seriesId: string
+  pattern: string
+}
+
+export interface UrlPatternsSheetData {
+  total: number
+  offset: number
+  limit: number
+  data: UrlPatternEntry[]
+}
+
+export interface UrlPatternsConfig {
+  [sheetKey: string]: UrlPatternsSheetData | number | string[] | string
 }
 
