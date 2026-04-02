@@ -222,20 +222,14 @@ async function upsertSessionTimeForSession(
 async function syncSessionSpeakers(
   sessionId: string,
   selectedIds: string[],
+  currentSpeakerIds: string[],
 ): Promise<void> {
-  const speakersRes = await apiService.getSessionSpeakers(sessionId);
-  const currentIds: string[] =
-    speakersRes && !("error" in speakersRes)
-      ? ((speakersRes as any)?.speakers ?? []).map((s: any) =>
-          String(s.speakerId),
-        )
-      : [];
-  const toRemove = currentIds.filter((id) => !selectedIds.includes(id));
-  const toAdd = selectedIds.filter((id) => !currentIds.includes(id));
+  const toRemove = currentSpeakerIds.filter((id) => !selectedIds.includes(id));
+  const toAdd = selectedIds.filter((id) => !currentSpeakerIds.includes(id));
   await Promise.all(
     toRemove.map((id) => apiService.deleteSessionSpeaker(sessionId, id)),
   );
-  const baseOrdinal = currentIds.length - toRemove.length;
+  const baseOrdinal = currentSpeakerIds.length - toRemove.length;
   await Promise.all(
     toAdd.map((id, index) =>
       apiService.addSessionSpeaker(sessionId, {
@@ -443,7 +437,7 @@ export const Sessions: React.FC = () => {
 
     const shouldUpdateSpeakers = hasSessionSpeakersChanges(data);
     if (shouldUpdateSpeakers) {
-      await syncSessionSpeakers(sessionId, data.speakerIds ?? []);
+      await syncSessionSpeakers(sessionId, data.speakerIds ?? [], data.originalSpeakerIds ?? []);
     }
 
     if (shouldUpdateSession || shouldUpdateSessionTime || shouldUpdateSpeakers) {

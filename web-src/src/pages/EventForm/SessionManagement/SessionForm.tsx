@@ -206,15 +206,14 @@ export const SessionForm: React.FC<SessionFormProps> = ({
       if (res && !("error" in res)) {
         const list = (res as any)?.speakers ?? [];
         if (Array.isArray(list)) {
-          const ids = list.map((s: any) => String(s.speakerId));
+          const ids = list.map((s: SeriesSpeaker) => String(s.speakerId));
           setOriginalSpeakerIds(ids);
-        }
-        if (Array.isArray(list) && list.length > 0) {
-          const ids = list.map((s: any) => String(s.speakerId));
-          setSelectedSpeakers((prev) => {
-            if (prev.length > 0) return prev;
-            return seriesSpeakers.filter((s) => ids.includes(s.speakerId));
-          });
+          if (ids.length > 0) {
+            setSelectedSpeakers((prev) => {
+              if (prev.length > 0) return prev;
+              return seriesSpeakers.filter((s) => ids.includes(s.speakerId));
+            });
+          }
         }
       }
     });
