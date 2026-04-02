@@ -148,6 +148,42 @@ select {
   position: relative;
 }
 
+/** Horizontal scroll edge hints (below thead z-index:1 and sticky-right z-index:2) **/
+.data-table-scroll-shell {
+  position: relative;
+  width: 100%;
+  max-width: 100%;
+}
+
+.data-table-scroll-hint-left,
+.data-table-scroll-hint-right {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 56px;
+  pointer-events: none;
+  z-index: 0;
+  opacity: 0;
+  transition: opacity 0.12s ease-out;
+}
+
+.data-table-scroll-hint-left {
+  left: 0;
+  background: linear-gradient(
+    to right,
+    color-mix(in srgb, var(--spectrum-global-color-gray-200) 55%, white),
+    transparent
+  );
+}
+
+.data-table-scroll-hint-right {
+  background: linear-gradient(
+    to left,
+    color-mix(in srgb, var(--spectrum-global-color-gray-200) 55%, white),
+    transparent
+  );
+}
+
 .custom-data-table table {
   width: 100%;
   border-collapse: collapse;
