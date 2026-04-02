@@ -16,7 +16,8 @@
 import React, { useEffect, useState, useMemo, useCallback, useRef } from 'react'
 import {
   ActionButton,
-  ActionMenu,
+  MenuTrigger,
+  Menu,
   MenuItem,
   Badge,
   Button,
@@ -35,6 +36,7 @@ import RemoveCircle from '@react-spectrum/s2/icons/RemoveCircle'
 import RotateCCW from '@react-spectrum/s2/icons/RotateCCW'
 import Add from '@react-spectrum/s2/icons/Add'
 import Link from '@react-spectrum/s2/icons/Link'
+import More from '@react-spectrum/s2/icons/More'
 import { TableColumn } from '../../components/shared/DataTable'
 import { ResourceDashboardLayout, BlurredLoadingOverlay, ResourceEmptyState } from '../../components/shared'
 import MicrophoneIllustration from '@react-spectrum/s2/illustrations/linear/Microphone'
@@ -590,29 +592,33 @@ export const SpeakersDashboard: React.FC<SpeakersDashboardProps> = () => {
         if (!hasAnyAction) return null
 
         return (
-          <ActionMenu
-            isQuiet
-            aria-label="Actions menu"
-            onAction={(key) => handleMenuAction(key as string, item)}
-            disabledKeys={eventCount === 0 ? ['view-connections'] : []}
-          >
-            {canWriteEvent && (
-              <MenuItem key="edit">
-                <Edit />
-                <Text>Edit Speaker</Text>
+          <MenuTrigger>
+            <ActionButton isQuiet aria-label="Actions menu">
+              <More />
+            </ActionButton>
+            <Menu onAction={(key) => handleMenuAction(key as string, item)}>
+              {canWriteEvent && (
+                <MenuItem id="edit" textValue="Edit Speaker">
+                  <Edit />
+                  <Text slot="label">Edit Speaker</Text>
+                </MenuItem>
+              )}
+              <MenuItem
+                id="view-connections"
+                textValue={`View Connections (${eventCount})`}
+                isDisabled={eventCount === 0}
+              >
+                <Link />
+                <Text slot="label">View Connections ({eventCount})</Text>
               </MenuItem>
-            )}
-            <MenuItem key="view-connections">
-              <Link />
-              <Text>View Connections ({eventCount})</Text>
-            </MenuItem>
-            {canDeleteEvent && (
-              <MenuItem key="delete">
-                <RemoveCircle />
-                <Text>Delete Speaker</Text>
-              </MenuItem>
-            )}
-          </ActionMenu>
+              {canDeleteEvent && (
+                <MenuItem id="delete" textValue="Delete Speaker">
+                  <RemoveCircle />
+                  <Text slot="label">Delete Speaker</Text>
+                </MenuItem>
+              )}
+            </Menu>
+          </MenuTrigger>
         )
       }
     }

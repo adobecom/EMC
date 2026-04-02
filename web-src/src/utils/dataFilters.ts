@@ -273,6 +273,31 @@ const EVENT_FILTER_STRATEGIES: Record<EventFilterMode, (descriptor: DataFieldDes
 }
 
 /**
+ * Keys stripped on every ESL **event** `PUT /v1/events/:id` (update, publish, unpublish, preview)
+ * inside {@link prepareEslEventPutPayload} — not publish-specific.
+ * - inviteOnly: read-only on ESL update.
+ * - detailPagePath: POST (create) only; must not be sent on PUT.
+ */
+export const EVENT_DATA_ESL_EVENT_PUT_EXCLUDE_KEYS: readonly string[] = ['inviteOnly', 'detailPagePath']
+
+/**
+ * Normalize any object intended for ESL `PUT /v1/events/:id` (update, publish, unpublish, preview).
+ * Applies submission filtering plus {@link EVENT_DATA_ESL_EVENT_PUT_EXCLUDE_KEYS}.
+ */
+export function prepareEslEventPutPayload(
+  data: Record<string, any>,
+  options: FilterOptions = {}
+): Record<string, any> {
+  if (!data || typeof data !== 'object') return {}
+
+  const excludeKeys = [
+    ...EVENT_DATA_ESL_EVENT_PUT_EXCLUDE_KEYS,
+    ...(options.excludeKeys ?? []),
+  ]
+  return filterEventData(data, 'submission', { excludeKeys })
+}
+
+/**
  * Filter event data based on mode (submission, clone)
  * 
  * - submission: Include all submittable fields (for publish/unpublish/update)
