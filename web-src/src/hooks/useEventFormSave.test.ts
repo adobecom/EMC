@@ -5,9 +5,8 @@
  * EVENT_DATA_FILTER and includes every submittable field that is not
  * in speciallyHandledFields. These tests verify guards on automatic payload building:
  *
- * 1. detailPagePath — submittable: false so buildEventPayload does not copy it from
- *    form state; EventForm merges `detailPagePath` via extraPayload when a series URL
- *    pattern applies on create.
+ * 1. detailPagePath — submittable: false in EVENT_DATA_FILTER; EventForm merges it via
+ *    extraPayload on create (POST only). prepareEslEventPutPayload also excludes it on PUT.
  * 2. inviteOnly — in speciallyHandledFields (tested indirectly via filterEventData)
  */
 
@@ -75,7 +74,7 @@ describe('prepareEslEventPutPayload (ESL PUT egress)', () => {
     expect(result.enTitle).toBe('T')
   })
 
-  it('restores detailPagePath from input after filter', () => {
+  it('omits detailPagePath on PUT even when present (POST-only on ESL)', () => {
     const url = 'https://www.adobe.com/events/my-event/overview'
     const result = prepareEslEventPutPayload({
       cloudType: 'CreativeCloud',
@@ -83,7 +82,7 @@ describe('prepareEslEventPutPayload (ESL PUT egress)', () => {
       detailPagePath: url,
       enTitle: 'T',
     })
-    expect(result.detailPagePath).toBe(url)
+    expect(result).not.toHaveProperty('detailPagePath')
     expect(result.enTitle).toBe('T')
   })
 

@@ -272,18 +272,16 @@ const EVENT_FILTER_STRATEGIES: Record<EventFilterMode, (descriptor: DataFieldDes
   clone: (descriptor) => descriptor?.submittable === true && descriptor?.cloneable !== false,
 }
 
-/** Fields omitted from ESL event PUT when using {@link prepareEslEventPutPayload} (read-only or not accepted on ESL update). */
-export const EVENT_DATA_ESL_PUBLISH_EXCLUDE_KEYS: readonly string[] = ['inviteOnly']
-
 /**
- * ESL PUT may accept these top-level keys even when EVENT_DATA_FILTER marks them non-submittable.
- * They are merged back from the input after {@link filterEventData} (e.g. detailPagePath via form extraPayload).
+ * Fields omitted from ESL `PUT /v1/events/:id` in {@link prepareEslEventPutPayload}.
+ * - inviteOnly: read-only on ESL update.
+ * - detailPagePath: POST (create) only; must not be sent on PUT.
  */
-export const EVENT_DATA_ESL_PUT_POST_FILTER_ALLOWLIST: readonly string[] = ['detailPagePath']
+export const EVENT_DATA_ESL_PUBLISH_EXCLUDE_KEYS: readonly string[] = ['inviteOnly', 'detailPagePath']
 
 /**
  * Normalize any object intended for ESL `PUT /v1/events/:id` (update, publish, unpublish, preview).
- * Applies submission filtering plus ESL-specific exclusions, then restores allowlisted keys from the input.
+ * Applies submission filtering plus {@link EVENT_DATA_ESL_PUBLISH_EXCLUDE_KEYS}.
  */
 export function prepareEslEventPutPayload(
   data: Record<string, any>,
@@ -295,15 +293,7 @@ export function prepareEslEventPutPayload(
     ...EVENT_DATA_ESL_PUBLISH_EXCLUDE_KEYS,
     ...(options.excludeKeys ?? []),
   ]
-  const filtered = filterEventData(data, 'submission', { excludeKeys })
-
-  const out: Record<string, any> = { ...filtered }
-  for (const key of EVENT_DATA_ESL_PUT_POST_FILTER_ALLOWLIST) {
-    if (Object.prototype.hasOwnProperty.call(data, key) && isValidAttribute(data[key])) {
-      out[key] = data[key]
-    }
-  }
-  return out
+  return filterEventData(data, 'submission', { excludeKeys })
 }
 
 /**
