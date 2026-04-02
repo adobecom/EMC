@@ -4,7 +4,7 @@
 
 import { getCurrentEnvironment, getApiHost } from '../config/constants'
 import { apiService } from './api'
-import { uploadImage, UploadTracker } from './requestHelpers'
+import { extractImageFromUploadResponse, uploadImage, UploadTracker } from './requestHelpers'
 
 /**
  * Upload a speaker profile image to ESP after the speaker record exists.
@@ -32,12 +32,7 @@ export async function uploadSpeakerSeriesImage(
     }
 
     const result = await uploadImage(file, config, token, tracker)
-    const imageData = result.image || result
-
-    if (imageData.imageUrl && imageData.imageId) {
-      return { imageUrl: imageData.imageUrl, imageId: imageData.imageId }
-    }
-    return null
+    return extractImageFromUploadResponse(result)
   } catch (err) {
     console.error('Failed to upload speaker image:', err)
     return null

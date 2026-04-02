@@ -14,7 +14,7 @@ import { apiService, cachedApi } from '../../services/api'
 import { getSponsorPayload } from '../../services/payloadBuilders'
 import RemoveCircle from '@react-spectrum/s2/icons/RemoveCircle'
 import { useEventFormComponent } from '../../hooks/useEventFormComponent'
-import { uploadImage, UploadTracker } from '../../services/requestHelpers'
+import { extractImageFromUploadResponse, uploadImage, UploadTracker } from '../../services/requestHelpers'
 import { getCurrentEnvironment, getApiHost } from '../../config/constants'
 import { PartnerPickerDialog } from './PartnerPickerDialog'
 
@@ -638,14 +638,7 @@ export const SponsorsComponent: React.FC = () => {
       }
 
       const result = await uploadImage(file, config, token, tracker, existingImageId)
-      
-      // Handle different response formats - the API might wrap the image object
-      const imageData = result.image || result
-      
-      if (imageData.imageUrl && imageData.imageId) {
-        return { imageUrl: imageData.imageUrl, imageId: imageData.imageId }
-      }
-      return null
+      return extractImageFromUploadResponse(result)
     } catch (err) {
       console.error('Failed to upload sponsor image:', err)
       return null
