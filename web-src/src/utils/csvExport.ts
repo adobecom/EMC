@@ -1,5 +1,5 @@
 /**
- * CSV export utilities for attendee data.
+ * CSV export utilities (attendees, campaigns, etc.).
  */
 
 export function escapeCsvValue(value: unknown): string {
