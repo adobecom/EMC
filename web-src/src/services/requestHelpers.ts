@@ -159,6 +159,58 @@ export interface UploadTracker {
   progress: number
 }
 
+/**
+ * Normalize JSON from ESP image uploads. Shapes differ by endpoint:
+ * - POST .../events/{id}/images 201 → bare Image
+ * - POST .../speakers/{id}/images 201 → Speaker with `photo` (not `image`)
+ * - POST .../sponsors/{id}/images 201 → Sponsor with `image`
+ * See docs/backend-reference/openapi.json (uploadSpeakerImage / uploadSponsorImage).
+ */
+export function extractImageFromUploadResponse(
+  result: unknown
+): { imageUrl: string; imageId: string } | null {
+  const asPair = (v: unknown): { imageUrl: string; imageId: string } | null => {
+    if (v === null || typeof v !== 'object') return null
+    const o = v as Record<string, unknown>
+    const imageUrl = o.imageUrl
+    const imageId = o.imageId
+    if (
+      typeof imageUrl === 'string' &&
+      typeof imageId === 'string' &&
+      imageUrl !== '' &&
+      imageId !== ''
+    ) {
+      return { imageUrl, imageId }
+    }
+    return null
+  }
+
+  if (result === null || typeof result !== 'object') return null
+  const r = result as Record<string, unknown>
+
+  let hit = asPair(r)
+  if (hit) return hit
+
+  hit = asPair(r.image) || asPair(r.photo)
+  if (hit) return hit
+
+  const speaker = r.speaker
+  if (speaker && typeof speaker === 'object') {
+    const s = speaker as Record<string, unknown>
+    hit = asPair(s.image) || asPair(s.photo)
+    if (hit) return hit
+  }
+
+  const sponsor = r.sponsor
+  if (sponsor && typeof sponsor === 'object') {
+    const s = sponsor as Record<string, unknown>
+    hit = asPair(s.image)
+    if (hit) return hit
+  }
+
+  return null
+}
+
 export async function uploadImage(
   file: File,
   config: ImageUploadConfig,
