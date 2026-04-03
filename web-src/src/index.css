@@ -54,6 +54,8 @@
   --emc-top-nav-shadow: 0 1px 4px rgba(0, 0, 0, 0.1);
   --emc-nav-card-shadow: 0 0 1px rgba(0, 0, 0, 0.12);
   --emc-nav-card-shadow-hover: 0 2px 8px rgba(0, 0, 0, 0.14);
+  /** Dropdowns anchored to body (e.g. Google Places) */
+  --emc-overlay-floating-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
   /** Tag chips (dark pill + light icon) — stable in both schemes */
   --emc-tag-chip-bg: #2c2c2c;
 
@@ -76,6 +78,19 @@
   --emc-focus-ring-color: #4b75ff;
   --emc-field-transition-duration: 0.15s;
   --emc-field-transition-ease: cubic-bezier(0.45, 0, 0.4, 1);
+
+  --emc-rte-toolbar-bg: linear-gradient(
+    to bottom,
+    var(--spectrum-global-color-gray-75),
+    var(--spectrum-global-color-gray-100)
+  );
+  --emc-rte-toolbar-shadow:
+    0 1px 3px rgba(0, 0, 0, 0.08),
+    0 4px 12px rgba(0, 0, 0, 0.06),
+    0 0 0 1px var(--spectrum-global-color-gray-300);
+  --emc-rte-picker-popover-shadow:
+    0 -2px 8px rgba(0, 0, 0, 0.12),
+    0 0 0 1px var(--spectrum-global-color-gray-300);
 }
 
 @media (prefers-color-scheme: dark) {
@@ -117,6 +132,7 @@
     --emc-top-nav-shadow: 0 1px 4px rgba(0, 0, 0, 0.45);
     --emc-nav-card-shadow: 0 0 1px rgba(0, 0, 0, 0.4);
     --emc-nav-card-shadow-hover: 0 2px 12px rgba(0, 0, 0, 0.45);
+    --emc-overlay-floating-shadow: 0 4px 16px rgba(0, 0, 0, 0.45);
     --emc-tag-chip-bg: #505050;
 
     /**
@@ -142,6 +158,7 @@ html[data-color-scheme='light'] {
   --emc-field-border-focus: #131313;
   --emc-field-border-invalid: #d73220;
   --emc-focus-ring-color: #4b75ff;
+  --emc-overlay-floating-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
 }
 
 html[data-color-scheme='dark'] {
@@ -150,6 +167,7 @@ html[data-color-scheme='dark'] {
   --emc-field-border-focus: #f2f2f2;
   --emc-field-border-invalid: #fc432e;
   --emc-focus-ring-color: #4069fd;
+  --emc-overlay-floating-shadow: 0 4px 16px rgba(0, 0, 0, 0.45);
 }
 
 /** Global Font Settings — use S2's variable font for the entire app **/
@@ -168,12 +186,12 @@ body {
   font-family: var(--emc-font-sans);
 }
 
-/** Root v3 Provider: wins over hashed i18nFontFamily legacy stack (see App.tsx `emc-app-provider`). **/
+/** App root: wins over hashed i18n font stack (see App.tsx `emc-app-provider`). **/
 .emc-app-provider {
   font-family: var(--emc-font-sans) !important;
 }
 
-/** Legacy selectors — hashed Spectrum classes may not match; kept for consistency if present **/
+/** Host / wrapper classes that may still set a default font stack */
 .spectrum-Provider,
 .spectrum {
   font-family: var(--emc-font-sans) !important;
@@ -265,7 +283,7 @@ select {
   left: 0;
   background: linear-gradient(
     to right,
-    color-mix(in srgb, var(--spectrum-global-color-gray-200) 55%, white),
+    color-mix(in srgb, var(--spectrum-global-color-gray-200) 55%, var(--s2-container-bg)),
     transparent
   );
 }
@@ -273,7 +291,7 @@ select {
 .data-table-scroll-hint-right {
   background: linear-gradient(
     to left,
-    color-mix(in srgb, var(--spectrum-global-color-gray-200) 55%, white),
+    color-mix(in srgb, var(--spectrum-global-color-gray-200) 55%, var(--s2-container-bg)),
     transparent
   );
 }
@@ -298,6 +316,7 @@ select {
   position: sticky;
   top: 0;
   z-index: 1;
+  white-space: nowrap;
 }
 
 .custom-data-table th.sortable {
@@ -325,10 +344,6 @@ select {
 .custom-data-table td.data-table-td-nowrap {
   white-space: nowrap;
   vertical-align: middle;
-}
-
-.custom-data-table th {
-  white-space: nowrap;
 }
 
 /** Expandable Row Styles **/
@@ -853,7 +868,7 @@ html[data-color-scheme='dark'] .rte-wrapper .ql-toolbar.ql-snow .ql-picker.ql-ex
   background-color: var(--emc-field-bg);
   border: 1px solid var(--emc-field-border);
   border-radius: 4px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
+  box-shadow: var(--emc-overlay-floating-shadow);
   margin-top: 4px;
 }
 
@@ -883,14 +898,4 @@ html[data-color-scheme='dark'] .rte-wrapper .ql-toolbar.ql-snow .ql-picker.ql-ex
 
 .pac-icon {
   filter: none;
-}
-
-@media (prefers-color-scheme: dark) {
-  .pac-container {
-    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.45);
-  }
-}
-
-html[data-color-scheme='dark'] .pac-container {
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.45);
 }
