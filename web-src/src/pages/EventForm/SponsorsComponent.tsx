@@ -7,7 +7,7 @@ import { Button, ButtonGroup, Text, TextField, Picker, PickerItem, Dialog, Dialo
 import { style } from '@react-spectrum/s2/style' with { type: 'macro' }
 import { SponsorData, SeriesSponsor, EventApiResponse, SponsorType } from '../../types/domain'
 import { ImageUploader } from '../../components/shared'
-import { TYPOGRAPHY, SPACING, COLORS } from '../../styles/designSystem'
+import { TYPOGRAPHY, SPACING, COLORS, SURFACES } from '../../styles/designSystem'
 import Edit from '@react-spectrum/s2/icons/Edit'
 import Add from '@react-spectrum/s2/icons/Add'
 import { apiService, cachedApi } from '../../services/api'
@@ -828,9 +828,9 @@ export const SponsorsComponent: React.FC = () => {
           onPress={() => setPickerOpen(true)}
           styles={style({ width: '[100%]' })}
           UNSAFE_style={{
-            backgroundColor: '#E1E1E1',
+            backgroundColor: SURFACES.PILL_BG,
             border: 'none',
-            color: '#2C2C2C',
+            color: COLORS.DARK_GRAY,
             justifyContent: 'flex-start',
             paddingLeft: '16px',
           }}

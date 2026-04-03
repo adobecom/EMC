@@ -52,7 +52,7 @@ import { useEventFeatureFlags } from '../../hooks/useEventTypeFeatures'
 import { EventFormProvider, useEventFormContext, useToast, useGroup } from '../../contexts'
 import { useEventFormSave } from '../../hooks/useEventFormSave'
 import { useCustomDetailPagePath } from '../../hooks/useCustomDetailPagePath'
-import { COLORS, Z_INDEX, TYPOGRAPHY } from '../../styles/designSystem'
+import { COLORS, Z_INDEX, TYPOGRAPHY, SURFACES } from '../../styles/designSystem'
 import { getEspEnvParam } from '../../config/constants'
 
 // ============================================================================
@@ -262,7 +262,8 @@ const FormatSelectionOverlay: React.FC<{
     >
       <div
         style={{
-          backgroundColor: 'var(--spectrum-global-color-gray-50)',
+          backgroundColor: SURFACES.FORMAT_DIALOG_PANEL,
+          border: '1px solid var(--spectrum-global-color-gray-300)',
           borderRadius: 8,
           padding: 40,
           width: 520,
@@ -992,7 +993,7 @@ const EventFormInner: React.FC<EventFormInnerProps> = ({ ims: _ims }) => {
   return (
     <div
       style={{
-        backgroundColor: '#F5F5F5',
+        backgroundColor: SURFACES.EVENT_FORM_SHELL,
         display: 'flex',
         flexDirection: 'column',
         flex: 1,

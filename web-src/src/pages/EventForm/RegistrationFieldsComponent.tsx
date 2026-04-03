@@ -6,6 +6,7 @@ import React, { useState, useEffect } from 'react'
 import { TextField, RadioGroup, Radio, Text, Switch } from '@react-spectrum/s2'
 import { style } from "@react-spectrum/s2/style" with { type: "macro" }
 import { HeadingWithTooltip } from '../../components/shared'
+import { COLORS, SURFACES } from '../../styles/designSystem'
 import OpenIn from '@react-spectrum/s2/icons/OpenIn'
 import Move from '@react-spectrum/s2/icons/Move'
 
@@ -305,14 +306,14 @@ export const RegistrationFieldsComponent: React.FC<RegistrationFieldsComponentPr
     return (
       <div className={style({display: 'flex', flexDirection: 'column', gap: 16})}>
         {mandatedFieldNames.length > 0 && (
-          <Text UNSAFE_style={{ color: '#4B4B4B' }}>
+          <Text UNSAFE_style={{ color: COLORS.GRAY_800 }}>
             Note: <strong>{cloudName}</strong> required fields include <strong>{mandatedFieldsDisplay}</strong>
           </Text>
         )}
         
         <div
           style={{
-            backgroundColor: '#F5F5F5',
+            backgroundColor: SURFACES.SUBTLE,
             borderRadius: '8px',
             padding: '48px'
           }}
@@ -325,17 +326,17 @@ export const RegistrationFieldsComponent: React.FC<RegistrationFieldsComponentPr
             alignItems: 'center',
             marginBottom: '12px'
           }}>
-            <Text UNSAFE_style={{ fontWeight: 600, fontSize: '12px', color: '#6E6E6E' }}>
+            <Text UNSAFE_style={{ fontWeight: 600, fontSize: '12px', color: COLORS.GRAY_600 }}>
               FIELD CATEGORIES
             </Text>
-            <Text UNSAFE_style={{ fontWeight: 600, fontSize: '12px', color: '#6E6E6E' }}>
+            <Text UNSAFE_style={{ fontWeight: 600, fontSize: '12px', color: COLORS.GRAY_600 }}>
               INCLUDE ON FORM
             </Text>
-            <Text UNSAFE_style={{ fontWeight: 600, fontSize: '12px', color: '#6E6E6E' }}>
+            <Text UNSAFE_style={{ fontWeight: 600, fontSize: '12px', color: COLORS.GRAY_600 }}>
               MAKE IT REQUIRED
             </Text>
             {/* Drag handle header - empty placeholder */}
-            <span style={{ fontWeight: 600, fontSize: '12px', color: '#6E6E6E' }} />
+            <span style={{ fontWeight: 600, fontSize: '12px', color: COLORS.GRAY_600 }} />
           </div>
 
           {/* Field rows */}
@@ -365,14 +366,14 @@ export const RegistrationFieldsComponent: React.FC<RegistrationFieldsComponentPr
                     padding: '12px 16px',
                     borderRadius: '6px',
                     backgroundColor: isDragging 
-                      ? '#E1E1E1' 
+                      ? SURFACES.PILL_BG 
                       : isVisible
-                        ? '#FFFFFF'
+                        ? SURFACES.CANVAS
                         : 'transparent',
                     border: isDragOver 
-                      ? '2px solid #1473E6' 
+                      ? `2px solid ${SURFACES.SELECTED_RING}` 
                       : isVisible
-                        ? '1px solid #D3D3D3'
+                        ? `1px solid ${SURFACES.BORDER}`
                         : '1px solid transparent',
                     opacity: isDragging ? 0.5 : 1,
                     transition: 'border-color 0.2s, background-color 0.2s',
@@ -384,7 +385,7 @@ export const RegistrationFieldsComponent: React.FC<RegistrationFieldsComponentPr
                     {isMandated && (
                       <Text UNSAFE_style={{ 
                         fontSize: '11px', 
-                        color: '#909090',
+                        color: COLORS.GRAY_500,
                         marginLeft: '8px',
                         fontWeight: 400
                       }}>
@@ -415,7 +416,7 @@ export const RegistrationFieldsComponent: React.FC<RegistrationFieldsComponentPr
                       justifyContent: 'center',
                       alignItems: 'center',
                       cursor: canDrag ? 'grab' : 'default',
-                      color: canDrag ? '#6E6E6E' : '#D3D3D3',
+                      color: canDrag ? COLORS.GRAY_600 : SURFACES.BORDER,
                       opacity: canDrag ? 1 : 0.3
                     }}
                   >
@@ -469,7 +470,7 @@ export const RegistrationFieldsComponent: React.FC<RegistrationFieldsComponentPr
   if (error) {
     return (
       <div style={{ padding: '32px' }}>
-        <Text UNSAFE_style={{ color: '#D7373F' }}>{error}</Text>
+        <Text UNSAFE_style={{ color: COLORS.STATUS_CANCELLED }}>{error}</Text>
       </div>
     )
   }

@@ -17,7 +17,8 @@ import { RBACGate } from './RBACGate'
 import { useAuth } from '../contexts/AuthContext'
 import { Runtime, IMS } from '../types'
 import type { AuthMode } from '../contexts/AuthContext'
-import { useHasPermission } from '../hooks/useHasPermission'
+import { useHasPermission, usePreferredColorScheme } from '../hooks'
+import type { ColorScheme } from '@react-types/provider'
 
 interface ProtectedRouteProps {
   resource: string
@@ -55,7 +56,7 @@ interface AppProps {
 }
 
 // Inner component that consumes AuthContext so it can react to auth state changes
-const AppContent: React.FC<{ runtime: Runtime }> = ({ runtime }) => {
+const AppContent: React.FC<{ runtime: Runtime, colorScheme: ColorScheme }> = ({ runtime, colorScheme }) => {
   const { ims, updateFromShell } = useAuth()
 
   // Sync configuration changes from ExC Shell (e.g. org switch)
@@ -90,7 +91,7 @@ const AppContent: React.FC<{ runtime: Runtime }> = ({ runtime }) => {
   return (
     <ErrorBoundary onError={onError} FallbackComponent={fallbackComponent}>
       <Router>
-        <S2Provider colorScheme="light">
+        <S2Provider colorScheme={colorScheme}>
           <div className="emc-app-provider">
             <Fonts />
             <ApiProvider ims={ims}>
@@ -153,10 +154,11 @@ const AppContent: React.FC<{ runtime: Runtime }> = ({ runtime }) => {
 }
 
 const App: React.FC<AppProps> = ({ runtime, ims, authMode }) => {
+  const colorScheme = usePreferredColorScheme()
   return (
     <AuthProvider initialIms={ims} authMode={authMode}>
-      <AuthGate>
-        <AppContent runtime={runtime} />
+      <AuthGate colorScheme={colorScheme}>
+        <AppContent runtime={runtime} colorScheme={colorScheme} />
       </AuthGate>
     </AuthProvider>
   )

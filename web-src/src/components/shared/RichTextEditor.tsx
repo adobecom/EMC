@@ -11,67 +11,59 @@ interface RichTextEditorProps {
   description?: string
 }
 
-// Custom styles to move toolbar to bottom and make it float
+/**
+ * Layout-only overrides (position, z-index). Colors / surfaces live in index.css
+ * (`.rte-wrapper` + Quill) so light/dark Spectrum tokens apply.
+ */
 const editorStyles = `
   .rte-wrapper {
     position: relative !important;
   }
-  
+
   .rte-wrapper .ql-toolbar.ql-snow {
     position: absolute !important;
     bottom: 10px !important;
     left: 10px !important;
     right: 10px !important;
     border: none !important;
-    background: linear-gradient(to bottom, rgba(250, 250, 250, 0.98), rgba(245, 245, 245, 0.98)) !important;
     border-radius: 8px !important;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08), 0 4px 12px rgba(0, 0, 0, 0.1), 0 0 0 1px rgba(0, 0, 0, 0.05) !important;
     padding: 6px 10px !important;
     z-index: 10 !important;
   }
-  
+
   .rte-wrapper .ql-toolbar.ql-snow .ql-formats {
     margin-right: 10px !important;
   }
-  
+
   .rte-wrapper .ql-toolbar.ql-snow button,
   .rte-wrapper .ql-toolbar.ql-snow .ql-picker-label {
     border-radius: 4px !important;
   }
-  
-  .rte-wrapper .ql-toolbar.ql-snow button:hover,
-  .rte-wrapper .ql-toolbar.ql-snow .ql-picker-label:hover {
-    background-color: rgba(0, 0, 0, 0.06) !important;
-  }
-  
-  /* Make dropdowns expand upwards since toolbar is at bottom */
+
   .rte-wrapper .ql-toolbar.ql-snow .ql-picker.ql-expanded .ql-picker-options {
     top: auto !important;
     bottom: 100% !important;
     margin-bottom: 4px !important;
     border-radius: 6px !important;
-    box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.12), 0 0 0 1px rgba(0, 0, 0, 0.08) !important;
   }
-  
-  /* Also handle the align picker */
+
   .rte-wrapper .ql-toolbar.ql-snow .ql-align .ql-picker-options {
     top: auto !important;
     bottom: 100% !important;
   }
-  
+
   .rte-wrapper .ql-container.ql-snow {
     border: none !important;
     font-family: inherit !important;
   }
-  
+
   .rte-wrapper .ql-editor {
     padding: 12px !important;
     padding-bottom: 60px !important;
   }
-  
+
   .rte-wrapper .ql-editor.ql-blank::before {
     font-style: normal !important;
-    color: var(--spectrum-global-color-gray-500) !important;
   }
 `
 
@@ -199,18 +191,15 @@ export const RichTextEditor: React.FC<RichTextEditorProps> = ({
           color: 'var(--spectrum-global-color-gray-800)',
         }}
       >
-        {label}{isRequired && <span style={{ color: 'rgb(218, 218, 218)' }}> *</span>}
+        {label}{isRequired && (
+          <span style={{ color: 'var(--spectrum-global-color-red-600)' }}> *</span>
+        )}
       </Text>
       
-      <div 
-        className="rte-wrapper"
+      <div
+        className="rte-wrapper rte-field-shell"
         style={{
-          border: '2px solid rgb(218, 218, 218)',
-          borderRadius: '8px',
-          backgroundColor: 'white',
           minHeight: height,
-          overflow: 'hidden',
-          position: 'relative'
         }}
       >
         <div className="rte-container" ref={editorRef} style={{ minHeight: height }} />

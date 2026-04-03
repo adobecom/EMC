@@ -5,7 +5,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react'
 import { Picker, PickerItem, Text, Heading } from '@react-spectrum/s2'
 import { style } from '@react-spectrum/s2/style' with { type: 'macro' }
-import { TYPOGRAPHY } from '../../styles/designSystem'
+import { TYPOGRAPHY, COLORS } from '../../styles/designSystem'
 import { useEventFormComponent } from '../../hooks/useEventFormComponent'
 import { apiService, cachedApi } from '../../services/api'
 import { PublishingProfile } from '../../types/domain'
@@ -250,7 +250,7 @@ export const PageMetadataComponent: React.FC = () => {
         <Heading level={3} UNSAFE_style={TYPOGRAPHY.COMPONENT_HEADING}>
           Page metadata management
         </Heading>
-        <Text UNSAFE_style={{ color: '#D7373F' }}>
+        <Text UNSAFE_style={{ color: COLORS.STATUS_CANCELLED }}>
           {error}
         </Text>
       </div>

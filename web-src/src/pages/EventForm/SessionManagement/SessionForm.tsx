@@ -662,7 +662,7 @@ export const SessionForm: React.FC<SessionFormProps> = ({
         </div>
 
         <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
-          <Text UNSAFE_style={{ fontSize: "14px", color: "#717171" }}>Session registration</Text>
+          <Text UNSAFE_style={{ fontSize: "14px", color: "var(--spectrum-global-color-gray-600)" }}>Session registration</Text>
           <div style={{ display: "flex", flexDirection: "row", gap: "16px", alignItems: "center", flexWrap: "wrap" }}>
             <SegmentedControl
               selectedKey={isAutoRegistrationEnabled ? "automatic" : "registration"}

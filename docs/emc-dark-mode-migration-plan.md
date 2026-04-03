@@ -1,45 +1,22 @@
-# EMC dark mode migration (future work)
+# EMC dark mode (implemented)
 
-This document captures a roadmap for **optional** full dark mode support. The app currently **forces light theme** at the document level (`data-color-scheme="light"` on `<html>`, `color-scheme: light` on `:root`, `S2Provider colorScheme="light"`) to avoid white-on-white text when the OS prefers dark mode.
+The app follows **OS / browser color scheme** (`prefers-color-scheme`). There is no in-app theme toggle.
 
-## Why this is larger than the light-only fix
+## Wiring
 
-- `@react-spectrum/s2/page.css` and `S2Provider` can follow system or explicit schemes, but EMC still defines a **manual light** `--spectrum-global-color-*` palette in `web-src/src/index.css` and references it from `web-src/src/styles/designSystem.ts` and many components.
-- Many surfaces use **hardcoded** `#fff` / `#FFFFFF` / `white` or fixed hex grays outside Spectrum semantics.
-- Custom CSS (`AutocompleteTextField.css`, table rules in `index.css`) and **Quill** (`RichTextEditor`) need per-theme or token-driven styling.
+- [`usePreferredColorScheme`](../web-src/src/hooks/usePreferredColorScheme.ts) — `useSyncExternalStore` + `matchMedia('(prefers-color-scheme: dark)')`, syncs `data-color-scheme` on `<html>`.
+- [`App.tsx`](../web-src/src/components/App.tsx) / [`AuthGate.tsx`](../web-src/src/components/AuthGate.tsx) — same `colorScheme` passed to `S2Provider` so gates and main UI match.
 
-## Phased approach
+## Tokens and CSS
 
-### Phase 1 — Foundation
+- [`index.css`](../web-src/src/index.css) — Light default `:root` palette; dark overrides in `@media (prefers-color-scheme: dark)`. Does **not** override `--s2-container-bg` (S2 `page.css` controls it). Surfaces use `var(--s2-container-bg)` / `--emc-surface-raised` / `--emc-home-gradient` / `--emc-shimmer-gradient` / `--emc-tag-chip-bg`.
+- [`designSystem.ts`](../web-src/src/styles/designSystem.ts) — `GRADIENT_BACKGROUND`, `SHIMMER_BASE`, `COLORS.GRAY_500`, `COLORS.DARK_GRAY` (gray-900 var), `SURFACES.*` for inline styles.
 
-- Decide **color scheme source**: OS only, or user toggle (and persistence) overriding OS.
-- If toggling: add React state + `localStorage` (or profile) and sync `document.documentElement` `data-color-scheme` / `data-background` with `S2Provider` `colorScheme`.
-- Replace or extend `:root` token strategy:
-  - **Option A**: Rely on S2-provided semantic tokens where possible and reduce duplicate `--spectrum-global-*` in `index.css`.
-  - **Option B**: Maintain explicit light and dark maps under `html[data-color-scheme="light"]` and `html[data-color-scheme="dark"]` (or media queries), keeping `designSystem` references valid.
+## Quill
 
-### Phase 2 — Global shell
-
-- `index.css`: `.content-area`, tables, nav, user panel — ensure backgrounds and text use theme tokens or paired light/dark rules.
-- `designSystem.ts`: Replace fixed `COLORS.BLACK` / `WHITE`, `GRADIENT_BACKGROUND`, status colors where they sit on surfaces that change with theme; revisit `FORM_WIZARD_FOOTER_STYLES` (contrast for primary actions in both schemes).
-- `TopNav`, `ToastContainer`, gates: audit inline colors.
-
-### Phase 3 — High-traffic features
-
-- Dashboards (`OverviewDashboard`, `EventsDashboard`, etc.), `DataTable`, registration flows.
-- Event/Series forms: `FormWizard` buttons using `staticColor="white"` — re-validate contrast on dark surfaces.
-
-### Phase 4 — Editors and custom widgets
-
-- `RichTextEditor` / Quill: toolbar and content area theming (often the highest friction).
-- `AutocompleteTextField.css`, `TagSelector`, image uploaders, any third-party CSS.
-
-### Phase 5 — QA
-
-- Visual pass on all routes in both schemes (including **ExC Shell** iframe).
-- Spot-check with `prefers-color-scheme: dark` and with forced light to ensure toggle overrides OS when implemented.
+- Dark toolbar/editor overrides live in `index.css` under `@media (prefers-color-scheme: dark)` (`.ql-toolbar.ql-snow`, `.ql-container.ql-snow`, etc.).
 
 ## References
 
-- React Spectrum S2: `data-color-scheme` / `data-background` on `<html>`; `S2Provider` `colorScheme`.
-- Project rules: `.cursor/rules/react-spectrum/react-spectrum-s2.mdc`, `emc-design-system.mdc`.
+- React Spectrum S2: `data-color-scheme` on `<html>`; `S2Provider` `colorScheme`.
+- Cursor rules: `.cursor/rules/react-spectrum/react-spectrum-s2.mdc`, `emc-design-system.mdc`.

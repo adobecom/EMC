@@ -18,4 +18,5 @@ export { useRBACFilter } from './useRBACFilter'
 export { useHasPermission, useHasAnyPermission, useHasAllPermissions, checkPermission } from './useHasPermission'
 export { useCustomDetailPagePath } from './useCustomDetailPagePath'
 export type { DetailPagePathResult } from './useCustomDetailPagePath'
+export { usePreferredColorScheme } from './usePreferredColorScheme'
 

@@ -7,6 +7,7 @@ import type { SessionFormData } from "./SessionForm";
 import { useEventFormContext } from "../../../contexts";
 import { EventApiResponse } from "../../../types/domain";
 import { apiService, cachedApi } from "../../../services/api";
+import { COLORS, SURFACES } from "../../../styles/designSystem";
 
 function parseTagsFromApi(tags: unknown): string[] {
   if (typeof tags === "string") return tags.split(",").map((t) => t.trim()).filter(Boolean);
@@ -511,8 +512,8 @@ export const Sessions: React.FC = () => {
       ) : sessions.length === 0 && !isAddingNew ? (
         <div
           style={{
-            background: "#f8f8f8",
-            border: "1px solid #e9e9e9",
+            background: SURFACES.INPUT,
+            border: `1px solid ${SURFACES.BORDER}`,
             borderRadius: "8px",
             height: "89px",
             display: "flex",
@@ -522,7 +523,7 @@ export const Sessions: React.FC = () => {
             marginTop: "12px",
           }}
         >
-          <span style={{ color: "#222", fontSize: "18px" }}>
+          <span style={{ color: COLORS.DARK_GRAY, fontSize: "18px" }}>
             No sessions have been created yet for this event
           </span>
         </div>
