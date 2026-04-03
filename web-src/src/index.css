@@ -149,6 +149,15 @@
     --emc-field-border-focus: #f2f2f2;
     --emc-field-border-invalid: #fc432e;
     --emc-focus-ring-color: #4069fd;
+
+    --emc-rte-toolbar-bg: linear-gradient(to bottom, #161616, #1a1a1a);
+    --emc-rte-toolbar-shadow:
+      0 1px 4px rgba(0, 0, 0, 0.45),
+      0 4px 16px rgba(0, 0, 0, 0.35),
+      0 0 0 1px var(--emc-field-border);
+    --emc-rte-picker-popover-shadow:
+      0 -4px 12px rgba(0, 0, 0, 0.4),
+      0 0 0 1px var(--spectrum-global-color-gray-300);
   }
 }
 
@@ -159,6 +168,18 @@ html[data-color-scheme='light'] {
   --emc-field-border-invalid: #d73220;
   --emc-focus-ring-color: #4b75ff;
   --emc-overlay-floating-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
+  --emc-rte-toolbar-bg: linear-gradient(
+    to bottom,
+    var(--spectrum-global-color-gray-75),
+    var(--spectrum-global-color-gray-100)
+  );
+  --emc-rte-toolbar-shadow:
+    0 1px 3px rgba(0, 0, 0, 0.08),
+    0 4px 12px rgba(0, 0, 0, 0.06),
+    0 0 0 1px var(--spectrum-global-color-gray-300);
+  --emc-rte-picker-popover-shadow:
+    0 -2px 8px rgba(0, 0, 0, 0.12),
+    0 0 0 1px var(--spectrum-global-color-gray-300);
 }
 
 html[data-color-scheme='dark'] {
@@ -168,6 +189,14 @@ html[data-color-scheme='dark'] {
   --emc-field-border-invalid: #fc432e;
   --emc-focus-ring-color: #4069fd;
   --emc-overlay-floating-shadow: 0 4px 16px rgba(0, 0, 0, 0.45);
+  --emc-rte-toolbar-bg: linear-gradient(to bottom, #161616, #1a1a1a);
+  --emc-rte-toolbar-shadow:
+    0 1px 4px rgba(0, 0, 0, 0.45),
+    0 4px 16px rgba(0, 0, 0, 0.35),
+    0 0 0 1px var(--emc-field-border);
+  --emc-rte-picker-popover-shadow:
+    0 -4px 12px rgba(0, 0, 0, 0.4),
+    0 0 0 1px var(--spectrum-global-color-gray-300);
 }
 
 /** Global Font Settings — use S2's variable font for the entire app **/
@@ -741,15 +770,8 @@ select {
  * Matches `data-color-scheme` (JS) and `prefers-color-scheme` before hydration.
  */
 .rte-wrapper .ql-toolbar.ql-snow {
-  background: linear-gradient(
-    to bottom,
-    var(--spectrum-global-color-gray-75),
-    var(--spectrum-global-color-gray-100)
-  );
-  box-shadow:
-    0 1px 3px rgba(0, 0, 0, 0.08),
-    0 4px 12px rgba(0, 0, 0, 0.06),
-    0 0 0 1px var(--spectrum-global-color-gray-300);
+  background: var(--emc-rte-toolbar-bg);
+  box-shadow: var(--emc-rte-toolbar-shadow);
 }
 
 .rte-wrapper .ql-toolbar.ql-snow button:hover,
@@ -758,9 +780,7 @@ select {
 }
 
 .rte-wrapper .ql-toolbar.ql-snow .ql-picker.ql-expanded .ql-picker-options {
-  box-shadow:
-    0 -2px 8px rgba(0, 0, 0, 0.12),
-    0 0 0 1px var(--spectrum-global-color-gray-300);
+  box-shadow: var(--emc-rte-picker-popover-shadow);
 }
 
 .rte-wrapper .ql-container.ql-snow {
@@ -775,55 +795,30 @@ select {
   -webkit-tap-highlight-color: transparent;
 }
 
-.rte-wrapper .ql-editor.ql-blank::before {
+.rte-wrapper .ql-editor.ql-blank::before,
+.ql-editor.ql-blank::before {
   color: var(--spectrum-global-color-gray-500);
 }
 
-.rte-wrapper .ql-snow .ql-stroke {
+.rte-wrapper .ql-snow .ql-stroke,
+.ql-snow .ql-stroke {
   stroke: var(--spectrum-global-color-gray-800);
 }
 
-.rte-wrapper .ql-snow .ql-fill {
+.rte-wrapper .ql-snow .ql-fill,
+.ql-snow .ql-fill {
   fill: var(--spectrum-global-color-gray-800);
 }
 
-.rte-wrapper .ql-snow .ql-picker-label {
+.rte-wrapper .ql-snow .ql-picker-label,
+.ql-snow .ql-picker-label {
   color: var(--spectrum-global-color-gray-900);
 }
 
-.rte-wrapper .ql-snow .ql-picker-options {
+.rte-wrapper .ql-snow .ql-picker-options,
+.ql-snow .ql-picker-options {
   background-color: var(--spectrum-global-color-gray-100);
   border: 1px solid var(--spectrum-global-color-gray-300);
-}
-
-@media (prefers-color-scheme: dark) {
-  .rte-wrapper .ql-toolbar.ql-snow {
-    background: linear-gradient(to bottom, #161616, #1a1a1a);
-    box-shadow:
-      0 1px 4px rgba(0, 0, 0, 0.45),
-      0 4px 16px rgba(0, 0, 0, 0.35),
-      0 0 0 1px var(--emc-field-border);
-  }
-
-  .rte-wrapper .ql-toolbar.ql-snow .ql-picker.ql-expanded .ql-picker-options {
-    box-shadow:
-      0 -4px 12px rgba(0, 0, 0, 0.4),
-      0 0 0 1px var(--spectrum-global-color-gray-300);
-  }
-}
-
-html[data-color-scheme='dark'] .rte-wrapper .ql-toolbar.ql-snow {
-  background: linear-gradient(to bottom, #161616, #1a1a1a);
-  box-shadow:
-    0 1px 4px rgba(0, 0, 0, 0.45),
-    0 4px 16px rgba(0, 0, 0, 0.35),
-    0 0 0 1px var(--emc-field-border);
-}
-
-html[data-color-scheme='dark'] .rte-wrapper .ql-toolbar.ql-snow .ql-picker.ql-expanded .ql-picker-options {
-  box-shadow:
-    0 -4px 12px rgba(0, 0, 0, 0.4),
-    0 0 0 1px var(--spectrum-global-color-gray-300);
 }
 
 /** Quill instances outside `.rte-wrapper` (if any) */
@@ -836,27 +831,6 @@ html[data-color-scheme='dark'] .rte-wrapper .ql-toolbar.ql-snow .ql-picker.ql-ex
   background-color: var(--emc-field-bg);
   border-color: var(--spectrum-global-color-gray-300);
   color: var(--spectrum-global-color-gray-900);
-}
-
-.ql-editor.ql-blank::before {
-  color: var(--spectrum-global-color-gray-500);
-}
-
-.ql-snow .ql-stroke {
-  stroke: var(--spectrum-global-color-gray-800);
-}
-
-.ql-snow .ql-fill {
-  fill: var(--spectrum-global-color-gray-800);
-}
-
-.ql-snow .ql-picker-label {
-  color: var(--spectrum-global-color-gray-900);
-}
-
-.ql-snow .ql-picker-options {
-  background-color: var(--spectrum-global-color-gray-100);
-  border-color: var(--spectrum-global-color-gray-300);
 }
 
 /**

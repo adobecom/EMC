@@ -14,6 +14,9 @@ function getColorScheme(): 'light' | 'dark' {
 }
 
 function subscribe(onChange: () => void): () => void {
+  if (typeof window === 'undefined') {
+    return () => {}
+  }
   const mql = window.matchMedia(DARK_QUERY)
   mql.addEventListener('change', onChange)
   return () => mql.removeEventListener('change', onChange)
