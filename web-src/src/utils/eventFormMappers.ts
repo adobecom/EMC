@@ -9,6 +9,7 @@ import {
   SponsorData,
   EventApiResponse,
   SeriesSpeaker,
+  SpeakerType,
 } from '../types/domain'
 import { getLanguageKeyFromLocale } from '../config/localeMapping'
 import { fromApiSocialLink } from './socialPlatformDetector'
@@ -34,11 +35,41 @@ export function getLocalizedValue(obj: any, fieldName: string, locale: string): 
 }
 
 /**
+ * Map ESP event speakerType (PascalCase per OpenAPI) to form ProfileData SpeakerType (kebab-case Picker keys).
+ * Accepts lowercase legacy values. Unknown values default to 'speaker'.
+ */
+export function apiSpeakerTypeToFormSpeakerType(apiType: string | undefined | null): SpeakerType {
+  if (apiType == null || apiType === '') return 'speaker'
+  const key = String(apiType).trim()
+  const map: Record<string, SpeakerType> = {
+    Host: 'host',
+    Presenter: 'presenter',
+    Speaker: 'speaker',
+    GuestSpeaker: 'guest-speaker',
+    Keynote: 'keynote',
+    Judge: 'judge',
+    PortfolioReviewer: 'portfolio-reviewer',
+    CareerAdvisor: 'career-advisor',
+    ProductDemonstrator: 'product-demonstrator',
+    host: 'host',
+    presenter: 'presenter',
+    speaker: 'speaker',
+    'guest-speaker': 'guest-speaker',
+    keynote: 'keynote',
+    judge: 'judge',
+    'portfolio-reviewer': 'portfolio-reviewer',
+    'career-advisor': 'career-advisor',
+    'product-demonstrator': 'product-demonstrator',
+  }
+  return map[key] ?? 'speaker'
+}
+
+/**
  * Map API speaker data to ProfileData format
  */
 export function mapSpeakersToProfiles(speakers: any[], locale: string = 'en-US'): ProfileData[] {
   return speakers.map(speaker => ({
-    type: speaker.speakerType === 'host' ? 'host' : 'speaker',
+    type: apiSpeakerTypeToFormSpeakerType(speaker.speakerType),
     speakerId: speaker.speakerId,
     firstName: getLocalizedValue(speaker, 'firstName', locale) || speaker.firstName || '',
     lastName: getLocalizedValue(speaker, 'lastName', locale) || speaker.lastName || '',

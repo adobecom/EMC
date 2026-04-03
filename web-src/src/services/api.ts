@@ -1080,8 +1080,8 @@ class ApiService {
               
               if (speakerResp.ok) {
                 const fullSpeaker = await speakerResp.json()
-                // Merge event-level data (like ordinal) with series-level data
-                return { ...fullSpeaker, ...eventSpeaker, ...fullSpeaker }
+                // Series fields first; event row wins on overlaps (speakerType, ordinal, event times)
+                return { ...fullSpeaker, ...eventSpeaker }
               }
             } catch (_err) {
               // Hydration failed - use event-level data
@@ -1107,8 +1107,8 @@ class ApiService {
               
               if (sponsorResp.ok) {
                 const fullSponsor = await sponsorResp.json()
-                // Merge event-level data with series-level data
-                return { ...fullSponsor, ...eventSponsor, ...fullSponsor }
+                // Series fields first; event row wins on overlaps (sponsorType, event times)
+                return { ...fullSponsor, ...eventSponsor }
               }
             } catch (_err) {
               // Hydration failed - use event-level data
