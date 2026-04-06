@@ -81,14 +81,81 @@ export function dateAndTimeToISO(date: CalendarDate, time: Time): string {
 }
 
 /**
+ * Converts UTC milliseconds to a naive datetime string in the given IANA timezone.
+ * The result has no timezone indicator (no 'Z', no offset), matching the format
+ * EventInfoComponent uses for event datetimes.
+ *
+ * @example
+ * millisToNaiveDateTimeString(1776074400000, "America/Los_Angeles")
+ * // => "2026-04-13T03:00:00"  (3 AM PDT, not UTC)
+ */
+export function millisToNaiveDateTimeString(millis: number, timezone: string): string {
+  const formatter = new Intl.DateTimeFormat("en-CA", {
+    timeZone: timezone,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+    hour12: false,
+  });
+  const parts = Object.fromEntries(
+    formatter.formatToParts(new Date(millis)).map((p) => [p.type, p.value]),
+  );
+  const hour = parts.hour === "24" ? "00" : parts.hour;
+  return `${parts.year}-${parts.month}-${parts.day}T${hour}:${parts.minute}:${parts.second}`;
+}
+
+/**
+ * Converts a naive datetime string (no timezone indicator) representing wall-clock
+ * time in the given IANA timezone to UTC milliseconds.
+ * Mirrors the save approach in EventInfoComponent: wall-clock time + separate timezone.
+ *
+ * @example
+ * naiveDateTimeToUTCMillis("2026-04-13T03:00:00", "America/Los_Angeles")
+ * // => 1776074400000  (3 AM PDT = 10:00 AM UTC)
+ */
+export function naiveDateTimeToUTCMillis(dateTimeStr: string, timezone: string): number {
+  // Treat the naive string as UTC to get a reference probe point
+  const probe = new Date(dateTimeStr + "Z").getTime();
+
+  // Find what wall-clock time the probe shows in the target timezone
+  const formatter = new Intl.DateTimeFormat("en-CA", {
+    timeZone: timezone,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+    hour12: false,
+  });
+  const parts = Object.fromEntries(
+    formatter.formatToParts(new Date(probe)).map((p) => [p.type, p.value]),
+  );
+  const h = parts.hour === "24" ? "00" : parts.hour;
+  const localMs = new Date(
+    `${parts.year}-${parts.month}-${parts.day}T${h}:${parts.minute}:${parts.second}Z`,
+  ).getTime();
+
+  // Shift the probe by the difference to land on the correct UTC instant
+  return probe + (probe - localMs);
+}
+
+/**
  * Formats an ISO datetime string as a user-facing time label.
+ * Reads the hour/minute values directly without UTC→local conversion,
+ * because session datetimes are stored as wall-clock times (the Z suffix
+ * is nominal and does not indicate true UTC).
  *
  * @param dateTimeString ISO datetime string
  * @returns Time string in `en-US` format (for example: `8:00 AM`)
  */
 export function formatTime(dateTimeString: string): string {
-  const date = new Date(dateTimeString);
-  return date.toLocaleTimeString("en-US", {
+  const dt = safeParseDateTimeString(dateTimeString);
+  if (!dt) return "";
+  return new Date(2000, 0, 1, dt.hour, dt.minute).toLocaleTimeString("en-US", {
     hour: "numeric",
     minute: "2-digit",
     hour12: true,
@@ -97,13 +164,16 @@ export function formatTime(dateTimeString: string): string {
 
 /**
  * Formats an ISO datetime string as a user-facing date label.
+ * Reads year/month/day directly without UTC→local conversion,
+ * because session datetimes are stored as wall-clock times.
  *
  * @param dateTimeString ISO datetime string
  * @returns Date string in `en-US` format (for example: `Dec 18, 2024`)
  */
 export function formatDate(dateTimeString: string): string {
-  const date = new Date(dateTimeString);
-  return date.toLocaleDateString("en-US", {
+  const dt = safeParseDateTimeString(dateTimeString);
+  if (!dt) return "";
+  return new Date(dt.year, dt.month - 1, dt.day).toLocaleDateString("en-US", {
     month: "short",
     day: "numeric",
     year: "numeric",

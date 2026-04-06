@@ -29,6 +29,7 @@ import { useEventFormContext } from "../../../contexts";
 import { RichTextEditor, TagSelector } from "../../../components/shared";
 import {
   dateAndTimeToISO,
+  millisToNaiveDateTimeString,
   parseTimeFromDateTime,
   safeParseDateTimeString,
 } from "../../../utils/dateTime";
@@ -276,13 +277,14 @@ export const SessionForm: React.FC<SessionFormProps> = ({
         setAttendeeLimitEnabled(false);
         setAttendeeLimit("");
       }
+      const tz = sessionTime?.timezone || formData.timezone || "UTC";
       const primaryStart =
         sessionTime?.startTimeMillis != null
-          ? new Date(Number(sessionTime.startTimeMillis)).toISOString()
+          ? millisToNaiveDateTimeString(Number(sessionTime.startTimeMillis), tz)
           : mapped.startDateTime;
       const primaryEnd =
         sessionTime?.endTimeMillis != null
-          ? new Date(Number(sessionTime.endTimeMillis)).toISOString()
+          ? millisToNaiveDateTimeString(Number(sessionTime.endTimeMillis), tz)
           : mapped.endDateTime;
 
       const startDt = safeParseDateTimeString(primaryStart);
