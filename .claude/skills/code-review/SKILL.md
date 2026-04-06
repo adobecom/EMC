@@ -17,13 +17,15 @@ This skill applies to:
 
 Default review scope:
 - review only the PR diff or explicitly provided changed files
-- compare against the target branch, typically `dev`
+- compare against the target branch: `stage` when on `dev`, otherwise `dev`
 - do not expand into a whole-codebase audit unless the user explicitly asks for it
 
 If the review target is unclear, prefer:
-1. current branch diff against `dev`
-2. explicit diff provided by the user
-3. specific files named by the user
+1. explicit diff provided by the user
+2. specific files named by the user
+3. current branch diff against its base branch:
+   - if on `dev`: diff against `stage` (`git diff stage...dev`)
+   - otherwise: diff against `dev`
 
 ## Review Priorities
 
