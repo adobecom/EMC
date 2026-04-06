@@ -325,9 +325,15 @@ export const VenueComponent: React.FC = () => {
     venueLocationsRef.current = venueLocations
   }, [venueLocations])
 
+  // Sync local venueLocations state to context so Session Management always
+  // sees the current list, including after onAfterSave creates pending locations.
+  const { setVenueLocations: setContextVenueLocations } = useEventFormContext()
+  useEffect(() => {
+    setContextVenueLocations(venueLocations)
+  }, [venueLocations, setContextVenueLocations])
+
   // Fetch venue + locations on initial load (edit mode only).
   // Skip if venueApiId is already set (e.g. after a save via onAfterSave).
-  const { setVenueLocations: setContextVenueLocations } = useEventFormContext()
   useEffect(() => {
     if (!eventId || venueApiId) return
     apiService.getEventVenue(eventId).then(async (res) => {
@@ -340,7 +346,6 @@ export const VenueComponent: React.FC = () => {
             const list = (locRes as any).locations ?? locRes ?? []
             const locations = Array.isArray(list) ? list : []
             setVenueLocations(locations)
-            setContextVenueLocations(locations)
           }
         } catch (err) {
           console.error('Failed to load venue locations:', err)
@@ -350,7 +355,7 @@ export const VenueComponent: React.FC = () => {
     }).catch((err) => {
       console.error('Failed to fetch event venue:', err)
     })
-  }, [eventId, venueApiId, setContextVenueLocations])
+  }, [eventId, venueApiId])
   
   // ============================================================================
   // REFS FOR CALLBACK STABILITY
