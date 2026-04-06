@@ -3,7 +3,7 @@
 */
 
 import React, { useState, useCallback } from 'react'
-import { Button, Text, ProgressBar, Heading } from '@react-spectrum/s2'
+import { Badge, Button, Heading, ProgressBar, StatusLight, Text } from '@react-spectrum/s2'
 import { style, iconStyle } from '@react-spectrum/s2/style' with { type: 'macro' }
 import { useNavigate } from 'react-router-dom'
 import ChevronLeft from '@react-spectrum/s2/icons/ChevronLeft'
@@ -15,8 +15,10 @@ import {
   LAYOUT_DIMENSIONS,
   FORM_WIZARD_FOOTER_STYLES,
   COLORS,
+  SURFACES,
   TYPOGRAPHY
 } from '../../styles/designSystem'
+import { formatEventFormStatusLabel, getEventFormStatusLightVariant } from './eventFormStatusBadge'
 
 export interface WizardStep {
   id: string
@@ -71,7 +73,7 @@ const SIDE_NAV_PIPE_LEFT = 12
 const SIDE_NAV_STEP_LABEL_INSET =
   SIDE_NAV_PIPE_LEFT + SIDE_NAV_PIPE_WIDTH + SIDE_NAV_PIPE_GAP
 const SIDE_NAV_PIPE_HOVER = 'var(--spectrum-global-color-gray-400)'
-const SIDE_NAV_PIPE_ACTIVE = '#000000'
+const SIDE_NAV_PIPE_ACTIVE = 'var(--spectrum-global-color-gray-900)'
 
 export const FormWizard: React.FC<FormWizardProps> = ({
   steps,
@@ -209,7 +211,7 @@ export const FormWizard: React.FC<FormWizardProps> = ({
         minHeight: 0,
         height: '100%',
         overflow: 'hidden',
-        backgroundColor: COLORS.GRAY_100,
+        backgroundColor: SURFACES.EVENT_FORM_SHELL,
       }}
     >
       <div data-testid="wizard-side-nav" style={{ padding: 24, flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0, overflow: 'auto' }}>
@@ -303,7 +305,7 @@ export const FormWizard: React.FC<FormWizardProps> = ({
                     style={{
                       border: 'none',
                       background: COLORS.TRANSPARENT,
-                      color: isLocked ? COLORS.GRAY_600 : isActive ? COLORS.BLACK : COLORS.GRAY_800,
+                      color: isLocked ? COLORS.GRAY_600 : isActive ? COLORS.DARK_GRAY : COLORS.GRAY_800,
                       padding: '8px 12px',
                       paddingLeft: SIDE_NAV_PIPE_LEFT,
                       textAlign: 'left',
@@ -372,7 +374,7 @@ export const FormWizard: React.FC<FormWizardProps> = ({
                 style={{
                   border: 'none',
                   background: COLORS.TRANSPARENT,
-                  color: showSessionView ? COLORS.BLACK : COLORS.GRAY_800,
+                  color: showSessionView ? COLORS.DARK_GRAY : COLORS.GRAY_800,
                   padding: '8px 12px',
                   paddingLeft: SIDE_NAV_PIPE_LEFT,
                   textAlign: 'left',
@@ -570,39 +572,8 @@ export const FormWizard: React.FC<FormWizardProps> = ({
   )
 
   const displayStatus = eventStatus || (isPublished ? 'published' : 'draft')
-
-  const getStatusBadgeStyles = (status: string): { dotColor: string; textColor: string; bgColor: string; borderColor: string } => {
-    const statusStyles: Record<string, { dotColor: string; textColor: string; bgColor: string; borderColor: string }> = {
-      draft: {
-        dotColor: COLORS.STATUS_DRAFT,
-        textColor: COLORS.GRAY_800,
-        bgColor: COLORS.WHITE,
-        borderColor: COLORS.GRAY_300
-      },
-      published: {
-        dotColor: COLORS.STATUS_PUBLISHED,
-        textColor: COLORS.GRAY_800,
-        bgColor: COLORS.WHITE,
-        borderColor: COLORS.GRAY_300
-      },
-      archived: {
-        dotColor: COLORS.STATUS_ARCHIVED,
-        textColor: COLORS.GRAY_700,
-        bgColor: COLORS.WHITE,
-        borderColor: COLORS.GRAY_300
-      },
-      cancelled: {
-        dotColor: COLORS.STATUS_CANCELLED,
-        textColor: COLORS.GRAY_800,
-        bgColor: COLORS.WHITE,
-        borderColor: COLORS.GRAY_300
-      }
-    }
-    return statusStyles[status.toLowerCase()] || statusStyles.draft
-  }
-
-  const statusStyles = getStatusBadgeStyles(displayStatus)
-  const statusLabel = displayStatus.charAt(0).toUpperCase() + displayStatus.slice(1).toLowerCase()
+  const statusLightVariant = getEventFormStatusLightVariant(displayStatus)
+  const statusLabel = formatEventFormStatusLabel(displayStatus)
 
   const mainContent = showSessionView ? (
     <div>
@@ -631,37 +602,17 @@ export const FormWizard: React.FC<FormWizardProps> = ({
         <div className={style({ display: 'flex', alignItems: 'center', gap: 32 })}>
           <Heading data-testid="wizard-step-heading" level={2} UNSAFE_style={TYPOGRAPHY.STEP_HEADING}>{currentStep.title}</Heading>
 
-          <div
-            style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: 8,
-              padding: '0 8px',
-              borderRadius: 4,
-              backgroundColor: statusStyles.bgColor,
-              flexShrink: 0,
-            }}
+          <Badge
+            data-testid="wizard-status-badge"
+            variant="neutral"
+            fillStyle="subtle"
+            size="S"
+            styles={style({ flexShrink: 0 })}
           >
-            <span
-              style={{
-                width: '10px',
-                height: '10px',
-                borderRadius: '50%',
-                backgroundColor: statusStyles.dotColor,
-                flexShrink: 0
-              }}
-            />
-            <Text
-              data-testid="wizard-status-badge"
-              UNSAFE_style={{
-                fontSize: '14px',
-                fontWeight: 500,
-                color: statusStyles.textColor
-              }}
-            >
+            <StatusLight variant={statusLightVariant} size="S" role="status">
               {statusLabel}
-            </Text>
-          </div>
+            </StatusLight>
+          </Badge>
 
           {headerActions ? <div style={{ flex: 1 }} /> : null}
           {headerActions}

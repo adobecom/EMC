@@ -19,6 +19,7 @@ import {
   SeriesFormData 
 } from '../../contexts'
 import { filterSeriesData } from '../../utils/dataFilters'
+import { SURFACES } from '../../styles/designSystem'
 import { normalizeRelatedDomain, normalizeContentRoot } from '../../utils/seriesFormAutoCorrect'
 
 // ============================================================================
@@ -419,7 +420,7 @@ const SeriesFormInner: React.FC<SeriesFormInnerProps> = ({ ims: _ims }) => {
   return (
     <div
       style={{
-        backgroundColor: 'var(--spectrum-global-color-gray-100)',
+        backgroundColor: SURFACES.EVENT_FORM_SHELL,
         display: 'flex',
         flexDirection: 'column',
         flex: 1,

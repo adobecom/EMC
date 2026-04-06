@@ -16,6 +16,7 @@ import DropToUpload from '@react-spectrum/s2/illustrations/linear/DropToUpload'
 import { uploadImage, UploadTracker } from '../../services/requestHelpers'
 import { getCurrentEnvironment, getApiHost } from '../../config/constants'
 import { apiService } from '../../services/api'
+import { COLORS, SURFACES } from '../../styles/designSystem'
 
 // ============================================================================
 // IMAGE VALIDATION UTILITIES
@@ -341,7 +342,7 @@ export const ImageUploader: React.FC<ImageUploaderProps> = ({
       </Text>
 
       {description && (
-        <Text UNSAFE_style={{ fontSize: '14px', color: '#4B4B4B', marginBottom: '8px', display: 'block' }}>
+        <Text UNSAFE_style={{ fontSize: '14px', color: COLORS.GRAY_800, marginBottom: '8px', display: 'block' }}>
           {description}
         </Text>
       )}
@@ -421,10 +422,10 @@ export const ImageUploader: React.FC<ImageUploaderProps> = ({
           onClick={isUploading || isDisabled ? undefined : handleBrowseClick}
           style={{
             border: isDragging
-              ? '2px dashed #1473E6'
-              : '2px dotted #909090',
+              ? `2px dashed ${SURFACES.SELECTED_RING}`
+              : `2px dotted ${COLORS.GRAY_500}`,
             backgroundColor: isDragging
-              ? '#E5F0FF'
+              ? SURFACES.SELECTED_FILL
               : 'transparent',
             cursor: isUploading || isDisabled ? 'default' : 'pointer',
             opacity: isDisabled ? 0.5 : 1,
@@ -445,19 +446,19 @@ export const ImageUploader: React.FC<ImageUploaderProps> = ({
           ) : (
             <div className={style({ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12 })}>
               <DropToUpload aria-hidden />
-              <Text UNSAFE_style={{ fontSize: '14px', color: '#4B4B4B' }}>
+              <Text UNSAFE_style={{ fontSize: '14px', color: COLORS.GRAY_800 }}>
                 {dropzoneTitle || 'Drop image here or click to browse'}
               </Text>
               <div className={style({ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 })}>
                 {(dropzoneDimensions || recommendedDimensions) && (
-                  <Text UNSAFE_style={{ fontSize: '12px', color: '#909090' }}>
+                  <Text UNSAFE_style={{ fontSize: '12px', color: COLORS.GRAY_500 }}>
                     {dropzoneDimensions || recommendedDimensions}
                   </Text>
                 )}
-                <Text UNSAFE_style={{ fontSize: '12px', color: '#909090' }}>
+                <Text UNSAFE_style={{ fontSize: '12px', color: COLORS.GRAY_500 }}>
                   Supported formats: <strong>JPG, PNG, SVG</strong>
                 </Text>
-                <Text UNSAFE_style={{ fontSize: '12px', color: '#909090' }}>
+                <Text UNSAFE_style={{ fontSize: '12px', color: COLORS.GRAY_500 }}>
                   Max size: <strong>{maxSizeMB}</strong> MB
                 </Text>
               </div>
@@ -475,7 +476,7 @@ export const ImageUploader: React.FC<ImageUploaderProps> = ({
       )}
 
       {error && (
-        <Text UNSAFE_style={{ color: '#D7373F', marginTop: '8px', display: 'block' }}>
+        <Text UNSAFE_style={{ color: COLORS.STATUS_CANCELLED, marginTop: '8px', display: 'block' }}>
           {error}
         </Text>
       )}

@@ -102,15 +102,6 @@ function App() {
 
 **Note**: If you're embedding Spectrum 2 as a section of a larger page rather than taking over the whole window, follow the 'Embedded sections' section below instead of using `page.css`.
 
-### Overriding the color scheme
-
-By default, the page follows the user's operating system color scheme setting, supporting both light and dark mode. The page background is set to the `base` Spectrum background layer by default. This can be configured by setting the `data-color-scheme` and `data-background` attributes on the `<html>` element. For example, to force the application to only render in light mode, set `data-color-scheme="light"`.
-```html
-<html data-color-scheme="light">
-  <!-- ... -->
-</html>
-```
-
 ### Overriding the locale
 
 By default, React Spectrum uses the browser/operating system language setting for localized strings, date and number formatting, and to determine the layout direction (left-to-right or right-to-left). This can be overridden by rendering a `<Provider>` component at the root of your app, and setting the `locale` prop.

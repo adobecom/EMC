@@ -155,6 +155,7 @@ export const COLORS = {
   GRAY_200: 'var(--spectrum-global-color-gray-200)',
   GRAY_300: 'var(--spectrum-global-color-gray-300)',
   GRAY_400: 'var(--spectrum-global-color-gray-400)',
+  GRAY_500: 'var(--spectrum-global-color-gray-500)',
   GRAY_600: 'var(--spectrum-global-color-gray-600)',
   GRAY_700: 'var(--spectrum-global-color-gray-700)',
   GRAY_800: 'var(--spectrum-global-color-gray-800)',
@@ -165,9 +166,10 @@ export const COLORS = {
   // Red
   RED_600: 'var(--spectrum-global-color-red-600)',
   
-  // Semantic
+  // Semantic (theme-aware where noted)
   BLACK: '#000000',
-  DARK_GRAY: '#2C2C2C',
+  /** Primary heading / high-contrast text — follows Spectrum gray scale in light and dark */
+  DARK_GRAY: 'var(--spectrum-global-color-gray-900)',
   WHITE: 'white',
   TRANSPARENT: 'transparent',
   
@@ -184,10 +186,32 @@ export const COLORS = {
 } as const
 
 /**
- * Home page background: layered gradient over white (Figma)
+ * Surfaces and borders for inline `UNSAFE_style` — backed by CSS variables (theme-aware).
  */
-export const GRADIENT_BACKGROUND =
-  'linear-gradient(180deg, rgba(252, 125, 1, 0.20) -36.63%, rgba(171, 162, 239, 0.20) 36.41%, rgba(236, 67, 71, 0.20) 85.8%), #FFF'
+export const SURFACES = {
+  CANVAS: 'var(--s2-container-bg)',
+  /** Event/Series wizard chrome (scroll + side nav) — darker than app base in dark mode for layering */
+  EVENT_FORM_SHELL: 'var(--emc-event-form-shell-bg)',
+  /** FormCard and other raised panels inside event/series forms */
+  FORM_CARD: 'var(--emc-form-card-bg)',
+  /** Format selection (cloud/series) modal panel — contrasts with Picker field surfaces */
+  FORMAT_DIALOG_PANEL: 'var(--emc-format-dialog-panel-bg)',
+  SUBTLE: 'var(--spectrum-global-color-gray-100)',
+  SUBTLE_WARM: 'var(--spectrum-global-color-gray-75)',
+  /** Matches S2 TextField fill (`--emc-field-bg`, #111 dark / #fff light) */
+  INPUT: 'var(--emc-field-bg)',
+  BORDER: 'var(--spectrum-global-color-gray-300)',
+  BORDER_STRONG: 'var(--spectrum-global-color-gray-400)',
+  CHROME: 'var(--spectrum-global-color-gray-400)',
+  SELECTED_FILL: 'var(--spectrum-global-color-blue-100)',
+  SELECTED_RING: 'var(--spectrum-global-color-blue-500)',
+  PILL_BG: 'var(--spectrum-global-color-gray-200)',
+} as const
+
+/**
+ * Home page background — light/dark from `index.css` (`--emc-home-gradient`)
+ */
+export const GRADIENT_BACKGROUND = 'var(--emc-home-gradient)'
 
 /**
  * Form wizard footer: flex child at bottom of column layout (not fixed).
@@ -238,7 +262,7 @@ export const TYPOGRAPHY = {
    * Used for headings like "Event Information", "Venue Information", etc.
    */
   COMPONENT_HEADING: {
-    color: COLORS.BLACK,
+    color: COLORS.DARK_GRAY,
     fontFamily: FONT_FAMILY_SANS,
     fontSize: '28px',
     lineHeight: '35px',
@@ -325,7 +349,7 @@ export const BORDERS = {
  * <div style={{ ...createShimmerStyle(120, 16) }} />
  */
 export const SHIMMER_BASE = {
-  background: 'linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%)',
+  background: 'var(--emc-shimmer-gradient)',
   backgroundSize: '200% 100%',
   animation: 'shimmer 1.5s infinite',
   borderRadius: '4px',
@@ -395,9 +419,9 @@ export const ACTION_BAR_BUTTON_STYLES = {
     transition: 'all 0.2s ease',
   },
   
-  // Next/Publish button (dark filled)
+  // Next/Publish button (dark filled) — fixed contrast on black footer bar (not theme gray-900)
   PRIMARY: {
-    backgroundColor: COLORS.DARK_GRAY,
+    backgroundColor: '#2c2c2c',
     color: COLORS.WHITE,
     fontWeight: 600,
     transition: 'all 0.2s ease',

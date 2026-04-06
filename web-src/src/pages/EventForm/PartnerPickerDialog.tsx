@@ -12,6 +12,7 @@ import { apiService, cachedApi } from '../../services/api'
 import { extractImageFromUploadResponse, uploadImage, UploadTracker } from '../../services/requestHelpers'
 import { getCurrentEnvironment, getApiHost } from '../../config/constants'
 import { getLocalizedValue } from '../../utils/eventFormMappers'
+import { COLORS, SURFACES } from '../../styles/designSystem'
 
 interface PartnerPickerDialogProps {
   isOpen: boolean
@@ -248,7 +249,7 @@ export const PartnerPickerDialog: React.FC<PartnerPickerDialogProps> = ({
 
       {filteredSponsors.length === 0 ? (
         <div style={{ padding: '32px', textAlign: 'center' }}>
-          <Text UNSAFE_style={{ color: '#6E6E6E' }}>
+          <Text UNSAFE_style={{ color: COLORS.GRAY_600 }}>
             {searchQuery.trim()
               ? 'No partners match your search. Try a different query or create a new partner.'
               : 'No partners available. Create a new partner to get started.'}
@@ -292,10 +293,10 @@ export const PartnerPickerDialog: React.FC<PartnerPickerDialogProps> = ({
                 }}
                 style={{
                   padding: '16px 12px',
-                  border: isSelected ? '2px solid #1473E6' : '1px solid #D3D3D3',
+                  border: isSelected ? `2px solid ${SURFACES.SELECTED_RING}` : `1px solid ${SURFACES.BORDER}`,
                   borderRadius: '8px',
                   cursor: 'pointer',
-                  backgroundColor: isSelected ? '#E5F0FF' : '#FFFFFF',
+                  backgroundColor: isSelected ? SURFACES.SELECTED_FILL : SURFACES.CANVAS,
                   display: 'flex',
                   flexDirection: 'column',
                   alignItems: 'center',
@@ -314,7 +315,7 @@ export const PartnerPickerDialog: React.FC<PartnerPickerDialogProps> = ({
                       height: '56px',
                       borderRadius: '8px',
                       objectFit: 'contain',
-                      border: '1px solid #D3D3D3',
+                      border: `1px solid ${SURFACES.BORDER}`,
                     }}
                   />
                 ) : (
@@ -323,11 +324,11 @@ export const PartnerPickerDialog: React.FC<PartnerPickerDialogProps> = ({
                       width: '56px',
                       height: '56px',
                       borderRadius: '8px',
-                      backgroundColor: '#D3D3D3',
+                      backgroundColor: SURFACES.CHROME,
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
-                      color: '#6E6E6E',
+                      color: COLORS.GRAY_600,
                       fontSize: '16px',
                       fontWeight: 'bold',
                     }}
@@ -341,7 +342,7 @@ export const PartnerPickerDialog: React.FC<PartnerPickerDialogProps> = ({
                     <div
                       style={{
                         fontSize: '11px',
-                        color: '#6E6E6E',
+                        color: COLORS.GRAY_600,
                         lineHeight: '16px',
                         marginTop: '2px',
                         overflow: 'hidden',

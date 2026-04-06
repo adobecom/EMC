@@ -33,8 +33,8 @@ const TopNav: React.FC<TopNavProps> = ({ ims }) => {
   //   - Not in the middle of initializing auth
   const showSignIn = authMode === 'standalone' && !isAuthenticated && !isLoading
 
+  /** Background from `.top-nav` in index.css (`var(--s2-container-bg)`) for theme sync */
   const barClass = style({
-    backgroundColor: 'white',
     paddingX: 24,
     borderBottomWidth: 1,
     borderBottomStyle: 'solid',
