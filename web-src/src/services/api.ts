@@ -2467,6 +2467,12 @@ export const cachedApi = {
   async createSeries(data: any) {
     const result = await apiService.createSeriesExternal(data)
     apiCache.invalidate('getSeriesList')
+    if (result && typeof result === 'object' && !('error' in result)) {
+      const id = (result as { seriesId?: string }).seriesId
+      if (id) {
+        apiCache.invalidate(id)
+      }
+    }
     return result
   },
   async updateSeries(seriesId: string, data: any) {

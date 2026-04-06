@@ -26,6 +26,25 @@ import { normalizeRelatedDomain, normalizeContentRoot } from '../../utils/series
 // ============================================================================
 
 /**
+ * Load canonical series from ESP (bypasses GET cache) so modificationTime and
+ * other required fields match the server after mutations.
+ */
+async function fetchSeriesCanonical(seriesId: string): Promise<SeriesApiResponse | null> {
+  const data = await apiService.getSeriesByIdExternal(seriesId)
+  if (!data || typeof data !== 'object' || 'error' in data) {
+    return null
+  }
+  return data as SeriesApiResponse
+}
+
+function mergeSeriesMutationIntoState(
+  previous: SeriesApiResponse | null,
+  mutationResult: SeriesApiResponse
+): SeriesApiResponse {
+  return { ...(previous ?? {}), ...mutationResult } as SeriesApiResponse
+}
+
+/**
  * Map API response to form data
  */
 function mapApiResponseToFormData(series: SeriesApiResponse): SeriesFormData {
@@ -177,7 +196,21 @@ const SeriesFormInner: React.FC<SeriesFormInnerProps> = ({ ims: _ims }) => {
         contentRoot: normalizeContentRoot(formData.contentRoot),
       }
       updateFormData({ relatedDomain: corrected.relatedDomain, contentRoot: corrected.contentRoot })
-      const modificationTime = state.seriesDataResp?.modificationTime
+
+      let modificationTime = state.seriesDataResp?.modificationTime
+      if (isEditMode && seriesId && modificationTime === undefined) {
+        const refreshed = await fetchSeriesCanonical(seriesId)
+        if (refreshed?.modificationTime != null) {
+          modificationTime = refreshed.modificationTime
+          setSeriesResponse(refreshed)
+        } else {
+          const msg = 'Could not load series data (modification time missing). Try reloading the page.'
+          setSaveError(msg)
+          setSaveStatus('error')
+          return false
+        }
+      }
+
       const payload = buildApiPayload(corrected, modificationTime, isEditMode)
       
       let result
@@ -190,13 +223,26 @@ const SeriesFormInner: React.FC<SeriesFormInnerProps> = ({ ims: _ims }) => {
       if ('error' in result) {
         throw new Error(result.error?.message || 'Failed to save series')
       }
-      
-      // Update series ID if this was a create
-      if (!isEditMode && result.seriesId) {
-        setSeriesId(result.seriesId)
-        setSeriesResponse(result as SeriesApiResponse)
-      } else if (isEditMode) {
-        setSeriesResponse(result as SeriesApiResponse)
+
+      const mutationSeries = result as SeriesApiResponse
+      if (!isEditMode && mutationSeries.seriesId) {
+        setSeriesId(mutationSeries.seriesId)
+      }
+
+      const idToRefresh = mutationSeries.seriesId ?? seriesId
+      if (idToRefresh) {
+        const refreshed = await fetchSeriesCanonical(idToRefresh)
+        if (refreshed) {
+          setSeriesResponse(refreshed)
+        } else {
+          setSeriesResponse(
+            mergeSeriesMutationIntoState(state.seriesDataResp, mutationSeries)
+          )
+        }
+      } else {
+        setSeriesResponse(
+          mergeSeriesMutationIntoState(state.seriesDataResp, mutationSeries)
+        )
       }
       
       setSaveStatus('success')
@@ -210,7 +256,18 @@ const SeriesFormInner: React.FC<SeriesFormInnerProps> = ({ ims: _ims }) => {
       setSaveStatus('error')
       return false
     }
-  }, [formData, seriesId, isEditMode, state.seriesDataResp, setSaveStatus, setSaveError, toast, updateFormData])
+  }, [
+    formData,
+    seriesId,
+    isEditMode,
+    state.seriesDataResp,
+    setSaveStatus,
+    setSaveError,
+    setSeriesId,
+    setSeriesResponse,
+    toast,
+    updateFormData,
+  ])
   
   /**
    * Handle Publish button click
@@ -228,6 +285,7 @@ const SeriesFormInner: React.FC<SeriesFormInnerProps> = ({ ims: _ims }) => {
       updateFormData({ relatedDomain: corrected.relatedDomain, contentRoot: corrected.contentRoot })
 
       let result
+      let seriesIdForCanonicalRefresh: string | null = null
       
       // For new series: first create as draft, then publish
       if (!isEditMode || !seriesId) {
@@ -245,13 +303,40 @@ const SeriesFormInner: React.FC<SeriesFormInnerProps> = ({ ims: _ims }) => {
         
         const newSeriesId = createResult.seriesId
         setSeriesId(newSeriesId)
+        seriesIdForCanonicalRefresh = newSeriesId
         
         // Step 2: Publish the newly created series
-        const publishPayload = buildApiPayload(corrected, createResult.modificationTime, true)
+        let publishModificationTime = createResult.modificationTime
+        if (publishModificationTime === undefined) {
+          const refreshedForPublish = await fetchSeriesCanonical(newSeriesId)
+          if (refreshedForPublish?.modificationTime != null) {
+            publishModificationTime = refreshedForPublish.modificationTime
+            setSeriesResponse(refreshedForPublish)
+          } else {
+            const msg = 'Could not load series data (modification time missing). Try reloading the page.'
+            setSaveError(msg)
+            setSaveStatus('error')
+            return
+          }
+        }
+        const publishPayload = buildApiPayload(corrected, publishModificationTime, true)
         result = await apiService.publishSeries(newSeriesId, publishPayload)
       } else {
+        seriesIdForCanonicalRefresh = seriesId
         // For existing series: use publishSeries directly
-        const modificationTime = state.seriesDataResp?.modificationTime
+        let modificationTime = state.seriesDataResp?.modificationTime
+        if (seriesId && modificationTime === undefined) {
+          const refreshed = await fetchSeriesCanonical(seriesId)
+          if (refreshed?.modificationTime != null) {
+            modificationTime = refreshed.modificationTime
+            setSeriesResponse(refreshed)
+          } else {
+            const msg = 'Could not load series data (modification time missing). Try reloading the page.'
+            setSaveError(msg)
+            setSaveStatus('error')
+            return
+          }
+        }
         const publishPayload = buildApiPayload(corrected, modificationTime, true)
         result = await apiService.publishSeries(seriesId, publishPayload)
       }
@@ -259,8 +344,23 @@ const SeriesFormInner: React.FC<SeriesFormInnerProps> = ({ ims: _ims }) => {
       if ('error' in result) {
         throw new Error(result.error?.message || 'Failed to publish series')
       }
-      
-      setSeriesResponse(result as SeriesApiResponse)
+
+      const mutationSeries = result as SeriesApiResponse
+      const refreshId = mutationSeries.seriesId ?? seriesIdForCanonicalRefresh
+      if (refreshId) {
+        const refreshed = await fetchSeriesCanonical(refreshId)
+        if (refreshed) {
+          setSeriesResponse(refreshed)
+        } else {
+          setSeriesResponse(
+            mergeSeriesMutationIntoState(state.seriesDataResp, mutationSeries)
+          )
+        }
+      } else {
+        setSeriesResponse(
+          mergeSeriesMutationIntoState(state.seriesDataResp, mutationSeries)
+        )
+      }
       setPublished(true)
       setSaveStatus('success')
       toast.success(
