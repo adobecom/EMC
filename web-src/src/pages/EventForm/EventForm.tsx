@@ -456,6 +456,7 @@ const EventFormInner: React.FC<EventFormInnerProps> = ({ ims: _ims }) => {
   const {
     formData,
     eventId,
+    eventDataResp,
     isEditMode,
     isLoading,
     isPublished,
@@ -659,14 +660,18 @@ const EventFormInner: React.FC<EventFormInnerProps> = ({ ims: _ims }) => {
   /**
    * Check whether the selected series requires a custom detailPagePath.
    * If so, show a confirmation/collision dialog instead of saving immediately.
-   * Returns true when save should proceed directly (no pattern or edit mode).
+   * On edit, only intercept when the title-derived URL can change.
    */
   const checkUrlPatternBeforeSave = useCallback(async (
     action: 'save' | 'publish'
   ): Promise<{ proceed: boolean; extraPayload?: Record<string, any> }> => {
-    // Only intercept on first creation (no eventId yet)
-    if (isEditMode || eventId) return { proceed: true }
+    const currentEnTitle = (formData.name || '').trim()
+    const savedEnTitle = String(eventDataResp?.enTitle || '').trim()
+    const isExistingEvent = Boolean(isEditMode || eventId)
+    const enTitleChanged = isExistingEvent && currentEnTitle !== savedEnTitle
 
+    // Only intercept on first creation, or when edit-mode title changes can affect the path.
+    if (isExistingEvent && !enTitleChanged) return { proceed: true }
     setIsCheckingUrl(true)
     try {
       const result = await getDetailPagePathForSave(formData.seriesId, formData)
@@ -682,7 +687,7 @@ const EventFormInner: React.FC<EventFormInnerProps> = ({ ims: _ims }) => {
     } finally {
       setIsCheckingUrl(false)
     }
-  }, [isEditMode, eventId, formData, getDetailPagePathForSave])
+  }, [isEditMode, eventId, eventDataResp, formData, getDetailPagePathForSave])
 
   /**
    * Execute the actual save/publish after URL confirmation
