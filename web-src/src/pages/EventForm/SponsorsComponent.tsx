@@ -3,7 +3,7 @@
 */
 
 import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react'
-import { Button, ButtonGroup, Text, TextField, Picker, PickerItem, Dialog, DialogContainer, Content, Heading, ActionButton, ProgressCircle } from '@react-spectrum/s2'
+import { Button, ButtonGroup, Text, TextField, Picker, PickerItem, Dialog, DialogContainer, Content, Heading, ActionButton, ProgressCircle, Checkbox } from '@react-spectrum/s2'
 import { style } from '@react-spectrum/s2/style' with { type: 'macro' }
 import { SponsorData, SeriesSponsor, EventApiResponse, SponsorType } from '../../types/domain'
 import { ImageUploader } from '../../components/shared'
@@ -775,6 +775,12 @@ export const SponsorsComponent: React.FC = () => {
     return new Set(sponsors.map(s => s.sponsorId).filter(Boolean) as string[])
   }, [sponsors])
 
+  const includePartners = formData.showSponsors ?? true
+
+  const handleIncludePartnersChange = (value: boolean) => {
+    updateFormData({ showSponsors: value })
+  }
+
   // ============================================================================
   // RENDER
   // ============================================================================
@@ -782,13 +788,27 @@ export const SponsorsComponent: React.FC = () => {
   return (
     <div className={style({display: 'flex', flexDirection: 'column', gap: 16})}>
       {/* Header */}
-      <div className={style({display: 'flex', alignItems: 'center', gap: 12})}>
-        <Heading level={3} UNSAFE_style={TYPOGRAPHY.COMPONENT_HEADING}>
-          Partners (optional)
-        </Heading>
-        {isLoadingSponsors && (
-          <ProgressCircle isIndeterminate aria-label="Loading partners" />
-        )}
+      <div className={style({display: 'flex', justifyContent: 'space-between', alignItems: 'start', gap: 16})}>
+        <div className={style({display: 'flex', alignItems: 'center', gap: 12})}>
+          <Heading level={3} UNSAFE_style={TYPOGRAPHY.COMPONENT_HEADING}>
+            Partners
+          </Heading>
+          {isLoadingSponsors && (
+            <ProgressCircle isIndeterminate aria-label="Loading partners" />
+          )}
+        </div>
+        <div className={style({display: 'flex', flexDirection: 'column', alignItems: 'end', gap: 4})}>
+          <Checkbox
+            data-testid="include-partners-checkbox"
+            isSelected={includePartners}
+            onChange={handleIncludePartnersChange}
+          >
+            Include partners
+          </Checkbox>
+          <Text UNSAFE_style={TYPOGRAPHY.HELPER_TEXT}>
+            (Partners are optional)
+          </Text>
+        </div>
       </div>
 
       <Text UNSAFE_style={TYPOGRAPHY.SECTION_DESCRIPTION}>

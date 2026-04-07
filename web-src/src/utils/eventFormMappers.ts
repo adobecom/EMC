@@ -165,6 +165,7 @@ export function mapApiResponseToFormData(event: EventApiResponse, locale: string
     secondaryLinkTitle: cta?.label || '',
     agendaItems: agendaItems,
     showAgendaPostEvent: event.showAgendaPostEvent || false,
+    showSponsors: event.showSponsors ?? true,
     sponsors: mapSponsorsToFormData(event.sponsors || [], locale),
     promotionalItems: (localized.promotionalItems || [])
       .filter((item: any) => {
