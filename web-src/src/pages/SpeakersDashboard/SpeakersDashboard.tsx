@@ -369,7 +369,6 @@ export const SpeakersDashboard: React.FC<SpeakersDashboardProps> = () => {
           await Promise.all(
             events.map(async (event) => {
               try {
-                // Note: updateSpeakerInEvent might need the event speaker's speakerType and ordinal
                 await apiService.updateSpeakerInEvent(
                   { speakerId: editingSpeaker.speakerId },
                   editingSpeaker.speakerId,

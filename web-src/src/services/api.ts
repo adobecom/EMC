@@ -1386,7 +1386,14 @@ class ApiService {
       `/v1/events/${eventId}/speakers/${speakerId}`,
       speakerData,
       () => this.getEventSpeaker(eventId, speakerId),
-      (body, dependentData) => ({ ...body, modificationTime: dependentData.modificationTime }),
+      (body, dependentData) => {
+        const { creationTime: _omitCreationTime, ...fromGet } = dependentData
+        return {
+          ...fromGet,
+          ...body,
+          modificationTime: dependentData.modificationTime,
+        }
+      },
       'updateSpeakerInEvent'
     )
   }
@@ -1984,7 +1991,8 @@ class ApiService {
     if (!profileData.name || typeof profileData.name !== 'string') {
       throw new Error('Publishing profile name is required')
     }
-    return this.callExternalApi('esp', '/v1/publishing-profiles', 'POST', profileData,
+    return this.callExternalApi('esp', '/v1/publishing-profiles', 'POST',
+      { ...profileData, status: 'active' },
       { operationName: 'createPublishingProfile', shouldReturnFullResponse: true }
     )
   }
@@ -2008,8 +2016,8 @@ class ApiService {
     if (!profileData.modificationTime || typeof profileData.modificationTime !== 'number') {
       throw new Error('Modification time is required for optimistic locking')
     }
-    return this.callExternalApi('esp', `/v1/publishing-profiles/${profileId}`, 'PUT', 
-      { ...profileData, profileId },
+    return this.callExternalApi('esp', `/v1/publishing-profiles/${profileId}`, 'PUT',
+      { ...profileData, profileId, status: 'active' },
       { operationName: `updatePublishingProfile(${profileId})`, shouldReturnFullResponse: true }
     )
   }
