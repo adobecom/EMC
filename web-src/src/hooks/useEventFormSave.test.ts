@@ -73,7 +73,7 @@ describe('prepareEslEventPutPayload (ESL PUT egress)', () => {
   })
 
   it('sends detailPagePath on PUT when the title is changed', () => {
-    const url = 'https://www.adobe.com/events/updated-title/overview'
+    const url = 'https://www.adobe.com/events/updated-title'
     const result = prepareEslEventPutPayload({
       cloudType: 'CreativeCloud',
       seriesId: 's1',
