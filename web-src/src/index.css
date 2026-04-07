@@ -67,6 +67,12 @@
   --emc-form-card-bg: #ffffff;
   --emc-format-dialog-panel-bg: #ffffff;
 
+  /** Speakers dashboard: cascade-to-events callout (readable on light + dark) */
+  --emc-cascade-callout-bg: var(--spectrum-global-color-gray-75);
+  --emc-cascade-callout-border: var(--spectrum-global-color-yellow-400);
+  --emc-cascade-callout-text: var(--spectrum-global-color-gray-900);
+  --emc-cascade-callout-text-muted: var(--spectrum-global-color-gray-700);
+
   /**
    * Native/custom inputs aligned with S2 TextField `FieldGroup` (see `@react-spectrum/s2/dist/Field.css`):
    * dark fill #111, border #444, focus border #131313 / #f2f2f2, ~150ms easing.
@@ -136,13 +142,17 @@
     --emc-tag-chip-bg: #505050;
 
     /**
-     * Dark: shell slightly above app chrome (#111) so the form area feels grounded; cards use gray-100
-     * so neutral badges and S2 controls aren’t the same tone as the shell. Format dialog panel matches
-     * raised cards; Pickers stay on gray-50 so triggers read as inputs vs. the panel.
+     * Dark: shell slightly above app chrome (#111). Cards use Spectrum gray-50 (see gray scale above)
+     * so surfaces stay on-token; format dialog matches cards.
      */
     --emc-event-form-shell-bg: #151515;
-    --emc-form-card-bg: var(--spectrum-global-color-gray-100);
-    --emc-format-dialog-panel-bg: var(--spectrum-global-color-gray-100);
+    --emc-form-card-bg: var(--spectrum-global-color-gray-50);
+    --emc-format-dialog-panel-bg: var(--spectrum-global-color-gray-50);
+
+    --emc-cascade-callout-bg: var(--spectrum-global-color-yellow-100);
+    --emc-cascade-callout-border: var(--spectrum-global-color-yellow-400);
+    --emc-cascade-callout-text: var(--spectrum-global-color-gray-900);
+    --emc-cascade-callout-text-muted: var(--spectrum-global-color-gray-600);
 
     --emc-field-bg: #111111;
     --emc-field-border: #444444;
@@ -162,6 +172,10 @@
 }
 
 html[data-color-scheme='light'] {
+  --emc-cascade-callout-bg: var(--spectrum-global-color-gray-75);
+  --emc-cascade-callout-border: var(--spectrum-global-color-yellow-400);
+  --emc-cascade-callout-text: var(--spectrum-global-color-gray-900);
+  --emc-cascade-callout-text-muted: var(--spectrum-global-color-gray-700);
   --emc-field-bg: #ffffff;
   --emc-field-border: #c6c6c6;
   --emc-field-border-focus: #131313;
@@ -183,6 +197,13 @@ html[data-color-scheme='light'] {
 }
 
 html[data-color-scheme='dark'] {
+  --emc-event-form-shell-bg: #151515;
+  --emc-form-card-bg: var(--spectrum-global-color-gray-50);
+  --emc-format-dialog-panel-bg: var(--spectrum-global-color-gray-50);
+  --emc-cascade-callout-bg: var(--spectrum-global-color-yellow-100);
+  --emc-cascade-callout-border: var(--spectrum-global-color-yellow-400);
+  --emc-cascade-callout-text: var(--spectrum-global-color-gray-900);
+  --emc-cascade-callout-text-muted: var(--spectrum-global-color-gray-600);
   --emc-field-bg: #111111;
   --emc-field-border: #444444;
   --emc-field-border-focus: #f2f2f2;
@@ -197,6 +218,21 @@ html[data-color-scheme='dark'] {
   --emc-rte-picker-popover-shadow:
     0 -4px 12px rgba(0, 0, 0, 0.4),
     0 0 0 1px var(--spectrum-global-color-gray-300);
+}
+
+/**
+ * React Spectrum S2 disabled fields: FieldGroup adds class `pp12` with lightningcss-dark color #444
+ * (see @react-spectrum/s2/dist/Field.css). That is not tied to --spectrum-global-color-* and reads
+ * very low-contrast on S2’s #111 field fill. Use our dark gray ramp for disabled label + value text.
+ */
+@media (prefers-color-scheme: dark) {
+  html:not([data-color-scheme='light']) .pp12 {
+    color: var(--spectrum-global-color-gray-600) !important;
+  }
+}
+
+html[data-color-scheme='dark'] .pp12 {
+  color: var(--spectrum-global-color-gray-600) !important;
 }
 
 /** Global Font Settings — use S2's variable font for the entire app **/

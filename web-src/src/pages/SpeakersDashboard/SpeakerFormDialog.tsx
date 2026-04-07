@@ -10,7 +10,7 @@
  * to `onSubmit`, then the parent saves the speaker and uploads via `uploadSpeakerSeriesImage`.
  */
 
-import React, { useState, useCallback, useEffect } from 'react'
+import React, { useState, useCallback, useEffect, useMemo } from 'react'
 import {
   ActionButton,
   Text,
@@ -24,27 +24,43 @@ import {
   Form,
   ProgressCircle,
   Checkbox,
+  Picker,
+  PickerItem,
 } from '@react-spectrum/s2'
 import { style } from '@react-spectrum/s2/style' with { type: 'macro' }
 import Add from '@react-spectrum/s2/icons/Add'
 import RemoveCircle from '@react-spectrum/s2/icons/RemoveCircle'
 import OpenIn from '@react-spectrum/s2/icons/OpenIn'
 import { SpeakerDashboardItem } from './SpeakersDashboard'
-import { SocialLinkFormData } from '../../types/domain'
+import { SocialLink, SocialLinkFormData } from '../../types/domain'
 import { RichTextEditor, ImageUploader } from '../../components/shared'
 import { detectSocialPlatform, isValidUrl, toApiSocialLink, fromApiSocialLink } from '../../utils/socialPlatformDetector'
+import { getProfileAttr } from '../../utils/dataFilters'
 import { TYPOGRAPHY } from '../../styles/designSystem'
+import {
+  DEFAULT_LOCALE,
+  SUPPORTED_SPEAKER_LOCALES,
+  SPEAKER_LOCALE_LABELS,
+} from '../../config/localeMapping'
+import type { SpeakerDashboardLocalizationDraft } from '../../services/payloadBuilders'
 
 /** Mirrors `PartnerDialogSaveOptions` shape: serializable payload first, `File` second, options last */
 export interface SpeakerFormSaveOptions {
   cascadeToEvents?: boolean
 }
 
+export interface SpeakerFormSubmitData {
+  firstName: string
+  lastName: string
+  socialLinks: SocialLink[]
+  localizationDrafts: Record<string, SpeakerDashboardLocalizationDraft>
+}
+
 interface SpeakerFormDialogProps {
   isOpen: boolean
   onClose: () => void
   onSubmit: (
-    speakerPayload: Record<string, unknown>,
+    data: SpeakerFormSubmitData,
     pendingFile?: File,
     options?: SpeakerFormSaveOptions
   ) => Promise<void>
@@ -57,8 +73,6 @@ interface SpeakerFormDialogProps {
 interface FormState {
   firstName: string
   lastName: string
-  title: string
-  bio: string
   socialLinks: SocialLinkFormData[]
   imageUrl?: string
   imageId?: string
@@ -67,9 +81,29 @@ interface FormState {
 const initialFormState: FormState = {
   firstName: '',
   lastName: '',
-  title: '',
-  bio: '',
-  socialLinks: []
+  socialLinks: [],
+}
+
+function emptyLocalizationDrafts(): Record<string, SpeakerDashboardLocalizationDraft> {
+  return Object.fromEntries(
+    SUPPORTED_SPEAKER_LOCALES.map((loc) => [loc, { title: '', bio: '' }])
+  ) as Record<string, SpeakerDashboardLocalizationDraft>
+}
+
+function localizationDraftsFromSpeaker(
+  speaker: SpeakerDashboardItem
+): Record<string, SpeakerDashboardLocalizationDraft> {
+  const row = speaker as unknown as Record<string, unknown>
+  const base = emptyLocalizationDrafts()
+  for (const loc of SUPPORTED_SPEAKER_LOCALES) {
+    const title = getProfileAttr(row, 'title', loc)
+    const bio = getProfileAttr(row, 'bio', loc)
+    base[loc] = {
+      title: typeof title === 'string' ? title : '',
+      bio: typeof bio === 'string' ? bio : '',
+    }
+  }
+  return base
 }
 
 export const SpeakerFormDialog: React.FC<SpeakerFormDialogProps> = ({
@@ -77,118 +111,147 @@ export const SpeakerFormDialog: React.FC<SpeakerFormDialogProps> = ({
   onClose,
   onSubmit,
   speaker,
-  seriesId: _seriesId,  // Reserved for future use
+  seriesId: _seriesId,
   isSubmitting,
-  cascadeToEvents
+  cascadeToEvents,
 }) => {
-  void _seriesId  // Suppress unused variable warning
+  void _seriesId
   const [formState, setFormState] = useState<FormState>(initialFormState)
+  const [localizationDrafts, setLocalizationDrafts] = useState<
+    Record<string, SpeakerDashboardLocalizationDraft>
+  >(emptyLocalizationDrafts)
+  const [selectedLocale, setSelectedLocale] = useState<string>(DEFAULT_LOCALE)
   const [pendingFile, setPendingFile] = useState<File | null>(null)
   const [shouldCascade, setShouldCascade] = useState(cascadeToEvents ?? false)
-  
+
   const isEditing = !!speaker
-  
-  // Reset form when dialog opens/closes or speaker changes
+
+  const activeLocaleDraft = useMemo(() => {
+    return (
+      localizationDrafts[selectedLocale] ?? { title: '', bio: '' }
+    )
+  }, [localizationDrafts, selectedLocale])
+
   useEffect(() => {
     if (isOpen && speaker) {
       setFormState({
         firstName: speaker.firstName || '',
         lastName: speaker.lastName || '',
-        title: speaker.title || '',
-        bio: speaker.bio || '',
-        socialLinks: speaker.socialLinks?.map(link => fromApiSocialLink(link)) || [],
+        socialLinks: speaker.socialLinks?.map((link) => fromApiSocialLink(link)) || [],
         imageUrl: speaker.photo?.imageUrl,
-        imageId: speaker.photo?.imageId
+        imageId: speaker.photo?.imageId,
       })
+      setLocalizationDrafts(localizationDraftsFromSpeaker(speaker))
+      setSelectedLocale(DEFAULT_LOCALE)
       setShouldCascade(cascadeToEvents ?? false)
     } else if (isOpen) {
       setFormState(initialFormState)
+      setLocalizationDrafts(emptyLocalizationDrafts())
+      setSelectedLocale(DEFAULT_LOCALE)
       setPendingFile(null)
       setShouldCascade(false)
     }
   }, [isOpen, speaker, cascadeToEvents])
-  
+
   const updateField = useCallback(<K extends keyof FormState>(field: K, value: FormState[K]) => {
-    setFormState(prev => ({ ...prev, [field]: value }))
+    setFormState((prev) => ({ ...prev, [field]: value }))
   }, [])
-  
+
+  const updateActiveLocaleTitle = useCallback(
+    (value: string) => {
+      setLocalizationDrafts((prev) => ({
+        ...prev,
+        [selectedLocale]: {
+          ...(prev[selectedLocale] ?? { title: '', bio: '' }),
+          title: value,
+        },
+      }))
+    },
+    [selectedLocale]
+  )
+
+  const updateActiveLocaleBio = useCallback(
+    (value: string) => {
+      setLocalizationDrafts((prev) => ({
+        ...prev,
+        [selectedLocale]: {
+          ...(prev[selectedLocale] ?? { title: '', bio: '' }),
+          bio: value,
+        },
+      }))
+    },
+    [selectedLocale]
+  )
+
+  const handleLocaleChange = useCallback((key: React.Key | null) => {
+    if (key != null) {
+      setSelectedLocale(String(key))
+    }
+  }, [])
+
   const handleAddSocialLink = useCallback(() => {
-    setFormState(prev => ({
+    setFormState((prev) => ({
       ...prev,
-      socialLinks: [...prev.socialLinks, { url: '' }]
+      socialLinks: [...prev.socialLinks, { url: '' }],
     }))
   }, [])
-  
+
   const handleRemoveSocialLink = useCallback((index: number) => {
-    setFormState(prev => ({
+    setFormState((prev) => ({
       ...prev,
-      socialLinks: prev.socialLinks.filter((_, i) => i !== index)
+      socialLinks: prev.socialLinks.filter((_, i) => i !== index),
     }))
   }, [])
-  
+
   const handleUpdateSocialLink = useCallback((index: number, url: string) => {
-    setFormState(prev => {
+    setFormState((prev) => {
       const updated = [...prev.socialLinks]
       const platform = detectSocialPlatform(url)
       updated[index] = { url, platform: platform?.name }
       return { ...prev, socialLinks: updated }
     })
   }, [])
-  
+
   const handleFileSelect = useCallback((file: File) => {
     setPendingFile(file)
   }, [])
-  
+
   const handleFileRemove = useCallback(() => {
     setPendingFile(null)
     updateField('imageUrl', undefined)
     updateField('imageId', undefined)
   }, [updateField])
-  
+
   const handleSubmit = useCallback(async () => {
     if (!formState.firstName.trim() || !formState.lastName.trim()) {
       return
     }
-    
-    const speakerPayload: Record<string, unknown> = {
+
+    const data: SpeakerFormSubmitData = {
       firstName: formState.firstName.trim(),
       lastName: formState.lastName.trim(),
       socialLinks: formState.socialLinks
-        .filter(link => link.url.trim())
-        .map(link => toApiSocialLink(link))
-    }
-    
-    const localizableFields: Record<string, string> = {}
-    if (formState.title.trim()) {
-      localizableFields.title = formState.title.trim()
-    }
-    if (formState.bio.trim()) {
-      localizableFields.bio = formState.bio.trim()
-    }
-    
-    if (Object.keys(localizableFields).length > 0) {
-      speakerPayload.localizations = {
-        'en-US': localizableFields // Default to en-US for now
-      }
+        .filter((link) => link.url.trim())
+        .map((link) => toApiSocialLink(link)),
+      localizationDrafts: { ...localizationDrafts },
     }
 
-    await onSubmit(speakerPayload, pendingFile ?? undefined, { cascadeToEvents: shouldCascade })
-  }, [formState, pendingFile, shouldCascade, onSubmit])
-  
+    await onSubmit(data, pendingFile ?? undefined, { cascadeToEvents: shouldCascade })
+  }, [formState, localizationDrafts, pendingFile, shouldCascade, onSubmit])
+
   const isFormValid = formState.firstName.trim() && formState.lastName.trim()
-  
+
   return (
     <DialogTrigger isOpen={isOpen} onOpenChange={(open) => !open && onClose()}>
       <div style={{ display: 'none' }} />
       <Dialog size="L">
-        {({close}) => (
+        {({ close }) => (
           <>
             <Heading slot="title">{isEditing ? 'Edit Speaker' : 'Add Speaker'}</Heading>
             <Content>
               <Form>
-                <div className={style({display: 'flex', flexDirection: 'column', gap: 24})}>
-                  {/* Name Fields */}
-                  <div className={style({display: 'flex', gap: 16})}>
+                <div className={style({ display: 'flex', flexDirection: 'column', gap: 24 })}>
+                  <div className={style({ display: 'flex', gap: 16 })}>
                     <TextField
                       label="First Name"
                       value={formState.firstName}
@@ -205,7 +268,6 @@ export const SpeakerFormDialog: React.FC<SpeakerFormDialogProps> = ({
                     />
                   </div>
 
-                  {/* Profile Image */}
                   <div style={{ width: '100%', maxWidth: 300 }}>
                     <ImageUploader
                       label="Profile Image"
@@ -228,26 +290,50 @@ export const SpeakerFormDialog: React.FC<SpeakerFormDialogProps> = ({
                     />
                   </div>
 
-                  {/* Title */}
+                  <div className={style({ display: 'flex', flexDirection: 'column', gap: 8 })}>
+                    <Picker
+                      label="Locale for title and bio"
+                      description="Title and bio below apply to this locale."
+                      selectedKey={selectedLocale}
+                      onSelectionChange={handleLocaleChange}
+                      styles={style({ width: '[100%]', maxWidth: 400 })}
+                    >
+                      {SUPPORTED_SPEAKER_LOCALES.map((loc) => (
+                        <PickerItem key={loc} id={loc}>
+                          {SPEAKER_LOCALE_LABELS[loc] ?? loc}
+                        </PickerItem>
+                      ))}
+                    </Picker>
+                    <Text UNSAFE_style={TYPOGRAPHY.HELPER_TEXT}>
+                      Editing content for <strong style={{ fontWeight: 600 }}>{selectedLocale}</strong>.
+                      Switch locale to add or change translations.
+                    </Text>
+                  </div>
+
                   <TextField
                     label="Title / Role"
-                    value={formState.title}
-                    onChange={(value) => updateField('title', value)}
+                    value={activeLocaleDraft.title}
+                    onChange={updateActiveLocaleTitle}
                     placeholder="e.g., Senior Product Designer at Adobe"
                     styles={style({ width: '[100%]' })}
                   />
 
-                  {/* Bio */}
                   <RichTextEditor
                     label="Bio (Optional)"
-                    value={formState.bio}
-                    onChange={(value) => updateField('bio', value)}
+                    value={activeLocaleDraft.bio}
+                    onChange={updateActiveLocaleBio}
                     height="150px"
                   />
 
-                  {/* Social Links */}
                   <div>
-                    <div className={style({display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8})}>
+                    <div
+                      className={style({
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        alignItems: 'center',
+                        marginBottom: 8,
+                      })}
+                    >
                       <Text UNSAFE_style={TYPOGRAPHY.FIELD_LABEL}>Social Media Links</Text>
                       <ActionButton onPress={handleAddSocialLink} isQuiet>
                         <Add />
@@ -256,17 +342,23 @@ export const SpeakerFormDialog: React.FC<SpeakerFormDialogProps> = ({
                     </div>
 
                     {formState.socialLinks.length === 0 ? (
-                      <Text UNSAFE_style={{ fontSize: '14px', color: 'var(--spectrum-global-color-gray-600)', fontStyle: 'italic' }}>
+                      <Text
+                        UNSAFE_style={{
+                          fontSize: '14px',
+                          color: 'var(--spectrum-global-color-gray-600)',
+                          fontStyle: 'italic',
+                        }}
+                      >
                         No social media links added yet.
                       </Text>
                     ) : (
-                      <div className={style({display: 'flex', flexDirection: 'column', gap: 8})}>
+                      <div className={style({ display: 'flex', flexDirection: 'column', gap: 8 })}>
                         {formState.socialLinks.map((socialLink, index) => {
                           const detectedPlatform = detectSocialPlatform(socialLink.url)
                           const valid = isValidUrl(socialLink.url)
 
                           return (
-                            <div key={index} className={style({display: 'flex', gap: 8, alignItems: 'center'})}>
+                            <div key={index} className={style({ display: 'flex', gap: 8, alignItems: 'center' })}>
                               <div
                                 style={{
                                   minWidth: 40,
@@ -304,24 +396,28 @@ export const SpeakerFormDialog: React.FC<SpeakerFormDialogProps> = ({
                     )}
                   </div>
 
-                  {/* Cascade option (only shown for editing with linked events) */}
                   {isEditing && cascadeToEvents !== undefined && (
                     <div
                       style={{
                         padding: 16,
-                        border: '1px solid var(--spectrum-global-color-yellow-400)',
+                        border: '1px solid var(--emc-cascade-callout-border)',
                         borderRadius: 8,
-                        backgroundColor: 'var(--spectrum-global-color-yellow-400)',
+                        backgroundColor: 'var(--emc-cascade-callout-bg)',
+                        color: 'var(--emc-cascade-callout-text)',
                       }}
                     >
-                      <Checkbox
-                        isSelected={shouldCascade}
-                        onChange={setShouldCascade}
-                      >
+                      <Checkbox isSelected={shouldCascade} onChange={setShouldCascade}>
                         Update this speaker in all linked events
                       </Checkbox>
-                      <Text UNSAFE_style={{ fontSize: '12px', color: 'var(--spectrum-global-color-gray-600)', marginTop: '4px' }}>
-                        This speaker is linked to events. Check this option to propagate changes to all linked events.
+                      <Text
+                        UNSAFE_style={{
+                          fontSize: '12px',
+                          color: 'var(--emc-cascade-callout-text-muted)',
+                          marginTop: '4px',
+                        }}
+                      >
+                        This speaker is linked to events. Check this option to propagate changes to all
+                        linked events.
                       </Text>
                     </div>
                   )}
@@ -332,11 +428,7 @@ export const SpeakerFormDialog: React.FC<SpeakerFormDialogProps> = ({
               <Button variant="secondary" onPress={() => { onClose(); close() }} isDisabled={isSubmitting}>
                 Cancel
               </Button>
-              <Button
-                variant="accent"
-                onPress={handleSubmit}
-                isDisabled={!isFormValid || isSubmitting}
-              >
+              <Button variant="accent" onPress={handleSubmit} isDisabled={!isFormValid || isSubmitting}>
                 {isSubmitting ? (
                   <>
                     <ProgressCircle size="S" isIndeterminate aria-label="Submitting" />
