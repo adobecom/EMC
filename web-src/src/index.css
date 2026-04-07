@@ -142,12 +142,15 @@
     --emc-tag-chip-bg: #505050;
 
     /**
-     * Dark: shell slightly above app chrome (#111). Cards use Spectrum gray-50 (see gray scale above)
-     * so surfaces stay on-token; format dialog matches cards.
+     * Dark: shell slightly above app chrome (#111). Form cards: one step darker than EMC’s
+     * --spectrum-global-color-gray-50 (#2c2c2c = S2 gray-100 dark in @react-spectrum/s2 theme).
+     * Next step on S2’s dark neutral ramp is gray-75 dark = rgb(34,34,34). EMC remaps
+     * --spectrum-global-color-gray-75 to a lighter #323232, so we keep an explicit S2-aligned token.
      */
+    --emc-spectrum-s2-gray-75-dark: rgb(34, 34, 34);
     --emc-event-form-shell-bg: #151515;
-    --emc-form-card-bg: var(--spectrum-global-color-gray-50);
-    --emc-format-dialog-panel-bg: var(--spectrum-global-color-gray-50);
+    --emc-form-card-bg: var(--emc-spectrum-s2-gray-75-dark);
+    --emc-format-dialog-panel-bg: var(--emc-spectrum-s2-gray-75-dark);
 
     --emc-cascade-callout-bg: var(--spectrum-global-color-yellow-100);
     --emc-cascade-callout-border: var(--spectrum-global-color-yellow-400);
@@ -197,9 +200,10 @@ html[data-color-scheme='light'] {
 }
 
 html[data-color-scheme='dark'] {
+  --emc-spectrum-s2-gray-75-dark: rgb(34, 34, 34);
   --emc-event-form-shell-bg: #151515;
-  --emc-form-card-bg: var(--spectrum-global-color-gray-50);
-  --emc-format-dialog-panel-bg: var(--spectrum-global-color-gray-50);
+  --emc-form-card-bg: var(--emc-spectrum-s2-gray-75-dark);
+  --emc-format-dialog-panel-bg: var(--emc-spectrum-s2-gray-75-dark);
   --emc-cascade-callout-bg: var(--spectrum-global-color-yellow-100);
   --emc-cascade-callout-border: var(--spectrum-global-color-yellow-400);
   --emc-cascade-callout-text: var(--spectrum-global-color-gray-900);
