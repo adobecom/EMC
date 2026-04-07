@@ -6,7 +6,7 @@
  * in speciallyHandledFields. These tests verify guards on automatic payload building:
  *
  * 1. detailPagePath — submittable: false in EVENT_DATA_FILTER; EventForm merges it via
- *    extraPayload on create (POST only). prepareEslEventPutPayload also excludes it on PUT.
+ *    extraPayload rather than the generic payload loop.
  * 2. inviteOnly — in speciallyHandledFields (tested indirectly via filterEventData)
  */
 
@@ -74,16 +74,28 @@ describe('prepareEslEventPutPayload (ESL PUT egress)', () => {
     expect(result.enTitle).toBe('T')
   })
 
-  it('omits detailPagePath on PUT even when present (POST-only on ESL)', () => {
-    const url = 'https://www.adobe.com/events/my-event/overview'
+  it('sends detailPagePath on PUT when the title is changed', () => {
+    const url = 'https://www.adobe.com/events/updated-title/overview'
     const result = prepareEslEventPutPayload({
       cloudType: 'CreativeCloud',
       seriesId: 's1',
       detailPagePath: url,
-      enTitle: 'T',
+      enTitle: 'Updated Title',
     })
+
+    expect(result.detailPagePath).toBe(url)
+    expect(result.enTitle).toBe('Updated Title')
+  })
+
+  it('does not send detailPagePath on PUT when the title is unchanged and no extra payload is provided', () => {
+    const result = prepareEslEventPutPayload({
+      eventId: 'evt-456',
+      cloudType: 'CreativeCloud',
+      seriesId: 's1',
+      enTitle: 'Existing Title',
+    })
+
     expect(result).not.toHaveProperty('detailPagePath')
-    expect(result.enTitle).toBe('T')
   })
 
   it('does not add detailPagePath when missing or empty', () => {
@@ -113,4 +125,3 @@ describe('isValidAttribute handles boolean false correctly', () => {
     expect(isValidAttribute('')).toBe(false)
   })
 })
-
