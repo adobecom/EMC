@@ -2016,8 +2016,22 @@ class ApiService {
     if (!profileData.modificationTime || typeof profileData.modificationTime !== 'number') {
       throw new Error('Modification time is required for optimistic locking')
     }
+
+    // Always use the server's current modificationTime so PUT succeeds (stale client ref or
+    // cached GET responses otherwise cause 409 conflict).
+    const latest = await this.getPublishingProfile(profileId)
+    let modificationTime = profileData.modificationTime
+    if (
+      latest &&
+      typeof latest === 'object' &&
+      !('error' in latest) &&
+      typeof (latest as { modificationTime?: unknown }).modificationTime === 'number'
+    ) {
+      modificationTime = (latest as { modificationTime: number }).modificationTime
+    }
+
     return this.callExternalApi('esp', `/v1/publishing-profiles/${profileId}`, 'PUT',
-      { ...profileData, profileId, status: 'active' },
+      { ...profileData, profileId, status: 'active', modificationTime },
       { operationName: `updatePublishingProfile(${profileId})`, shouldReturnFullResponse: true }
     )
   }
