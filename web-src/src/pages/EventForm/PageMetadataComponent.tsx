@@ -102,13 +102,24 @@ export const PageMetadataComponent: React.FC = () => {
         const existingProfile = publishingProfileRef.current
         
         if (existingProfile?.profileId) {
-          // Update existing profile
-          await apiService.updatePublishingProfile(existingProfile.profileId, {
+          // Update existing profile (ApiService refreshes modificationTime before PUT)
+          const updateResult = await apiService.updatePublishingProfile(existingProfile.profileId, {
             name: existingProfile.name,
             description: existingProfile.description,
             metadata: currentMetadata,
             modificationTime: existingProfile.modificationTime,
           })
+          if (
+            updateResult &&
+            typeof updateResult === 'object' &&
+            !('error' in updateResult) &&
+            (updateResult as PublishingProfile).profileId
+          ) {
+            publishingProfileRef.current = {
+              ...existingProfile,
+              ...(updateResult as PublishingProfile),
+            }
+          }
         } else {
           // Create new profile and assign to event
           const createResult = await apiService.createPublishingProfile({

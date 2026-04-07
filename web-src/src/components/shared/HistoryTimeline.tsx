@@ -19,6 +19,7 @@ import Edit from '@react-spectrum/s2/icons/Edit'
 import RemoveCircle from '@react-spectrum/s2/icons/RemoveCircle'
 import {
   COLORS,
+  SURFACES,
   Z_INDEX,
   TYPOGRAPHY,
   SPACING
@@ -358,8 +359,9 @@ export const HistoryTimeline: React.FC<HistoryTimelineProps> = ({
           top: 0,
           left: 0,
           right: 0,
-          backgroundColor: COLORS.WHITE,
-          boxShadow: '0 8px 32px rgba(0, 0, 0, 0.2)',
+          backgroundColor: SURFACES.FORM_CARD,
+          color: COLORS.DARK_GRAY,
+          boxShadow: 'var(--emc-overlay-floating-shadow)',
           zIndex: Z_INDEX.MODAL,
           transform: isOpen ? 'translateY(0)' : 'translateY(-100%)',
           opacity: isOpen ? 1 : 0,
@@ -375,8 +377,8 @@ export const HistoryTimeline: React.FC<HistoryTimelineProps> = ({
           className={style({ display: 'flex', justifyContent: 'space-between', alignItems: 'center' })}
           style={{
             padding: `${SPACING.MD}px ${SPACING.LG}px`,
-            borderBottom: `1px solid ${COLORS.GRAY_200}`,
-            backgroundColor: COLORS.GRAY_100,
+            borderBottom: `1px solid ${SURFACES.BORDER}`,
+            backgroundColor: SURFACES.SUBTLE,
             flexShrink: 0
           }}
         >
@@ -388,7 +390,7 @@ export const HistoryTimeline: React.FC<HistoryTimelineProps> = ({
             {historyRecords.length > 0 && (
               <div
                 style={{
-                  backgroundColor: COLORS.GRAY_300,
+                  backgroundColor: SURFACES.PILL_BG,
                   padding: '2px 10px',
                   borderRadius: '12px',
                   marginLeft: '8px'
@@ -474,7 +476,7 @@ export const HistoryTimeline: React.FC<HistoryTimelineProps> = ({
                 className={style({ display: 'flex', gap: 24, justifyContent: 'center' })}
                 style={{
                   padding: `${SPACING.MD}px`,
-                  borderTop: `1px solid ${COLORS.GRAY_200}`,
+                  borderTop: `1px solid ${SURFACES.BORDER}`,
                   marginTop: `${SPACING.MD}px`
                 }}
               >

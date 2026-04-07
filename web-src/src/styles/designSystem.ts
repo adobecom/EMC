@@ -192,7 +192,7 @@ export const SURFACES = {
   CANVAS: 'var(--s2-container-bg)',
   /** Event/Series wizard chrome (scroll + side nav) — darker than app base in dark mode for layering */
   EVENT_FORM_SHELL: 'var(--emc-event-form-shell-bg)',
-  /** FormCard and other raised panels inside event/series forms */
+  /** FormCard — `--emc-form-card-bg` (light: white; dark: S2 gray-75 dark via `--emc-spectrum-s2-gray-75-dark`) */
   FORM_CARD: 'var(--emc-form-card-bg)',
   /** Format selection (cloud/series) modal panel — contrasts with Picker field surfaces */
   FORMAT_DIALOG_PANEL: 'var(--emc-format-dialog-panel-bg)',

@@ -455,6 +455,17 @@ export function useEventFormSave() {
         // Default to America/Los_Angeles if not set (required field)
         payload.timezone = formData.timezone || 'America/Los_Angeles'
       }
+
+      // ESL PUT must include detailPagePath for custom URL patterns; form state omits it unless extraPayload merged it.
+      if (
+        isEditMode &&
+        eventId &&
+        !isValidAttribute(payload.detailPagePath) &&
+        eventDataResp &&
+        isValidAttribute(eventDataResp.detailPagePath)
+      ) {
+        payload.detailPagePath = eventDataResp.detailPagePath
+      }
       
       // 5. Call create/update API (using external ESP/ESL API)
       let response: EventApiResponse
