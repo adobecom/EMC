@@ -486,7 +486,7 @@ const EventFormInner: React.FC<EventFormInnerProps> = ({ ims: _ims }) => {
   const { publishEvent, saveDraft, isSaving, saveError } = useEventFormSave()
 
   // Custom URL pattern hook
-  const { getDetailPagePathForSave } = useCustomDetailPagePath()
+  const { getDetailPagePathForSave, shouldRunCustomDetailPagePathFlow } = useCustomDetailPagePath()
 
   // Dialog state for custom detailPagePath confirmation
   const [urlDialogState, setUrlDialogState] = useState<{
@@ -660,21 +660,25 @@ const EventFormInner: React.FC<EventFormInnerProps> = ({ ims: _ims }) => {
   /**
    * Check whether the selected series requires a custom detailPagePath.
    * If so, show a confirmation/collision dialog instead of saving immediately.
-   * On edit, only intercept when the title-derived URL can change.
+   * On edit, only when URL-affecting fields changed (pattern tokens + defaultLocale).
    */
   const checkUrlPatternBeforeSave = useCallback(async (
     action: 'save' | 'publish'
   ): Promise<{ proceed: boolean; extraPayload?: Record<string, any> }> => {
-    const currentEnTitle = (formData.name || '').trim()
-    const savedEnTitle = String(eventDataResp?.enTitle || '').trim()
     const isExistingEvent = Boolean(isEditMode || eventId)
-    const enTitleChanged = isExistingEvent && currentEnTitle !== savedEnTitle
+    const runFlow = await shouldRunCustomDetailPagePathFlow(
+      formData.seriesId,
+      formData,
+      isExistingEvent,
+      eventDataResp
+    )
+    if (!runFlow) return { proceed: true }
 
-    // Only intercept on first creation, or when edit-mode title changes can affect the path.
-    if (isExistingEvent && !enTitleChanged) return { proceed: true }
     setIsCheckingUrl(true)
     try {
-      const result = await getDetailPagePathForSave(formData.seriesId, formData)
+      const result = await getDetailPagePathForSave(formData.seriesId, formData, {
+        excludeEventId: eventId || undefined,
+      })
       if (!result) return { proceed: true }
 
       // Pattern found — show confirmation dialog
@@ -687,7 +691,14 @@ const EventFormInner: React.FC<EventFormInnerProps> = ({ ims: _ims }) => {
     } finally {
       setIsCheckingUrl(false)
     }
-  }, [isEditMode, eventId, eventDataResp, formData, getDetailPagePathForSave])
+  }, [
+    isEditMode,
+    eventId,
+    eventDataResp,
+    formData,
+    getDetailPagePathForSave,
+    shouldRunCustomDetailPagePathFlow,
+  ])
 
   /**
    * Execute the actual save/publish after URL confirmation
