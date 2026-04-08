@@ -47,10 +47,10 @@ import type {
   ScopeConfig,
   RsvpScopeConfig,
   LocalesScopeConfig,
+  CustomAttributesScopeConfig,
   RsvpFormField,
   RsvpFormFieldLocaleOverride,
-  EnabledAttributeRef,
-  CustomAttribute,
+  CustomAttributeConfig,
   CustomAttributeValue,
   CustomAttributeInputType,
   RsvpFieldType,
@@ -58,6 +58,7 @@ import type {
 } from '../../types/configApi'
 import { ResourceDashboardLayout, BlurredLoadingOverlay } from '../../components/shared'
 import { useHasPermission } from '../../hooks/useHasPermission'
+import { generateUUID } from '../../services/requestHelpers'
 import { SUPPORTED_SPEAKER_LOCALES, SPEAKER_LOCALE_LABELS } from '../../config/localeMapping'
 
 interface ConfigManagementProps {
@@ -134,8 +135,6 @@ export const ConfigManagement: React.FC<ConfigManagementProps> = () => {
 
   const [configs, setConfigs] = useState<ScopeConfig[]>([])
   const [isLoadingConfigs, setIsLoadingConfigs] = useState(false)
-  const [customAttributes, setCustomAttributes] = useState<CustomAttribute[]>([])
-  const [isLoadingAttributes, setIsLoadingAttributes] = useState(false)
   const [activeTab, setActiveTab] = useState<string>('rsvp')
 
   // ============================================================================
@@ -145,7 +144,6 @@ export const ConfigManagement: React.FC<ConfigManagementProps> = () => {
   const [isRsvpFormOpen, setIsRsvpFormOpen] = useState(false)
   const [editingRsvpConfig, setEditingRsvpConfig] = useState<RsvpScopeConfig | null>(null)
   const [rsvpFormFields, setRsvpFormFields] = useState<RsvpFormField[]>([])
-  const [rsvpEnabledAttributes, setRsvpEnabledAttributes] = useState<EnabledAttributeRef[]>([])
   const [rsvpLocalizations, setRsvpLocalizations] = useState<Record<string, { rsvpFormFields: RsvpFormFieldLocaleOverride[] }>>({})
   const [rsvpLocaleEditing, setRsvpLocaleEditing] = useState<string | null>(null)
   const [rsvpConfigToDelete, setRsvpConfigToDelete] = useState<ScopeConfig | null>(null)
@@ -167,11 +165,12 @@ export const ConfigManagement: React.FC<ConfigManagementProps> = () => {
   // ============================================================================
 
   const [isAttrFormOpen, setIsAttrFormOpen] = useState(false)
-  const [editingAttr, setEditingAttr] = useState<CustomAttribute | null>(null)
+  const [editingAttr, setEditingAttr] = useState<CustomAttributeConfig | null>(null)
   const [attrFormName, setAttrFormName] = useState('')
   const [attrFormInputType, setAttrFormInputType] = useState<CustomAttributeInputType>('text')
   const [attrFormValues, setAttrFormValues] = useState<CustomAttributeValue[]>([])
-  const [attrToDelete, setAttrToDelete] = useState<CustomAttribute | null>(null)
+  const [attrFormEnabled, setAttrFormEnabled] = useState(true)
+  const [attrToDelete, setAttrToDelete] = useState<CustomAttributeConfig | null>(null)
 
   // Expandable state for attributes table
   const [expandedAttrKeys, setExpandedAttrKeys] = useState<Set<string>>(new Set())
@@ -218,6 +217,14 @@ export const ConfigManagement: React.FC<ConfigManagementProps> = () => {
     () => configs.find((c): c is LocalesScopeConfig => c.type === 'locales') || null,
     [configs]
   )
+  const customAttrsConfig = useMemo(
+    () => configs.find((c): c is CustomAttributesScopeConfig => c.type === 'custom-attributes') || null,
+    [configs]
+  )
+  const customAttributes = useMemo(
+    () => customAttrsConfig?.attributes || [],
+    [customAttrsConfig]
+  )
   // Available locales for RSVP localization (from sibling locales config or fallback)
   const availableLocales = useMemo(() => {
     if (localesConfig) {
@@ -261,25 +268,8 @@ export const ConfigManagement: React.FC<ConfigManagementProps> = () => {
     }
   }, [apiService, selectedScopeId])
 
-  const loadCustomAttributes = useCallback(async () => {
-    if (!selectedScopeId) {
-      setCustomAttributes([])
-      return
-    }
-    setIsLoadingAttributes(true)
-    try {
-      const result = await apiService.getCustomAttributesForScope(selectedScopeId)
-      if (!('error' in result)) setCustomAttributes(result)
-    } catch {
-      // Errors handled silently — consumer shows empty state
-    } finally {
-      setIsLoadingAttributes(false)
-    }
-  }, [apiService, selectedScopeId])
-
   useEffect(() => { loadScopes() }, [loadScopes])
   useEffect(() => { loadConfigs() }, [loadConfigs])
-  useEffect(() => { loadCustomAttributes() }, [loadCustomAttributes])
 
   // Clear state on scope change
   useEffect(() => {
@@ -302,7 +292,6 @@ export const ConfigManagement: React.FC<ConfigManagementProps> = () => {
   const openRsvpCreate = useCallback(() => {
     setEditingRsvpConfig(null)
     setRsvpFormFields([createEmptyRsvpField()])
-    setRsvpEnabledAttributes([])
     setRsvpLocalizations({})
     setRsvpLocaleEditing(null)
     setIsRsvpFormOpen(true)
@@ -311,7 +300,6 @@ export const ConfigManagement: React.FC<ConfigManagementProps> = () => {
   const openRsvpEdit = useCallback((config: RsvpScopeConfig) => {
     setEditingRsvpConfig(config)
     setRsvpFormFields([...config.rsvpFormFields])
-    setRsvpEnabledAttributes([...(config.enabledAttributes || [])])
     setRsvpLocalizations(config.localizations ? JSON.parse(JSON.stringify(config.localizations)) : {})
     setRsvpLocaleEditing(null)
     setIsRsvpFormOpen(true)
@@ -331,7 +319,6 @@ export const ConfigManagement: React.FC<ConfigManagementProps> = () => {
         const result = await apiService.updateConfig(selectedScopeId, editingRsvpConfig.configId, {
           ...editingRsvpConfig,
           rsvpFormFields: validFields,
-          enabledAttributes: rsvpEnabledAttributes,
           localizations: rsvpLocalizations,
         })
         if ('error' in result) {
@@ -346,7 +333,6 @@ export const ConfigManagement: React.FC<ConfigManagementProps> = () => {
         const result = await apiService.createConfig(selectedScopeId, {
           type: 'rsvp',
           rsvpFormFields: validFields,
-          enabledAttributes: rsvpEnabledAttributes,
           localizations: rsvpLocalizations,
         })
         if ('error' in result) {
@@ -366,7 +352,7 @@ export const ConfigManagement: React.FC<ConfigManagementProps> = () => {
     } finally {
       setIsSaving(false)
     }
-  }, [selectedScopeId, rsvpFormFields, rsvpEnabledAttributes, rsvpLocalizations, editingRsvpConfig, apiService, toast, loadConfigs])
+  }, [selectedScopeId, rsvpFormFields, rsvpLocalizations, editingRsvpConfig, apiService, toast, loadConfigs])
 
   const handleDeleteConfig = useCallback(async (config: ScopeConfig) => {
     if (!selectedScopeId) return
@@ -475,14 +461,16 @@ export const ConfigManagement: React.FC<ConfigManagementProps> = () => {
     setAttrFormName('')
     setAttrFormInputType('text')
     setAttrFormValues([])
+    setAttrFormEnabled(true)
     setIsAttrFormOpen(true)
   }, [])
 
-  const openAttrEdit = useCallback((attr: CustomAttribute) => {
+  const openAttrEdit = useCallback((attr: CustomAttributeConfig) => {
     setEditingAttr(attr)
     setAttrFormName(attr.name)
     setAttrFormInputType(attr.inputType)
     setAttrFormValues([...attr.values])
+    setAttrFormEnabled(attr.enabled)
     setIsAttrFormOpen(true)
   }, [])
 
@@ -492,64 +480,94 @@ export const ConfigManagement: React.FC<ConfigManagementProps> = () => {
       return
     }
 
+    const newAttr: CustomAttributeConfig = {
+      attributeId: editingAttr?.attributeId || generateUUID(),
+      name: attrFormName.trim(),
+      inputType: attrFormInputType,
+      enabled: attrFormEnabled,
+      values: attrFormValues
+        .filter(v => v.value.trim())
+        .map((v, i) => ({
+          valueId: v.valueId || generateUUID(),
+          value: v.value.trim(),
+          displayOrder: i,
+        })),
+    }
+
     setIsSaving(true)
     try {
-      if (editingAttr) {
-        const result = await apiService.updateCustomAttribute(selectedScopeId, editingAttr.attributeId, {
-          attributeId: editingAttr.attributeId,
-          name: attrFormName.trim(),
-          inputType: attrFormInputType,
-          values: attrFormValues,
+      if (customAttrsConfig) {
+        const updatedAttributes = editingAttr
+          ? customAttrsConfig.attributes.map(a =>
+              a.attributeId === editingAttr.attributeId ? newAttr : a
+            )
+          : [...customAttrsConfig.attributes, newAttr]
+
+        const result = await apiService.updateConfig(selectedScopeId, customAttrsConfig.configId, {
+          ...customAttrsConfig,
+          attributes: updatedAttributes,
         })
         if ('error' in result) {
           const status = (result as { status: number }).status
           toast.error(status === 409
-            ? 'This attribute was modified by someone else. Refresh and try again.'
-            : 'Failed to update custom attribute')
+            ? 'This config was modified by someone else. Refresh and try again.'
+            : `Failed to ${editingAttr ? 'update' : 'create'} custom attribute`)
           return
         }
-        toast.success('Custom attribute updated')
       } else {
-        const result = await apiService.createCustomAttribute(selectedScopeId, {
-          name: attrFormName.trim(),
-          inputType: attrFormInputType,
-          values: attrFormValues.filter(v => v.value.trim()).map(v => ({ value: v.value.trim() })),
+        const result = await apiService.createConfig(selectedScopeId, {
+          type: 'custom-attributes',
+          attributes: [newAttr],
         })
         if ('error' in result) {
           toast.error('Failed to create custom attribute')
           return
         }
-        toast.success('Custom attribute created')
       }
+      toast.success(`Custom attribute ${editingAttr ? 'updated' : 'created'}`)
       setIsAttrFormOpen(false)
       setIsSaving(false)
-      await loadCustomAttributes()
+      await loadConfigs()
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Failed to save custom attribute')
     } finally {
       setIsSaving(false)
     }
-  }, [selectedScopeId, attrFormName, attrFormInputType, attrFormValues, editingAttr, apiService, toast, loadCustomAttributes])
+  }, [selectedScopeId, attrFormName, attrFormInputType, attrFormValues, attrFormEnabled, editingAttr, customAttrsConfig, apiService, toast, loadConfigs])
 
-  const handleDeleteAttr = useCallback(async (attr: CustomAttribute) => {
-    if (!selectedScopeId) return
+  const handleDeleteAttr = useCallback(async (attr: CustomAttributeConfig) => {
+    if (!selectedScopeId || !customAttrsConfig) return
     setIsSaving(true)
     try {
-      const result = await apiService.deleteCustomAttribute(selectedScopeId, attr.attributeId)
-      if ('error' in result) {
-        toast.error('Failed to delete custom attribute')
-        return
+      const remaining = customAttrsConfig.attributes.filter(a => a.attributeId !== attr.attributeId)
+
+      if (remaining.length === 0) {
+        const result = await apiService.deleteConfig(selectedScopeId, customAttrsConfig.configId)
+        if ('error' in result) {
+          toast.error('Failed to delete custom attribute')
+          return
+        }
+      } else {
+        const result = await apiService.updateConfig(selectedScopeId, customAttrsConfig.configId, {
+          ...customAttrsConfig,
+          attributes: remaining,
+        })
+        if ('error' in result) {
+          toast.error('Failed to delete custom attribute')
+          return
+        }
       }
+
       toast.success('Custom attribute deleted')
       setAttrToDelete(null)
       setIsSaving(false)
-      await loadCustomAttributes()
+      await loadConfigs()
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Failed to delete custom attribute')
     } finally {
       setIsSaving(false)
     }
-  }, [apiService, selectedScopeId, toast, loadCustomAttributes])
+  }, [apiService, selectedScopeId, customAttrsConfig, toast, loadConfigs])
 
   // ============================================================================
   // RSVP FIELD HELPERS
@@ -733,14 +751,27 @@ export const ConfigManagement: React.FC<ConfigManagementProps> = () => {
   // CUSTOM ATTRIBUTES TABLE
   // ============================================================================
 
+  const isOwnAttrsConfig = customAttrsConfig?.scopeId === selectedScopeId
+
   const attrColumns = useMemo(() => [
     { key: 'name', name: 'NAME', width: 200, sortable: true },
+    {
+      key: 'enabled',
+      name: 'ENABLED',
+      width: 100,
+      sortable: true,
+      render: (item: CustomAttributeConfig) => (
+        <Badge variant={item.enabled ? 'positive' : 'neutral'}>
+          {item.enabled ? 'Yes' : 'No'}
+        </Badge>
+      ),
+    },
     {
       key: 'inputType',
       name: 'INPUT TYPE',
       width: 140,
       sortable: true,
-      render: (item: CustomAttribute) => (
+      render: (item: CustomAttributeConfig) => (
         <Badge variant="informative">{item.inputType}</Badge>
       ),
     },
@@ -749,7 +780,7 @@ export const ConfigManagement: React.FC<ConfigManagementProps> = () => {
       name: 'VALUES',
       width: 100,
       sortable: false,
-      render: (item: CustomAttribute) => (
+      render: (item: CustomAttributeConfig) => (
         <Text>{item.values.length > 0 ? `${item.values.length} values` : '-'}</Text>
       ),
     },
@@ -758,14 +789,17 @@ export const ConfigManagement: React.FC<ConfigManagementProps> = () => {
       name: 'SCOPE',
       width: 120,
       sortable: false,
-      render: (item: CustomAttribute) => {
-        const scope = scopes.find(s => s.scopeId === item.scopeId)
+      render: () => {
+        const configScopeId = customAttrsConfig?.scopeId
+        const scope = configScopeId ? scopes.find(s => s.scopeId === configScopeId) : null
         return scope ? (
           <Badge variant={SCOPE_TYPE_VARIANTS[scope.type] || 'neutral'}>{scope.name}</Badge>
-        ) : (
+        ) : configScopeId ? (
           <Text UNSAFE_style={{ fontSize: 12, color: 'var(--spectrum-global-color-gray-700)' }}>
-            {item.scopeId.substring(0, 8)}...
+            {configScopeId.substring(0, 8)}...
           </Text>
+        ) : (
+          <Text>-</Text>
         )
       },
     },
@@ -774,27 +808,24 @@ export const ConfigManagement: React.FC<ConfigManagementProps> = () => {
       name: 'ACTIONS',
       width: 100,
       sortable: false,
-      render: (item: CustomAttribute) => {
-        const isOwnScope = item.scopeId === selectedScopeId
-        return (
-          <div className={style({ display: 'flex', gap: 8, justifyContent: 'end' })}>
-            {canWriteConfig && isOwnScope && (
-              <ActionButton isQuiet aria-label="Edit attribute" onPress={() => openAttrEdit(item)}>
-                <EditIcon />
-              </ActionButton>
-            )}
-            {canDeleteConfig && isOwnScope && (
-              <ActionButton isQuiet aria-label="Delete attribute" onPress={() => setAttrToDelete(item)}>
-                <RemoveCircle />
-              </ActionButton>
-            )}
-          </div>
-        )
-      },
+      render: (item: CustomAttributeConfig) => (
+        <div className={style({ display: 'flex', gap: 8, justifyContent: 'end' })}>
+          {canWriteConfig && isOwnAttrsConfig && (
+            <ActionButton isQuiet aria-label="Edit attribute" onPress={() => openAttrEdit(item)}>
+              <EditIcon />
+            </ActionButton>
+          )}
+          {canDeleteConfig && isOwnAttrsConfig && (
+            <ActionButton isQuiet aria-label="Delete attribute" onPress={() => setAttrToDelete(item)}>
+              <RemoveCircle />
+            </ActionButton>
+          )}
+        </div>
+      ),
     },
-  ], [scopes, selectedScopeId, canWriteConfig, canDeleteConfig, openAttrEdit])
+  ], [scopes, customAttrsConfig, isOwnAttrsConfig, canWriteConfig, canDeleteConfig, openAttrEdit])
 
-  const renderAttrExpandedContent = useCallback((item: CustomAttribute) => {
+  const renderAttrExpandedContent = useCallback((item: CustomAttributeConfig) => {
     if (item.values.length === 0) {
       return (
         <Text UNSAFE_style={{ color: 'var(--spectrum-global-color-gray-700)', fontSize: 13, padding: 8 }}>
@@ -822,13 +853,13 @@ export const ConfigManagement: React.FC<ConfigManagementProps> = () => {
       isRsvpFormOpen || isLocalesFormOpen || isAttrFormOpen ||
       rsvpConfigToDelete != null || localesToDelete != null || attrToDelete != null
     return {
-      loadingOverlayVisible: (isLoadingScopes || isLoadingConfigs || isLoadingAttributes) && !isSaving,
+      loadingOverlayVisible: (isLoadingScopes || isLoadingConfigs) && !isSaving,
       savingOverlayVisible: isSaving && !isBlockingDialogOpen,
     }
   }, [
     isRsvpFormOpen, isLocalesFormOpen, isAttrFormOpen,
     rsvpConfigToDelete, localesToDelete, attrToDelete,
-    isLoadingScopes, isLoadingConfigs, isLoadingAttributes,
+    isLoadingScopes, isLoadingConfigs,
     isSaving,
   ])
 
@@ -1057,7 +1088,7 @@ export const ConfigManagement: React.FC<ConfigManagementProps> = () => {
                       <Text>Create Attribute</Text>
                     </Button>
                   ) : undefined}
-                  onRefresh={loadCustomAttributes}
+                  onRefresh={loadConfigs}
                   emptyStateIllustration={<GearSettingIllustration aria-hidden />}
                   emptyStateTitle="No Custom Attributes"
                   emptyStateDescription="Create custom attributes to add additional fields to events"
@@ -1226,33 +1257,6 @@ export const ConfigManagement: React.FC<ConfigManagementProps> = () => {
                       ))}
                     </div>
                   </div>
-
-                  {/* Enabled Attributes */}
-                  {customAttributes.length > 0 && (
-                    <div>
-                      <Text UNSAFE_style={{ fontWeight: 700, marginBottom: 8, display: 'block' }}>Enabled Custom Attributes</Text>
-                      <div className={style({ display: 'flex', flexDirection: 'column', gap: 8 })}>
-                        {customAttributes.map(attr => {
-                          const isEnabled = rsvpEnabledAttributes.some(ea => ea.attributeId === attr.attributeId)
-                          return (
-                            <Checkbox
-                              key={attr.attributeId}
-                              isSelected={isEnabled}
-                              onChange={(checked) => {
-                                if (checked) {
-                                  setRsvpEnabledAttributes(prev => [...prev, { attributeId: attr.attributeId, name: attr.name }])
-                                } else {
-                                  setRsvpEnabledAttributes(prev => prev.filter(ea => ea.attributeId !== attr.attributeId))
-                                }
-                              }}
-                            >
-                              {attr.name} ({attr.inputType})
-                            </Checkbox>
-                          )
-                        })}
-                      </div>
-                    </div>
-                  )}
 
                   {/* Localizations */}
                   <div>
@@ -1450,6 +1454,9 @@ export const ConfigManagement: React.FC<ConfigManagementProps> = () => {
                     isRequired
                     autoFocus
                   />
+                  <SpectrumSwitch isSelected={attrFormEnabled} onChange={setAttrFormEnabled}>
+                    Enabled
+                  </SpectrumSwitch>
                   <Picker
                     label="Input Type"
                     selectedKey={attrFormInputType}

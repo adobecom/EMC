@@ -43,15 +43,6 @@ export interface RsvpFormFieldLocaleOverride {
 }
 
 // ============================================================================
-// Enabled Attribute Reference
-// ============================================================================
-
-export interface EnabledAttributeRef {
-  attributeId: string
-  name: string
-}
-
-// ============================================================================
 // Scope Config Models
 // ============================================================================
 
@@ -66,7 +57,6 @@ interface ScopeConfigBase {
 export interface RsvpScopeConfig extends ScopeConfigBase {
   type: 'rsvp'
   rsvpFormFields: RsvpFormField[]
-  enabledAttributes: EnabledAttributeRef[]
   localizations: Record<string, { rsvpFormFields: RsvpFormFieldLocaleOverride[] }>
 }
 
@@ -78,7 +68,7 @@ export interface LocalesScopeConfig extends ScopeConfigBase {
 
 export interface CustomAttributesScopeConfig extends ScopeConfigBase {
   type: 'custom-attributes'
-  enabledAttributes: EnabledAttributeRef[]
+  attributes: CustomAttributeConfig[]
 }
 
 export type ScopeConfig = RsvpScopeConfig | LocalesScopeConfig | CustomAttributesScopeConfig
@@ -93,14 +83,12 @@ export interface CustomAttributeValue {
   displayOrder: number
 }
 
-export interface CustomAttribute {
+export interface CustomAttributeConfig {
   attributeId: string
   name: string
   inputType: CustomAttributeInputType
+  enabled: boolean
   values: CustomAttributeValue[]
-  scopeId: string
-  creationTime: number
-  modificationTime: number
 }
 
 // ============================================================================
@@ -110,7 +98,6 @@ export interface CustomAttribute {
 export interface RsvpConfigCreateBody {
   type: 'rsvp'
   rsvpFormFields: RsvpFormField[]
-  enabledAttributes?: EnabledAttributeRef[]
   localizations?: Record<string, { rsvpFormFields: RsvpFormFieldLocaleOverride[] }>
 }
 
@@ -122,7 +109,7 @@ export interface LocalesConfigCreateBody {
 
 export interface CustomAttributesConfigCreateBody {
   type: 'custom-attributes'
-  enabledAttributes: EnabledAttributeRef[]
+  attributes: CustomAttributeConfig[]
 }
 
 export type ConfigCreateBody =
@@ -132,31 +119,12 @@ export type ConfigCreateBody =
 
 export type ConfigUpdateBody = ScopeConfig
 
-export interface CustomAttributeCreateBody {
-  name: string
-  inputType: CustomAttributeInputType
-  values?: Array<{ value: string }>
-}
-
-export interface CustomAttributeUpdateBody {
-  attributeId: string
-  name: string
-  inputType: CustomAttributeInputType
-  values: CustomAttributeValue[]
-}
-
 // ============================================================================
 // Response Envelopes
 // ============================================================================
 
 export interface ConfigListResponse {
   configs: ScopeConfig[]
-  count: number
-  nextPageToken?: string | null
-}
-
-export interface CustomAttributeListResponse {
-  customAttributes: CustomAttribute[]
   count: number
   nextPageToken?: string | null
 }
