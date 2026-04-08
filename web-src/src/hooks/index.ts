@@ -17,5 +17,6 @@ export type { SaveOptions, SaveResult } from './useEventFormSave'
 export { useRBACFilter } from './useRBACFilter'
 export { useHasPermission, useHasAnyPermission, useHasAllPermissions, checkPermission } from './useHasPermission'
 export { useCustomDetailPagePath } from './useCustomDetailPagePath'
-export type { DetailPagePathResult } from './useCustomDetailPagePath'
+export type { DetailPagePathResult, GetDetailPagePathForSaveOptions } from './useCustomDetailPagePath'
+export { usePreferredColorScheme } from './usePreferredColorScheme'
 

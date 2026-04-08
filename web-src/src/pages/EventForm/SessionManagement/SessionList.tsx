@@ -110,11 +110,11 @@ export const SessionItem: React.FC<SessionItemProps> = ({
           <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
             <Heading
               level={3}
-              UNSAFE_style={{ color: "#464646", margin: 0 }}
+              UNSAFE_style={{ color: 'var(--spectrum-global-color-gray-900)', margin: 0 }}
             >
               {session.name}
             </Heading>
-            <Text UNSAFE_style={{ color: "#464646", fontSize: "14px" }}>
+            <Text UNSAFE_style={{ color: 'var(--spectrum-global-color-gray-900)', fontSize: "14px" }}>
               {sessionDate} | {startTime} - {endTime}
             </Text>
             {session.tags && session.tags.length > 0 && (

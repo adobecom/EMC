@@ -20,8 +20,30 @@ import { getDetailPageLocalePrefixFromIetf } from '../config/detailPageLocalePre
 import {
   buildTokenContext,
   constructDetailPagePath,
+  patternTokensAffectingUrlChanged,
   resolveUrlPattern,
 } from '../utils/urlPatternResolver'
+
+/** Options for {@link getDetailPagePathForSave}. */
+export interface GetDetailPagePathForSaveOptions {
+  /** When set, that event is ignored for collision (avoids matching the row being edited). */
+  excludeEventId?: string
+}
+
+/** First event with this detail URL other than `excludeEventId` (for unit tests and hook). */
+export function findDetailPagePathCollisionEvent(
+  events: EventApiResponse[],
+  url: string,
+  excludeEventId?: string
+): EventApiResponse | null {
+  return (
+    events.find(
+      (e) =>
+        e.detailPagePath === url &&
+        (!excludeEventId || !e.eventId || e.eventId !== excludeEventId)
+    ) || null
+  )
+}
 
 /** `url` is the full detail page URL — same value sent as API `detailPagePath` on create. */
 export interface DetailPagePathResult {
@@ -46,17 +68,41 @@ export function useCustomDetailPagePath() {
     return () => { cancelled = true }
   }, [])
 
-  const getDetailPagePathForSave = useCallback(async (
-    seriesId: string,
-    formData: EventFormData
-  ): Promise<DetailPagePathResult | null> => {
+  const ensurePatternsLoaded = useCallback(async (): Promise<boolean> => {
     if (!loadedRef.current) {
       try {
         patternsRef.current = await configService.getUrlPatterns()
         loadedRef.current = true
       } catch {
-        return null
+        return false
       }
+    }
+    return true
+  }, [])
+
+  /**
+   * Whether this save should run URL resolution + collision (series has a pattern and create or URL-affecting edit).
+   */
+  const shouldRunCustomDetailPagePathFlow = useCallback(async (
+    seriesId: string,
+    formData: EventFormData,
+    isExistingEvent: boolean,
+    eventDataResp: EventApiResponse | null
+  ): Promise<boolean> => {
+    if (!(await ensurePatternsLoaded())) return false
+    const entry = patternsRef.current.find((p) => p.seriesId === seriesId)
+    if (!entry) return false
+    if (!isExistingEvent || !eventDataResp) return true
+    return patternTokensAffectingUrlChanged(entry.pattern, formData, eventDataResp)
+  }, [ensurePatternsLoaded])
+
+  const getDetailPagePathForSave = useCallback(async (
+    seriesId: string,
+    formData: EventFormData,
+    options?: GetDetailPagePathForSaveOptions
+  ): Promise<DetailPagePathResult | null> => {
+    if (!(await ensurePatternsLoaded())) {
+      return null
     }
 
     const entry = patternsRef.current.find((p) => p.seriesId === seriesId)
@@ -83,10 +129,14 @@ export function useCustomDetailPagePath() {
     )
 
     const allEvents: EventApiResponse[] = await cachedApi.getEventsList()
-    const collision = allEvents.find((e) => e.detailPagePath === url) || null
+    const collision = findDetailPagePathCollisionEvent(
+      allEvents,
+      url,
+      options?.excludeEventId
+    )
 
     return { url, collision }
-  }, [])
+  }, [ensurePatternsLoaded])
 
-  return { getDetailPagePathForSave }
+  return { getDetailPagePathForSave, shouldRunCustomDetailPagePathFlow }
 }

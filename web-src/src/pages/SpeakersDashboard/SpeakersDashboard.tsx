@@ -49,7 +49,14 @@ import { useToast, useGroup } from '../../contexts'
 import { createShimmerStyle, COLORS } from '../../styles/designSystem'
 import { useSafeState, useRBACFilter } from '../../hooks'
 import { useHasPermission } from '../../hooks/useHasPermission'
-import { SpeakerFormDialog, SpeakerFormSaveOptions } from './SpeakerFormDialog'
+import { getProfileAttr } from '../../utils/dataFilters'
+import { DEFAULT_LOCALE, SUPPORTED_SPEAKER_LOCALES } from '../../config/localeMapping'
+import { buildSpeakerPayloadForDashboard } from '../../services/payloadBuilders'
+import {
+  SpeakerFormDialog,
+  SpeakerFormSaveOptions,
+  SpeakerFormSubmitData,
+} from './SpeakerFormDialog'
 import { CascadeConfirmDialog, CascadeAction } from './CascadeConfirmDialog'
 import { SpeakerEventConnectionsDialog } from './SpeakerEventConnectionsDialog'
 
@@ -62,10 +69,27 @@ export interface SpeakerDashboardItem extends SeriesSpeaker {
 
 const SPEAKERS_SEARCH_KEYS = ['firstName', 'lastName', 'title']
 
-function speakerImageAltText(payload: Record<string, unknown>): string {
-  const fn = typeof payload.firstName === 'string' ? payload.firstName.trim() : ''
-  const ln = typeof payload.lastName === 'string' ? payload.lastName.trim() : ''
-  return `${fn} ${ln}`.trim() || 'Speaker'
+function getSpeakerDisplayTitle(item: SpeakerDashboardItem): string {
+  const row = item as unknown as Record<string, unknown>
+  const primary = getProfileAttr(row, 'title', DEFAULT_LOCALE)
+  if (typeof primary === 'string' && primary.trim()) {
+    return primary.trim()
+  }
+  for (const loc of SUPPORTED_SPEAKER_LOCALES) {
+    const t = item.localizations?.[loc]?.title
+    if (typeof t === 'string' && t.trim()) {
+      return t.trim()
+    }
+  }
+  return (item.title || '').trim()
+}
+
+function speakerTitleSearchText(item: SpeakerDashboardItem): string {
+  const chunks = [
+    item.title,
+    ...SUPPORTED_SPEAKER_LOCALES.map((loc) => item.localizations?.[loc]?.title),
+  ]
+  return chunks.filter(Boolean).join(' ').toLowerCase()
 }
 
 interface SpeakersDashboardProps {
@@ -290,7 +314,7 @@ export const SpeakersDashboard: React.FC<SpeakersDashboardProps> = () => {
   }, [])
   
   const handleFormSubmit = useCallback(async (
-    speakerPayload: Record<string, unknown>,
+    data: SpeakerFormSubmitData,
     pendingFile?: File,
     options?: SpeakerFormSaveOptions
   ) => {
@@ -302,12 +326,24 @@ export const SpeakersDashboard: React.FC<SpeakersDashboardProps> = () => {
     
     try {
       let result
-      const altText = pendingFile ? speakerImageAltText(speakerPayload) : ''
+      const altText = pendingFile
+        ? `${data.firstName} ${data.lastName}`.trim() || 'Speaker'
+        : ''
+
+      const speakerPayload = await buildSpeakerPayloadForDashboard({
+        seriesId: selectedSeriesId,
+        speakerId: editingSpeaker?.speakerId,
+        firstName: data.firstName,
+        lastName: data.lastName,
+        socialLinks: data.socialLinks,
+        localizationDrafts: data.localizationDrafts,
+        modificationTime: editingSpeaker?.modificationTime,
+      })
 
       if (editingSpeaker) {
         // Update existing speaker
         result = await apiService.updateSpeaker(
-          { ...speakerPayload, speakerId: editingSpeaker.speakerId, modificationTime: editingSpeaker.modificationTime },
+          speakerPayload as Record<string, unknown>,
           selectedSeriesId
         )
         
@@ -333,7 +369,6 @@ export const SpeakersDashboard: React.FC<SpeakersDashboardProps> = () => {
           await Promise.all(
             events.map(async (event) => {
               try {
-                // Note: updateSpeakerInEvent might need the event speaker's speakerType and ordinal
                 await apiService.updateSpeakerInEvent(
                   { speakerId: editingSpeaker.speakerId },
                   editingSpeaker.speakerId,
@@ -349,7 +384,10 @@ export const SpeakersDashboard: React.FC<SpeakersDashboardProps> = () => {
         toast.success('Speaker updated successfully!')
       } else {
         // Create new speaker
-        result = await apiService.createSpeaker(speakerPayload, selectedSeriesId)
+        result = await apiService.createSpeaker(
+          speakerPayload as Record<string, unknown>,
+          selectedSeriesId
+        )
         
         if ('error' in result) {
           throw new Error(result.error)
@@ -524,18 +562,21 @@ export const SpeakersDashboard: React.FC<SpeakersDashboardProps> = () => {
         const bName = `${b.firstName} ${b.lastName}`
         return aName.localeCompare(bName)
       },
-      render: (item) => (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-          <Text UNSAFE_style={{ fontWeight: 'bold' }}>
-            {item.firstName} {item.lastName}
-          </Text>
-          {item.title && (
-            <Text UNSAFE_style={{ fontSize: '12px', color: 'var(--spectrum-global-color-gray-600)' }}>
-              {item.title.length > 40 ? `${item.title.substring(0, 40)}...` : item.title}
+      render: (item) => {
+        const displayTitle = getSpeakerDisplayTitle(item)
+        return (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+            <Text UNSAFE_style={{ fontWeight: 'bold' }}>
+              {item.firstName} {item.lastName}
             </Text>
-          )}
-        </div>
-      )
+            {displayTitle ? (
+              <Text UNSAFE_style={{ fontSize: '12px', color: 'var(--spectrum-global-color-gray-600)' }}>
+                {displayTitle.length > 40 ? `${displayTitle.substring(0, 40)}...` : displayTitle}
+              </Text>
+            ) : null}
+          </div>
+        )
+      }
     },
     {
       key: 'eventCount',
@@ -888,7 +929,9 @@ export const SpeakersDashboard: React.FC<SpeakersDashboardProps> = () => {
             searchKeys={SPEAKERS_SEARCH_KEYS}
             searchFilter={(speaker, query) => {
               const fullName = `${speaker.firstName || ''} ${speaker.lastName || ''}`.toLowerCase()
-              return fullName.includes(query) || (speaker.title || '').toLowerCase().includes(query)
+              return (
+                fullName.includes(query) || speakerTitleSearchText(speaker).includes(query)
+              )
             }}
           />
         </div>

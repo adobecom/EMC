@@ -2,7 +2,7 @@
 * <license header>
 */
 
-import React, { useState, useMemo, useCallback } from 'react'
+import React, { useState, useMemo, useCallback, useRef, useEffect, useLayoutEffect } from 'react'
 import { ActionButton, Text } from '@react-spectrum/s2'
 import { style } from '@react-spectrum/s2/style' with { type: 'macro' }
 import Sort from "@react-spectrum/s2/icons/Sort"
@@ -54,6 +54,214 @@ const iconMap = {
   view: Visibility,
   edit: Edit,
   delete: RemoveCircle
+}
+
+const EDGE_ZONE_PX = 56
+const MAX_SCROLL_SPEED_PX_PER_S = 1400
+const SCROLL_EPSILON = 2
+
+function sumStickyRightHeaderWidths(scrollRoot: HTMLElement): number {
+  const headers = scrollRoot.querySelectorAll<HTMLElement>('thead th[class*="sticky-right"]')
+  let sum = 0
+  headers.forEach((th) => {
+    sum += th.offsetWidth
+  })
+  return sum
+}
+
+interface DataTableScrollRegionProps {
+  children: React.ReactNode
+  /** Bumps measurement when columns / structure change */
+  layoutKey: string
+}
+
+/**
+ * Proximity horizontal auto-scroll + edge gradients for mouse users.
+ * Right-edge math excludes sticky-right header width so actions stay clickable.
+ */
+function DataTableScrollRegion({ children, layoutKey }: DataTableScrollRegionProps): React.ReactElement {
+  const shellRef = useRef<HTMLDivElement>(null)
+  const scrollRef = useRef<HTMLDivElement>(null)
+  const leftHintRef = useRef<HTMLDivElement>(null)
+  const rightHintRef = useRef<HTMLDivElement>(null)
+  const velocityRef = useRef(0)
+  const rafRef = useRef<number | null>(null)
+  const lastTickRef = useRef(0)
+  const reduceMotionRef = useRef(false)
+  const [stickyReservedWidth, setStickyReservedWidth] = useState(0)
+
+  useEffect(() => {
+    const mq = window.matchMedia('(prefers-reduced-motion: reduce)')
+    reduceMotionRef.current = mq.matches
+    const onChange = () => {
+      reduceMotionRef.current = mq.matches
+      if (mq.matches) {
+        velocityRef.current = 0
+      }
+    }
+    mq.addEventListener('change', onChange)
+    return () => mq.removeEventListener('change', onChange)
+  }, [])
+
+  const updateHintOpacity = useCallback(() => {
+    const el = scrollRef.current
+    const leftEl = leftHintRef.current
+    const rightEl = rightHintRef.current
+    if (!el || !leftEl || !rightEl) return
+
+    const maxScroll = el.scrollWidth - el.clientWidth
+    const hasOverflow = maxScroll > SCROLL_EPSILON
+    const sl = el.scrollLeft
+
+    const leftOp = hasOverflow && sl > SCROLL_EPSILON ? 1 : 0
+    const rightOp = hasOverflow && sl < maxScroll - SCROLL_EPSILON ? 1 : 0
+    leftEl.style.opacity = String(leftOp)
+    rightEl.style.opacity = String(rightOp)
+  }, [])
+
+  const measureSticky = useCallback(() => {
+    const root = scrollRef.current
+    if (!root) return
+    const raw = sumStickyRightHeaderWidths(root)
+    const clamped = Math.min(Math.max(0, raw), root.clientWidth)
+    setStickyReservedWidth(clamped)
+  }, [])
+
+  useLayoutEffect(() => {
+    measureSticky()
+    updateHintOpacity()
+  }, [layoutKey, measureSticky, updateHintOpacity])
+
+  useEffect(() => {
+    const root = scrollRef.current
+    if (!root) return
+
+    const ro = new ResizeObserver(() => {
+      measureSticky()
+      updateHintOpacity()
+    })
+    ro.observe(root)
+    const table = root.querySelector('table')
+    if (table) {
+      ro.observe(table)
+    }
+
+    const onScroll = () => updateHintOpacity()
+    root.addEventListener('scroll', onScroll, { passive: true })
+
+    return () => {
+      ro.disconnect()
+      root.removeEventListener('scroll', onScroll)
+    }
+  }, [layoutKey, measureSticky, updateHintOpacity])
+
+  const runTick = useCallback(() => {
+    const el = scrollRef.current
+    if (!el) {
+      rafRef.current = null
+      return
+    }
+
+    const now = performance.now()
+    if (lastTickRef.current === 0) {
+      lastTickRef.current = now
+    }
+    const dt = Math.min(0.1, (now - lastTickRef.current) / 1000)
+    lastTickRef.current = now
+
+    const v = reduceMotionRef.current ? 0 : velocityRef.current
+    if (v !== 0) {
+      el.scrollLeft += v * dt
+    }
+    updateHintOpacity()
+
+    if (velocityRef.current !== 0 && !reduceMotionRef.current) {
+      rafRef.current = requestAnimationFrame(runTick)
+    } else {
+      rafRef.current = null
+      lastTickRef.current = 0
+    }
+  }, [updateHintOpacity])
+
+  const ensureTick = useCallback(() => {
+    if (rafRef.current == null && velocityRef.current !== 0 && !reduceMotionRef.current) {
+      rafRef.current = requestAnimationFrame(runTick)
+    }
+  }, [runTick])
+
+  const handleMouseMove = useCallback(
+    (e: React.MouseEvent<HTMLDivElement>) => {
+      const shell = shellRef.current
+      if (!shell || !scrollRef.current || reduceMotionRef.current) {
+        velocityRef.current = 0
+        return
+      }
+
+      const rect = shell.getBoundingClientRect()
+      const stickyW = stickyReservedWidth
+      const effectiveRight = rect.right - stickyW
+
+      const distLeft = e.clientX - rect.left
+      const distRight = effectiveRight - e.clientX
+
+      let vLeft = 0
+      let vRight = 0
+      if (distLeft >= 0 && distLeft < EDGE_ZONE_PX) {
+        vLeft = -MAX_SCROLL_SPEED_PX_PER_S * (1 - distLeft / EDGE_ZONE_PX)
+      }
+      if (distRight >= 0 && distRight < EDGE_ZONE_PX && e.clientX < effectiveRight) {
+        vRight = MAX_SCROLL_SPEED_PX_PER_S * (1 - distRight / EDGE_ZONE_PX)
+      }
+
+      if (vLeft !== 0 && vRight !== 0) {
+        velocityRef.current = Math.abs(vLeft) >= Math.abs(vRight) ? vLeft : vRight
+      } else {
+        velocityRef.current = vLeft + vRight
+      }
+
+      if (velocityRef.current !== 0) {
+        ensureTick()
+      }
+    },
+    [ensureTick, stickyReservedWidth]
+  )
+
+  const handleMouseLeave = useCallback(() => {
+    velocityRef.current = 0
+    updateHintOpacity()
+  }, [updateHintOpacity])
+
+  useEffect(() => {
+    return () => {
+      if (rafRef.current != null) {
+        cancelAnimationFrame(rafRef.current)
+      }
+    }
+  }, [])
+
+  return (
+    <div
+      ref={shellRef}
+      className="data-table-scroll-shell"
+      onMouseMove={handleMouseMove}
+      onMouseLeave={handleMouseLeave}
+    >
+      <div
+        ref={scrollRef}
+        className="custom-data-table"
+        style={{ overflowX: 'auto', width: '100%', maxWidth: '100%' }}
+      >
+        {children}
+      </div>
+      <div ref={leftHintRef} className="data-table-scroll-hint-left" aria-hidden />
+      <div
+        ref={rightHintRef}
+        className="data-table-scroll-hint-right"
+        style={{ right: stickyReservedWidth, width: EDGE_ZONE_PX }}
+        aria-hidden
+      />
+    </div>
+  )
 }
 
 export function DataTable<T extends Record<string, any>>({
@@ -232,6 +440,12 @@ export function DataTable<T extends Record<string, any>>({
 
   const totalColumnCount = allColumns.length + (isExpandable ? 1 : 0)
 
+  const scrollLayoutKey = useMemo(
+    () =>
+      `${allColumns.map((c) => `${c.key}:${c.width ?? ''}:${c.isSticky ? 1 : 0}`).join('|')}|e:${isExpandable ? 1 : 0}|a:${actions?.length ?? 0}`,
+    [allColumns, isExpandable, actions?.length]
+  )
+
   // Get sticky column classes
   const getStickyClass = (columnKey: string): string => {
     const stickyColumns = allColumns.filter(c => c.isSticky).reverse()
@@ -276,7 +490,7 @@ export function DataTable<T extends Record<string, any>>({
 
   return (
     <div data-testid="data-table" className={style({ display: 'flex', flexDirection: 'column', gap: 12, height: '[100%]', width: '[100%]' })}>
-      <div className="custom-data-table" style={{ overflowX: 'auto', width: '100%', maxWidth: '100%' }}>
+      <DataTableScrollRegion layoutKey={scrollLayoutKey}>
         <table>
           <thead>
             <tr>
@@ -404,7 +618,7 @@ export function DataTable<T extends Record<string, any>>({
             })}
           </tbody>
         </table>
-      </div>
+      </DataTableScrollRegion>
 
       {/* Pagination */}
       {totalPages > 1 && (

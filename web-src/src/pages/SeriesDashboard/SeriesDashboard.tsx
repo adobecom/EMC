@@ -14,7 +14,7 @@ import Archive from '@react-spectrum/s2/icons/Archive'
 import { TableColumn } from '../../components/shared/DataTable'
 import { StatusBadge, ResourceDashboardLayout, BlurredLoadingOverlay } from '../../components/shared'
 import LayersIllustration from '@react-spectrum/s2/illustrations/linear/Layers'
-import { SeriesDashboardItem, EventApiResponse } from '../../types/domain'
+import { SeriesDashboardItem, EventApiResponse, SeriesApiResponse } from '../../types/domain'
 import { apiService, cachedApi } from '../../services/api'
 import { IMS } from '../../types'
 import { 
@@ -355,7 +355,8 @@ export const SeriesDashboard: React.FC<SeriesDashboardProps> = () => {
           if ('error' in fullSeries) {
             throw new Error('Failed to fetch series data')
           }
-          await apiService.publishSeries(item.seriesId, { modificationTime: fullSeries.modificationTime })
+          // ESP validates full Series body on PUT (seriesName, templateId, modificationTime, etc.)
+          await apiService.publishSeries(item.seriesId, fullSeries as SeriesApiResponse)
           
           // Reload data to reflect changes
           await loadSeriesData()
@@ -372,7 +373,7 @@ export const SeriesDashboard: React.FC<SeriesDashboardProps> = () => {
           if ('error' in fullSeries) {
             throw new Error('Failed to fetch series data')
           }
-          await apiService.unpublishSeries(item.seriesId, { modificationTime: fullSeries.modificationTime })
+          await apiService.unpublishSeries(item.seriesId, fullSeries as SeriesApiResponse)
           
           // Reload data to reflect changes
           await loadSeriesData()
@@ -396,7 +397,7 @@ export const SeriesDashboard: React.FC<SeriesDashboardProps> = () => {
           if ('error' in fullSeries) {
             throw new Error('Failed to fetch series data')
           }
-          await apiService.archiveSeries(item.seriesId, { modificationTime: fullSeries.modificationTime })
+          await apiService.archiveSeries(item.seriesId, fullSeries as SeriesApiResponse)
           
           // Reload data to reflect changes
           await loadSeriesData()

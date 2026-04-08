@@ -7,7 +7,7 @@ import { Button, Heading, Text, Picker, PickerItem, ActionButton, ProgressCircle
 import { style } from '@react-spectrum/s2/style' with { type: 'macro' }
 import { ProfileData, SeriesSpeaker, SpeakerType, EventApiResponse } from '../../types/domain'
 import { SpeakerPickerDialog } from './SpeakerPickerDialog'
-import { TYPOGRAPHY, COLORS } from '../../styles/designSystem'
+import { TYPOGRAPHY, COLORS, SURFACES } from '../../styles/designSystem'
 import { speakerHasLocalization } from '../../utils/eventFormMappers'
 import Add from '@react-spectrum/s2/icons/Add'
 import AlertTriangle from '@react-spectrum/s2/icons/AlertTriangle'
@@ -366,7 +366,7 @@ export const SpeakersComponent: React.FC = () => {
         <div
           style={{
             padding: '32px',
-            backgroundColor: '#F5F5F5',
+            backgroundColor: SURFACES.SUBTLE,
             borderRadius: '4px',
             textAlign: 'center',
           }}
@@ -416,12 +416,12 @@ export const SpeakersComponent: React.FC = () => {
             style={{
               padding: '16px',
               border: isDragOver
-                ? '2px solid #1473E6'
-                : '1px solid #D3D3D3',
+                ? `2px solid ${SURFACES.SELECTED_RING}`
+                : `1px solid ${SURFACES.BORDER}`,
               borderRadius: '8px',
               backgroundColor: isDragging
-                ? '#F5F5F5'
-                : '#FFFFFF',
+                ? SURFACES.SUBTLE
+                : SURFACES.CANVAS,
               opacity: isDragging ? 0.5 : 1,
               transition: 'border-color 0.2s, background-color 0.2s',
             }}
@@ -440,7 +440,7 @@ export const SpeakersComponent: React.FC = () => {
                     height: '40px',
                     borderRadius: '50%',
                     objectFit: 'cover',
-                    border: '1px solid #D3D3D3',
+                    border: `1px solid ${SURFACES.BORDER}`,
                     flexShrink: 0,
                   }}
                 />
@@ -450,11 +450,11 @@ export const SpeakersComponent: React.FC = () => {
                     width: '40px',
                     height: '40px',
                     borderRadius: '50%',
-                    backgroundColor: '#D3D3D3',
+                    backgroundColor: SURFACES.CHROME,
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    color: '#6E6E6E',
+                    color: COLORS.GRAY_600,
                     fontSize: '14px',
                     fontWeight: 'bold',
                     flexShrink: 0,
@@ -485,7 +485,7 @@ export const SpeakersComponent: React.FC = () => {
                   <Text
                     UNSAFE_style={{
                       fontSize: '12px',
-                      color: '#6E6E6E',
+                      color: COLORS.GRAY_600,
                       overflow: 'hidden',
                       textOverflow: 'ellipsis',
                       whiteSpace: 'nowrap',
@@ -495,7 +495,7 @@ export const SpeakersComponent: React.FC = () => {
                   </Text>
                 )}
                 {hasTitleNoBio && (
-                  <Text UNSAFE_style={{ fontSize: '11px', color: '#909090', fontStyle: 'italic' }}>
+                  <Text UNSAFE_style={{ fontSize: '11px', color: COLORS.GRAY_500, fontStyle: 'italic' }}>
                     No bio for this locale
                   </Text>
                 )}
@@ -528,9 +528,9 @@ export const SpeakersComponent: React.FC = () => {
           onPress={() => setPickerOpen(true)}
           styles={style({ width: '[100%]' })}
           UNSAFE_style={{
-            backgroundColor: '#E1E1E1',
+            backgroundColor: SURFACES.PILL_BG,
             border: 'none',
-            color: '#2C2C2C',
+            color: COLORS.DARK_GRAY,
             justifyContent: 'flex-start',
             paddingLeft: '16px',
           }}

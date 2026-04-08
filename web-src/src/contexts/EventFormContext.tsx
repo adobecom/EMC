@@ -228,6 +228,7 @@ export const createDefaultFormData = (): EventFormData => ({
   secondaryLinkTitle: '',
   agendaItems: [],
   showAgendaPostEvent: false,
+  showSponsors: true,
   sponsors: []
 })
 

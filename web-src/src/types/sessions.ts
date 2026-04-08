@@ -2,6 +2,7 @@ export interface SessionTimeInfo {
   sessionTimeId?: string
   startTimeMillis?: number
   endTimeMillis?: number
+  timezone?: string
   attendeeLimit?: number
   isAutoRegistrationEnabled?: boolean
   locationId?: string

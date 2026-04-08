@@ -4,14 +4,11 @@
 
 /** Canonical sans stack (S2 variable font + fallbacks). Single source: keep TS `FONT_FAMILY_SANS` in sync. **/
 :root {
-  color-scheme: light;
   --emc-font-sans: adobe-clean-spectrum-vf, adobe-clean-variable, adobe-clean, ui-sans-serif, system-ui, sans-serif;
 
   /**
-   * Legacy Spectrum global palette + dimensions (light theme).
-   * React Spectrum S2 does not inject --spectrum-global-* tokens from v3 Provider.
-   * EMC COLORS, overlays, dialogs, and index.css reference them — define here so backgrounds and borders resolve.
-   * Values align with Spectrum light global colors / dimension scale.
+   * Legacy Spectrum global palette (light). S2 does not inject --spectrum-global-* from v3 Provider.
+   * Dark overrides: @media (prefers-color-scheme: dark) below (keeps keys stable for designSystem.ts).
    */
   --spectrum-global-color-gray-50: #f8f8f8;
   --spectrum-global-color-gray-75: #fafafa;
@@ -42,21 +39,204 @@
   --spectrum-global-dimension-size-400: 32px;
   --spectrum-global-dimension-size-2000: 160px;
 
+  /** EMC semantic surfaces (light) — use instead of hardcoded #fff in CSS */
+  --emc-surface-raised: #ffffff;
+  --emc-nav-selected-border: var(--spectrum-global-color-gray-900);
+  --emc-home-gradient: linear-gradient(
+    180deg,
+    rgba(252, 125, 1, 0.2) -36.63%,
+    rgba(171, 162, 239, 0.2) 36.41%,
+    rgba(236, 67, 71, 0.2) 85.8%
+  ),
+    #ffffff;
+  --emc-shimmer-gradient: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+  --emc-sticky-col-shadow: -2px 0 4px rgba(0, 0, 0, 0.05);
+  --emc-top-nav-shadow: 0 1px 4px rgba(0, 0, 0, 0.1);
+  --emc-nav-card-shadow: 0 0 1px rgba(0, 0, 0, 0.12);
+  --emc-nav-card-shadow-hover: 0 2px 8px rgba(0, 0, 0, 0.14);
+  /** Dropdowns anchored to body (e.g. Google Places) */
+  --emc-overlay-floating-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
+  /** Tag chips (dark pill + light icon) — stable in both schemes */
+  --emc-tag-chip-bg: #2c2c2c;
+
   /**
-   * S2 page.css sets --s2-container-bg via LightningCSS branches; without the build-time
-   * transform the value is not a single valid color. Force a light surface for the app shell.
+   * Multi-step forms (event/series): shell sits on app `--s2-container-bg`; cards sit above shell.
+   * Light: shell = gray-100 tint; cards = white; format dialog = white so Pickers (gray-50) read as fields.
    */
-  --s2-container-bg: #ffffff;
+  --emc-event-form-shell-bg: var(--spectrum-global-color-gray-100);
+  --emc-form-card-bg: #ffffff;
+  --emc-format-dialog-panel-bg: #ffffff;
+
+  /** Speakers dashboard: cascade-to-events callout (readable on light + dark) */
+  --emc-cascade-callout-bg: var(--spectrum-global-color-gray-75);
+  --emc-cascade-callout-border: var(--spectrum-global-color-yellow-400);
+  --emc-cascade-callout-text: var(--spectrum-global-color-gray-900);
+  --emc-cascade-callout-text-muted: var(--spectrum-global-color-gray-700);
+
+  /**
+   * Native/custom inputs aligned with S2 TextField `FieldGroup` (see `@react-spectrum/s2/dist/Field.css`):
+   * dark fill #111, border #444, focus border #131313 / #f2f2f2, ~150ms easing.
+   */
+  --emc-field-bg: #ffffff;
+  --emc-field-border: #c6c6c6;
+  --emc-field-border-focus: #131313;
+  --emc-field-border-invalid: #d73220;
+  --emc-focus-ring-color: #4b75ff;
+  --emc-field-transition-duration: 0.15s;
+  --emc-field-transition-ease: cubic-bezier(0.45, 0, 0.4, 1);
+
+  --emc-rte-toolbar-bg: linear-gradient(
+    to bottom,
+    var(--spectrum-global-color-gray-75),
+    var(--spectrum-global-color-gray-100)
+  );
+  --emc-rte-toolbar-shadow:
+    0 1px 3px rgba(0, 0, 0, 0.08),
+    0 4px 12px rgba(0, 0, 0, 0.06),
+    0 0 0 1px var(--spectrum-global-color-gray-300);
+  --emc-rte-picker-popover-shadow:
+    0 -2px 8px rgba(0, 0, 0, 0.12),
+    0 0 0 1px var(--spectrum-global-color-gray-300);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --spectrum-global-color-gray-50: #2c2c2c;
+    --spectrum-global-color-gray-75: #323232;
+    --spectrum-global-color-gray-100: #393939;
+    --spectrum-global-color-gray-200: #464646;
+    --spectrum-global-color-gray-300: #5c5c5c;
+    --spectrum-global-color-gray-400: #757575;
+    --spectrum-global-color-gray-500: #8f8f8f;
+    --spectrum-global-color-gray-600: #b1b1b1;
+    --spectrum-global-color-gray-700: #d3d3d3;
+    --spectrum-global-color-gray-800: #e0e0e0;
+    --spectrum-global-color-gray-900: #ededed;
+    --spectrum-global-color-blue-100: #003571;
+    --spectrum-global-color-blue-400: #5eaaf7;
+    --spectrum-global-color-blue-500: #378ef0;
+    --spectrum-global-color-blue-600: #2680eb;
+    --spectrum-global-color-green-100: #0f2f1f;
+    --spectrum-global-color-green-500: #33a186;
+    --spectrum-global-color-green-600: #2d9d78;
+    --spectrum-global-color-green-700: #268e6c;
+    --spectrum-global-color-red-600: #f75b62;
+    --spectrum-global-color-yellow-100: #3d3000;
+    --spectrum-global-color-yellow-400: #e6c200;
+
+    --emc-surface-raised: #2c2c2c;
+    --emc-nav-selected-border: var(--spectrum-global-color-gray-900);
+    --emc-home-gradient: linear-gradient(
+      180deg,
+      rgba(252, 125, 1, 0.12) -36.63%,
+      rgba(171, 162, 239, 0.12) 36.41%,
+      rgba(236, 67, 71, 0.12) 85.8%
+    ),
+      #1a1a1a;
+    --emc-shimmer-gradient: linear-gradient(90deg, #3a3a3a 25%, #2a2a2a 50%, #3a3a3a 75%);
+    --emc-sticky-col-shadow: -2px 0 6px rgba(0, 0, 0, 0.35);
+    --emc-top-nav-shadow: 0 1px 4px rgba(0, 0, 0, 0.45);
+    --emc-nav-card-shadow: 0 0 1px rgba(0, 0, 0, 0.4);
+    --emc-nav-card-shadow-hover: 0 2px 12px rgba(0, 0, 0, 0.45);
+    --emc-overlay-floating-shadow: 0 4px 16px rgba(0, 0, 0, 0.45);
+    --emc-tag-chip-bg: #505050;
+
+    /**
+     * Dark: shell slightly above app chrome (#111). Form cards: one step darker than EMC’s
+     * --spectrum-global-color-gray-50 (#2c2c2c = S2 gray-100 dark in @react-spectrum/s2 theme).
+     * Next step on S2’s dark neutral ramp is gray-75 dark = rgb(34,34,34). EMC remaps
+     * --spectrum-global-color-gray-75 to a lighter #323232, so we keep an explicit S2-aligned token.
+     */
+    --emc-spectrum-s2-gray-75-dark: rgb(34, 34, 34);
+    --emc-event-form-shell-bg: #151515;
+    --emc-form-card-bg: var(--emc-spectrum-s2-gray-75-dark);
+    --emc-format-dialog-panel-bg: var(--emc-spectrum-s2-gray-75-dark);
+
+    --emc-cascade-callout-bg: var(--spectrum-global-color-yellow-100);
+    --emc-cascade-callout-border: var(--spectrum-global-color-yellow-400);
+    --emc-cascade-callout-text: var(--spectrum-global-color-gray-900);
+    --emc-cascade-callout-text-muted: var(--spectrum-global-color-gray-600);
+
+    --emc-field-bg: #111111;
+    --emc-field-border: #444444;
+    --emc-field-border-focus: #f2f2f2;
+    --emc-field-border-invalid: #fc432e;
+    --emc-focus-ring-color: #4069fd;
+
+    --emc-rte-toolbar-bg: linear-gradient(to bottom, #161616, #1a1a1a);
+    --emc-rte-toolbar-shadow:
+      0 1px 4px rgba(0, 0, 0, 0.45),
+      0 4px 16px rgba(0, 0, 0, 0.35),
+      0 0 0 1px var(--emc-field-border);
+    --emc-rte-picker-popover-shadow:
+      0 -4px 12px rgba(0, 0, 0, 0.4),
+      0 0 0 1px var(--spectrum-global-color-gray-300);
+  }
+}
+
+html[data-color-scheme='light'] {
+  --emc-cascade-callout-bg: var(--spectrum-global-color-gray-75);
+  --emc-cascade-callout-border: var(--spectrum-global-color-yellow-400);
+  --emc-cascade-callout-text: var(--spectrum-global-color-gray-900);
+  --emc-cascade-callout-text-muted: var(--spectrum-global-color-gray-700);
+  --emc-field-bg: #ffffff;
+  --emc-field-border: #c6c6c6;
+  --emc-field-border-focus: #131313;
+  --emc-field-border-invalid: #d73220;
+  --emc-focus-ring-color: #4b75ff;
+  --emc-overlay-floating-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
+  --emc-rte-toolbar-bg: linear-gradient(
+    to bottom,
+    var(--spectrum-global-color-gray-75),
+    var(--spectrum-global-color-gray-100)
+  );
+  --emc-rte-toolbar-shadow:
+    0 1px 3px rgba(0, 0, 0, 0.08),
+    0 4px 12px rgba(0, 0, 0, 0.06),
+    0 0 0 1px var(--spectrum-global-color-gray-300);
+  --emc-rte-picker-popover-shadow:
+    0 -2px 8px rgba(0, 0, 0, 0.12),
+    0 0 0 1px var(--spectrum-global-color-gray-300);
+}
+
+html[data-color-scheme='dark'] {
+  --emc-spectrum-s2-gray-75-dark: rgb(34, 34, 34);
+  --emc-event-form-shell-bg: #151515;
+  --emc-form-card-bg: var(--emc-spectrum-s2-gray-75-dark);
+  --emc-format-dialog-panel-bg: var(--emc-spectrum-s2-gray-75-dark);
+  --emc-cascade-callout-bg: var(--spectrum-global-color-yellow-100);
+  --emc-cascade-callout-border: var(--spectrum-global-color-yellow-400);
+  --emc-cascade-callout-text: var(--spectrum-global-color-gray-900);
+  --emc-cascade-callout-text-muted: var(--spectrum-global-color-gray-600);
+  --emc-field-bg: #111111;
+  --emc-field-border: #444444;
+  --emc-field-border-focus: #f2f2f2;
+  --emc-field-border-invalid: #fc432e;
+  --emc-focus-ring-color: #4069fd;
+  --emc-overlay-floating-shadow: 0 4px 16px rgba(0, 0, 0, 0.45);
+  --emc-rte-toolbar-bg: linear-gradient(to bottom, #161616, #1a1a1a);
+  --emc-rte-toolbar-shadow:
+    0 1px 4px rgba(0, 0, 0, 0.45),
+    0 4px 16px rgba(0, 0, 0, 0.35),
+    0 0 0 1px var(--emc-field-border);
+  --emc-rte-picker-popover-shadow:
+    0 -4px 12px rgba(0, 0, 0, 0.4),
+    0 0 0 1px var(--spectrum-global-color-gray-300);
 }
 
 /**
- * S2 Modal / Dialog surface (@react-spectrum/s2 Modal.css): same --s2-container-bg issue
- * is re-declared on the dialog node (.-Ovbhqd-g_g12), which overrides :root and leaves
- * background-color invalid. Class names are from installed @react-spectrum/s2 — recheck after upgrades.
+ * React Spectrum S2 disabled fields: FieldGroup adds class `pp12` with lightningcss-dark color #444
+ * (see @react-spectrum/s2/dist/Field.css). That is not tied to --spectrum-global-color-* and reads
+ * very low-contrast on S2’s #111 field fill. Use our dark gray ramp for disabled label + value text.
  */
-.-Ovbhqd-g_g12.gEzkoQe12 {
-  --s2-container-bg: #ffffff;
-  background-color: #ffffff;
+@media (prefers-color-scheme: dark) {
+  html:not([data-color-scheme='light']) .pp12 {
+    color: var(--spectrum-global-color-gray-600) !important;
+  }
+}
+
+html[data-color-scheme='dark'] .pp12 {
+  color: var(--spectrum-global-color-gray-600) !important;
 }
 
 /** Global Font Settings — use S2's variable font for the entire app **/
@@ -66,21 +246,21 @@ body {
   font-family: var(--emc-font-sans);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  background-color: #FFFFFF;
+  background-color: var(--s2-container-bg);
   color: var(--spectrum-global-color-gray-800);
 }
 
 #root {
-  background-color: #FFFFFF;
+  background-color: var(--s2-container-bg);
   font-family: var(--emc-font-sans);
 }
 
-/** Root v3 Provider: wins over hashed i18nFontFamily legacy stack (see App.tsx `emc-app-provider`). **/
+/** App root: wins over hashed i18n font stack (see App.tsx `emc-app-provider`). **/
 .emc-app-provider {
   font-family: var(--emc-font-sans) !important;
 }
 
-/** Legacy selectors — hashed Spectrum classes may not match; kept for consistency if present **/
+/** Host / wrapper classes that may still set a default font stack */
 .spectrum-Provider,
 .spectrum {
   font-family: var(--emc-font-sans) !important;
@@ -96,7 +276,8 @@ select {
 
 /** Top Navigation Styling **/
 .top-nav {
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.1);
+  background-color: var(--s2-container-bg);
+  box-shadow: var(--emc-top-nav-shadow);
 }
 
 .nav-links {
@@ -130,14 +311,14 @@ select {
 
 .nav-link.is-selected {
   color: var(--spectrum-global-color-gray-900);
-  border-bottom-color: #000000;
+  border-bottom-color: var(--emc-nav-selected-border);
   background-color: transparent;
 }
 
 /** Main scroll region below TopNav **/
 .content-area {
   overflow-y: auto;
-  background-color: #FFFFFF;
+  background-color: var(--s2-container-bg);
 }
 
 /** Custom Data Table Styling **/
@@ -148,10 +329,46 @@ select {
   position: relative;
 }
 
+/** Horizontal scroll edge hints (below thead z-index:1 and sticky-right z-index:2) **/
+.data-table-scroll-shell {
+  position: relative;
+  width: 100%;
+  max-width: 100%;
+}
+
+.data-table-scroll-hint-left,
+.data-table-scroll-hint-right {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 56px;
+  pointer-events: none;
+  z-index: 0;
+  opacity: 0;
+  transition: opacity 0.12s ease-out;
+}
+
+.data-table-scroll-hint-left {
+  left: 0;
+  background: linear-gradient(
+    to right,
+    color-mix(in srgb, var(--spectrum-global-color-gray-200) 55%, var(--s2-container-bg)),
+    transparent
+  );
+}
+
+.data-table-scroll-hint-right {
+  background: linear-gradient(
+    to left,
+    color-mix(in srgb, var(--spectrum-global-color-gray-200) 55%, var(--s2-container-bg)),
+    transparent
+  );
+}
+
 .custom-data-table table {
   width: 100%;
   border-collapse: collapse;
-  background-color: #FFFFFF;
+  background-color: var(--s2-container-bg);
   table-layout: fixed;
 }
 
@@ -164,10 +381,11 @@ select {
   padding: 0 16px;
   text-align: left;
   font-weight: 500;
-  background-color: #FFFFFF;
+  background-color: var(--s2-container-bg);
   position: sticky;
   top: 0;
   z-index: 1;
+  white-space: nowrap;
 }
 
 .custom-data-table th.sortable {
@@ -187,7 +405,7 @@ select {
   min-height: 100px;
   padding: 16px;
   vertical-align: middle;
-  background-color: #FFFFFF;
+  background-color: var(--s2-container-bg);
   white-space: normal;
   overflow-wrap: anywhere;
 }
@@ -195,10 +413,6 @@ select {
 .custom-data-table td.data-table-td-nowrap {
   white-space: nowrap;
   vertical-align: middle;
-}
-
-.custom-data-table th {
-  white-space: nowrap;
 }
 
 /** Expandable Row Styles **/
@@ -235,7 +449,7 @@ select {
   padding: 12px 16px;
   border: 1px solid var(--spectrum-global-color-gray-200);
   border-radius: 6px;
-  background-color: #FFFFFF;
+  background-color: var(--emc-surface-raised);
   transition: background-color 0.15s ease;
 }
 
@@ -394,7 +608,7 @@ select {
   right: 0;
   background-color: var(--spectrum-global-color-gray-100);
   z-index: 2;
-  box-shadow: -2px 0 4px rgba(0, 0, 0, 0.05);
+  box-shadow: var(--emc-sticky-col-shadow);
 }
 
 .custom-data-table th.sticky-right-2,
@@ -403,7 +617,7 @@ select {
   right: calc(130px + 32px); /* column width + padding */
   background-color: var(--spectrum-global-color-gray-100);
   z-index: 2;
-  box-shadow: -2px 0 4px rgba(0, 0, 0, 0.05);
+  box-shadow: var(--emc-sticky-col-shadow);
 }
 
 .custom-data-table th.sticky-right-3,
@@ -412,7 +626,7 @@ select {
   right: calc(2 * (130px + 32px)); /* two column widths + padding */
   background-color: var(--spectrum-global-color-gray-100);
   z-index: 2;
-  box-shadow: -2px 0 4px rgba(0, 0, 0, 0.05);
+  box-shadow: var(--emc-sticky-col-shadow);
 }
 
 /** Attendee Dashboard - Side Panel **/
@@ -463,7 +677,7 @@ select {
 .event-stats-value {
   font-size: var(--spectrum-global-dimension-font-size-500);
   font-weight: 700;
-  color: #EB1000;
+  color: #eb1000;
 }
 
 .event-stats-value-secondary {
@@ -480,24 +694,22 @@ select {
   gap: 16px;
   box-sizing: border-box;
   padding: 32px;
-  background-color: #fff;
+  background-color: var(--emc-surface-raised);
   border: none;
   border-radius: 8px;
   text-decoration: none;
   color: inherit;
   cursor: pointer;
   transition: box-shadow 0.2s ease;
-  /* Default: X 0, Y 0, blur 1 */
-  box-shadow: 0 0 1px rgba(0, 0, 0, 0.12);
+  box-shadow: var(--emc-nav-card-shadow);
 }
 
 .nav-card:hover {
-  /* Hover: Y 2, blur 8 */
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.14);
+  box-shadow: var(--emc-nav-card-shadow-hover);
 }
 
 .nav-card:active {
-  box-shadow: 0 0 1px rgba(0, 0, 0, 0.12);
+  box-shadow: var(--emc-nav-card-shadow);
 }
 
 .nav-card:focus-visible {
@@ -527,3 +739,177 @@ select {
   gap: 8px;
 }
 
+/**
+ * Custom inputs / editors — match S2 TextField surface, border, focus ring, and transition.
+ */
+.emc-field-like {
+  box-sizing: border-box;
+  width: 100%;
+  border: 2px solid var(--emc-field-border);
+  border-radius: 8px;
+  background-color: var(--emc-field-bg);
+  color: var(--spectrum-global-color-gray-800);
+  transition-property: border-color, background-color, box-shadow;
+  transition-duration: var(--emc-field-transition-duration);
+  transition-timing-function: var(--emc-field-transition-ease);
+  outline: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.emc-field-like:focus,
+.emc-field-like:focus:active {
+  border-color: var(--emc-field-border-focus);
+  outline: none;
+  box-shadow: none;
+}
+
+.emc-field-like:focus-visible {
+  outline: 2px solid var(--emc-focus-ring-color);
+  outline-offset: 2px;
+}
+
+.emc-field-like[aria-invalid='true'] {
+  border-color: var(--emc-field-border-invalid);
+}
+
+.emc-field-like[aria-invalid='true']:focus {
+  border-color: var(--emc-field-border-invalid);
+}
+
+/**
+ * Rich text shell: focus lives on inner `.ql-editor`; border follows `:focus-within`,
+ * keyboard ring when the editor matches `:focus-visible`.
+ */
+.rte-field-shell {
+  box-sizing: border-box;
+  border: 2px solid var(--emc-field-border);
+  border-radius: 8px;
+  background-color: var(--emc-field-bg);
+  overflow: hidden;
+  position: relative;
+  transition-property: border-color, box-shadow;
+  transition-duration: var(--emc-field-transition-duration);
+  transition-timing-function: var(--emc-field-transition-ease);
+  -webkit-tap-highlight-color: transparent;
+  outline: none;
+}
+
+.rte-field-shell:focus-within {
+  border-color: var(--emc-field-border-focus);
+  outline: none;
+  box-shadow: none;
+}
+
+.rte-field-shell:has(.ql-editor:focus-visible) {
+  outline: 2px solid var(--emc-focus-ring-color);
+  outline-offset: 2px;
+}
+
+/**
+ * Quill snow + RichTextEditor (`.rte-wrapper`) — Spectrum-like surfaces for light/dark.
+ * Matches `data-color-scheme` (JS) and `prefers-color-scheme` before hydration.
+ */
+.rte-wrapper .ql-toolbar.ql-snow {
+  background: var(--emc-rte-toolbar-bg);
+  box-shadow: var(--emc-rte-toolbar-shadow);
+}
+
+.rte-wrapper .ql-toolbar.ql-snow button:hover,
+.rte-wrapper .ql-toolbar.ql-snow .ql-picker-label:hover {
+  background-color: var(--spectrum-global-color-gray-200);
+}
+
+.rte-wrapper .ql-toolbar.ql-snow .ql-picker.ql-expanded .ql-picker-options {
+  box-shadow: var(--emc-rte-picker-popover-shadow);
+}
+
+.rte-wrapper .ql-container.ql-snow {
+  background-color: var(--emc-field-bg);
+  color: var(--spectrum-global-color-gray-900);
+}
+
+.rte-wrapper .ql-editor {
+  color: var(--spectrum-global-color-gray-900);
+  /* contenteditable — suppress UA focus ring; shell uses border + :focus-visible ring */
+  outline: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.rte-wrapper .ql-editor.ql-blank::before,
+.ql-editor.ql-blank::before {
+  color: var(--spectrum-global-color-gray-500);
+}
+
+.rte-wrapper .ql-snow .ql-stroke,
+.ql-snow .ql-stroke {
+  stroke: var(--spectrum-global-color-gray-800);
+}
+
+.rte-wrapper .ql-snow .ql-fill,
+.ql-snow .ql-fill {
+  fill: var(--spectrum-global-color-gray-800);
+}
+
+.rte-wrapper .ql-snow .ql-picker-label,
+.ql-snow .ql-picker-label {
+  color: var(--spectrum-global-color-gray-900);
+}
+
+.rte-wrapper .ql-snow .ql-picker-options,
+.ql-snow .ql-picker-options {
+  background-color: var(--spectrum-global-color-gray-100);
+  border: 1px solid var(--spectrum-global-color-gray-300);
+}
+
+/** Quill instances outside `.rte-wrapper` (if any) */
+.ql-toolbar.ql-snow {
+  background-color: var(--spectrum-global-color-gray-100);
+  border-color: var(--spectrum-global-color-gray-300);
+}
+
+.ql-container.ql-snow {
+  background-color: var(--emc-field-bg);
+  border-color: var(--spectrum-global-color-gray-300);
+  color: var(--spectrum-global-color-gray-900);
+}
+
+/**
+ * Google Places Autocomplete (appended to body) — not controllable from React;
+ * style `.pac-*` with Spectrum tokens.
+ */
+.pac-container {
+  font-family: var(--emc-font-sans);
+  background-color: var(--emc-field-bg);
+  border: 1px solid var(--emc-field-border);
+  border-radius: 4px;
+  box-shadow: var(--emc-overlay-floating-shadow);
+  margin-top: 4px;
+}
+
+.pac-item {
+  color: var(--spectrum-global-color-gray-900);
+  border-top: 1px solid var(--spectrum-global-color-gray-200);
+  padding: 8px 12px;
+  cursor: pointer;
+}
+
+.pac-item:first-child {
+  border-top: none;
+}
+
+.pac-item:hover,
+.pac-item-selected {
+  background-color: var(--spectrum-global-color-gray-200);
+}
+
+.pac-item-query {
+  color: var(--spectrum-global-color-gray-900);
+}
+
+.pac-matched {
+  font-weight: 600;
+}
+
+.pac-icon {
+  filter: none;
+}
