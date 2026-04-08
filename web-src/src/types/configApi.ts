@@ -22,24 +22,32 @@ export type CustomAttributeInputType = 'text' | 'boolean' | 'single-select' | 'm
 // RSVP Form Field Models
 // ============================================================================
 
+/** A single option in a select/multi-select RSVP field.
+ *  `value` is the locale-independent DB key; `label` is the display text shown to users. */
+export interface RsvpOption {
+  value: string
+  label: string
+}
+
 export interface RsvpFormField {
   field: string
   label: string
   placeholder: string
   type: RsvpFieldType
   required: boolean
-  options: string[]
+  options: RsvpOption[]
   rules: string
   default: string
   displayAs: RsvpDisplayAs
 }
 
-/** Partial RSVP field for localization overrides (only translatable properties) */
+/** Partial RSVP field for localization overrides (only translatable properties).
+ *  Option overrides match base options by `value` and translate `label` only. */
 export interface RsvpFormFieldLocaleOverride {
   field: string
   label?: string
   placeholder?: string
-  options?: string[]
+  options?: RsvpOption[]
 }
 
 // ============================================================================
@@ -80,6 +88,7 @@ export type ScopeConfig = RsvpScopeConfig | LocalesScopeConfig | CustomAttribute
 export interface CustomAttributeValue {
   valueId?: string
   value: string
+  label: string
   displayOrder: number
 }
 

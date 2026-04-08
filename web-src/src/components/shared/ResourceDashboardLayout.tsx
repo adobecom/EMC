@@ -57,6 +57,7 @@ interface ResourceDashboardLayoutProps<T> {
   renderExpandedContent?: (item: T) => React.ReactNode
   expandedKeys?: Set<string>
   onToggleExpand?: (key: string) => void
+  isRowExpandable?: (item: T) => boolean
 }
 
 export function ResourceDashboardLayout<T extends Record<string, any>>({
@@ -85,6 +86,7 @@ export function ResourceDashboardLayout<T extends Record<string, any>>({
   renderExpandedContent,
   expandedKeys,
   onToggleExpand,
+  isRowExpandable,
 }: ResourceDashboardLayoutProps<T>): React.ReactElement {
   const [inputValue, setInputValue] = useState('')
   const [debouncedQuery, setDebouncedQuery] = useState('')
@@ -255,6 +257,7 @@ export function ResourceDashboardLayout<T extends Record<string, any>>({
                 renderExpandedContent={renderExpandedContent}
                 expandedKeys={expandedKeys}
                 onToggleExpand={onToggleExpand}
+                isRowExpandable={isRowExpandable}
                 emptyState={
                   debouncedQuery ? (
                     <ResourceEmptyState
