@@ -1,6 +1,19 @@
 import React, { useEffect, useRef } from 'react'
 import { Text } from '@react-spectrum/s2'
+import type Delta from 'quill-delta'
 import 'quill/dist/quill.snow.css'
+
+/** Matches toolbar capabilities; omits color/background/font/size so paste cannot add them. */
+const RTE_FORMATS = [
+  'bold',
+  'italic',
+  'underline',
+  'strike',
+  'list',
+  'indent',
+  'align',
+  'link',
+] as const
 
 interface RichTextEditorProps {
   label: string
@@ -67,6 +80,37 @@ const editorStyles = `
   }
 `
 
+/** Quill / browsers often emit NBSP in HTML; we only support normal spaces in stored markup. */
+function normalizeNbspInRteHtml(html: string): string {
+  return html
+    .replace(/&nbsp;/gi, ' ')
+    .replace(/&#160;/g, ' ')
+    .replace(/&#x0*A0;/gi, ' ')
+    .replace(/\u00A0/g, ' ')
+}
+
+function getExportedRteHtml(quill: {
+  getText: () => string
+  getSemanticHTML: () => string
+}): string {
+  if (!quill.getText().trim()) {
+    return ''
+  }
+  return normalizeNbspInRteHtml(quill.getSemanticHTML())
+}
+
+function applyHtmlToQuill(quill: any, html: string, silent: string, isUpdatingRef: React.MutableRefObject<boolean>) {
+  isUpdatingRef.current = true
+  const trimmed = normalizeNbspInRteHtml(html).trim()
+  if (!trimmed) {
+    quill.setText('', silent)
+  } else {
+    const delta = quill.clipboard.convert({ html: trimmed, text: '' })
+    quill.setContents(delta, silent)
+  }
+  isUpdatingRef.current = false
+}
+
 export const RichTextEditor: React.FC<RichTextEditorProps> = ({
   label,
   value,
@@ -83,6 +127,8 @@ export const RichTextEditor: React.FC<RichTextEditorProps> = ({
   const valueRef = useRef(value)
   // Store the latest onChange in a ref to avoid stale closures
   const onChangeRef = useRef(onChange)
+  /** Exact `value` string last applied from props (avoids re-sync when semantic HTML !== API string). */
+  const lastAppliedValueRef = useRef<string | null>(null)
   
   // Keep refs in sync with props
   useEffect(() => {
@@ -99,41 +145,47 @@ export const RichTextEditor: React.FC<RichTextEditorProps> = ({
       if (typeof window !== 'undefined' && !quillRef.current) {
         try {
           const Quill = (await import('quill')).default
-          
+          const Delta = (await import('quill-delta')).default
+          const silent = Quill.sources?.SILENT ?? 'silent'
+
           if (editorRef.current && !quillRef.current) {
             quillRef.current = new Quill(editorRef.current, {
               theme: 'snow',
+              formats: [...RTE_FORMATS],
               modules: {
                 toolbar: [
                   ['bold', 'italic', 'underline', 'strike'],
-                  [{ 'list': 'ordered'}, { 'list': 'bullet' }],
-                  [{ 'align': [] }],
+                  [{ list: 'ordered' }, { list: 'bullet' }],
+                  [{ align: [] }],
                   ['link'],
-                  ['clean']
-                ]
+                  ['clean'],
+                ],
               },
-              placeholder: `Enter ${label.toLowerCase()}...`
+              placeholder: `Enter ${label.toLowerCase()}...`,
             })
-            
-            // Set initial value
-            if (valueRef.current) {
-              isUpdatingRef.current = true
-              quillRef.current.root.innerHTML = valueRef.current
-              isUpdatingRef.current = false
-            }
-            
+
+            // Drop Quill UI chrome if it ever appears in pasted HTML
+            quillRef.current.clipboard.addMatcher('SPAN', (node: Node, delta: Delta) => {
+              if (node instanceof HTMLElement && node.classList.contains('ql-ui')) {
+                return new Delta()
+              }
+              return delta
+            })
+
+            const initial = valueRef.current ?? ''
+            lastAppliedValueRef.current = initial
+            applyHtmlToQuill(quillRef.current, initial, silent, isUpdatingRef)
+
             // Listen for changes - only trigger onChange for user edits, not programmatic updates
             quillRef.current.on('text-change', (_delta: any, _oldDelta: any, source: string) => {
-              // Skip if this is a programmatic update or not a user edit
               if (isUpdatingRef.current || source !== 'user') {
                 return
               }
-              
-              const html = quillRef.current.root.innerHTML
-              const normalizedHtml = html === '<p><br></p>' ? '' : html
-              
-              // Only trigger onChange if content actually differs from current value
-              if (normalizedHtml !== valueRef.current) {
+
+              const normalizedHtml = getExportedRteHtml(quillRef.current)
+              const prevNormalized = normalizeNbspInRteHtml(valueRef.current ?? '')
+
+              if (normalizedHtml !== prevNormalized) {
                 onChangeRef.current(normalizedHtml)
               }
             })
@@ -154,16 +206,25 @@ export const RichTextEditor: React.FC<RichTextEditorProps> = ({
     }
   }, [label])
   
-  // Update editor content when value prop changes externally
+  // Update editor when `value` from parent changes (skip redundant applies — avoids selection jumps on each keystroke)
   useEffect(() => {
-    if (quillRef.current && quillRef.current.root.innerHTML !== value) {
-      isUpdatingRef.current = true
-      const currentSelection = quillRef.current.getSelection()
-      quillRef.current.root.innerHTML = value || ''
-      if (currentSelection) {
-        quillRef.current.setSelection(currentSelection)
-      }
-      isUpdatingRef.current = false
+    const quill = quillRef.current
+    if (!quill) {
+      return
+    }
+    if (value === lastAppliedValueRef.current) {
+      return
+    }
+    if (getExportedRteHtml(quill) === normalizeNbspInRteHtml(value ?? '')) {
+      lastAppliedValueRef.current = value
+      return
+    }
+    lastAppliedValueRef.current = value
+    const silent = 'silent'
+    const currentSelection = quill.getSelection()
+    applyHtmlToQuill(quill, value || '', silent, isUpdatingRef)
+    if (currentSelection) {
+      quill.setSelection(currentSelection)
     }
   }, [value])
 
