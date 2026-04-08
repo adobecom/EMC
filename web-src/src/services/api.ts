@@ -42,6 +42,15 @@ import type {
   PermissionsListResponse,
   ScopeType,
 } from '../types/rbacApi'
+import type {
+  ConfigType,
+  ScopeConfig,
+  ConfigCreateBody,
+  ConfigUpdateBody,
+  CustomAttribute,
+  CustomAttributeCreateBody,
+  CustomAttributeUpdateBody,
+} from '../types/configApi'
 
 // ============================================================================
 // TYPES
@@ -2324,6 +2333,153 @@ class ApiService {
     if ('error' in result) return result
     return result.permissions
   }
+
+  // --- Scope Configs ---
+
+  async getConfigsForScope(scopeId: string, type?: ConfigType): Promise<ScopeConfig[] | ErrorResponse> {
+    validateString(scopeId, 'scope ID')
+    const baseParams: Record<string, string> = {}
+    if (type) baseParams.type = type
+    return this.fetchAllPages<ScopeConfig>({
+      service: 'esp',
+      baseEndpoint: `/v1/scopes/${encodeURIComponent(scopeId)}/configs`,
+      listKey: 'configs',
+      baseParams,
+      operationName: 'getConfigsForScope'
+    })
+  }
+
+  async getConfigById(scopeId: string, configId: string): Promise<ScopeConfig | ErrorResponse> {
+    validateString(scopeId, 'scope ID')
+    validateString(configId, 'config ID')
+    return this.callExternalApi<ScopeConfig>('esp', `/v1/scopes/${encodeURIComponent(scopeId)}/configs/${encodeURIComponent(configId)}`, 'GET', undefined, {
+      operationName: 'getConfigById',
+      shouldReturnFullResponse: true
+    })
+  }
+
+  async createConfig(scopeId: string, data: ConfigCreateBody): Promise<ScopeConfig | ErrorResponse> {
+    validateString(scopeId, 'scope ID')
+    validateObject(data, 'config create body')
+    return this.callExternalApi<ScopeConfig>('esp', `/v1/scopes/${encodeURIComponent(scopeId)}/configs`, 'POST', data, {
+      operationName: 'createConfig',
+      shouldReturnFullResponse: true
+    })
+  }
+
+  async updateConfig(scopeId: string, configId: string, data: ConfigUpdateBody): Promise<ScopeConfig | ErrorResponse> {
+    validateString(scopeId, 'scope ID')
+    validateString(configId, 'config ID')
+    validateObject(data, 'config update body')
+    return this.callExternalApi<ScopeConfig>('esp', `/v1/scopes/${encodeURIComponent(scopeId)}/configs/${encodeURIComponent(configId)}`, 'PUT', data, {
+      operationName: 'updateConfig',
+      shouldReturnFullResponse: true
+    })
+  }
+
+  async deleteConfig(scopeId: string, configId: string): Promise<SuccessResponse | ErrorResponse> {
+    validateString(scopeId, 'scope ID')
+    validateString(configId, 'config ID')
+    return this.callExternalApi('esp', `/v1/scopes/${encodeURIComponent(scopeId)}/configs/${encodeURIComponent(configId)}`, 'DELETE', undefined, {
+      operationName: 'deleteConfig'
+    })
+  }
+
+  // --- Custom Attributes ---
+
+  async getCustomAttributesForScope(scopeId: string): Promise<CustomAttribute[] | ErrorResponse> {
+    validateString(scopeId, 'scope ID')
+    return this.fetchAllPages<CustomAttribute>({
+      service: 'esp',
+      baseEndpoint: `/v1/scopes/${encodeURIComponent(scopeId)}/custom-attributes`,
+      listKey: 'customAttributes',
+      operationName: 'getCustomAttributesForScope'
+    })
+  }
+
+  async getCustomAttributeById(scopeId: string, attributeId: string): Promise<CustomAttribute | ErrorResponse> {
+    validateString(scopeId, 'scope ID')
+    validateString(attributeId, 'attribute ID')
+    return this.callExternalApi<CustomAttribute>('esp', `/v1/scopes/${encodeURIComponent(scopeId)}/custom-attributes/${encodeURIComponent(attributeId)}`, 'GET', undefined, {
+      operationName: 'getCustomAttributeById',
+      shouldReturnFullResponse: true
+    })
+  }
+
+  async createCustomAttribute(scopeId: string, data: CustomAttributeCreateBody): Promise<CustomAttribute | ErrorResponse> {
+    validateString(scopeId, 'scope ID')
+    validateObject(data, 'custom attribute create body')
+    return this.callExternalApi<CustomAttribute>('esp', `/v1/scopes/${encodeURIComponent(scopeId)}/custom-attributes`, 'POST', data, {
+      operationName: 'createCustomAttribute',
+      shouldReturnFullResponse: true
+    })
+  }
+
+  async updateCustomAttribute(scopeId: string, attributeId: string, data: CustomAttributeUpdateBody): Promise<CustomAttribute | ErrorResponse> {
+    validateString(scopeId, 'scope ID')
+    validateString(attributeId, 'attribute ID')
+    validateObject(data, 'custom attribute update body')
+    return this.callExternalApi<CustomAttribute>('esp', `/v1/scopes/${encodeURIComponent(scopeId)}/custom-attributes/${encodeURIComponent(attributeId)}`, 'PUT', data, {
+      operationName: 'updateCustomAttribute',
+      shouldReturnFullResponse: true
+    })
+  }
+
+  async deleteCustomAttribute(scopeId: string, attributeId: string): Promise<SuccessResponse | ErrorResponse> {
+    validateString(scopeId, 'scope ID')
+    validateString(attributeId, 'attribute ID')
+    return this.callExternalApi('esp', `/v1/scopes/${encodeURIComponent(scopeId)}/custom-attributes/${encodeURIComponent(attributeId)}`, 'DELETE', undefined, {
+      operationName: 'deleteCustomAttribute'
+    })
+  }
+
+  // --- Convenience Endpoints (resolved configs for events/series) ---
+
+  async getEventConfigs(eventId: string, type?: ConfigType): Promise<ScopeConfig[] | ErrorResponse> {
+    validateString(eventId, 'event ID')
+    const baseParams: Record<string, string> = {}
+    if (type) baseParams.type = type
+    return this.fetchAllPages<ScopeConfig>({
+      service: 'esp',
+      baseEndpoint: `/v1/events/${encodeURIComponent(eventId)}/configs`,
+      listKey: 'configs',
+      baseParams,
+      operationName: 'getEventConfigs'
+    })
+  }
+
+  async getSeriesConfigs(seriesId: string, type?: ConfigType): Promise<ScopeConfig[] | ErrorResponse> {
+    validateString(seriesId, 'series ID')
+    const baseParams: Record<string, string> = {}
+    if (type) baseParams.type = type
+    return this.fetchAllPages<ScopeConfig>({
+      service: 'esp',
+      baseEndpoint: `/v1/series/${encodeURIComponent(seriesId)}/configs`,
+      listKey: 'configs',
+      baseParams,
+      operationName: 'getSeriesConfigs'
+    })
+  }
+
+  async getEventCustomAttributes(eventId: string): Promise<CustomAttribute[] | ErrorResponse> {
+    validateString(eventId, 'event ID')
+    return this.fetchAllPages<CustomAttribute>({
+      service: 'esp',
+      baseEndpoint: `/v1/events/${encodeURIComponent(eventId)}/custom-attributes`,
+      listKey: 'customAttributes',
+      operationName: 'getEventCustomAttributes'
+    })
+  }
+
+  async getSeriesCustomAttributes(seriesId: string): Promise<CustomAttribute[] | ErrorResponse> {
+    validateString(seriesId, 'series ID')
+    return this.fetchAllPages<CustomAttribute>({
+      service: 'esp',
+      baseEndpoint: `/v1/series/${encodeURIComponent(seriesId)}/custom-attributes`,
+      listKey: 'customAttributes',
+      operationName: 'getSeriesCustomAttributes'
+    })
+  }
 }
 
 // ============================================================================
@@ -2483,6 +2639,20 @@ export const cachedApi = {
   getEventPublishingProfile: (eventId: string) => apiCache.get((id: string) => apiService.getEventPublishingProfile(id), eventId),
   getCaasTags: () => apiService.getCaasTags(), // Already has internal caching
 
+  // === CONFIGS (GET Operations - Cached) ===
+  getConfigsForScope: (scopeId: string, type?: ConfigType) =>
+    apiCache.get((id: string, t?: ConfigType) => apiService.getConfigsForScope(id, t), scopeId, type),
+  getCustomAttributesForScope: (scopeId: string) =>
+    apiCache.get((id: string) => apiService.getCustomAttributesForScope(id), scopeId),
+  getEventConfigs: (eventId: string, type?: ConfigType) =>
+    apiCache.get((id: string, t?: ConfigType) => apiService.getEventConfigs(id, t), eventId, type),
+  getSeriesConfigs: (seriesId: string, type?: ConfigType) =>
+    apiCache.get((id: string, t?: ConfigType) => apiService.getSeriesConfigs(id, t), seriesId, type),
+  getEventCustomAttributes: (eventId: string) =>
+    apiCache.get((id: string) => apiService.getEventCustomAttributes(id), eventId),
+  getSeriesCustomAttributes: (seriesId: string) =>
+    apiCache.get((id: string) => apiService.getSeriesCustomAttributes(id), seriesId),
+
   // === MUTATIONS (with cache invalidation) ===
   
   // Series Mutations
@@ -2594,6 +2764,50 @@ export const cachedApi = {
     apiCache.invalidate(eventId)
     apiCache.invalidate('getEventAttendees')
     apiCache.invalidate('getAllEventAttendees')
+    return result
+  },
+
+  // Config Mutations
+  async createConfig(scopeId: string, data: ConfigCreateBody) {
+    const result = await apiService.createConfig(scopeId, data)
+    apiCache.invalidate(scopeId)
+    apiCache.invalidate('getConfigsForScope')
+    return result
+  },
+  async updateConfig(scopeId: string, configId: string, data: ConfigUpdateBody) {
+    const result = await apiService.updateConfig(scopeId, configId, data)
+    apiCache.invalidate(scopeId)
+    apiCache.invalidate(configId)
+    apiCache.invalidate('getConfigsForScope')
+    return result
+  },
+  async deleteConfig(scopeId: string, configId: string) {
+    const result = await apiService.deleteConfig(scopeId, configId)
+    apiCache.invalidate(scopeId)
+    apiCache.invalidate(configId)
+    apiCache.invalidate('getConfigsForScope')
+    return result
+  },
+
+  // Custom Attribute Mutations
+  async createCustomAttribute(scopeId: string, data: CustomAttributeCreateBody) {
+    const result = await apiService.createCustomAttribute(scopeId, data)
+    apiCache.invalidate(scopeId)
+    apiCache.invalidate('getCustomAttributesForScope')
+    return result
+  },
+  async updateCustomAttribute(scopeId: string, attributeId: string, data: CustomAttributeUpdateBody) {
+    const result = await apiService.updateCustomAttribute(scopeId, attributeId, data)
+    apiCache.invalidate(scopeId)
+    apiCache.invalidate(attributeId)
+    apiCache.invalidate('getCustomAttributesForScope')
+    return result
+  },
+  async deleteCustomAttribute(scopeId: string, attributeId: string) {
+    const result = await apiService.deleteCustomAttribute(scopeId, attributeId)
+    apiCache.invalidate(scopeId)
+    apiCache.invalidate(attributeId)
+    apiCache.invalidate('getCustomAttributesForScope')
     return result
   },
 
