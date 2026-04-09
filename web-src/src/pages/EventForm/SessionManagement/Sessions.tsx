@@ -7,6 +7,8 @@ import type { SessionFormData } from "./SessionForm";
 import { useEventFormContext } from "../../../contexts";
 import { EventApiResponse } from "../../../types/domain";
 import { apiService, cachedApi } from "../../../services/api";
+import { COLORS, SURFACES } from "../../../styles/designSystem";
+import { millisToNaiveDateTimeString, naiveDateTimeToUTCMillis } from "../../../utils/dateTime";
 
 function parseTagsFromApi(tags: unknown): string[] {
   if (typeof tags === "string") return tags.split(",").map((t) => t.trim()).filter(Boolean);
@@ -132,13 +134,14 @@ async function hydrateSessionWithTime(session: Session): Promise<Session> {
   const sessionTime = times[0];
   if (!sessionTime) return session;
 
+  const tz = sessionTime.timezone || "UTC";
   const startDateTime =
     sessionTime.startTimeMillis != null
-      ? new Date(Number(sessionTime.startTimeMillis)).toISOString()
+      ? millisToNaiveDateTimeString(Number(sessionTime.startTimeMillis), tz)
       : session.startDateTime;
   const endDateTime =
     sessionTime.endTimeMillis != null
-      ? new Date(Number(sessionTime.endTimeMillis)).toISOString()
+      ? millisToNaiveDateTimeString(Number(sessionTime.endTimeMillis), tz)
       : session.endDateTime;
 
   return {
@@ -160,8 +163,9 @@ async function createSessionTimeForSession(
   sessionId: string,
   data: SessionFormData,
 ): Promise<void> {
-  const startTimeMillis = new Date(data.startDateTime + 'Z').getTime();
-  const endTimeMillis = new Date(data.endDateTime + 'Z').getTime();
+  const tz = data.timezone || "UTC";
+  const startTimeMillis = naiveDateTimeToUTCMillis(data.startDateTime, tz);
+  const endTimeMillis = naiveDateTimeToUTCMillis(data.endDateTime, tz);
   const sessionTimeRes = await apiService.createSessionTime({
     eventId,
     sessionId,
@@ -187,8 +191,9 @@ async function upsertSessionTimeForSession(
   sessionId: string,
   data: SessionFormData,
 ): Promise<void> {
-  const startTimeMillis = new Date(data.startDateTime + 'Z').getTime();
-  const endTimeMillis = new Date(data.endDateTime + 'Z').getTime();
+  const tz = data.timezone || "UTC";
+  const startTimeMillis = naiveDateTimeToUTCMillis(data.startDateTime, tz);
+  const endTimeMillis = naiveDateTimeToUTCMillis(data.endDateTime, tz);
   if (!data.sessionTimeId) {
     await createSessionTimeForSession(eventId, sessionId, data);
     return;
@@ -222,20 +227,14 @@ async function upsertSessionTimeForSession(
 async function syncSessionSpeakers(
   sessionId: string,
   selectedIds: string[],
+  currentSpeakerIds: string[],
 ): Promise<void> {
-  const speakersRes = await apiService.getSessionSpeakers(sessionId);
-  const currentIds: string[] =
-    speakersRes && !("error" in speakersRes)
-      ? ((speakersRes as any)?.speakers ?? []).map((s: any) =>
-          String(s.speakerId),
-        )
-      : [];
-  const toRemove = currentIds.filter((id) => !selectedIds.includes(id));
-  const toAdd = selectedIds.filter((id) => !currentIds.includes(id));
+  const toRemove = currentSpeakerIds.filter((id) => !selectedIds.includes(id));
+  const toAdd = selectedIds.filter((id) => !currentSpeakerIds.includes(id));
   await Promise.all(
     toRemove.map((id) => apiService.deleteSessionSpeaker(sessionId, id)),
   );
-  const baseOrdinal = currentIds.length - toRemove.length;
+  const baseOrdinal = currentSpeakerIds.length - toRemove.length;
   await Promise.all(
     toAdd.map((id, index) =>
       apiService.addSessionSpeaker(sessionId, {
@@ -252,6 +251,7 @@ export const Sessions: React.FC = () => {
     eventId,
     mergeEventResponse,
     venueLocations,
+    setVenueLocations,
     seriesSpeakers,
     setSeriesSpeakers,
     seriesId: contextSeriesId,
@@ -276,6 +276,21 @@ export const Sessions: React.FC = () => {
       console.error("Failed to load series speakers:", err);
     }
   }, [seriesId, seriesSpeakers.length, setSeriesSpeakers]);
+
+  const loadVenueLocationsIfNeeded = useCallback(async () => {
+    if (!eventId || venueLocations.length > 0) return
+    try {
+      const venueRes = await apiService.getEventVenue(eventId)
+      if (!venueRes || 'error' in venueRes || !venueRes.venueId) return
+      const locRes = await apiService.listVenueLocations(venueRes.venueId)
+      if (locRes && !('error' in locRes)) {
+        const list = (locRes as any).locations ?? locRes ?? []
+        setVenueLocations(Array.isArray(list) ? list : [])
+      }
+    } catch (err) {
+      console.error('Failed to load venue locations:', err)
+    }
+  }, [eventId, venueLocations.length, setVenueLocations])
 
   const refreshSeriesSpeakers = useCallback(async () => {
     if (!seriesId) return;
@@ -343,6 +358,10 @@ export const Sessions: React.FC = () => {
     loadSeriesSpeakersIfNeeded();
   }, [loadSeriesSpeakersIfNeeded]);
 
+  useEffect(() => {
+    loadVenueLocationsIfNeeded();
+  }, [loadVenueLocationsIfNeeded]);
+
   const handleDeleteSession = async (sessionId: string) => {
     if (!eventId) return;
     const res = await apiService.deleteSession(sessionId);
@@ -396,8 +415,8 @@ export const Sessions: React.FC = () => {
         : {}),
       locationId: data.locationId,
       sessionTime: {
-        startTimeMillis: new Date(data.startDateTime + 'Z').getTime(),
-        endTimeMillis: new Date(data.endDateTime + 'Z').getTime(),
+        startTimeMillis: naiveDateTimeToUTCMillis(data.startDateTime, data.timezone || "UTC"),
+        endTimeMillis: naiveDateTimeToUTCMillis(data.endDateTime, data.timezone || "UTC"),
         isAutoRegistrationEnabled: data.isAutoRegistrationEnabled,
         attendeeLimit: data.attendeeLimit != null ? Number(data.attendeeLimit) : undefined,
         locationId: data.locationId,
@@ -443,7 +462,7 @@ export const Sessions: React.FC = () => {
 
     const shouldUpdateSpeakers = hasSessionSpeakersChanges(data);
     if (shouldUpdateSpeakers) {
-      await syncSessionSpeakers(sessionId, data.speakerIds ?? []);
+      await syncSessionSpeakers(sessionId, data.speakerIds ?? [], data.originalSpeakerIds ?? []);
     }
 
     if (shouldUpdateSession || shouldUpdateSessionTime || shouldUpdateSpeakers) {
@@ -464,8 +483,8 @@ export const Sessions: React.FC = () => {
               locationId: data.locationId,
               sessionTime: {
                 ...s.sessionTime,
-                startTimeMillis: new Date(data.startDateTime + 'Z').getTime(),
-                endTimeMillis: new Date(data.endDateTime + 'Z').getTime(),
+                startTimeMillis: naiveDateTimeToUTCMillis(data.startDateTime, data.timezone || "UTC"),
+                endTimeMillis: naiveDateTimeToUTCMillis(data.endDateTime, data.timezone || "UTC"),
                 isAutoRegistrationEnabled: data.isAutoRegistrationEnabled,
                 attendeeLimit:
                   data.isAutoRegistrationEnabled === false && data.attendeeLimit != null
@@ -511,8 +530,8 @@ export const Sessions: React.FC = () => {
       ) : sessions.length === 0 && !isAddingNew ? (
         <div
           style={{
-            background: "#f8f8f8",
-            border: "1px solid #e9e9e9",
+            background: SURFACES.INPUT,
+            border: `1px solid ${SURFACES.BORDER}`,
             borderRadius: "8px",
             height: "89px",
             display: "flex",
@@ -522,7 +541,7 @@ export const Sessions: React.FC = () => {
             marginTop: "12px",
           }}
         >
-          <span style={{ color: "#222", fontSize: "18px" }}>
+          <span style={{ color: COLORS.DARK_GRAY, fontSize: "18px" }}>
             No sessions have been created yet for this event
           </span>
         </div>

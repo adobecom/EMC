@@ -177,7 +177,7 @@ export const LocationDialog: React.FC<LocationDialogProps> = ({
                     />
 
                     {createError && (
-                      <Text UNSAFE_style={{ color: 'var(--spectrum-global-color-red-600)', fontSize: '14px' }}>
+                      <Text UNSAFE_style={{ color: 'var(--spectrum-negative-color-900)', fontSize: '14px' }}>
                         {createError}
                       </Text>
                     )}

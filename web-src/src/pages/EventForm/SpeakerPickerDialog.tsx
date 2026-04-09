@@ -12,7 +12,7 @@ import OpenIn from '@react-spectrum/s2/icons/OpenIn'
 import { SeriesSpeaker, SocialLinkFormData } from '../../types/domain'
 import { speakerHasLocalization } from '../../utils/eventFormMappers'
 import { RichTextEditor, ImageUploader } from '../../components/shared'
-import { TYPOGRAPHY, COLORS } from '../../styles/designSystem'
+import { TYPOGRAPHY, COLORS, SURFACES } from '../../styles/designSystem'
 import { detectSocialPlatform, isValidUrl, toApiSocialLink } from '../../utils/socialPlatformDetector'
 import { cachedApi } from '../../services/api'
 import { getSpeakerPayload } from '../../services/payloadBuilders'
@@ -285,7 +285,7 @@ export const SpeakerPickerDialog: React.FC<SpeakerPickerDialogProps> = ({
 
       {filteredSpeakers.length === 0 ? (
         <div style={{ padding: '32px', textAlign: 'center' }}>
-          <Text UNSAFE_style={{ color: '#6E6E6E' }}>
+          <Text UNSAFE_style={{ color: COLORS.GRAY_600 }}>
             {searchQuery.trim()
               ? 'No speakers match your search. Try a different query or create a new speaker.'
               : 'No speakers available. Create a new speaker to get started.'}
@@ -324,13 +324,13 @@ export const SpeakerPickerDialog: React.FC<SpeakerPickerDialogProps> = ({
                 style={{
                   padding: '16px 12px',
                   border: isSelected
-                    ? '2px solid #1473E6'
-                    : '1px solid #D3D3D3',
+                    ? `2px solid ${SURFACES.SELECTED_RING}`
+                    : `1px solid ${SURFACES.BORDER}`,
                   borderRadius: '8px',
                   cursor: 'pointer',
                   backgroundColor: isSelected
-                    ? '#E5F0FF'
-                    : '#FFFFFF',
+                    ? SURFACES.SELECTED_FILL
+                    : SURFACES.CANVAS,
                   display: 'flex',
                   flexDirection: 'column',
                   alignItems: 'center',
@@ -350,7 +350,7 @@ export const SpeakerPickerDialog: React.FC<SpeakerPickerDialogProps> = ({
                       height: '56px',
                       borderRadius: '50%',
                       objectFit: 'cover',
-                      border: '1px solid #D3D3D3',
+                      border: `1px solid ${SURFACES.BORDER}`,
                     }}
                   />
                 ) : (
@@ -359,11 +359,11 @@ export const SpeakerPickerDialog: React.FC<SpeakerPickerDialogProps> = ({
                       width: '56px',
                       height: '56px',
                       borderRadius: '50%',
-                      backgroundColor: '#D3D3D3',
+                      backgroundColor: SURFACES.CHROME,
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
-                      color: '#6E6E6E',
+                      color: COLORS.GRAY_600,
                       fontSize: '16px',
                       fontWeight: 'bold',
                     }}
@@ -395,7 +395,7 @@ export const SpeakerPickerDialog: React.FC<SpeakerPickerDialogProps> = ({
                     <div
                       style={{
                         fontSize: '11px',
-                        color: '#6E6E6E',
+                        color: COLORS.GRAY_600,
                         lineHeight: '16px',
                         marginTop: '2px',
                         overflow: 'hidden',
@@ -483,7 +483,7 @@ export const SpeakerPickerDialog: React.FC<SpeakerPickerDialogProps> = ({
               height="150px"
             />
             {!localizeForm.bio.trim() && (
-              <Text UNSAFE_style={{ fontSize: '12px', color: '#6E6E6E', fontStyle: 'italic' }}>
+              <Text UNSAFE_style={{ fontSize: '12px', color: COLORS.GRAY_600, fontStyle: 'italic' }}>
                 No bio has been added for this locale.
               </Text>
             )}
@@ -575,7 +575,7 @@ export const SpeakerPickerDialog: React.FC<SpeakerPickerDialogProps> = ({
             </div>
 
             {createForm.socialLinks.length === 0 ? (
-              <Text UNSAFE_style={{ fontSize: '14px', color: '#6E6E6E', fontStyle: 'italic' }}>
+              <Text UNSAFE_style={{ fontSize: '14px', color: COLORS.GRAY_600, fontStyle: 'italic' }}>
                 No social media links added yet.
               </Text>
             ) : (
@@ -595,7 +595,7 @@ export const SpeakerPickerDialog: React.FC<SpeakerPickerDialogProps> = ({
                           justifyContent: 'center',
                           backgroundColor: detectedPlatform
                             ? detectedPlatform.color
-                            : '#B8B8B8',
+                            : COLORS.GRAY_500,
                           color: 'white',
                           borderRadius: '4px',
                           fontSize: '16px',

@@ -52,7 +52,7 @@ import { useEventFeatureFlags } from '../../hooks/useEventTypeFeatures'
 import { EventFormProvider, useEventFormContext, useToast, useGroup } from '../../contexts'
 import { useEventFormSave } from '../../hooks/useEventFormSave'
 import { useCustomDetailPagePath } from '../../hooks/useCustomDetailPagePath'
-import { COLORS, Z_INDEX, TYPOGRAPHY } from '../../styles/designSystem'
+import { COLORS, Z_INDEX, TYPOGRAPHY, SURFACES } from '../../styles/designSystem'
 import { getEspEnvParam } from '../../config/constants'
 
 // ============================================================================
@@ -262,7 +262,8 @@ const FormatSelectionOverlay: React.FC<{
     >
       <div
         style={{
-          backgroundColor: 'var(--spectrum-global-color-gray-50)',
+          backgroundColor: SURFACES.FORMAT_DIALOG_PANEL,
+          border: '1px solid var(--spectrum-global-color-gray-300)',
           borderRadius: 8,
           padding: 40,
           width: 520,
@@ -455,6 +456,7 @@ const EventFormInner: React.FC<EventFormInnerProps> = ({ ims: _ims }) => {
   const {
     formData,
     eventId,
+    eventDataResp,
     isEditMode,
     isLoading,
     isPublished,
@@ -484,7 +486,7 @@ const EventFormInner: React.FC<EventFormInnerProps> = ({ ims: _ims }) => {
   const { publishEvent, saveDraft, isSaving, saveError } = useEventFormSave()
 
   // Custom URL pattern hook
-  const { getDetailPagePathForSave } = useCustomDetailPagePath()
+  const { getDetailPagePathForSave, shouldRunCustomDetailPagePathFlow } = useCustomDetailPagePath()
 
   // Dialog state for custom detailPagePath confirmation
   const [urlDialogState, setUrlDialogState] = useState<{
@@ -658,17 +660,25 @@ const EventFormInner: React.FC<EventFormInnerProps> = ({ ims: _ims }) => {
   /**
    * Check whether the selected series requires a custom detailPagePath.
    * If so, show a confirmation/collision dialog instead of saving immediately.
-   * Returns true when save should proceed directly (no pattern or edit mode).
+   * On edit, only when URL-affecting fields changed (pattern tokens + defaultLocale).
    */
   const checkUrlPatternBeforeSave = useCallback(async (
     action: 'save' | 'publish'
   ): Promise<{ proceed: boolean; extraPayload?: Record<string, any> }> => {
-    // Only intercept on first creation (no eventId yet)
-    if (isEditMode || eventId) return { proceed: true }
+    const isExistingEvent = Boolean(isEditMode || eventId)
+    const runFlow = await shouldRunCustomDetailPagePathFlow(
+      formData.seriesId,
+      formData,
+      isExistingEvent,
+      eventDataResp
+    )
+    if (!runFlow) return { proceed: true }
 
     setIsCheckingUrl(true)
     try {
-      const result = await getDetailPagePathForSave(formData.seriesId, formData)
+      const result = await getDetailPagePathForSave(formData.seriesId, formData, {
+        excludeEventId: eventId || undefined,
+      })
       if (!result) return { proceed: true }
 
       // Pattern found — show confirmation dialog
@@ -681,7 +691,14 @@ const EventFormInner: React.FC<EventFormInnerProps> = ({ ims: _ims }) => {
     } finally {
       setIsCheckingUrl(false)
     }
-  }, [isEditMode, eventId, formData, getDetailPagePathForSave])
+  }, [
+    isEditMode,
+    eventId,
+    eventDataResp,
+    formData,
+    getDetailPagePathForSave,
+    shouldRunCustomDetailPagePathFlow,
+  ])
 
   /**
    * Execute the actual save/publish after URL confirmation
@@ -992,7 +1009,7 @@ const EventFormInner: React.FC<EventFormInnerProps> = ({ ims: _ims }) => {
   return (
     <div
       style={{
-        backgroundColor: '#F5F5F5',
+        backgroundColor: SURFACES.EVENT_FORM_SHELL,
         display: 'flex',
         flexDirection: 'column',
         flex: 1,

@@ -5,7 +5,7 @@
 import React, { useState, useEffect } from 'react'
 import { Text } from '@react-spectrum/s2'
 import { style } from '@react-spectrum/s2/style' with { type: 'macro' }
-import { COLORS, TYPOGRAPHY, SPACING } from '../../styles/designSystem'
+import { COLORS, SURFACES, TYPOGRAPHY, SPACING } from '../../styles/designSystem'
 import { HistoryRecord } from '../../types/domain'
 import {
   formatTimestamp,
@@ -64,7 +64,7 @@ const DiffDisplay: React.FC<DiffDisplayProps> = ({ diff }) => {
           </Text>
           <div
             style={{
-              backgroundColor: 'rgba(45, 157, 120, 0.1)',
+              backgroundColor: SURFACES.SUBTLE,
               borderLeft: '3px solid var(--spectrum-global-color-green-600)',
               padding: '8px 12px',
               borderRadius: '0 4px 4px 0'
@@ -100,7 +100,7 @@ const DiffDisplay: React.FC<DiffDisplayProps> = ({ diff }) => {
           </Text>
           <div
             style={{
-              backgroundColor: 'rgba(59, 130, 246, 0.1)',
+              backgroundColor: SURFACES.SUBTLE,
               borderLeft: '3px solid var(--spectrum-global-color-blue-500)',
               padding: '8px 12px',
               borderRadius: '0 4px 4px 0'
@@ -136,7 +136,7 @@ const DiffDisplay: React.FC<DiffDisplayProps> = ({ diff }) => {
           </Text>
           <div
             style={{
-              backgroundColor: 'rgba(220, 38, 38, 0.1)',
+              backgroundColor: SURFACES.SUBTLE,
               borderLeft: '3px solid var(--spectrum-global-color-red-600)',
               padding: '8px 12px',
               borderRadius: '0 4px 4px 0'
@@ -201,7 +201,7 @@ export const DetailCard: React.FC<DetailCardProps> = ({ record, isLocked }) => {
     <div
       style={{
         padding: `${SPACING.MD}px ${SPACING.LG}px`,
-        backgroundColor: COLORS.GRAY_100,
+        backgroundColor: SURFACES.SUBTLE,
         borderRadius: '8px',
         margin: `0 ${SPACING.LG}px`,
         border: isLocked ? `2px solid ${changeColor}` : '2px solid transparent'
@@ -292,26 +292,28 @@ export const DetailCard: React.FC<DetailCardProps> = ({ record, isLocked }) => {
         <div style={{ marginTop: `${SPACING.MD}px` }}>
           {/* Details toggle button */}
           <button
+            type="button"
             onClick={() => setIsDetailsOpen(!isDetailsOpen)}
             style={{
               display: 'inline-flex',
               alignItems: 'center',
               gap: '6px',
               padding: '6px 12px',
-              backgroundColor: COLORS.WHITE,
-              border: `1px solid ${COLORS.GRAY_300}`,
+              backgroundColor: SURFACES.INPUT,
+              border: `1px solid ${SURFACES.BORDER}`,
               borderRadius: '4px',
               cursor: 'pointer',
               fontSize: '12px',
               fontWeight: 500,
-              color: COLORS.GRAY_700,
+              color: COLORS.GRAY_800,
+              fontFamily: 'var(--emc-font-sans)',
               transition: 'all 0.2s ease'
             }}
             onMouseEnter={(e) => {
-              e.currentTarget.style.backgroundColor = COLORS.GRAY_200
+              e.currentTarget.style.backgroundColor = SURFACES.PILL_BG
             }}
             onMouseLeave={(e) => {
-              e.currentTarget.style.backgroundColor = COLORS.WHITE
+              e.currentTarget.style.backgroundColor = SURFACES.INPUT
             }}
           >
             <span style={{

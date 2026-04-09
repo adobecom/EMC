@@ -29,6 +29,7 @@ import { useEventFormContext } from "../../../contexts";
 import { RichTextEditor, TagSelector } from "../../../components/shared";
 import {
   dateAndTimeToISO,
+  millisToNaiveDateTimeString,
   parseTimeFromDateTime,
   safeParseDateTimeString,
 } from "../../../utils/dateTime";
@@ -206,15 +207,14 @@ export const SessionForm: React.FC<SessionFormProps> = ({
       if (res && !("error" in res)) {
         const list = (res as any)?.speakers ?? [];
         if (Array.isArray(list)) {
-          const ids = list.map((s: any) => String(s.speakerId));
+          const ids = list.map((s: SeriesSpeaker) => String(s.speakerId));
           setOriginalSpeakerIds(ids);
-        }
-        if (Array.isArray(list) && list.length > 0) {
-          const ids = list.map((s: any) => String(s.speakerId));
-          setSelectedSpeakers((prev) => {
-            if (prev.length > 0) return prev;
-            return seriesSpeakers.filter((s) => ids.includes(s.speakerId));
-          });
+          if (ids.length > 0) {
+            setSelectedSpeakers((prev) => {
+              if (prev.length > 0) return prev;
+              return seriesSpeakers.filter((s) => ids.includes(s.speakerId));
+            });
+          }
         }
       }
     });
@@ -277,13 +277,14 @@ export const SessionForm: React.FC<SessionFormProps> = ({
         setAttendeeLimitEnabled(false);
         setAttendeeLimit("");
       }
+      const tz = sessionTime?.timezone || formData.timezone || "UTC";
       const primaryStart =
         sessionTime?.startTimeMillis != null
-          ? new Date(Number(sessionTime.startTimeMillis)).toISOString()
+          ? millisToNaiveDateTimeString(Number(sessionTime.startTimeMillis), tz)
           : mapped.startDateTime;
       const primaryEnd =
         sessionTime?.endTimeMillis != null
-          ? new Date(Number(sessionTime.endTimeMillis)).toISOString()
+          ? millisToNaiveDateTimeString(Number(sessionTime.endTimeMillis), tz)
           : mapped.endDateTime;
 
       const startDt = safeParseDateTimeString(primaryStart);
@@ -662,7 +663,7 @@ export const SessionForm: React.FC<SessionFormProps> = ({
         </div>
 
         <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
-          <Text UNSAFE_style={{ fontSize: "14px", color: "#717171" }}>Session registration</Text>
+          <Text UNSAFE_style={{ fontSize: "14px", color: "var(--spectrum-global-color-gray-600)" }}>Session registration</Text>
           <div style={{ display: "flex", flexDirection: "row", gap: "16px", alignItems: "center", flexWrap: "wrap" }}>
             <SegmentedControl
               selectedKey={isAutoRegistrationEnabled ? "automatic" : "registration"}

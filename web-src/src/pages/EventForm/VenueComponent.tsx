@@ -9,7 +9,7 @@ import { style } from "@react-spectrum/s2/style" with { type: "macro" }
 import Add from '@react-spectrum/s2/icons/Add'
 import RemoveCircle from '@react-spectrum/s2/icons/RemoveCircle'
 import { ImageUploader, RichTextEditor } from '../../components/shared'
-import { TYPOGRAPHY, COLORS } from '../../styles/designSystem'
+import { TYPOGRAPHY, COLORS, SURFACES } from '../../styles/designSystem'
 import { VenueData, EventApiResponse } from '../../types/domain'
 import { loadGooglePlacesAPI } from '../../utils/loadGooglePlaces'
 import { useEventFormComponent } from '../../hooks/useEventFormComponent'
@@ -325,9 +325,15 @@ export const VenueComponent: React.FC = () => {
     venueLocationsRef.current = venueLocations
   }, [venueLocations])
 
+  // Sync local venueLocations state to context so Session Management always
+  // sees the current list, including after onAfterSave creates pending locations.
+  const { setVenueLocations: setContextVenueLocations } = useEventFormContext()
+  useEffect(() => {
+    setContextVenueLocations(venueLocations)
+  }, [venueLocations, setContextVenueLocations])
+
   // Fetch venue + locations on initial load (edit mode only).
   // Skip if venueApiId is already set (e.g. after a save via onAfterSave).
-  const { setVenueLocations: setContextVenueLocations } = useEventFormContext()
   useEffect(() => {
     if (!eventId || venueApiId) return
     apiService.getEventVenue(eventId).then(async (res) => {
@@ -340,7 +346,6 @@ export const VenueComponent: React.FC = () => {
             const list = (locRes as any).locations ?? locRes ?? []
             const locations = Array.isArray(list) ? list : []
             setVenueLocations(locations)
-            setContextVenueLocations(locations)
           }
         } catch (err) {
           console.error('Failed to load venue locations:', err)
@@ -350,7 +355,7 @@ export const VenueComponent: React.FC = () => {
     }).catch((err) => {
       console.error('Failed to fetch event venue:', err)
     })
-  }, [eventId, venueApiId, setContextVenueLocations])
+  }, [eventId, venueApiId])
   
   // ============================================================================
   // REFS FOR CALLBACK STABILITY
@@ -692,16 +697,12 @@ export const VenueComponent: React.FC = () => {
           maxLength={VENUE_NAME_MAX_LENGTH}
           placeholder="Where it's at"
           aria-label="Venue Name"
+          aria-invalid={showVenueNameError}
           aria-describedby={showVenueNameError ? 'venue-name-error' : undefined}
+          className="emc-field-like"
           style={{
-            width: '100%',
             padding: '10px 12px',
             fontSize: '14px',
-            border: '2px solid rgb(218, 218, 218)',
-            borderRadius: '8px',
-            backgroundColor: COLORS.WHITE,
-            color: COLORS.GRAY_800,
-            boxSizing: 'border-box'
           }}
         />
         
@@ -817,7 +818,7 @@ export const VenueComponent: React.FC = () => {
           </Heading>
 
           {venueLocations.length === 0 && (
-            <div style={{ padding: '2rem', backgroundColor: '#F5F5F5', borderRadius: '4px', textAlign: 'center', marginTop: '1rem' }}>
+            <div style={{ padding: '2rem', backgroundColor: SURFACES.SUBTLE, borderRadius: '4px', textAlign: 'center', marginTop: '1rem' }}>
               <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '16px' }}>
                 <Text>Add locations to your venue using the button below.</Text>
                 <Button variant="secondary" onPress={() => setIsLocationDialogOpen(true)}>
@@ -829,21 +830,21 @@ export const VenueComponent: React.FC = () => {
           )}
 
           {venueLocations.map(loc => (
-            <div key={loc.locationId} style={{ padding: '16px', border: '1px solid #D3D3D3', borderRadius: '8px', backgroundColor: '#FFFFFF' }}>
+            <div key={loc.locationId} style={{ padding: '16px', border: `1px solid ${SURFACES.BORDER}`, borderRadius: '8px', backgroundColor: SURFACES.CANVAS }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
                 <div style={{ display: 'flex', flexDirection: 'column', flexGrow: 1, gap: '4px' }}>
                   <Text UNSAFE_style={{ fontWeight: 600, fontSize: '14px' }}>{loc.name}</Text>
                   <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
-                    <span style={{ fontSize: '11px', padding: '2px 8px', borderRadius: '10px', backgroundColor: '#E1E1E1', color: COLORS.GRAY_700, fontWeight: 500 }}>
+                    <span style={{ fontSize: '11px', padding: '2px 8px', borderRadius: '10px', backgroundColor: SURFACES.PILL_BG, color: COLORS.GRAY_700, fontWeight: 500 }}>
                       {loc.locationType.charAt(0).toUpperCase() + loc.locationType.slice(1)}
                     </span>
                     {loc.locationCode && (
-                      <Text UNSAFE_style={{ fontSize: '12px', color: '#6E6E6E' }}>
+                      <Text UNSAFE_style={{ fontSize: '12px', color: COLORS.GRAY_600 }}>
                         Code: {loc.locationCode}
                       </Text>
                     )}
                     {loc.capacity != null && (
-                      <Text UNSAFE_style={{ fontSize: '12px', color: '#6E6E6E' }}>
+                      <Text UNSAFE_style={{ fontSize: '12px', color: COLORS.GRAY_600 }}>
                         Capacity: {loc.capacity}
                       </Text>
                     )}
@@ -862,9 +863,9 @@ export const VenueComponent: React.FC = () => {
               onPress={() => setIsLocationDialogOpen(true)}
               styles={style({ width: '[100%]' })}
               UNSAFE_style={{
-                backgroundColor: '#E1E1E1',
+                backgroundColor: SURFACES.PILL_BG,
                 border: 'none',
-                color: '#2C2C2C',
+                color: COLORS.DARK_GRAY,
                 justifyContent: 'flex-start',
                 paddingLeft: '16px',
               }}
