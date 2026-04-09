@@ -252,7 +252,7 @@ export const RegistrationConfigComponent: React.FC = () => {
       {/* Registration Fields Configuration */}
       <div style={{ width: '100%', marginTop: 32 }}>
         <RegistrationFieldsComponent
-          cloudType={cloudType}
+          isExperienceCloud={isExperienceCloud}
           eventType={isWebinar ? 'Virtual' : 'InPerson'}
           visibleFields={visibleRsvpFields}
           requiredFields={requiredRsvpFields}

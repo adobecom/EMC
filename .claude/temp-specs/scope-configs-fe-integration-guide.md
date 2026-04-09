@@ -89,12 +89,12 @@ Config routes require `config:read`, `config:write`, or `config:delete` permissi
           "required": true,
           "displayAs": "dropdown",
           "options": [
-            "Art or Creative Director",
-            "Animator",
-            "Developer",
-            "Marketer",
-            "Student",
-            "Other"
+            { "value": "Art or Creative Director", "label": "Art or Creative Director" },
+            { "value": "Animator", "label": "Animator" },
+            { "value": "Developer", "label": "Developer" },
+            { "value": "Marketer", "label": "Marketer" },
+            { "value": "Student", "label": "Student" },
+            { "value": "Other", "label": "Other" }
           ],
           "rules": "",
           "default": ""
@@ -105,7 +105,13 @@ Config routes require `config:read`, `config:write`, or `config:delete` permissi
           "type": "multi-select",
           "required": false,
           "displayAs": "checkbox",
-          "options": ["Acrobat Pro", "Adobe Express", "Photoshop", "Illustrator", "Premiere Pro"],
+          "options": [
+            { "value": "Acrobat Pro", "label": "Acrobat Pro" },
+            { "value": "Adobe Express", "label": "Adobe Express" },
+            { "value": "Photoshop", "label": "Photoshop" },
+            { "value": "Illustrator", "label": "Illustrator" },
+            { "value": "Premiere Pro", "label": "Premiere Pro" }
+          ],
           "rules": "",
           "default": ""
         }
@@ -115,7 +121,14 @@ Config routes require `config:read`, `config:write`, or `config:delete` permissi
           "rsvpFormFields": [
             { "field": "firstName", "label": "Prénom", "placeholder": "Prénom" },
             { "field": "email", "label": "Courriel", "placeholder": "Courriel" },
-            { "field": "jobTitle", "label": "Titre du poste", "options": ["Directeur artistique", "Animateur", "Développeur", "Spécialiste marketing", "Étudiant", "Autre"] },
+            { "field": "jobTitle", "label": "Titre du poste", "options": [
+              { "value": "Art or Creative Director", "label": "Directeur artistique" },
+              { "value": "Animator", "label": "Animateur" },
+              { "value": "Developer", "label": "Développeur" },
+              { "value": "Marketer", "label": "Spécialiste marketing" },
+              { "value": "Student", "label": "Étudiant" },
+              { "value": "Other", "label": "Autre" }
+            ]},
             { "field": "productsOfInterest", "label": "Produits d'intérêt" }
           ]
         }
@@ -153,9 +166,9 @@ Config routes require `config:read`, `config:write`, or `config:delete` permissi
           "inputType": "single-select",
           "enabled": true,
           "values": [
-            { "valueId": "a1b2c3d4-0001", "value": "Photoshop", "displayOrder": 0 },
-            { "valueId": "a1b2c3d4-0002", "value": "Illustrator", "displayOrder": 1 },
-            { "valueId": "a1b2c3d4-0003", "value": "Premiere Pro", "displayOrder": 2 }
+            { "valueId": "a1b2c3d4-0001", "value": "Photoshop", "label": "Photoshop", "displayOrder": 0 },
+            { "valueId": "a1b2c3d4-0002", "value": "Illustrator", "label": "Illustrator", "displayOrder": 1 },
+            { "valueId": "a1b2c3d4-0003", "value": "Premiere Pro", "label": "Premiere Pro", "displayOrder": 2 }
           ]
         },
         {
@@ -164,9 +177,9 @@ Config routes require `config:read`, `config:write`, or `config:delete` permissi
           "inputType": "multi-select",
           "enabled": true,
           "values": [
-            { "valueId": "b2c3d4e5-0001", "value": "Blog Post", "displayOrder": 0 },
-            { "valueId": "b2c3d4e5-0002", "value": "Social Media", "displayOrder": 1 },
-            { "valueId": "b2c3d4e5-0003", "value": "Video", "displayOrder": 2 }
+            { "valueId": "b2c3d4e5-0001", "value": "Blog Post", "label": "Blog Post", "displayOrder": 0 },
+            { "valueId": "b2c3d4e5-0002", "value": "Social Media", "label": "Social Media", "displayOrder": 1 },
+            { "valueId": "b2c3d4e5-0003", "value": "Video", "label": "Video", "displayOrder": 2 }
           ]
         },
         {
@@ -212,6 +225,7 @@ Config routes require `config:read`, `config:write`, or `config:delete` permissi
 ### POST /v1/scopes/{scopeId}/configs — Create config
 
 **Request:**
+
 ```json
 {
   "type": "rsvp",
@@ -222,6 +236,7 @@ Config routes require `config:read`, `config:write`, or `config:delete` permissi
 ```
 
 **Response (201):**
+
 ```json
 {
   "configId": "7a8b9c0d-1234-5678-9abc-def012345678",
@@ -238,6 +253,7 @@ Config routes require `config:read`, `config:write`, or `config:delete` permissi
 ### POST — Create custom-attributes config
 
 **Request:**
+
 ```json
 {
   "type": "custom-attributes",
@@ -257,6 +273,7 @@ Config routes require `config:read`, `config:write`, or `config:delete` permissi
 ```
 
 **Response (201):**
+
 ```json
 {
   "configId": "e5f6a7b8-1234-5678-9abc-def012345678",
@@ -297,16 +314,18 @@ Note: `attributeId` and `valueId` should be generated client-side (UUID) before 
 { "message": "Human-readable error description" }
 ```
 
-| Status | Meaning | Example |
-|--------|---------|---------|
-| 200 | Success | — |
-| 201 | Created | — |
-| 204 | Deleted (empty body) | — |
-| 400 | Bad request | `"type is required when creating a config"` |
-| 400 | Platform restriction | `"Configs cannot be created at the platform scope level."` |
-| 403 | Forbidden | `"Insufficient permissions"` |
-| 404 | Not found | `"Config not found"` / `"Scope not found"` |
-| 409 | Duplicate | `"A config with type 'rsvp' already exists for this scope"` |
+
+| Status | Meaning              | Example                                                     |
+| ------ | -------------------- | ----------------------------------------------------------- |
+| 200    | Success              | —                                                           |
+| 201    | Created              | —                                                           |
+| 204    | Deleted (empty body) | —                                                           |
+| 400    | Bad request          | `"type is required when creating a config"`                 |
+| 400    | Platform restriction | `"Configs cannot be created at the platform scope level."`  |
+| 403    | Forbidden            | `"Insufficient permissions"`                                |
+| 404    | Not found            | `"Config not found"` / `"Scope not found"`                  |
+| 409    | Duplicate            | `"A config with type 'rsvp' already exists for this scope"` |
+
 
 ---
 
@@ -328,9 +347,17 @@ if (rsvpConfig) {
     // field.type        → "select" | "multi-select" | "text" | "email" | "phone"
     // field.displayAs   → "dropdown" | "radio" | "checkbox"
     // field.required    → true/false
-    // field.options     → ["Option A", "Option B", ...]
+    // field.options     → [{ value, label }, ...] for select types
+    //   option.value    → stored in DB (locale-independent key)
+    //   option.label    → displayed to user (localizable, falls back to value)
     // field.default     → default value
     // field.rules       → "full-width" etc.
+
+    // Rendering select options:
+    // field.options.forEach(opt => {
+    //   const display = opt.label || opt.value;  // label for display
+    //   const stored  = opt.value;                // value for DB
+    // });
   });
 }
 ```
@@ -346,11 +373,19 @@ const localeOverrides = rsvpConfig.localizations?.[userLocale]?.rsvpFormFields |
 
 const localizedFields = baseFields.map(field => {
   const override = localeOverrides.find(o => o.field === field.field);
+  // Merge localized labels into options — value stays the same, label gets translated
+  let localizedOptions = field.options;
+  if (override?.options) {
+    localizedOptions = (field.options || []).map(opt => {
+      const locOpt = override.options.find(lo => lo.value === opt.value);
+      return locOpt ? { ...opt, label: locOpt.label } : opt;
+    });
+  }
   return {
     ...field,
     label: override?.label || field.label,
     placeholder: override?.placeholder || field.placeholder,
-    options: override?.options || field.options
+    options: localizedOptions
   };
 });
 ```
@@ -458,9 +493,11 @@ const customAttrsConfig = allConfigs.find(c => c.type === 'custom-attributes');
 
 ## Hierarchy Behavior
 
-| Merge Strategy | Behavior |
-|---------------|----------|
+
+| Merge Strategy            | Behavior                                                                          |
+| ------------------------- | --------------------------------------------------------------------------------- |
 | **Full replace** per type | If team scope has a `rsvp` config, it completely replaces the org's `rsvp` config |
+
 
 Each config in the response includes a `scopeId` field indicating where it was originally defined. If `scopeId` differs from the queried scope, it's inherited from a parent.
 
@@ -500,31 +537,37 @@ await fetch(`/v1/scopes/${teamScopeId}/configs`, {
 
 ### RSVP Form Field `type` Values
 
-| Value | Render As |
-|-------|-----------|
-| `text` | Text input |
-| `email` | Email input (with validation) |
-| `phone` | Phone input |
-| `select` | Dropdown or radio buttons (check `displayAs`) |
+
+| Value          | Render As                                        |
+| -------------- | ------------------------------------------------ |
+| `text`         | Text input                                       |
+| `email`        | Email input (with validation)                    |
+| `phone`        | Phone input                                      |
+| `select`       | Dropdown or radio buttons (check `displayAs`)    |
 | `multi-select` | Multi-dropdown or checkboxes (check `displayAs`) |
+
 
 ### RSVP Form Field `displayAs` Values
 
-| Value | Applies To | Render As |
-|-------|-----------|-----------|
-| `dropdown` | `select` | Standard dropdown |
-| `radio` | `select` | Radio button group |
+
+| Value      | Applies To     | Render As             |
+| ---------- | -------------- | --------------------- |
+| `dropdown` | `select`       | Standard dropdown     |
+| `radio`    | `select`       | Radio button group    |
 | `dropdown` | `multi-select` | Multi-select dropdown |
-| `checkbox` | `multi-select` | Checkbox group |
+| `checkbox` | `multi-select` | Checkbox group        |
+
 
 ### Custom Attribute `inputType` Values
 
-| Value | Render As | Values Array |
-|-------|-----------|-------------|
-| `text` | Text input | Not used |
-| `boolean` | Checkbox/toggle | Not used |
-| `single-select` | Dropdown | Required — list of options |
-| `multi-select` | Multi-select | Required — list of options |
+
+| Value           | Render As       | Values Array               |
+| --------------- | --------------- | -------------------------- |
+| `text`          | Text input      | Not used                   |
+| `boolean`       | Checkbox/toggle | Not used                   |
+| `single-select` | Dropdown        | Required — list of options |
+| `multi-select`  | Multi-select    | Required — list of options |
+
 
 ---
 
@@ -537,3 +580,4 @@ await fetch(`/v1/scopes/${teamScopeId}/configs`, {
 - Custom attributes with `enabled: false` should be hidden from the events console
 - One config per type per scope — duplicates return 409
 - Inherited configs can be **overridden** at child scopes by creating a config with the same type — the child's config fully replaces the parent's
+- **Options use `{ value, label }` format** — `value` is the locale-independent key stored in DB, `label` is the display text shown to users. Localizations override `label` while keeping `value` unchanged. FE display logic: `option.label || option.value`

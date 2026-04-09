@@ -1,4 +1,4 @@
-/* 
+/*
 * <license header>
 */
 
@@ -9,32 +9,22 @@ import { HeadingWithTooltip } from '../../components/shared'
 import { COLORS, SURFACES } from '../../styles/designSystem'
 import OpenIn from '@react-spectrum/s2/icons/OpenIn'
 import Move from '@react-spectrum/s2/icons/Move'
-
-/**
- * Configuration field structure from the JSON configs
- */
-interface RsvpConfigField {
-  Field: string
-  Type: string
-  Required?: string
-}
-
-interface RsvpConfig {
-  cloudType: string
-  config: RsvpConfigField[] | null
-}
+import { useGroup } from '../../contexts/GroupContext'
+import { cachedApi } from '../../services/api'
+import type { RsvpFormField, RsvpScopeConfig } from '../../types/configApi'
 
 /**
  * Extended field with display info
  */
 interface DisplayField {
   fieldName: string
+  label: string
   isMandated: boolean
   originalIndex: number
 }
 
 interface RegistrationFieldsComponentProps {
-  cloudType: 'CreativeCloud' | 'ExperienceCloud'
+  isExperienceCloud: boolean
   eventType: 'InPerson' | 'Virtual'
   visibleFields: string[]
   requiredFields: string[]
@@ -46,48 +36,8 @@ interface RegistrationFieldsComponentProps {
   onMarketoFormUrlChange: (url: string) => void
 }
 
-/**
- * Converts a camelCase or PascalCase string into an uppercase string with spaces between words.
- */
-const convertString = (input: string): string => {
-  const parts = input.replace(/([a-z])([A-Z])/g, '$1 $2')
-  return parts.toUpperCase()
-}
-
-/**
- * Fetches RSVP form configurations for all supported clouds
- */
-const fetchRsvpFormConfigs = async (): Promise<RsvpConfig[]> => {
-  const SUPPORTED_CLOUDS = [
-    { id: 'CreativeCloud', name: 'Creative Cloud' },
-    { id: 'ExperienceCloud', name: 'Experience Cloud' }
-  ]
-
-  return Promise.all(
-    SUPPORTED_CLOUDS.map(async ({ id }) => {
-      try {
-        const response = await fetch(`https://www.adobe.com/event-libs/assets/configs/rsvp/${id.toLowerCase()}.json`)
-        if (!response.ok) {
-          console.error(`Failed to fetch RSVP config for ${id}: ${response.status} ${response.statusText}`)
-          return { cloudType: id, config: null }
-        }
-        const data = await response.json()
-        console.log(`Fetched RSVP config for ${id}:`, data)
-        
-        // Handle different possible JSON structures
-        const config = Array.isArray(data) ? data : (data.data || data.fields || data.config || null)
-        
-        return { cloudType: id, config }
-      } catch (error) {
-        console.error(`Failed to fetch RSVP config for ${id}:`, error)
-        return { cloudType: id, config: null }
-      }
-    })
-  )
-}
-
 export const RegistrationFieldsComponent: React.FC<RegistrationFieldsComponentProps> = ({
-  cloudType,
+  isExperienceCloud,
   eventType,
   visibleFields,
   requiredFields,
@@ -98,21 +48,33 @@ export const RegistrationFieldsComponent: React.FC<RegistrationFieldsComponentPr
   onRegistrationTypeChange,
   onMarketoFormUrlChange
 }) => {
-  const [configs, setConfigs] = useState<RsvpConfig[]>([])
+  const { activeGroup } = useGroup()
+  const [fields, setFields] = useState<RsvpFormField[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  
+
   // Drag and drop state
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null)
   const [dragOverIndex, setDragOverIndex] = useState<number | null>(null)
 
-  // Fetch configs on mount
+  // Fetch RSVP config for the current scope on mount
   useEffect(() => {
-    const loadConfigs = async () => {
+    const scopeId = activeGroup?.scopeId
+    if (!scopeId) {
+      setLoading(false)
+      return
+    }
+
+    const loadFields = async () => {
       try {
         setLoading(true)
-        const fetchedConfigs = await fetchRsvpFormConfigs()
-        setConfigs(fetchedConfigs)
+        const result = await cachedApi.getConfigsForScope(scopeId, 'rsvp')
+        if ('error' in result) {
+          setError('Failed to load registration field configurations')
+          return
+        }
+        const rsvpConfig = result.find(c => c.type === 'rsvp') as RsvpScopeConfig | undefined
+        setFields(rsvpConfig?.rsvpFormFields ?? [])
         setError(null)
       } catch (err) {
         setError('Failed to load registration field configurations')
@@ -122,21 +84,18 @@ export const RegistrationFieldsComponent: React.FC<RegistrationFieldsComponentPr
       }
     }
 
-    loadConfigs()
-  }, [])
+    loadFields()
+  }, [activeGroup?.scopeId])
 
-  // Get the current cloud's config
-  const cloudConfig = configs.find((c) => c.cloudType === cloudType)
-  const currentConfig = Array.isArray(cloudConfig?.config) ? cloudConfig.config : []
-  
-  // Filter out items with null-ish Field attribute and submit buttons
-  const validFields = currentConfig.filter((f) => f.Field && f.Field.trim() !== '' && f.Type !== 'submit')
-  const mandatedFieldNames = validFields.filter((f) => f.Required === 'x').map((f) => f.Field)
-  
+  // Filter out submit-type fields
+  const validFields = fields.filter(f => f.field)
+  const mandatedFieldNames = validFields.filter(f => f.required).map(f => f.field)
+
   // Build display fields list with original order preserved
   const allDisplayFields: DisplayField[] = validFields.map((f, idx) => ({
-    fieldName: f.Field,
-    isMandated: f.Required === 'x',
+    fieldName: f.field,
+    label: f.label,
+    isMandated: f.required,
     originalIndex: idx
   }))
 
@@ -145,15 +104,15 @@ export const RegistrationFieldsComponent: React.FC<RegistrationFieldsComponentPr
   const sortedDisplayFields = [...allDisplayFields].sort((a, b) => {
     const aIsSelected = visibleFields.includes(a.fieldName)
     const bIsSelected = visibleFields.includes(b.fieldName)
-    
+
     if (aIsSelected && !bIsSelected) return -1
     if (!aIsSelected && bIsSelected) return 1
-    
+
     // Both selected: sort by position in visibleFields array
     if (aIsSelected && bIsSelected) {
       return visibleFields.indexOf(a.fieldName) - visibleFields.indexOf(b.fieldName)
     }
-    
+
     // Both unselected: maintain original config order
     return a.originalIndex - b.originalIndex
   })
@@ -167,12 +126,12 @@ export const RegistrationFieldsComponent: React.FC<RegistrationFieldsComponentPr
     if (missingVisibleMandated.length > 0) {
       const newVisibleFields = [...visibleFields, ...missingVisibleMandated]
       onVisibleFieldsChange(newVisibleFields)
-      
+
       // Also ensure requiredFields is ordered consistently with newVisibleFields
       const missingRequiredMandated = mandatedFieldNames.filter((f) => !requiredFields.includes(f))
       if (missingRequiredMandated.length > 0) {
         // Build required array in the same order as visible
-        const newRequiredFields = newVisibleFields.filter((f) => 
+        const newRequiredFields = newVisibleFields.filter((f) =>
           requiredFields.includes(f) || missingRequiredMandated.includes(f)
         )
         onRequiredFieldsChange(newRequiredFields)
@@ -182,7 +141,7 @@ export const RegistrationFieldsComponent: React.FC<RegistrationFieldsComponentPr
       const missingRequiredMandated = mandatedFieldNames.filter((f) => !requiredFields.includes(f))
       if (missingRequiredMandated.length > 0) {
         // Build required array in the same order as visible
-        const newRequiredFields = visibleFields.filter((f) => 
+        const newRequiredFields = visibleFields.filter((f) =>
           requiredFields.includes(f) || missingRequiredMandated.includes(f)
         )
         onRequiredFieldsChange(newRequiredFields)
@@ -198,7 +157,7 @@ export const RegistrationFieldsComponent: React.FC<RegistrationFieldsComponentPr
     const field = sortedDisplayFields[displayIndex]
     // Only allow dragging selected (visible) fields
     if (!visibleFields.includes(field.fieldName)) return
-    
+
     setDraggedIndex(displayIndex)
     e.dataTransfer.effectAllowed = 'move'
     e.dataTransfer.setData('text/plain', String(displayIndex))
@@ -209,7 +168,7 @@ export const RegistrationFieldsComponent: React.FC<RegistrationFieldsComponentPr
     const field = sortedDisplayFields[displayIndex]
     // Only allow dropping on selected (visible) fields
     if (!visibleFields.includes(field.fieldName)) return
-    
+
     e.dataTransfer.dropEffect = 'move'
     if (draggedIndex !== null && draggedIndex !== displayIndex) {
       setDragOverIndex(displayIndex)
@@ -222,7 +181,7 @@ export const RegistrationFieldsComponent: React.FC<RegistrationFieldsComponentPr
 
   const handleDrop = (e: React.DragEvent, dropDisplayIndex: number) => {
     e.preventDefault()
-    
+
     if (draggedIndex === null || draggedIndex === dropDisplayIndex) {
       setDraggedIndex(null)
       setDragOverIndex(null)
@@ -231,7 +190,7 @@ export const RegistrationFieldsComponent: React.FC<RegistrationFieldsComponentPr
 
     const draggedField = sortedDisplayFields[draggedIndex]
     const dropField = sortedDisplayFields[dropDisplayIndex]
-    
+
     // Only reorder within visible fields
     if (!visibleFields.includes(draggedField.fieldName) || !visibleFields.includes(dropField.fieldName)) {
       setDraggedIndex(null)
@@ -243,17 +202,16 @@ export const RegistrationFieldsComponent: React.FC<RegistrationFieldsComponentPr
     const newVisibleFields = [...visibleFields]
     const draggedVisibleIdx = newVisibleFields.indexOf(draggedField.fieldName)
     const dropVisibleIdx = newVisibleFields.indexOf(dropField.fieldName)
-    
+
     const [removed] = newVisibleFields.splice(draggedVisibleIdx, 1)
     newVisibleFields.splice(dropVisibleIdx, 0, removed)
-    
+
     onVisibleFieldsChange(newVisibleFields)
-    
+
     // Also reorder requiredFields to match the new visibleFields order
-    // Filter requiredFields to only include fields that are in newVisibleFields, maintaining the new order
     const newRequiredFields = newVisibleFields.filter((f) => requiredFields.includes(f))
     onRequiredFieldsChange(newRequiredFields)
-    
+
     setDraggedIndex(null)
     setDragOverIndex(null)
   }
@@ -273,7 +231,7 @@ export const RegistrationFieldsComponent: React.FC<RegistrationFieldsComponentPr
       onVisibleFieldsChange(newVisibleFields)
       // Re-order requiredFields to match visible order (in case field was previously required)
       const newRequiredFields = newVisibleFields.filter((f) => requiredFields.includes(f))
-      if (newRequiredFields.length !== requiredFields.length || 
+      if (newRequiredFields.length !== requiredFields.length ||
           !newRequiredFields.every((f, i) => f === requiredFields[i])) {
         onRequiredFieldsChange(newRequiredFields)
       }
@@ -299,18 +257,18 @@ export const RegistrationFieldsComponent: React.FC<RegistrationFieldsComponentPr
   }
 
   const renderBasicFormTable = () => {
-    // Format mandated fields for display
-    const mandatedFieldsDisplay = mandatedFieldNames.map((field) => convertString(field)).join(', ')
-    const cloudName = cloudType === 'CreativeCloud' ? 'Creative Cloud' : 'Experience Cloud'
-    
+    const mandatedLabels = mandatedFieldNames
+      .map(name => allDisplayFields.find(f => f.fieldName === name)?.label ?? name)
+      .join(', ')
+
     return (
       <div className={style({display: 'flex', flexDirection: 'column', gap: 16})}>
         {mandatedFieldNames.length > 0 && (
           <Text UNSAFE_style={{ color: COLORS.GRAY_800 }}>
-            Note: <strong>{cloudName}</strong> required fields include <strong>{mandatedFieldsDisplay}</strong>
+            Note: required fields include <strong>{mandatedLabels}</strong>
           </Text>
         )}
-        
+
         <div
           style={{
             backgroundColor: SURFACES.SUBTLE,
@@ -318,8 +276,8 @@ export const RegistrationFieldsComponent: React.FC<RegistrationFieldsComponentPr
             padding: '48px'
           }}
         >
-          {/* Header row - 4 columns now with drag handle */}
-          <div style={{ 
+          {/* Header row */}
+          <div style={{
             display: 'grid',
             gridTemplateColumns: '1fr 1fr 1fr 40px',
             gap: '16px',
@@ -342,7 +300,7 @@ export const RegistrationFieldsComponent: React.FC<RegistrationFieldsComponentPr
           {/* Field rows */}
           <div className={style({display: 'flex', flexDirection: 'column', gap: 8})} >
             {sortedDisplayFields.map((displayField, displayIndex) => {
-              const { fieldName, isMandated } = displayField
+              const { fieldName, label, isMandated } = displayField
               const isVisible = visibleFields.includes(fieldName)
               const isRequired = requiredFields.includes(fieldName)
               const isDragging = draggedIndex === displayIndex
@@ -365,13 +323,13 @@ export const RegistrationFieldsComponent: React.FC<RegistrationFieldsComponentPr
                     alignItems: 'center',
                     padding: '12px 16px',
                     borderRadius: '6px',
-                    backgroundColor: isDragging 
-                      ? SURFACES.PILL_BG 
+                    backgroundColor: isDragging
+                      ? SURFACES.PILL_BG
                       : isVisible
                         ? SURFACES.CANVAS
                         : 'transparent',
-                    border: isDragOver 
-                      ? `2px solid ${SURFACES.SELECTED_RING}` 
+                    border: isDragOver
+                      ? `2px solid ${SURFACES.SELECTED_RING}`
                       : isVisible
                         ? `1px solid ${SURFACES.BORDER}`
                         : '1px solid transparent',
@@ -381,10 +339,10 @@ export const RegistrationFieldsComponent: React.FC<RegistrationFieldsComponentPr
                   }}
                 >
                   <Text UNSAFE_style={{ fontWeight: 500 }}>
-                    {convertString(fieldName)}
+                    {label}
                     {isMandated && (
-                      <Text UNSAFE_style={{ 
-                        fontSize: '11px', 
+                      <Text UNSAFE_style={{
+                        fontSize: '11px',
                         color: COLORS.GRAY_500,
                         marginLeft: '8px',
                         fontWeight: 400
@@ -475,8 +433,7 @@ export const RegistrationFieldsComponent: React.FC<RegistrationFieldsComponentPr
     )
   }
 
-  // For webinars (ExperienceCloud Virtual), show form type selector
-  const isWebinar = cloudType === 'ExperienceCloud' && eventType === 'Virtual'
+  const isWebinar = isExperienceCloud && eventType === 'Virtual'
 
   return (
     <div className={style({display: 'flex', flexDirection: 'column', gap: 24})}>
@@ -507,4 +464,3 @@ export const RegistrationFieldsComponent: React.FC<RegistrationFieldsComponentPr
     </div>
   )
 }
-
