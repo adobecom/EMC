@@ -102,6 +102,7 @@ const MultiSelectRepeater: React.FC<MultiSelectRepeaterProps> = ({ attr, values,
             placeholder={`Select ${attr.name}`}
             selectedKey={row.value || null}
             onSelectionChange={(key) => handleChange(row.id, String(key))}
+            styles={style({ flexGrow: 1 })}
           >
             {getAvailableOptions(row.value).map(opt => (
               <PickerItem key={opt.value} id={opt.value}>{opt.label || opt.value}</PickerItem>
@@ -276,6 +277,7 @@ export const CustomAttributesComponent: React.FC = () => {
             label={attr.name}
             selectedKey={getSingleSelectValue(attr) || null}
             onSelectionChange={(key) => updateSingleSelectValue(attr, String(key))}
+            styles={style({ alignSelf: 'start' })}
           >
             {attr.values
               .slice()
