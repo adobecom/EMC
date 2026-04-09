@@ -337,6 +337,56 @@ export const ConfigManagement: React.FC<ConfigManagementProps> = () => {
     setIsRsvpFormOpen(true)
   }, [])
 
+  // Helpers for reading/writing locale overrides inside the RSVP dialog.
+  // These use `activeLocale` (the table toolbar locale switcher) so the dialog
+  // reflects whichever locale is selected on the page when it opens.
+  const getDialogLocaleFieldValue = useCallback((fieldName: string, key: 'label' | 'placeholder'): string => {
+    if (!activeLocale) return ''
+    return rsvpLocalizations[activeLocale]?.rsvpFormFields?.find(f => f.field === fieldName)?.[key] ?? ''
+  }, [activeLocale, rsvpLocalizations])
+
+  const getDialogLocaleOptionLabel = useCallback((fieldName: string, optValue: string): string => {
+    if (!activeLocale) return ''
+    return rsvpLocalizations[activeLocale]?.rsvpFormFields?.find(f => f.field === fieldName)?.options?.find(o => o.value === optValue)?.label ?? ''
+  }, [activeLocale, rsvpLocalizations])
+
+  const setDialogLocaleFieldValue = useCallback((fieldName: string, updates: Partial<RsvpFormFieldLocaleOverride>) => {
+    if (!activeLocale) return
+    const locale = activeLocale
+    setRsvpLocalizations(prev => {
+      const localeData = { ...(prev[locale] ?? { rsvpFormFields: [] }) }
+      const fields = [...localeData.rsvpFormFields]
+      const idx = fields.findIndex(f => f.field === fieldName)
+      const entry = { ...(idx >= 0 ? fields[idx] : { field: fieldName }), ...updates }
+      if (idx >= 0) fields[idx] = entry
+      else fields.push(entry)
+      return { ...prev, [locale]: { rsvpFormFields: fields } }
+    })
+  }, [activeLocale])
+
+  const setDialogLocaleOptionLabel = useCallback((fieldName: string, optValue: string, newLabel: string) => {
+    if (!activeLocale) return
+    const locale = activeLocale
+    setRsvpLocalizations(prev => {
+      const localeData = { ...(prev[locale] ?? { rsvpFormFields: [] }) }
+      const fields = [...localeData.rsvpFormFields]
+      const idx = fields.findIndex(f => f.field === fieldName)
+      const existing = idx >= 0 ? fields[idx] : { field: fieldName }
+      const baseField = rsvpFormFields.find(f => f.field === fieldName)
+      const baseOptions = baseField?.options ?? []
+      const currentOptions = existing.options ?? []
+      const updatedOptions = baseOptions.map(o => {
+        if (o.value === optValue) return { value: o.value, label: newLabel }
+        const cur = currentOptions.find(co => co.value === o.value)
+        return { value: o.value, label: cur?.label ?? '' }
+      }).filter(o => o.label.trim())
+      const entry = { ...existing, options: updatedOptions.length > 0 ? updatedOptions : undefined }
+      if (idx >= 0) fields[idx] = entry
+      else fields.push(entry)
+      return { ...prev, [locale]: { rsvpFormFields: fields } }
+    })
+  }, [activeLocale, rsvpFormFields])
+
   const handleSaveRsvpConfig = useCallback(async () => {
     if (!selectedScopeId) return
     const validFields = rsvpFormFields.filter(f => f.field.trim() && f.label.trim())
@@ -1368,7 +1418,7 @@ export const ConfigManagement: React.FC<ConfigManagementProps> = () => {
           </div>
         </div>
 
-        <Divider />
+        <Divider styles={style({ marginBottom: 56 })} />
 
         {/* Tab content */}
         {selectedScopeId ? (
@@ -1760,19 +1810,28 @@ export const ConfigManagement: React.FC<ConfigManagementProps> = () => {
                   <div>
                     <div className={style({ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 })}>
                       <Text UNSAFE_style={{ fontWeight: 700 }}>Form Fields</Text>
-                      <Button
-                        variant="secondary"
-                        size="S"
-                        onPress={() => {
-                          const newIndex = rsvpFormFields.length
-                          setRsvpFormFields(prev => [...prev, createEmptyRsvpField()])
-                          setExpandedRsvpDialogFields(prev => new Set([...prev, newIndex]))
-                        }}
-                      >
-                        <Add />
-                        <Text>Add Field</Text>
-                      </Button>
+                      {!(activeLocale && editingRsvpConfig) && (
+                        <Button
+                          variant="secondary"
+                          size="S"
+                          onPress={() => {
+                            const newIndex = rsvpFormFields.length
+                            setRsvpFormFields(prev => [...prev, createEmptyRsvpField()])
+                            setExpandedRsvpDialogFields(prev => new Set([...prev, newIndex]))
+                          }}
+                        >
+                          <Add />
+                          <Text>Add Field</Text>
+                        </Button>
+                      )}
                     </div>
+                    {(activeLocale && editingRsvpConfig) && (
+                      <div className={style({ paddingX: 12, paddingY: 8, backgroundColor: 'gray-75', borderWidth: 1, borderColor: 'gray-300', borderRadius: 'sm', marginBottom: 12 })}>
+                        <Text UNSAFE_style={{ fontSize: 13 }}>
+                          Locale: <strong>{activeLocale}</strong> — Label, Placeholder, and Option Labels save as locale overrides. All other fields update the base definition.
+                        </Text>
+                      </div>
+                    )}
                     <div className={style({ display: 'flex', flexDirection: 'column', gap: 8 })}>
                       {rsvpFormFields.map((field, index) => {
                         const hasOptions = field.type === 'select' || field.type === 'multi-select'
@@ -1809,14 +1868,16 @@ export const ConfigManagement: React.FC<ConfigManagementProps> = () => {
                                   </div>
                                 )}
                               </div>
-                              <ActionButton
-                                isQuiet
-                                aria-label="Remove field"
-                                onPress={(e) => { e.continuePropagation?.(); setRsvpFormFields(prev => prev.filter((_, i) => i !== index)) }}
-                                isDisabled={rsvpFormFields.length <= 1}
-                              >
-                                <RemoveCircle />
-                              </ActionButton>
+                              {!(activeLocale && editingRsvpConfig) && (
+                                <ActionButton
+                                  isQuiet
+                                  aria-label="Remove field"
+                                  onPress={(e) => { e.continuePropagation?.(); setRsvpFormFields(prev => prev.filter((_, i) => i !== index)) }}
+                                  isDisabled={rsvpFormFields.length <= 1}
+                                >
+                                  <RemoveCircle />
+                                </ActionButton>
+                              )}
                             </div>
                             {/* Body — always shown for non-select types; toggled for select/multi-select */}
                             {isExpanded && (
@@ -1833,23 +1894,29 @@ export const ConfigManagement: React.FC<ConfigManagementProps> = () => {
                                     isRequired
                                   />
                                   <TextField
-                                    label="Label"
-                                    value={field.label}
-                                    onChange={(v) => setRsvpFormFields(prev => {
-                                      const copy = [...prev]
-                                      copy[index] = { ...copy[index], label: v }
-                                      return copy
-                                    })}
-                                    isRequired
+                                    label={(activeLocale && editingRsvpConfig) ? `Label (${activeLocale})` : 'Label'}
+                                    value={(activeLocale && editingRsvpConfig) ? getDialogLocaleFieldValue(field.field, 'label') : field.label}
+                                    onChange={(activeLocale && editingRsvpConfig)
+                                      ? (v) => setDialogLocaleFieldValue(field.field, { label: v || undefined })
+                                      : (v) => setRsvpFormFields(prev => {
+                                          const copy = [...prev]
+                                          copy[index] = { ...copy[index], label: v }
+                                          return copy
+                                        })
+                                    }
+                                    isRequired={!(activeLocale && editingRsvpConfig)}
                                   />
                                   <TextField
-                                    label="Placeholder"
-                                    value={field.placeholder}
-                                    onChange={(v) => setRsvpFormFields(prev => {
-                                      const copy = [...prev]
-                                      copy[index] = { ...copy[index], placeholder: v }
-                                      return copy
-                                    })}
+                                    label={(activeLocale && editingRsvpConfig) ? `Placeholder (${activeLocale})` : 'Placeholder'}
+                                    value={(activeLocale && editingRsvpConfig) ? getDialogLocaleFieldValue(field.field, 'placeholder') : field.placeholder}
+                                    onChange={(activeLocale && editingRsvpConfig)
+                                      ? (v) => setDialogLocaleFieldValue(field.field, { placeholder: v || undefined })
+                                      : (v) => setRsvpFormFields(prev => {
+                                          const copy = [...prev]
+                                          copy[index] = { ...copy[index], placeholder: v }
+                                          return copy
+                                        })
+                                    }
                                   />
                                   <Picker
                                     label="Type"
@@ -1907,18 +1974,20 @@ export const ConfigManagement: React.FC<ConfigManagementProps> = () => {
                                       <Text UNSAFE_style={{ fontWeight: 600, fontSize: 13 }}>
                                         Options{field.options.length > 0 ? ` (${field.options.length})` : ''}
                                       </Text>
-                                      <ActionButton
-                                        isQuiet
-                                        size="S"
-                                        onPress={() => setRsvpFormFields(prev => {
-                                          const copy = [...prev]
-                                          copy[index] = { ...copy[index], options: [...copy[index].options, { value: '', label: '' }] }
-                                          return copy
-                                        })}
-                                      >
-                                        <Add />
-                                        <Text>Add Option</Text>
-                                      </ActionButton>
+                                      {!(activeLocale && editingRsvpConfig) && (
+                                        <ActionButton
+                                          isQuiet
+                                          size="S"
+                                          onPress={() => setRsvpFormFields(prev => {
+                                            const copy = [...prev]
+                                            copy[index] = { ...copy[index], options: [...copy[index].options, { value: '', label: '' }] }
+                                            return copy
+                                          })}
+                                        >
+                                          <Add />
+                                          <Text>Add Option</Text>
+                                        </ActionButton>
+                                      )}
                                     </div>
                                     <div
                                       className={field.options.length > 0
@@ -1931,6 +2000,7 @@ export const ConfigManagement: React.FC<ConfigManagementProps> = () => {
                                           <TextField
                                             label="Value"
                                             value={opt.value}
+                                            isReadOnly={!!(activeLocale && editingRsvpConfig)}
                                             onChange={(v) => setRsvpFormFields(prev => {
                                               const copy = [...prev]
                                               const opts = [...copy[index].options]
@@ -1941,31 +2011,36 @@ export const ConfigManagement: React.FC<ConfigManagementProps> = () => {
                                             styles={style({ flexGrow: 1 })}
                                           />
                                           <TextField
-                                            label="Label"
-                                            value={opt.label}
-                                            onChange={(v) => setRsvpFormFields(prev => {
-                                              const copy = [...prev]
-                                              const opts = [...copy[index].options]
-                                              opts[optIdx] = { ...opts[optIdx], label: v }
-                                              copy[index] = { ...copy[index], options: opts }
-                                              return copy
-                                            })}
+                                            label={(activeLocale && editingRsvpConfig) ? `Label (${activeLocale})` : 'Label'}
+                                            value={(activeLocale && editingRsvpConfig) ? getDialogLocaleOptionLabel(field.field, opt.value) : opt.label}
+                                            onChange={(activeLocale && editingRsvpConfig)
+                                              ? (v) => setDialogLocaleOptionLabel(field.field, opt.value, v)
+                                              : (v) => setRsvpFormFields(prev => {
+                                                  const copy = [...prev]
+                                                  const opts = [...copy[index].options]
+                                                  opts[optIdx] = { ...opts[optIdx], label: v }
+                                                  copy[index] = { ...copy[index], options: opts }
+                                                  return copy
+                                                })
+                                            }
                                             styles={style({ flexGrow: 1 })}
                                           />
-                                          <ActionButton
-                                            isQuiet
-                                            aria-label="Remove option"
-                                            onPress={() => setRsvpFormFields(prev => {
-                                              const copy = [...prev]
-                                              copy[index] = {
-                                                ...copy[index],
-                                                options: copy[index].options.filter((_, oi) => oi !== optIdx),
-                                              }
-                                              return copy
-                                            })}
-                                          >
-                                            <RemoveCircle />
-                                          </ActionButton>
+                                          {!(activeLocale && editingRsvpConfig) && (
+                                            <ActionButton
+                                              isQuiet
+                                              aria-label="Remove option"
+                                              onPress={() => setRsvpFormFields(prev => {
+                                                const copy = [...prev]
+                                                copy[index] = {
+                                                  ...copy[index],
+                                                  options: copy[index].options.filter((_, oi) => oi !== optIdx),
+                                                }
+                                                return copy
+                                              })}
+                                            >
+                                              <RemoveCircle />
+                                            </ActionButton>
+                                          )}
                                         </div>
                                       ))}
                                       {field.options.length === 0 && (
