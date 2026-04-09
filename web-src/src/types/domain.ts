@@ -634,6 +634,15 @@ export interface EventFormData {
   localizations?: Record<string, EventLocalization>
   localizationOverrides?: Record<string, any>
   metadata?: Record<string, any>
+  customAttributes?: EventCustomAttributeValue[]
+}
+
+export interface EventCustomAttributeValue {
+  attributeId: string
+  attribute: string
+  valueId?: string
+  value: string
+  displayOrder?: number
 }
 
 // Agenda Item

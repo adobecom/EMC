@@ -32,20 +32,21 @@ import { configService } from '../../services/configService'
 import { IMS } from '../../types'
 import { FormWizard, WizardStep, BlurredLoadingOverlay, FormCard, HistoryTimeline } from '../../components/shared'
 import { 
-  EventFormatComponent, 
-  EventTagsComponent, 
-  EventInfoComponent, 
-  AgendaComponent, 
-  VenueComponent, 
-  SpeakersComponent, 
-  SponsorsComponent, 
-  EventImagesComponent, 
-  RegistrationConfigComponent, 
+  EventFormatComponent,
+  EventTagsComponent,
+  EventInfoComponent,
+  AgendaComponent,
+  VenueComponent,
+  SpeakersComponent,
+  SponsorsComponent,
+  EventImagesComponent,
+  RegistrationConfigComponent,
   PageMetadataComponent,
   PromotionalContentComponent,
   MarketoIntegrationComponent,
   SessionManagementComponent,
-  VideoContentComponent
+  VideoContentComponent,
+  CustomAttributesComponent,
 } from './index'
 import { mapApiResponseToFormData } from '../../utils/eventFormMappers'
 import { useEventFeatureFlags } from '../../hooks/useEventTypeFeatures'
@@ -919,6 +920,8 @@ const EventFormInner: React.FC<EventFormInnerProps> = ({ ims: _ims }) => {
           <VideoContentComponent />
         </FormCard>
       )}
+
+      <CustomAttributesComponent />
     </>
   )
   

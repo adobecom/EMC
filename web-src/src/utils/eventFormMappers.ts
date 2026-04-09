@@ -178,5 +178,6 @@ export function mapApiResponseToFormData(event: EventApiResponse, locale: string
       }),
     marketoIntegration: event.marketoIntegration,
     video: event.video,
+    customAttributes: event.customAttributes || [],
   }
 }
