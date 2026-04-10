@@ -97,6 +97,7 @@ export interface CustomAttributeConfig {
   name: string
   inputType: CustomAttributeInputType
   enabled: boolean
+  isRequired?: boolean
   values: CustomAttributeValue[]
 }
 

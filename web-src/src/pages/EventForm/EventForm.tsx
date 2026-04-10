@@ -55,6 +55,7 @@ import { useEventFormSave } from '../../hooks/useEventFormSave'
 import { useCustomDetailPagePath } from '../../hooks/useCustomDetailPagePath'
 import { COLORS, Z_INDEX, TYPOGRAPHY, SURFACES } from '../../styles/designSystem'
 import { getEspEnvParam } from '../../config/constants'
+import { validateForPublish, PublishGuardResult } from '../../utils/publishGuard'
 
 // ============================================================================
 // FORMAT SELECTION OVERLAY
@@ -496,7 +497,8 @@ const EventFormInner: React.FC<EventFormInnerProps> = ({ ims: _ims }) => {
     pendingAction: 'save' | 'publish'
   } | null>(null)
   const [isCheckingUrl, setIsCheckingUrl] = useState(false)
-  
+  const [publishGuardResult, setPublishGuardResult] = useState<PublishGuardResult | null>(null)
+
   // Show toast when saveError changes
   useEffect(() => {
     if (saveError && saveError !== lastErrorShownRef.current) {
@@ -770,18 +772,25 @@ const EventFormInner: React.FC<EventFormInnerProps> = ({ ims: _ims }) => {
    * Handle Publish/Re-publish button click
    */
   const handleComplete = useCallback(async () => {
+    // Validate all required fields across steps before publishing
+    const guardResult = validateForPublish({ formData, hasVenue })
+    if (!guardResult.valid) {
+      setPublishGuardResult(guardResult)
+      return
+    }
+
     const { proceed, extraPayload } = await checkUrlPatternBeforeSave('publish')
     if (!proceed) return
 
     persistToStorage()
-    
+
     await publishEvent({
       extraPayload,
       onSuccess: () => {
         setPublished(true)
         toast.success(
           isPublished ? 'Event re-published successfully!' : 'Event published successfully!',
-          { 
+          {
             duration: 3000,
             action: {
               label: 'View Events',
@@ -794,7 +803,7 @@ const EventFormInner: React.FC<EventFormInnerProps> = ({ ims: _ims }) => {
         console.error('Failed to publish event:', error)
       }
     })
-  }, [checkUrlPatternBeforeSave, publishEvent, persistToStorage, setPublished, navigate, toast, isPublished])
+  }, [formData, hasVenue, checkUrlPatternBeforeSave, publishEvent, persistToStorage, setPublished, navigate, toast, isPublished])
   
   /**
    * Handle max step change from FormWizard
@@ -1134,6 +1143,44 @@ const EventFormInner: React.FC<EventFormInnerProps> = ({ ims: _ims }) => {
                 Confirm & Save
               </Button>
             )}
+          </ButtonGroup>
+        </Dialog>
+      </DialogTrigger>
+
+      {/* Publish guard — required fields missing dialog */}
+      <DialogTrigger
+        isOpen={publishGuardResult !== null}
+        onOpenChange={(open) => { if (!open) setPublishGuardResult(null) }}
+      >
+        <div style={{ display: 'none' }} />
+        <Dialog size="M">
+          <Heading slot="title">Required Fields Missing</Heading>
+          <Divider />
+          <Content>
+            <div className={style({display: 'flex', flexDirection: 'column', gap: 16})}>
+              <Text>
+                Please complete the following required fields before publishing:
+              </Text>
+              {publishGuardResult?.missingByStep.map((group) => (
+                <div key={group.stepTitle} className={style({display: 'flex', flexDirection: 'column', gap: 4})}>
+                  <Text UNSAFE_style={{ fontWeight: 700 }}>
+                    {group.stepTitle}
+                  </Text>
+                  <ul style={{ margin: 0, paddingLeft: 20 }}>
+                    {group.fields.map((field, i) => (
+                      <li key={i}>
+                        <Text>{field.fieldLabel}</Text>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              ))}
+            </div>
+          </Content>
+          <ButtonGroup>
+            <Button variant="accent" onPress={() => setPublishGuardResult(null)}>
+              OK
+            </Button>
           </ButtonGroup>
         </Dialog>
       </DialogTrigger>

@@ -160,6 +160,7 @@ export const CustomAttributesComponent: React.FC = () => {
           const config = result.find(c => c.type === 'custom-attributes') as CustomAttributesScopeConfig | undefined
           const enabled = (config?.attributes ?? []).filter(a => a.enabled !== false)
           setAttributes(enabled)
+          updateFormData({ _customAttributeConfigs: enabled })
         }
       } finally {
         setLoading(false)
@@ -256,6 +257,7 @@ export const CustomAttributesComponent: React.FC = () => {
         return (
           <TextField
             label={attr.name}
+            isRequired={attr.isRequired === true}
             value={getTextValue(attr)}
             onChange={(v) => updateTextValue(attr, v)}
           />
@@ -275,6 +277,7 @@ export const CustomAttributesComponent: React.FC = () => {
         return (
           <Picker
             label={attr.name}
+            isRequired={attr.isRequired === true}
             selectedKey={getSingleSelectValue(attr) || null}
             onSelectionChange={(key) => updateSingleSelectValue(attr, String(key))}
             styles={style({ alignSelf: 'start' })}
@@ -327,7 +330,12 @@ export const CustomAttributesComponent: React.FC = () => {
           <React.Fragment key={attr.attributeId}>
             {index > 0 && <Divider size="S" />}
             <div className={style({ display: 'flex', flexDirection: 'column', gap: 12 })}>
-              <Heading level={4}>{attr.name}</Heading>
+              <Heading level={4}>
+                {attr.name}
+                {attr.isRequired && attr.inputType === 'multi-select' && (
+                  <Text UNSAFE_style={{ fontWeight: 400 }}> (Required)</Text>
+                )}
+              </Heading>
               {renderInput(attr)}
             </div>
           </React.Fragment>

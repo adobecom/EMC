@@ -635,6 +635,9 @@ export interface EventFormData {
   localizationOverrides?: Record<string, any>
   metadata?: Record<string, any>
   customAttributes?: EventCustomAttributeValue[]
+
+  // Transient fields (not submitted to API, used for cross-component validation)
+  _customAttributeConfigs?: import('./configApi').CustomAttributeConfig[]
 }
 
 export interface EventCustomAttributeValue {
