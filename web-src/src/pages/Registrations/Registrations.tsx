@@ -64,7 +64,7 @@ export const Registrations: React.FC<RegistrationsProps> = ({ ims: _ims }) => {
 
     const campaignColumn: AttendeeColumnConfig = {
       key: 'campaignId',
-      label: 'Campaign',
+      label: 'Campaign ID',
       type: 'text',
       fallback: '-',
       width: 130,
@@ -323,6 +323,7 @@ export const Registrations: React.FC<RegistrationsProps> = ({ ims: _ims }) => {
                 columnConfig={effectiveColumnConfig}
                 onAttendeesRefresh={handleAttendeesRefresh}
                 campaigns={campaigns}
+                eventTitle={selectedEvent?.title || selectedEvent?.enTitle || ''}
               />
             </div>
           </TabPanel>
