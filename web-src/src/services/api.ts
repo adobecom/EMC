@@ -1662,13 +1662,14 @@ class ApiService {
    *
    * The GET attendees endpoint does not return registrationStatus on each
    * attendee object. Instead, the `?type=` query param filters by registration
-   * type. We query both `type=registered` and `type=waitlisted`, hydrate each
-   * attendee with the appropriate registrationStatus, and merge the results.
+   * type. We query `type=registered`, `type=waitlisted`, and `type=declined`,
+   * hydrate each attendee with the appropriate registrationStatus, and merge
+   * the results.
    */
   async getAllEventAttendees(eventId: string): Promise<any[] | ErrorResponse> {
     validateString(eventId, 'event ID')
 
-    const fetchByType = async (type: 'registered' | 'waitlisted'): Promise<any[] | ErrorResponse> => {
+    const fetchByType = async (type: 'registered' | 'waitlisted' | 'declined'): Promise<any[] | ErrorResponse> => {
       const result = await this.fetchAllPages<any>({
         service: 'esp',
         baseEndpoint: `/v1/events/${eventId}/attendees`,
@@ -1687,20 +1688,22 @@ class ApiService {
       }))
     }
 
-    const [registered, waitlisted] = await Promise.all([
+    const [registered, waitlisted, declined] = await Promise.all([
       fetchByType('registered'),
-      fetchByType('waitlisted')
+      fetchByType('waitlisted'),
+      fetchByType('declined')
     ])
 
-    // If both errored, return the first error
-    if ('error' in registered && 'error' in waitlisted) {
+    // If all errored, return the first error
+    if ('error' in registered && 'error' in waitlisted && 'error' in declined) {
       return registered
     }
 
     const registeredList = 'error' in registered ? [] : registered
     const waitlistedList = 'error' in waitlisted ? [] : waitlisted
+    const declinedList = 'error' in declined ? [] : declined
 
-    return registeredList.concat(waitlistedList)
+    return registeredList.concat(waitlistedList).concat(declinedList)
   }
 
   // ============================================================================
