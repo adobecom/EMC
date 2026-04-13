@@ -48,6 +48,6 @@
     "deploy:prod": "ENVIRONMENT=prod aio app deploy"
   },
   "engines": {
-    "node": ">=18"
+    "node": ">=20"
   }
 }
