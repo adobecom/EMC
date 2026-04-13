@@ -20,6 +20,7 @@ import { EventInfoComponent } from './EventInfoComponent'
 import { EventSelectorComponent } from './EventSelectorComponent'
 import { RegistrationsTab } from './RegistrationsTab'
 import { CampaignsTab } from './CampaignsTab'
+import { SessionsTab } from './SessionsTab'
 
 interface RegistrationsProps {
   ims: IMS
@@ -314,6 +315,7 @@ export const Registrations: React.FC<RegistrationsProps> = ({ ims: _ims }) => {
           <TabList>
             <Tab id="registrations">Registrations</Tab>
             <Tab id="campaigns">Campaigns</Tab>
+            <Tab id="sessions">Sessions</Tab>
           </TabList>
           <TabPanel id="registrations">
             <div style={{ paddingTop: '24px' }}>
@@ -335,6 +337,14 @@ export const Registrations: React.FC<RegistrationsProps> = ({ ims: _ims }) => {
                 onCreateCampaign={handleCreateCampaign}
                 onUpdateCampaign={handleUpdateCampaign}
                 onDeleteCampaign={handleDeleteCampaign}
+              />
+            </div>
+          </TabPanel>
+          <TabPanel id="sessions">
+            <div style={{ paddingTop: '24px' }}>
+              <SessionsTab
+                eventId={selectedEventId}
+                attendees={attendees}
               />
             </div>
           </TabPanel>

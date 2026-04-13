@@ -439,7 +439,14 @@ class ApiService {
     })
   }
 
-
+  /** GET /v1/session-times/{timeId}/attendees */
+  async getSessionTimeAttendees(timeId: string): Promise<any | ErrorResponse> {
+    validateString(timeId, 'session time ID')
+    return this.callExternalApi('esp', `/v1/session-times/${encodeURIComponent(timeId)}/attendees`, 'GET', undefined, {
+      operationName: 'getSessionTimeAttendees',
+      shouldReturnFullResponse: true,
+    })
+  }
 
   /** GET /v1/sessions/{sessionId}/speakers */
   async getSessionSpeakers(sessionId: string): Promise<any | ErrorResponse> {
