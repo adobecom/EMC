@@ -2,7 +2,7 @@
 * <license header>
 */
 
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useMemo } from 'react'
 import {
   ComboBox,
   ComboBoxItem,
@@ -28,6 +28,9 @@ import { HeadingWithTooltip, RichTextEditor } from '../../components/shared'
 import { SPACING } from '../../styles/designSystem'
 import { cachedApi } from '../../services/api'
 import { useEventFormComponent } from '../../hooks/useEventFormComponent'
+import { useGroup } from '../../contexts/GroupContext'
+import type { LocalesScopeConfig } from '../../types/configApi'
+import { SUPPORTED_SPEAKER_LOCALES, SPEAKER_LOCALE_LABELS } from '../../config/localeMapping'
 
 /**
  * Safely parse ISO 8601 datetime string for DatePicker
@@ -106,16 +109,11 @@ function getMinEndDateTime(startDateTimeStr: string): CalendarDateTime | undefin
   return addMinutes(startDt, 1)
 }
 
-const FALLBACK_LOCALE_OPTIONS = [
-  { key: 'en-US', label: 'English (US)' },
-  { key: 'es-ES', label: 'Spanish' },
-  { key: 'fr-FR', label: 'French' },
-  { key: 'de-DE', label: 'German' },
-  { key: 'ja-JP', label: 'Japanese' },
-  { key: 'ko-KR', label: 'Korean' },
-  { key: 'pt-BR', label: 'Portuguese (Brazil)' },
-  { key: 'zh-CN', label: 'Chinese (Simplified)' },
-]
+/** Default picker entries when no scope locales config exists (aligned with ConfigManagement RSVP locales). */
+const DEFAULT_LOCALE_PICKER_OPTIONS = SUPPORTED_SPEAKER_LOCALES.map((key) => ({
+  key,
+  label: SPEAKER_LOCALE_LABELS[key] || key,
+}))
 
 const TIMEZONE_OPTIONS = getTimeZones().map((tz) => ({
   id: tz.name,
@@ -130,6 +128,8 @@ const TIMEZONE_OPTIONS = getTimeZones().map((tz) => ({
  * startDateTime, endDateTime, timezone, communityForumUrl, secondaryLinkTitle, isPrivate
  */
 export const EventInfoComponent: React.FC = () => {
+  const { activeGroup } = useGroup()
+
   // ============================================================================
   // CONTEXT INTEGRATION
   // ============================================================================
@@ -174,21 +174,46 @@ export const EventInfoComponent: React.FC = () => {
   const [hasSecondaryLink, setHasSecondaryLink] = useState(false)
   const [pendingLocale, setPendingLocale] = useState<string | null>(null)
   const [urlValidationError, setUrlValidationError] = useState<string | null>(null)
-  const [localeOptions, setLocaleOptions] = useState<{ key: string; label: string }[]>(FALLBACK_LOCALE_OPTIONS)
+  const [localeOptions, setLocaleOptions] = useState<{ key: string; label: string }[]>(DEFAULT_LOCALE_PICKER_OPTIONS)
 
   useEffect(() => {
-    // getLocales returns `any` — the ESP /v1/locales response shape varies
-    // (localeNames object, locales array, or bare object) and has no typed interface
-    cachedApi.getLocales().then((result: Record<string, unknown>) => {
-      const localeMap = result?.localeNames ?? result?.locales ?? result
-      if (localeMap && typeof localeMap === 'object' && !Array.isArray(localeMap)) {
-        const options = Object.entries(localeMap as Record<string, string>).map(([key, label]) => ({ key, label }))
-        if (options.length > 0) setLocaleOptions(options)
+    const scopeId = activeGroup?.scopeId
+    if (!scopeId) {
+      setLocaleOptions(DEFAULT_LOCALE_PICKER_OPTIONS)
+      return
+    }
+
+    let cancelled = false
+    cachedApi.getConfigsForScope(scopeId, 'locales').then((result) => {
+      if (cancelled) return
+      if ('error' in result) {
+        setLocaleOptions(DEFAULT_LOCALE_PICKER_OPTIONS)
+        return
+      }
+      const localesConfig = result.find((c): c is LocalesScopeConfig => c.type === 'locales')
+      const names = localesConfig?.localeNames
+      if (names && typeof names === 'object' && Object.keys(names).length > 0) {
+        const options = Object.entries(names).map(([key, label]) => ({ key, label }))
+        setLocaleOptions(options)
+      } else {
+        setLocaleOptions(DEFAULT_LOCALE_PICKER_OPTIONS)
       }
     }).catch(() => {
-      // fallback stays in place
+      if (!cancelled) {
+        setLocaleOptions(DEFAULT_LOCALE_PICKER_OPTIONS)
+      }
     })
-  }, [])
+
+    return () => {
+      cancelled = true
+    }
+  }, [activeGroup?.scopeId])
+
+  const pickerLocaleOptions = useMemo(() => {
+    if (!locale) return localeOptions
+    if (localeOptions.some((o) => o.key === locale)) return localeOptions
+    return [{ key: locale, label: locale }, ...localeOptions]
+  }, [localeOptions, locale])
 
   useEffect(() => {
     if (communityForumUrl) {
@@ -309,7 +334,7 @@ export const EventInfoComponent: React.FC = () => {
         selectedKey={locale || null}
         onSelectionChange={handleLanguageChange}
       >
-        {localeOptions.map((opt) => (
+        {pickerLocaleOptions.map((opt) => (
           <PickerItem key={opt.key} id={opt.key}>{opt.label}</PickerItem>
         ))}
       </Picker>
