@@ -85,7 +85,7 @@ aio app run --local
 ```
 
 **What happens:**
-- ✅ Frontend at `localhost:9080`
+- ✅ Frontend at `localhost:3000` (see `package.json` `dev` script)
 - ✅ Actions run in local OpenWhisk container
 - ✅ Need to access via ExC Shell for IMS
 
@@ -93,7 +93,7 @@ aio app run --local
 
 **Access locally running app:**
 ```
-https://experience.adobe.com/?devMode=true&localDevUrl=https://localhost:9080#/@org/app-id
+https://experience.adobe.com/?devMode=true&localDevUrl=https://localhost:3000#/@org/app-id
 ```
 
 ---
@@ -107,7 +107,7 @@ aio app run
 ```
 
 **What happens:**
-- ✅ Frontend at `localhost:9080`
+- ✅ Frontend at `localhost:3000` (see `package.json` `dev` script)
 - ✅ Calls deployed backend actions
 - ❌ No IMS authentication in standalone mode
 
@@ -311,7 +311,7 @@ touch web-src/src/components/NewFeature.tsx
 aio app run --local
 
 # Access via ExC Shell
-# https://experience.adobe.com/?devMode=true&localDevUrl=https://localhost:9080
+# https://experience.adobe.com/?devMode=true&localDevUrl=https://localhost:3000
 ```
 
 ---

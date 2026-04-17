@@ -20,7 +20,7 @@ Welcome to the Event Management Console (EMC) documentation! This index will hel
   - Adobe Spectrum UI components
 
 - **[Event Form Guide](./EVENT_FORM.md)** - Complete event form implementation
-  - Multi-step wizard with 4 main steps
+  - Multi-step wizard (`pages/EventForm/`)
   - Modular component architecture
   - Validation and data flow
   - Create and edit modes
@@ -44,6 +44,8 @@ Welcome to the Event Management Console (EMC) documentation! This index will hel
   - Mock support
   - Consistent error handling
 
+- **[Cache Implementation](./CACHE_IMPLEMENTATION.md)** - GET caching, deduplication, invalidation
+
 - **[Google Places API Setup](./GOOGLE_PLACES_SETUP.md)** - Google Places integration
   - API key setup and security
   - Venue autocomplete configuration
@@ -51,11 +53,10 @@ Welcome to the Event Management Console (EMC) documentation! This index will hel
   - Troubleshooting guide
 
 ### Testing
-- **[Testing Guide](./TESTING.md)** - Unit and E2E testing patterns
-  - Jest configuration
-  - Testing components
-  - Testing actions
-  - E2E with Puppeteer
+- **[Testing Guide](./TESTING.md)** - Jest setup and patterns (`npm run test:unit` when tests exist)
+
+### Access control
+- **[RBAC permission gating](./RBAC_PERMISSION_GATING_IMPLEMENTATION.md)** - Resource checks and UI gates
 
 ## 🔐 Local Development Features
 
@@ -184,14 +185,13 @@ ENVIRONMENT=dev  # or 'stage' to test against stage APIs
 ```bash
 # Development
 npm run dev              # Start local dev server (port 3000)
-npm run dev:local        # Run with local actions
-aio app run              # Alternative (port 9080)
+npm run dev:local        # Run with local actions (port 3000)
 
-# Testing
-npm test                 # Run unit tests
-npm run e2e              # Run E2E tests
-npm run lint             # Check code style
+# Quality
+npm run lint             # ESLint (Node/actions src; web-src excluded)
 npm run type-check       # TypeScript validation
+npm run test:unit        # Jest (when `*.test.ts` files exist under web-src/src)
+npm run check            # lint + type-check
 
 # Deployment
 aio app deploy           # Deploy to your workspace (dev)
@@ -223,33 +223,20 @@ EMC/
 ├── docs/                           # 📚 This documentation
 │   ├── README.md                   # This index file
 │   ├── PROJECT_OVERVIEW.md         # Start here!
-│   ├── DEVELOPMENT_WORKFLOW.md     # How to develop
-│   ├── FRONTEND.md                 # Frontend guide
-│   ├── EVENT_FORM.md               # Event form guide
-│   ├── MODULAR_COMPONENT_PATTERN.md # Component patterns
-│   ├── API_CENTRALIZATION.md       # API architecture
-│   ├── TESTING.md                  # Testing guide
-│   ├── DEV_TOKEN_QUICKSTART.md    # ⚡ Quick setup
-│   └── DEV_TOKEN_GUIDE.md         # 📖 Complete guide
+│   └── …                           # See sections above for full list
 │
 ├── web-src/                        # Frontend application
 │   └── src/
-│       ├── components/             # React components
-│       ├── pages/                  # Page components
+│       ├── components/             # App shell, layout, shared UI
+│       ├── pages/                  # Route-level pages (EventForm, dashboards, …)
 │       ├── services/               # API services
-│       │   ├── api.ts             # Main API service
-│       │   ├── tokenStorage.ts    # Token management
-│       │   └── *Enrichment.ts     # Data enrichment utilities
 │       ├── hooks/                  # React hooks
 │       ├── contexts/               # React context providers
 │       ├── config/                 # Configuration
-│       │   ├── constants.ts       # Environment & API config
-│       │   └── env.ts             # Environment variables
 │       └── types/                  # TypeScript definitions
 │
 ├── actions/                        # Backend actions (I/O Runtime)
-├── test/                          # Unit tests
-├── e2e/                          # E2E tests
+├── jest.config.js                # Jest (tests: web-src/src/**/*.test.ts)
 └── app.config.yaml               # App configuration
 ```
 
@@ -303,8 +290,8 @@ EMC/
 
 ### Event Form Implementation (November 2025)
 - ✨ **Production-Ready Multi-Step Form** - Complete event creation/editing
-  - 4-step wizard matching v1 reference structure
-  - Modular component architecture (EventFormatComponent, EventInfoComponent)
+  - Multi-step wizard under `web-src/src/pages/EventForm/`
+  - Modular components (e.g. EventFormatComponent, EventInfoComponent)
   - Full TypeScript type safety
   - Comprehensive validation
   - See [Event Form Guide](./EVENT_FORM.md)
@@ -355,8 +342,8 @@ When updating documentation:
 
 ---
 
-**Last Updated:** January 26, 2026
-**Version:** 1.6.0
+**Last Updated:** April 16, 2026
+**Version:** 1.7.0
 
 Happy coding! 🚀
 

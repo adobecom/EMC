@@ -42,22 +42,13 @@ Instead of having all form logic inline within a single large component, we extr
 ### Directory Layout
 
 ```
-web-src/src/components/
+web-src/src/pages/EventForm/
 ├── EventForm.tsx                       # Main form container & wizard logic
-└── EventForm/                          # 13 Modular components
-    ├── index.ts                        # Barrel export file
-    ├── EventFormatComponent.tsx        # Cloud + Series selection
-    ├── EventInfoComponent.tsx          # Title, dates, description
-    ├── EventTagsComponent.tsx          # Tags and categories
-    ├── VenueComponent.tsx              # Venue with Google Places
-    ├── SpeakersComponent.tsx           # Speaker management
-    ├── SponsorsComponent.tsx           # Sponsor management
-    ├── AgendaComponent.tsx             # Agenda items with repeater
-    ├── EventImagesComponent.tsx        # Event images
-    ├── ProfilesComponent.tsx           # Speaker/host profiles
-    ├── RegistrationConfigComponent.tsx # Registration settings
-    ├── RegistrationFieldsComponent.tsx # RSVP form fields
-    └── PageMetadataComponent.tsx       # SEO metadata
+├── index.ts                            # Barrel exports (as applicable)
+├── EventFormatComponent.tsx            # Cloud + Series selection
+├── EventInfoComponent.tsx              # Title, dates, description
+├── …                                   # Additional step/feature modules
+└── SessionManagement/                  # Sessions sub-area (if present)
 ```
 
 ### Component Template
@@ -177,7 +168,7 @@ import { EventFormatComponent, EventInfoComponent } from './EventForm'
 ### Example 1: EventFormatComponent
 
 **Purpose:** Cloud type and series selection  
-**Location:** `web-src/src/components/EventForm/EventFormatComponent.tsx`
+**Location:** `web-src/src/pages/EventForm/EventFormatComponent.tsx`
 
 **Key Features:**
 - Fetches clouds and series lists from API
@@ -207,7 +198,7 @@ interface EventFormatComponentProps {
 ### Example 2: EventInfoComponent
 
 **Purpose:** Event information, dates, and secondary links  
-**Location:** `web-src/src/components/EventForm/EventInfoComponent.tsx`
+**Location:** `web-src/src/pages/EventForm/EventInfoComponent.tsx`
 
 **Key Features:**
 - Manages event title with URL title sync logic
@@ -252,7 +243,7 @@ interface EventInfoComponentProps {
 ### Example 3: AgendaComponent
 
 **Purpose:** Repeatable agenda items with ordering and constraints  
-**Location:** `web-src/src/components/EventForm/AgendaComponent.tsx`
+**Location:** `web-src/src/pages/EventForm/AgendaComponent.tsx`
 
 **Key Features:**
 - Repeatable fieldsets for agenda items
@@ -288,7 +279,7 @@ interface AgendaComponentProps {
 ### Example 4: VenueComponent
 
 **Purpose:** Venue information with Google Places integration and image upload  
-**Location:** `web-src/src/components/EventForm/VenueComponent.tsx`
+**Location:** `web-src/src/pages/EventForm/VenueComponent.tsx`
 
 **Key Features:**
 - Google Places API autocomplete for venue name
@@ -414,7 +405,7 @@ return <ComponentContent />
 ### Step 2: Create Component File
 ```bash
 # Create new file in EventForm folder
-touch web-src/src/components/EventForm/MyComponent.tsx
+touch web-src/src/pages/EventForm/MyComponent.tsx
 ```
 
 ### Step 3: Define Props Interface
