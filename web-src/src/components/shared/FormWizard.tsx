@@ -656,7 +656,7 @@ export const FormWizard: React.FC<FormWizardProps> = ({
             {mainContent}
           </div>
         </div>
-        {renderActionBar()}
+        {!showSessionView && renderActionBar()}
       </div>
     )
   }
@@ -666,7 +666,7 @@ export const FormWizard: React.FC<FormWizardProps> = ({
       <div style={{ ...bodyRowStyle, flexDirection: 'column' }}>
         <div style={{ ...mainColumnStyle, flex: 1 }}>{mainContent}</div>
       </div>
-      {renderActionBar()}
+      {!showSessionView && renderActionBar()}
     </div>
   )
 }
