@@ -138,7 +138,7 @@ const MultiSelectRepeater: React.FC<MultiSelectRepeaterProps> = ({ attr, values,
 
 export const CustomAttributesComponent: React.FC = () => {
   const { formData, updateFormData } = useEventFormComponent({
-    componentId: 'custom-attributes',
+    componentId: 'customAttributes',
   })
 
   const { activeGroup } = useGroup()
@@ -155,9 +155,9 @@ export const CustomAttributesComponent: React.FC = () => {
     const load = async () => {
       setLoading(true)
       try {
-        const result = await cachedApi.getConfigsForScope(scopeId, 'custom-attributes')
+        const result = await cachedApi.getConfigsForScope(scopeId, 'customAttributes')
         if (!('error' in result)) {
-          const config = result.find(c => c.type === 'custom-attributes') as CustomAttributesScopeConfig | undefined
+          const config = result.find(c => c.type === 'customAttributes') as CustomAttributesScopeConfig | undefined
           const enabled = (config?.attributes ?? []).filter(a => a.enabled !== false)
           setAttributes(enabled)
           updateFormData({ _customAttributeConfigs: enabled })

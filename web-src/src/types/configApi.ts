@@ -1,16 +1,16 @@
 /**
  * Scope Configs & Custom Attributes API type definitions
  *
- * Types matching the ESP configs/custom-attributes endpoints.
+ * Types matching the ESP scope config endpoints.
  * Configs are scope-inherited (org -> team) and support three types:
- * rsvp, locales, and custom-attributes.
+ * rsvp, locales, and customAttributes.
  */
 
 // ============================================================================
 // Enums & Primitives
 // ============================================================================
 
-export type ConfigType = 'rsvp' | 'locales' | 'custom-attributes'
+export type ConfigType = 'rsvp' | 'locales' | 'customAttributes'
 
 export type RsvpFieldType = 'text' | 'email' | 'phone' | 'select' | 'multi-select'
 
@@ -75,7 +75,7 @@ export interface LocalesScopeConfig extends ScopeConfigBase {
 }
 
 export interface CustomAttributesScopeConfig extends ScopeConfigBase {
-  type: 'custom-attributes'
+  type: 'customAttributes'
   attributes: CustomAttributeConfig[]
 }
 
@@ -118,7 +118,7 @@ export interface LocalesConfigCreateBody {
 }
 
 export interface CustomAttributesConfigCreateBody {
-  type: 'custom-attributes'
+  type: 'customAttributes'
   attributes: CustomAttributeConfig[]
 }
 

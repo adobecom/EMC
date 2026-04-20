@@ -242,7 +242,7 @@ export const ConfigManagement: React.FC<ConfigManagementProps> = () => {
     [configs]
   )
   const customAttrsConfig = useMemo(
-    () => configs.find((c): c is CustomAttributesScopeConfig => c.type === 'custom-attributes') || null,
+    () => configs.find((c): c is CustomAttributesScopeConfig => c.type === 'customAttributes') || null,
     [configs]
   )
   const customAttributes = useMemo(
@@ -805,7 +805,7 @@ export const ConfigManagement: React.FC<ConfigManagementProps> = () => {
         }
       } else {
         const result = await apiService.createConfig(selectedScopeId, {
-          type: 'custom-attributes',
+          type: 'customAttributes',
           attributes: [newAttr],
         })
         if ('error' in result) {
