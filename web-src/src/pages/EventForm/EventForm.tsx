@@ -495,6 +495,7 @@ const EventFormInner: React.FC<EventFormInnerProps> = ({ ims: _ims }) => {
     pendingAction: 'save' | 'publish'
   } | null>(null)
   const [isCheckingUrl, setIsCheckingUrl] = useState(false)
+  const [sessionHasOpenForm, setSessionHasOpenForm] = useState(false)
   
   // Show toast when saveError changes
   useEffect(() => {
@@ -937,7 +938,7 @@ const EventFormInner: React.FC<EventFormInnerProps> = ({ ims: _ims }) => {
   // ============================================================================
   const sessionManagementComponent = (
     <FormCard>
-      <SessionManagementComponent />
+      <SessionManagementComponent onOpenFormChange={setSessionHasOpenForm} />
     </FormCard>
   )
   
@@ -1035,6 +1036,7 @@ const EventFormInner: React.FC<EventFormInnerProps> = ({ ims: _ims }) => {
         eventTypeLabel={getEventTypeLabel()}
         headerActions={renderHeaderActions()}
         sessionContent={sessionManagementComponent}
+        sessionHasOpenForm={sessionHasOpenForm}
       />
 
       {/* Format Selection Overlay — frosted glass + dialog */}

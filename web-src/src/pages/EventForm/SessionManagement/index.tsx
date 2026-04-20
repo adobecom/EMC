@@ -1,9 +1,13 @@
 import React from "react";
 import { Sessions } from "./Sessions";
 
-export const SessionManagementComponent = () => {
+interface SessionManagementComponentProps {
+  onOpenFormChange?: (hasOpen: boolean) => void;
+}
+
+export const SessionManagementComponent = ({ onOpenFormChange }: SessionManagementComponentProps) => {
   return (
-      <Sessions />
+      <Sessions onOpenFormChange={onOpenFormChange} />
   );
 };
 

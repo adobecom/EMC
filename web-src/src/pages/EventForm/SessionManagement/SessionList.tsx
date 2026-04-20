@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   Heading,
   Text,
@@ -51,6 +51,7 @@ export interface SessionItemProps {
   venueLocations: VenueLocation[];
   seriesSpeakers: SeriesSpeaker[];
   onSpeakersRefresh: () => Promise<void>;
+  onDirtyChange?: (isDirty: boolean) => void;
 }
 
 export const SessionItem: React.FC<SessionItemProps> = ({
@@ -62,6 +63,7 @@ export const SessionItem: React.FC<SessionItemProps> = ({
   venueLocations,
   seriesSpeakers,
   onSpeakersRefresh,
+  onDirtyChange,
 }) => {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const startTime = formatTime(session.startDateTime);
@@ -143,6 +145,7 @@ export const SessionItem: React.FC<SessionItemProps> = ({
           venueLocations={venueLocations}
           seriesSpeakers={seriesSpeakers}
           onSpeakersRefresh={onSpeakersRefresh}
+          onDirtyChange={onDirtyChange}
         />
       )}
 
@@ -193,6 +196,8 @@ export interface SessionsListProps {
   venueLocations: VenueLocation[];
   seriesSpeakers: SeriesSpeaker[];
   onSpeakersRefresh: () => Promise<void>;
+  /** Called when any open session form's dirty state changes */
+  onDirtyChange?: (isDirty: boolean) => void;
 }
 
 export const SessionsList: React.FC<SessionsListProps> = ({
@@ -205,8 +210,20 @@ export const SessionsList: React.FC<SessionsListProps> = ({
   venueLocations,
   seriesSpeakers,
   onSpeakersRefresh,
+  onDirtyChange,
 }) => {
   const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [editFormDirty, setEditFormDirty] = useState(false);
+  const [addFormDirty, setAddFormDirty] = useState(false);
+
+  // Reset edit dirty when the expanded session changes (old form unmounts)
+  useEffect(() => { setEditFormDirty(false) }, [expandedId]);
+  // Reset add dirty when add mode closes
+  useEffect(() => { if (!isAddingNew) setAddFormDirty(false) }, [isAddingNew]);
+
+  useEffect(() => {
+    onDirtyChange?.(editFormDirty || addFormDirty)
+  }, [editFormDirty, addFormDirty, onDirtyChange])
 
   const handleToggle = (sessionId: string) => {
     setExpandedId((prev) => (prev === sessionId ? null : sessionId));
@@ -222,6 +239,7 @@ export const SessionsList: React.FC<SessionsListProps> = ({
           venueLocations={venueLocations}
           seriesSpeakers={seriesSpeakers}
           onSpeakersRefresh={onSpeakersRefresh}
+          onDirtyChange={setAddFormDirty}
         />
       )}
       {sessions.map((session) => (
@@ -235,6 +253,7 @@ export const SessionsList: React.FC<SessionsListProps> = ({
           venueLocations={venueLocations}
           seriesSpeakers={seriesSpeakers}
           onSpeakersRefresh={onSpeakersRefresh}
+          onDirtyChange={setEditFormDirty}
         />
       ))}
     </div>

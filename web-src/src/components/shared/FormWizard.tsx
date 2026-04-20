@@ -3,7 +3,7 @@
 */
 
 import React, { useState, useCallback } from 'react'
-import { Badge, Button, Heading, ProgressBar, StatusLight, Text } from '@react-spectrum/s2'
+import { AlertDialog, Badge, Button, DialogTrigger, Heading, ProgressBar, StatusLight, Text } from '@react-spectrum/s2'
 import { style, iconStyle } from '@react-spectrum/s2/style' with { type: 'macro' }
 import { useNavigate } from 'react-router-dom'
 import ChevronLeft from '@react-spectrum/s2/icons/ChevronLeft'
@@ -61,6 +61,8 @@ interface FormWizardProps {
   headerActions?: React.ReactNode
   /** Content rendered when "Session Management" is selected in the side nav (outside the wizard steps) */
   sessionContent?: React.ReactNode
+  /** True when an inline session form (add or edit) is currently open */
+  sessionHasOpenForm?: boolean
 }
 
 /** Side nav: Dashboard row hover */
@@ -90,7 +92,8 @@ export const FormWizard: React.FC<FormWizardProps> = ({
   eventTypeLabel,
   eventStatus,
   headerActions,
-  sessionContent
+  sessionContent,
+  sessionHasOpenForm = false,
 }) => {
   const [currentStepIndex, setCurrentStepIndex] = useState(0)
   const [isNavigating, setIsNavigating] = useState(false)
@@ -98,6 +101,8 @@ export const FormWizard: React.FC<FormWizardProps> = ({
   const [pendingAction, setPendingAction] = useState<'save' | 'publish' | 'next' | null>(null)
   const [sideNavStepHoverIndex, setSideNavStepHoverIndex] = useState<number | null>(null)
   const [sessionHover, setSessionHover] = useState(false)
+  const [leaveSessionDialogOpen, setLeaveSessionDialogOpen] = useState(false)
+  const pendingLeaveAction = React.useRef<(() => void) | null>(null)
   const navigate = useNavigate()
 
   const currentStep = steps[currentStepIndex]
@@ -169,11 +174,22 @@ export const FormWizard: React.FC<FormWizardProps> = ({
     }
   }
 
+  const guardLeaveSession = (action: () => void) => {
+    if (showSessionView && sessionHasOpenForm) {
+      pendingLeaveAction.current = action
+      setLeaveSessionDialogOpen(true)
+    } else {
+      action()
+    }
+  }
+
   const handleStepClick = (stepIndex: number) => {
     if (isSubmitting || isNavigating) return
     if (!isStepAccessible(stepIndex)) return
-    setShowSessionView(false)
-    setCurrentStepIndex(stepIndex)
+    guardLeaveSession(() => {
+      setShowSessionView(false)
+      setCurrentStepIndex(stepIndex)
+    })
   }
 
   const handleSessionClick = () => {
@@ -183,11 +199,13 @@ export const FormWizard: React.FC<FormWizardProps> = ({
 
   const handleDashboardClick = () => {
     if (isSubmitting || isNavigating) return
-    if (onCancel) {
-      onCancel()
-    } else {
-      navigate('/')
-    }
+    guardLeaveSession(() => {
+      if (onCancel) {
+        onCancel()
+      } else {
+        navigate('/')
+      }
+    })
   }
 
   const handlePreviewClick = (type: 'pre-event' | 'post-event') => {
@@ -537,7 +555,7 @@ export const FormWizard: React.FC<FormWizardProps> = ({
               data-testid="wizard-publish-button"
               variant="accent"
               fillStyle="fill"
-              onPress={handlePublish}
+              onPress={() => guardLeaveSession(handlePublish)}
               isDisabled={isActionDisabled || pendingAction === 'publish'}
             >
               <Text>{getPublishLabel()}</Text>
@@ -548,7 +566,7 @@ export const FormWizard: React.FC<FormWizardProps> = ({
               variant="secondary"
               fillStyle="outline"
               staticColor="white"
-              onPress={handleSave}
+              onPress={() => guardLeaveSession(handleSave)}
               isDisabled={isActionDisabled || !onSave}
             >
               {saveLabel}
@@ -558,7 +576,7 @@ export const FormWizard: React.FC<FormWizardProps> = ({
                 data-testid="wizard-next-button"
                 variant="accent"
                 fillStyle="fill"
-                onPress={handleNext}
+                onPress={() => guardLeaveSession(handleNext)}
                 isDisabled={isActionDisabled || !onSave || pendingAction === 'next'}
               >
                 <Text>{nextLabel}</Text>
@@ -647,6 +665,34 @@ export const FormWizard: React.FC<FormWizardProps> = ({
     padding: 32,
   }
 
+  const leaveSessionDialog = (
+    <DialogTrigger
+      isOpen={leaveSessionDialogOpen}
+      onOpenChange={(open) => { if (!open) setLeaveSessionDialogOpen(false) }}
+    >
+      <div style={{ display: 'none' }} />
+      <AlertDialog
+        title="Unsaved session changes"
+        variant="warning"
+        primaryActionLabel="Continue without saving"
+        cancelLabel="Go back"
+        onPrimaryAction={() => {
+          setLeaveSessionDialogOpen(false)
+          pendingLeaveAction.current?.()
+          pendingLeaveAction.current = null
+        }}
+        onCancel={() => {
+          setLeaveSessionDialogOpen(false)
+          pendingLeaveAction.current = null
+        }}
+      >
+        <Text>
+          You have unsaved changes in your sessions. Would you like to save them before proceeding?
+        </Text>
+      </AlertDialog>
+    </DialogTrigger>
+  )
+
   if (showSideNav) {
     return (
       <div data-testid="form-wizard" style={shellStyle}>
@@ -657,6 +703,7 @@ export const FormWizard: React.FC<FormWizardProps> = ({
           </div>
         </div>
         {renderActionBar()}
+        {leaveSessionDialog}
       </div>
     )
   }
@@ -667,6 +714,7 @@ export const FormWizard: React.FC<FormWizardProps> = ({
         <div style={{ ...mainColumnStyle, flex: 1 }}>{mainContent}</div>
       </div>
       {renderActionBar()}
+      {leaveSessionDialog}
     </div>
   )
 }
