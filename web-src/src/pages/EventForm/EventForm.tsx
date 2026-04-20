@@ -713,7 +713,7 @@ const EventFormInner: React.FC<EventFormInnerProps> = ({ ims: _ims }) => {
     const extra = { detailPagePath }
 
     if (action === 'publish') {
-      await publishEvent({
+      const result = await publishEvent({
         extraPayload: extra,
         onSuccess: () => {
           setPublished(true)
@@ -729,8 +729,11 @@ const EventFormInner: React.FC<EventFormInnerProps> = ({ ims: _ims }) => {
           console.error('Failed to publish event:', error)
         }
       })
+      if (result.success && result.eventId && !isEditMode) {
+        navigate(`/events/edit/${result.eventId}`, { replace: true })
+      }
     } else {
-      await saveDraft({
+      const result = await saveDraft({
         extraPayload: extra,
         onSuccess: () => {
           toast.success('Event saved successfully!')
@@ -739,8 +742,11 @@ const EventFormInner: React.FC<EventFormInnerProps> = ({ ims: _ims }) => {
           console.error('Failed to save event:', error)
         }
       })
+      if (result.success && result.eventId && !isEditMode) {
+        navigate(`/events/edit/${result.eventId}`, { replace: true })
+      }
     }
-  }, [publishEvent, saveDraft, persistToStorage, setPublished, navigate, toast, isPublished])
+  }, [publishEvent, saveDraft, persistToStorage, setPublished, navigate, toast, isPublished, isEditMode])
 
   /**
    * Handle Save button click - saves to API + sessionStorage without advancing
@@ -761,9 +767,13 @@ const EventFormInner: React.FC<EventFormInnerProps> = ({ ims: _ims }) => {
         console.error('Failed to save event:', error)
       }
     })
-    
+
+    if (result.success && result.eventId && !isEditMode) {
+      navigate(`/events/edit/${result.eventId}`, { replace: true })
+    }
+
     return result.success
-  }, [checkUrlPatternBeforeSave, saveDraft, persistToStorage, toast, isEditMode])
+  }, [checkUrlPatternBeforeSave, saveDraft, persistToStorage, toast, isEditMode, navigate])
   
   /**
    * Handle Publish/Re-publish button click
@@ -773,14 +783,14 @@ const EventFormInner: React.FC<EventFormInnerProps> = ({ ims: _ims }) => {
     if (!proceed) return
 
     persistToStorage()
-    
-    await publishEvent({
+
+    const result = await publishEvent({
       extraPayload,
       onSuccess: () => {
         setPublished(true)
         toast.success(
           isPublished ? 'Event re-published successfully!' : 'Event published successfully!',
-          { 
+          {
             duration: 3000,
             action: {
               label: 'View Events',
@@ -793,7 +803,11 @@ const EventFormInner: React.FC<EventFormInnerProps> = ({ ims: _ims }) => {
         console.error('Failed to publish event:', error)
       }
     })
-  }, [checkUrlPatternBeforeSave, publishEvent, persistToStorage, setPublished, navigate, toast, isPublished])
+
+    if (result.success && result.eventId && !isEditMode) {
+      navigate(`/events/edit/${result.eventId}`, { replace: true })
+    }
+  }, [checkUrlPatternBeforeSave, publishEvent, persistToStorage, setPublished, navigate, toast, isPublished, isEditMode])
   
   /**
    * Handle max step change from FormWizard
