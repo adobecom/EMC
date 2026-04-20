@@ -27,6 +27,7 @@ interface RegistrationsTabProps {
   columnConfig: AttendeeColumnConfig[]
   onAttendeesRefresh: () => Promise<void>
   campaigns?: Campaign[]
+  eventTitle?: string
 }
 
 /**
@@ -43,6 +44,7 @@ export const RegistrationsTab: React.FC<RegistrationsTabProps> = ({
   attendees,
   columnConfig,
   campaigns = [],
+  eventTitle = '',
 }) => {
   const isAdmin = useHasPermission('user', 'read')
   const [isExportOpen, setIsExportOpen] = useState(false)
@@ -217,6 +219,7 @@ export const RegistrationsTab: React.FC<RegistrationsTabProps> = ({
           attendees={filteredAttendees}
           columnConfig={columnConfig}
           campaigns={campaigns}
+          eventTitle={eventTitle}
           onClose={() => setIsExportOpen(false)}
         />
       </DialogTrigger>

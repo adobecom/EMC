@@ -11,11 +11,11 @@
  * Registration status enum (from OpenAPI RegistrationStatus)
  * 
  * Note: The GET attendees list endpoint does NOT return registrationStatus
- * on each attendee. It is only available as a query filter (`?type=registered`
- * or `?type=waitlisted`). The frontend hydrates this field at runtime by
- * querying both types and merging the results.
+ * on each attendee. It is only available as a query filter (`?type=registered`,
+ * `?type=waitlisted`, or `?type=declined`). The frontend hydrates this field
+ * at runtime by querying all three types and merging the results.
  */
-export type RegistrationStatus = 'registered' | 'waitlisted'
+export type RegistrationStatus = 'registered' | 'waitlisted' | 'declined'
 
 /**
  * Attendee data structure from ESP API
@@ -146,6 +146,7 @@ export interface AttendeeStats {
   total: number
   registered: number
   waitlisted: number
+  declined: number
   checkedIn: number
 }
 
@@ -154,16 +155,18 @@ export interface AttendeeStats {
  */
 export function mapRegistrationStatusToDisplay(
   attendee: Attendee
-): 'pending' | 'confirmed' | 'attended' | 'cancelled' {
+): 'pending' | 'confirmed' | 'attended' | 'cancelled' | 'declined' {
   if (attendee.checkedIn) {
     return 'attended'
   }
-  
+
   switch (attendee.registrationStatus) {
     case 'registered':
       return 'confirmed'
     case 'waitlisted':
       return 'pending'
+    case 'declined':
+      return 'declined'
     default:
       return 'pending'
   }
@@ -172,13 +175,14 @@ export function mapRegistrationStatusToDisplay(
 /**
  * Calculate attendee statistics from attendee list.
  * registrationStatus is hydrated at runtime by getAllEventAttendees
- * (which queries both ?type=registered and ?type=waitlisted).
+ * (which queries ?type=registered, ?type=waitlisted, and ?type=declined).
  */
 export function calculateAttendeeStats(attendees: Attendee[]): AttendeeStats {
   return {
     total: attendees.length,
     registered: attendees.filter(a => a.registrationStatus === 'registered' || !a.registrationStatus).length,
     waitlisted: attendees.filter(a => a.registrationStatus === 'waitlisted').length,
+    declined: attendees.filter(a => a.registrationStatus === 'declined').length,
     checkedIn: attendees.filter(a => a.checkedIn === true).length
   }
 }

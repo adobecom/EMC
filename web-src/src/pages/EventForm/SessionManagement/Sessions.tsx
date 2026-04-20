@@ -162,7 +162,7 @@ async function createSessionTimeForSession(
   eventId: string,
   sessionId: string,
   data: SessionFormData,
-): Promise<void> {
+): Promise<SessionTimeInfo> {
   const tz = data.timezone || "UTC";
   const startTimeMillis = naiveDateTimeToUTCMillis(data.startDateTime, tz);
   const endTimeMillis = naiveDateTimeToUTCMillis(data.endDateTime, tz);
@@ -184,19 +184,19 @@ async function createSessionTimeForSession(
       sessionTimeRes.error?.message || String(sessionTimeRes.error),
     );
   }
+  return sessionTimeRes as SessionTimeInfo;
 }
 
 async function upsertSessionTimeForSession(
   eventId: string,
   sessionId: string,
   data: SessionFormData,
-): Promise<void> {
+): Promise<SessionTimeInfo> {
   const tz = data.timezone || "UTC";
   const startTimeMillis = naiveDateTimeToUTCMillis(data.startDateTime, tz);
   const endTimeMillis = naiveDateTimeToUTCMillis(data.endDateTime, tz);
   if (!data.sessionTimeId) {
-    await createSessionTimeForSession(eventId, sessionId, data);
-    return;
+    return createSessionTimeForSession(eventId, sessionId, data);
   }
 
   const updateTimeRes = await apiService.updateSessionTime(
@@ -222,6 +222,7 @@ async function upsertSessionTimeForSession(
       updateTimeRes.error?.message || String(updateTimeRes.error),
     );
   }
+  return updateTimeRes as SessionTimeInfo;
 }
 
 async function syncSessionSpeakers(
@@ -246,7 +247,12 @@ async function syncSessionSpeakers(
   );
 }
 
-export const Sessions: React.FC = () => {
+interface SessionsProps {
+  /** Called whenever an inline session form opens or closes */
+  onOpenFormChange?: (hasOpen: boolean) => void;
+}
+
+export const Sessions: React.FC<SessionsProps> = ({ onOpenFormChange }) => {
   const {
     eventId,
     mergeEventResponse,
@@ -398,11 +404,7 @@ export const Sessions: React.FC = () => {
       await Promise.allSettled(speakerPromises);
     }
 
-    try {
-      await createSessionTimeForSession(eventId, newSession.id, data);
-    } catch (err) {
-      throw err;
-    }
+    const createdSessionTime = await createSessionTimeForSession(eventId, newSession.id, data);
 
     await refreshEventConcurrencyMetadata(eventId);
 
@@ -420,6 +422,9 @@ export const Sessions: React.FC = () => {
         isAutoRegistrationEnabled: data.isAutoRegistrationEnabled,
         attendeeLimit: data.attendeeLimit != null ? Number(data.attendeeLimit) : undefined,
         locationId: data.locationId,
+        sessionTimeId: createdSessionTime.sessionTimeId,
+        creationTime: createdSessionTime.creationTime,
+        modificationTime: createdSessionTime.modificationTime,
       },
     };
     setSessions((prev) => sortSessionsByDate([...prev, sessionWithTime]));
@@ -456,8 +461,9 @@ export const Sessions: React.FC = () => {
       updatedSessionApi = mapApiSessionToSession(res as any);
     }
 
+    let updatedSessionTime: SessionTimeInfo | undefined
     if (shouldUpdateSessionTime) {
-      await upsertSessionTimeForSession(eventId, sessionId, data);
+      updatedSessionTime = await upsertSessionTimeForSession(eventId, sessionId, data);
     }
 
     const shouldUpdateSpeakers = hasSessionSpeakersChanges(data);
@@ -491,7 +497,9 @@ export const Sessions: React.FC = () => {
                     ? Number(data.attendeeLimit)
                     : undefined,
                 locationId: data.locationId,
-                sessionTimeId: data.sessionTimeId ?? s.sessionTime?.sessionTimeId,
+                sessionTimeId: updatedSessionTime?.sessionTimeId ?? data.sessionTimeId ?? s.sessionTime?.sessionTimeId,
+                creationTime: updatedSessionTime?.creationTime ?? s.sessionTime?.creationTime,
+                modificationTime: updatedSessionTime?.modificationTime ?? s.sessionTime?.modificationTime,
               },
             }
           : s,
@@ -556,6 +564,7 @@ export const Sessions: React.FC = () => {
           venueLocations={venueLocations}
           seriesSpeakers={seriesSpeakers}
           onSpeakersRefresh={refreshSeriesSpeakers}
+          onDirtyChange={onOpenFormChange}
         />
       )}
     </div>
