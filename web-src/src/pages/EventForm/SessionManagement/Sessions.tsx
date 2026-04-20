@@ -247,7 +247,12 @@ async function syncSessionSpeakers(
   );
 }
 
-export const Sessions: React.FC = () => {
+interface SessionsProps {
+  /** Called whenever an inline session form opens or closes */
+  onOpenFormChange?: (hasOpen: boolean) => void;
+}
+
+export const Sessions: React.FC<SessionsProps> = ({ onOpenFormChange }) => {
   const {
     eventId,
     mergeEventResponse,
@@ -559,6 +564,7 @@ export const Sessions: React.FC = () => {
           venueLocations={venueLocations}
           seriesSpeakers={seriesSpeakers}
           onSpeakersRefresh={refreshSeriesSpeakers}
+          onDirtyChange={onOpenFormChange}
         />
       )}
     </div>

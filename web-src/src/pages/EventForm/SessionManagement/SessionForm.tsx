@@ -2,7 +2,7 @@
  * <license header>
  */
 
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import {
   Heading,
   Text,
@@ -134,6 +134,21 @@ interface SessionFormProps {
   seriesSpeakers?: SeriesSpeaker[];
   /** Callback to refresh series speakers (e.g. after creating a new speaker) */
   onSpeakersRefresh?: () => Promise<void>;
+  /** Called when the form's dirty state changes (true = has unsaved edits) */
+  onDirtyChange?: (isDirty: boolean) => void;
+}
+
+interface LoadedSnapshot {
+  name: string
+  description: string
+  dateStr: string
+  startTimeStr: string
+  endTimeStr: string
+  tagStr: string
+  isAutoReg: boolean
+  limitEnabled: boolean
+  limitValue: string
+  locationId: string
 }
 
 export const SessionForm: React.FC<SessionFormProps> = ({
@@ -143,6 +158,7 @@ export const SessionForm: React.FC<SessionFormProps> = ({
   venueLocations: venueLocationsProp,
   seriesSpeakers: seriesSpeakersProp,
   onSpeakersRefresh: onSpeakersRefreshProp,
+  onDirtyChange,
 }) => {
   const isEditMode = session !== null;
   const { seriesId: contextSeriesId, formData, locale } = useEventFormContext();
@@ -194,6 +210,44 @@ export const SessionForm: React.FC<SessionFormProps> = ({
   // Location state — use props from parent, no internal fetch
   const venueLocations = venueLocationsProp ?? [];
   const [selectedLocationId, setSelectedLocationId] = useState<string | null>(session?.locationId ?? null);
+
+  // ---- Dirty detection ----
+  const loadedSnapshot = useRef<LoadedSnapshot | null>(isEditMode ? null : {
+    name: '', description: '', dateStr: '', startTimeStr: '', endTimeStr: '',
+    tagStr: '', isAutoReg: false, limitEnabled: false, limitValue: '', locationId: '',
+  })
+
+  const currentDateStr = date ? `${date.year}-${date.month}-${date.day}` : ''
+  const currentStartStr = startTime ? `${startTime.hour}:${startTime.minute}` : ''
+  const currentEndStr = endTime ? `${endTime.hour}:${endTime.minute}` : ''
+  const currentTagStr = selectedTags.map((t) => t.caasId ?? t.name).sort().join(',')
+  const currentSpeakerStr = selectedSpeakers.map((s) => s.speakerId).sort().join(',')
+  const originalSpeakerStr = [...originalSpeakerIds].sort().join(',')
+
+  const isDirty = useMemo(() => {
+    const snap = loadedSnapshot.current
+    if (!snap) return false // still loading edit-mode data
+    const speakersDirty = currentSpeakerStr !== originalSpeakerStr
+    return (
+      name !== snap.name ||
+      description !== snap.description ||
+      currentDateStr !== snap.dateStr ||
+      currentStartStr !== snap.startTimeStr ||
+      currentEndStr !== snap.endTimeStr ||
+      currentTagStr !== snap.tagStr ||
+      isAutoRegistrationEnabled !== snap.isAutoReg ||
+      attendeeLimitEnabled !== snap.limitEnabled ||
+      attendeeLimit !== snap.limitValue ||
+      (selectedLocationId ?? '') !== snap.locationId ||
+      speakersDirty
+    )
+  }, [name, description, currentDateStr, currentStartStr, currentEndStr,
+      currentTagStr, isAutoRegistrationEnabled, attendeeLimitEnabled, attendeeLimit,
+      selectedLocationId, currentSpeakerStr, originalSpeakerStr])
+
+  useEffect(() => {
+    onDirtyChange?.(isDirty)
+  }, [isDirty, onDirtyChange])
 
   const selectedSpeakerIds = new Set(
     selectedSpeakers.map((s) => s.speakerId),
@@ -307,6 +361,23 @@ export const SessionForm: React.FC<SessionFormProps> = ({
         creationTime: sessionTime?.creationTime,
         modificationTime: sessionTime?.modificationTime,
       });
+
+      // Snapshot loaded values for dirty detection
+      const loadedStartTime = parseTimeFromDateTime(primaryStart);
+      const loadedEndTime = parseTimeFromDateTime(primaryEnd);
+      const resolvedLimitEnabled = !resolvedIsAutoRegistrationEnabled && cap != null && Number(cap) > 0;
+      loadedSnapshot.current = {
+        name: mapped.name,
+        description: mapped.description ?? "",
+        dateStr: startDt ? `${startDt.year}-${startDt.month}-${startDt.day}` : '',
+        startTimeStr: loadedStartTime ? `${loadedStartTime.hour}:${loadedStartTime.minute}` : '',
+        endTimeStr: loadedEndTime ? `${loadedEndTime.hour}:${loadedEndTime.minute}` : '',
+        tagStr: (mapped.tags ?? []).sort().join(','),
+        isAutoReg: resolvedIsAutoRegistrationEnabled,
+        limitEnabled: resolvedLimitEnabled,
+        limitValue: resolvedLimitEnabled ? String(cap) : '',
+        locationId: session?.locationId ?? '',
+      };
     });
     return () => {
       cancelled = true;
