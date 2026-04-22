@@ -643,6 +643,7 @@ export interface AgendaItem {
   endDateTime: string
   title: string
   description?: string
+  speaker?: string // Rich text field for speaker / presenter info (3rd RTE)
 }
 
 // Session types
@@ -735,4 +736,3 @@ export interface UrlPatternsSheetData {
 export interface UrlPatternsConfig {
   [sheetKey: string]: UrlPatternsSheetData | number | string[] | string
 }
-

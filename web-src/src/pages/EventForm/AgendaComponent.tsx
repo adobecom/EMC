@@ -3,7 +3,7 @@
 */
 
 import React, { useState, useEffect } from 'react'
-import { Button, Text, TextField, DatePicker, TimeField, ActionButton, Heading, Switch } from '@react-spectrum/s2'
+import { Button, Text, DatePicker, TimeField, ActionButton, Heading, Switch } from '@react-spectrum/s2'
 import { style } from '@react-spectrum/s2/style' with { type: 'macro' }
 import { Time } from '@internationalized/date'
 import { parseDateTime, CalendarDateTime } from '@internationalized/date'
@@ -36,6 +36,14 @@ function safeParseDateTimeString(dateString: string | undefined | null): Calenda
     console.error('Failed to parse datetime:', dateString, error)
     return null
   }
+}
+
+/**
+ * Strip HTML tags from a rich text string
+ */
+function stripHtml(html: string | undefined): string {
+  if (!html) return ''
+  return html.replace(/<[^>]*>/g, '').trim()
 }
 
 /**
@@ -160,6 +168,11 @@ function timeToDateTimeString(time: Time | null, baseDateTimeStr: string | undef
  * 
  * Uses EventFormContext for state management.
  * Handles agenda items and showAgendaPostEvent flag.
+ * 
+ * Each agenda item supports three rich text fields:
+ *   1. Agenda Title (RichTextEditor, 120px)
+ *   2. Agenda Description (RichTextEditor, 200px)
+ *   3. Speaker / Presenter (RichTextEditor, 120px)
  */
 export const AgendaComponent: React.FC = () => {
   // ============================================================================
@@ -225,7 +238,8 @@ export const AgendaComponent: React.FC = () => {
       startDateTime: '',
       endDateTime: '',
       title: '',
-      description: ''
+      description: '',
+      speaker: ''
     }
     updateFormData({ agendaItems: [...agendaItems, newItem] })
   }
@@ -407,17 +421,17 @@ export const AgendaComponent: React.FC = () => {
    */
   const truncateDescription = (html: string | undefined, maxLength: number = 80): string => {
     if (!html) return ''
-    // Strip HTML tags
-    const text = html.replace(/<[^>]*>/g, '').trim()
+    const text = stripHtml(html)
     if (text.length <= maxLength) return text
     return text.substring(0, maxLength) + '...'
   }
 
   /**
-   * Check if an item has content (time or title filled in)
+   * Check if an item has content (time and title filled in)
+   * Title is now a rich text field — strip HTML before checking truthiness.
    */
   const isItemComplete = (item: AgendaItem): boolean => {
-    return !!(item.startDateTime && item.title)
+    return !!(item.startDateTime && stripHtml(item.title))
   }
 
   // ============================================================================
@@ -481,6 +495,7 @@ export const AgendaComponent: React.FC = () => {
         const isDragOver = dragOverIndex === index
         const timeRange = getTimeRangeDisplay(item)
         const truncatedDesc = truncateDescription(item.description)
+        const truncatedTitle = truncateDescription(item.title, 120)
 
         // ==================== COLLAPSED VIEW ====================
         if (isCollapsed) {
@@ -528,13 +543,13 @@ export const AgendaComponent: React.FC = () => {
                       {timeRange}
                     </Text>
                   )}
-                  {/* Title */}
+                  {/* Title (stripped of HTML for collapsed display) */}
                   <Text UNSAFE_style={{ 
                     fontWeight: 'bold', 
                     fontSize: '16px',
                     color: COLORS.DARK_GRAY
                   }}>
-                    {item.title || 'Untitled'}
+                    {truncatedTitle || 'Untitled'}
                   </Text>
                   {/* Truncated description */}
                   {truncatedDesc && (
@@ -603,7 +618,7 @@ export const AgendaComponent: React.FC = () => {
                   </ActionButton>
                 )}
                 <Heading level={4} UNSAFE_style={{ margin: 0 }}>
-                  {item.title || `Agenda Item ${index + 1}`}
+                  {stripHtml(item.title) || `Agenda Item ${index + 1}`}
                 </Heading>
               </div>
               <ActionButton
@@ -664,22 +679,33 @@ export const AgendaComponent: React.FC = () => {
                 )}
               </div>
 
-              {/* Title */}
-              <TextField
-                label="Agenda Title"
-                isRequired
-                value={item.title}
-                onChange={(value) => updateAgendaItem(index, { title: value })}
-                styles={style({ width: '[100%]' })}
-              />
+              {/* Agenda Title - RTE (RTE 1) */}
+              <div style={{ width: '100%' }}>
+                <RichTextEditor
+                  label="Agenda Title"
+                  value={item.title || ''}
+                  onChange={(value) => updateAgendaItem(index, { title: value })}
+                  height="120px"
+                />
+              </div>
 
-              {/* Description */}
+              {/* Agenda Description - RTE (RTE 2) */}
               <div style={{ width: '100%' }}>
                 <RichTextEditor
                   label="Agenda Description"
                   value={item.description || ''}
                   onChange={(value) => updateAgendaItem(index, { description: value })}
                   height="200px"
+                />
+              </div>
+
+              {/* Speaker / Presenter - RTE (RTE 3) */}
+              <div style={{ width: '100%' }}>
+                <RichTextEditor
+                  label="Speaker / Presenter"
+                  value={item.speaker || ''}
+                  onChange={(value) => updateAgendaItem(index, { speaker: value })}
+                  height="120px"
                 />
               </div>
 
