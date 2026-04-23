@@ -1393,14 +1393,13 @@ class ApiService {
       `/v1/events/${eventId}/speakers/${speakerId}`,
       speakerData,
       () => this.getEventSpeaker(eventId, speakerId),
-      (body, dependentData) => {
-        const { creationTime: _omitCreationTime, ...fromGet } = dependentData
-        return {
-          ...fromGet,
-          ...body,
-          modificationTime: dependentData.modificationTime,
-        }
-      },
+      (body, dependentData) => ({
+        speakerId: body.speakerId ?? dependentData.speakerId,
+        speakerType: body.speakerType ?? dependentData.speakerType,
+        ordinal: body.ordinal ?? dependentData.ordinal,
+        creationTime: dependentData.creationTime,
+        modificationTime: dependentData.modificationTime,
+      }),
       'updateSpeakerInEvent'
     )
   }
