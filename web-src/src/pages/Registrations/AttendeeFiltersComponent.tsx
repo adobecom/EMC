@@ -169,7 +169,7 @@ interface FilterMenuProps {
 }
 
 const FilterMenu: React.FC<FilterMenuProps> = ({ menu, selectedValues, onToggle }) => {
-  const [isExpanded, setIsExpanded] = React.useState(true)
+  const [isExpanded, setIsExpanded] = React.useState(false)
 
   return (
     <div className={style({ paddingInline: 12 })}>
