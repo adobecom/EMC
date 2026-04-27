@@ -25,7 +25,7 @@ import {
 import { Session } from "../../../types/sessions";
 import { EventTag, SeriesSpeaker } from "../../../types/domain";
 import { apiService } from "../../../services/api";
-import { useEventFormContext } from "../../../contexts";
+import { useEventFormContext, useToast } from "../../../contexts";
 import { RichTextEditor, TagSelector } from "../../../components/shared";
 import {
   dateAndTimeToISO,
@@ -162,6 +162,7 @@ export const SessionForm: React.FC<SessionFormProps> = ({
 }) => {
   const isEditMode = session !== null;
   const { seriesId: contextSeriesId, formData, locale } = useEventFormContext();
+  const toast = useToast();
   const seriesId = contextSeriesId || formData.seriesId || "";
 
   const [loadingDetails, setLoadingDetails] = useState(
@@ -421,9 +422,12 @@ export const SessionForm: React.FC<SessionFormProps> = ({
         timezone: formData.timezone || undefined,
         locationId: selectedLocationId ?? undefined,
       });
+      toast.success(isEditMode ? "Session updated successfully" : "Session created successfully");
       onCancel(); // unmounts this component — no state updates after this
     } catch (err) {
-      setSaveError(err instanceof Error ? err.message : "Failed to save");
+      const msg = err instanceof Error ? err.message : "Failed to save";
+      setSaveError(msg);
+      toast.error(msg, { duration: 8000 });
       setSaving(false);
     }
   };

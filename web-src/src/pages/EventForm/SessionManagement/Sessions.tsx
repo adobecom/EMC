@@ -1,10 +1,10 @@
 import React, { useState, useEffect, useCallback } from "react";
-import { ProgressCircle, Button, Heading, Text, InlineAlert } from "@react-spectrum/s2";
+import { ProgressCircle, Button, Heading, Text } from "@react-spectrum/s2";
 import AddCircle from "@react-spectrum/s2/icons/AddCircle";
 import { Session, SessionTimeInfo } from "../../../types/sessions";
 import { SessionsList } from "./SessionList";
 import type { SessionFormData } from "./SessionForm";
-import { useEventFormContext } from "../../../contexts";
+import { useEventFormContext, useToast } from "../../../contexts";
 import { EventApiResponse } from "../../../types/domain";
 import { apiService, cachedApi } from "../../../services/api";
 import { COLORS, SURFACES } from "../../../styles/designSystem";
@@ -263,8 +263,8 @@ export const Sessions: React.FC<SessionsProps> = ({ onOpenFormChange }) => {
     seriesId: contextSeriesId,
     formData,
   } = useEventFormContext();
+  const toast = useToast();
   const [sessions, setSessions] = useState<Session[]>([]);
-  const [loadError, setLoadError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [isAddingNew, setIsAddingNew] = useState(false);
   const seriesId = contextSeriesId || formData.seriesId || "";
@@ -316,12 +316,11 @@ export const Sessions: React.FC<SessionsProps> = ({ onOpenFormChange }) => {
       setSessions([]);
       return;
     }
-    setLoadError(null);
     setIsLoading(true);
     try {
       const response = await apiService.getAllEventSessions(eventId);
       if (response && "error" in response) {
-        setLoadError(response.error?.message || String(response.error));
+        toast.error(response.error?.message || String(response.error), { duration: 8000 });
         setSessions([]);
         return;
       }
@@ -335,12 +334,12 @@ export const Sessions: React.FC<SessionsProps> = ({ onOpenFormChange }) => {
     } catch (err) {
       const message =
         err instanceof Error ? err.message : "Failed to load sessions";
-      setLoadError(message);
+      toast.error(message, { duration: 8000 });
       setSessions([]);
     } finally {
       setIsLoading(false);
     }
-  }, [eventId]);
+  }, [eventId, toast]);
 
   const refreshEventConcurrencyMetadata = useCallback(
     async (id: string) => {
@@ -372,11 +371,12 @@ export const Sessions: React.FC<SessionsProps> = ({ onOpenFormChange }) => {
     if (!eventId) return;
     const res = await apiService.deleteSession(sessionId);
     if ("error" in res) {
-      setLoadError(res.error?.message || String(res.error));
-    } else {
-      setSessions((prev) => prev.filter((s) => s.id !== sessionId));
-      await refreshEventConcurrencyMetadata(eventId);
+      toast.error(res.error?.message || String(res.error), { duration: 8000 });
+      return;
     }
+    setSessions((prev) => prev.filter((s) => s.id !== sessionId));
+    await refreshEventConcurrencyMetadata(eventId);
+    toast.success("Session deleted successfully");
   };
 
   const handleAddSession = async (data: SessionFormData) => {
@@ -526,11 +526,7 @@ export const Sessions: React.FC<SessionsProps> = ({ onOpenFormChange }) => {
         </Button>
       </div>
 
-      {loadError ? (
-        <InlineAlert variant="negative" UNSAFE_style={{ marginTop: "28px" }}>
-          <Text>{loadError}</Text>
-        </InlineAlert>
-      ) : isLoading ? (
+      {isLoading ? (
         <div style={{ display: "flex", justifyContent: "center", alignItems: "center", gap: "12px", marginTop: "32px" }}>
           <ProgressCircle isIndeterminate aria-label="Loading sessions" />
           <Text>Loading sessions</Text>
