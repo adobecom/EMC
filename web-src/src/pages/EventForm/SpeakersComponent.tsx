@@ -476,10 +476,11 @@ export const SpeakersComponent: React.FC = () => {
                     style={{
                       padding: '16px',
                       borderBottom: groupIdx < groupItems.length - 1 ? `1px solid ${SURFACES.BORDER}` : 'none',
-                      border: isDragOver ? `2px solid ${SURFACES.SELECTED_RING}` : undefined,
+                      outline: isDragOver ? `2px solid ${SURFACES.SELECTED_RING}` : 'none',
+                      outlineOffset: '-1px',
                       backgroundColor: isDragging ? SURFACES.SUBTLE : SURFACES.CANVAS,
                       opacity: isDragging ? 0.5 : 1,
-                      transition: 'border-color 0.2s, background-color 0.2s',
+                      transition: 'outline-color 0.2s, background-color 0.2s',
                     }}
                   >
                     <div className={style({display: 'flex', alignItems: 'center', gap: 16})}>

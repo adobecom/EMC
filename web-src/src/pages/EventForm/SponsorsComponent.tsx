@@ -975,28 +975,22 @@ export const SponsorsComponent: React.FC = () => {
                     {groupItems.length} {groupItems.length === 1 ? 'partner' : 'partners'}
                   </Text>
                 </div>
-                <div className={style({display: 'flex', flexDirection: 'column', gap: 0})}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', padding: '8px' }}>
                   {groupItems.map(({ sponsor, globalIndex }, groupIdx) => (
-                    <div
+                    <PartnerCard
                       key={sponsor.id || globalIndex}
-                      style={{
-                        borderBottom: groupIdx < groupItems.length - 1 ? `1px solid ${SURFACES.BORDER}` : 'none',
-                      }}
-                    >
-                      <PartnerCard
-                        partner={sponsor}
-                        onEdit={() => handleEditClick(globalIndex)}
-                        onRemove={() => removeSponsor(globalIndex)}
-                        onTierChange={(newTier) => handleTierChange(globalIndex, newTier)}
-                        isDragging={draggedItem?.tier === tier && draggedItem.idx === groupIdx}
-                        isDragOver={dragOverItem?.tier === tier && dragOverItem.idx === groupIdx}
-                        onDragStart={(e) => handleDragStart(e, tier, groupIdx)}
-                        onDragOver={(e) => handleDragOver(e, tier, groupIdx)}
-                        onDragLeave={handleDragLeave}
-                        onDrop={(e) => handleDrop(e, tier, groupIdx)}
-                        onDragEnd={handleDragEnd}
-                      />
-                    </div>
+                      partner={sponsor}
+                      onEdit={() => handleEditClick(globalIndex)}
+                      onRemove={() => removeSponsor(globalIndex)}
+                      onTierChange={(newTier) => handleTierChange(globalIndex, newTier)}
+                      isDragging={draggedItem?.tier === tier && draggedItem.idx === groupIdx}
+                      isDragOver={dragOverItem?.tier === tier && dragOverItem.idx === groupIdx}
+                      onDragStart={(e) => handleDragStart(e, tier, groupIdx)}
+                      onDragOver={(e) => handleDragOver(e, tier, groupIdx)}
+                      onDragLeave={handleDragLeave}
+                      onDrop={(e) => handleDrop(e, tier, groupIdx)}
+                      onDragEnd={handleDragEnd}
+                    />
                   ))}
                 </div>
               </div>
