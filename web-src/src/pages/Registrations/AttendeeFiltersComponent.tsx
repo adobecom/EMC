@@ -7,6 +7,7 @@ import { Button, Text, ActionButton, Checkbox, Divider } from '@react-spectrum/s
 import { style } from '@react-spectrum/s2/style' with { type: 'macro' }
 import ChevronLeft from '@react-spectrum/s2/icons/ChevronLeft'
 import type { AttendeeColumnConfig, AttendeeFilters, Attendee, FilterMenuConfig } from '../../types/attendee'
+import { formatRegisteredDateMmDdYyyy } from '../../types/attendee'
 import { COLORS } from '../../styles/designSystem'
 
 interface AttendeeFiltersComponentProps {
@@ -225,7 +226,13 @@ function formatFilterValue(key: string, value: string): string {
   if (key === 'registrationStatus') {
     return value.charAt(0).toUpperCase() + value.slice(1)
   }
-  
+
+  // Registration created-at (stored filter value is numeric epoch string)
+  if (key === 'creationTime') {
+    const formatted = formatRegisteredDateMmDdYyyy(Number(value))
+    if (formatted) return formatted
+  }
+
   return value
 }
 
