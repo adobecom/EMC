@@ -25,9 +25,6 @@ export { OverviewDashboard } from './OverviewDashboard'
 export { EventForm } from './EventForm'
 export { SeriesForm } from './SeriesForm'
 
-// Biometric pages
-export { BiometricCheckin } from './BiometricCheckin'
-
 // Admin pages
 export { UserManagement } from './UserManagement'
 export { ScopeGroupManagement } from './ScopeGroupManagement'

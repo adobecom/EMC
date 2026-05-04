@@ -36,8 +36,8 @@ export const BiometricConsentDialog: React.FC<BiometricConsentDialogProps> = ({
       <Content>
         <Flex direction="column" gap="size-200">
           <Text>
-            <strong>{attendeeName}</strong>, we would like to collect a facial photograph
-            for biometric identification to enable expedited event check-in.
+            <strong>{attendeeName}</strong>, we would like to collect a facial photograph for biometric identification.
+            At the event, you will use the fast-lane and the automated pre-checkin system.
           </Text>
 
           <Flex
@@ -60,8 +60,7 @@ export const BiometricConsentDialog: React.FC<BiometricConsentDialogProps> = ({
               How it is used:
             </Text>
             <Text UNSAFE_style={{ fontSize: '13px', color: COLORS.GRAY_700 }}>
-              Your photo is compared against enrolled attendees at check-in to verify identity
-              and speed up the registration process.
+              Your template is used at the event with the automated pre-checkin system so you can use the fast-lane.
             </Text>
 
             <Text UNSAFE_style={{ fontWeight: 600, fontSize: '14px', marginTop: '8px' }}>

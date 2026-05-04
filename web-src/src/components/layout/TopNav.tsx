@@ -123,14 +123,6 @@ const TopNav: React.FC<TopNavProps> = ({ ims }) => {
                 <Text>Speakers</Text>
               </NavLink>
             )}
-            {canReadEvents && (
-              <NavLink
-                className={({ isActive }) => `nav-link ${isActive ? 'is-selected' : ''}`}
-                to="/checkin"
-              >
-                <Text>Check-in</Text>
-              </NavLink>
-            )}
             {canReadSeries && (
               <NavLink
                 className={({ isActive }) => `nav-link ${isActive ? 'is-selected' : ''}`}

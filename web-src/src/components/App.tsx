@@ -44,7 +44,6 @@ import {
   Registrations,
   SpeakersDashboard,
   OverviewDashboard,
-  BiometricCheckin,
   UserManagement,
   ScopeGroupManagement,
   RoleManagement,
@@ -134,7 +133,6 @@ const AppContent: React.FC<{ runtime: Runtime, colorScheme: ColorScheme }> = ({ 
                             <Route path='/registrations' element={<Registrations ims={ims} />} />
                             <Route path='/registrations/:eventId' element={<Registrations ims={ims} />} />
                             <Route path='/speakers' element={<SpeakersDashboard ims={ims} />} />
-                            <Route path='/checkin' element={<BiometricCheckin ims={ims} />} />
                             <Route path='/users' element={<UserManagement ims={ims} />} />
                             <Route path='/access' element={<ScopeGroupManagement ims={ims} />} />
                             <Route path='/roles' element={<RoleManagement ims={ims} />} />

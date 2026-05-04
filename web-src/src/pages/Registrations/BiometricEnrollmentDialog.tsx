@@ -61,7 +61,7 @@ export const BiometricEnrollmentDialog: React.FC<BiometricEnrollmentDialogProps>
   const handleConfirmEnrollment = useCallback(() => {
     if (capturedDataUrl) {
       onEnrolled(attendee.attendeeId, capturedDataUrl)
-      toast.success(`Biometric enrollment complete for ${attendeeName}`)
+      toast.success(`Biometric enrollment saved for ${attendeeName}`)
       onClose()
     }
   }, [capturedDataUrl, attendee.attendeeId, attendeeName, onEnrolled, toast, onClose])
@@ -104,12 +104,16 @@ export const BiometricEnrollmentDialog: React.FC<BiometricEnrollmentDialogProps>
         </Dialog>
       ) : (
         <Dialog>
-          <Heading>Confirm Enrollment</Heading>
+          <Heading>Thank you</Heading>
           <Divider />
           <Content>
             <Flex direction="column" gap="size-200" alignItems="center">
-              <Text UNSAFE_style={{ color: COLORS.GRAY_700 }}>
-                Review the captured photo for <strong>{attendeeName}</strong>.
+              <Text UNSAFE_style={{ color: COLORS.GRAY_700, textAlign: 'center', maxWidth: '440px' }}>
+                Thanks for consenting to biometric collection. At the event, please proceed to the fast-lane and use
+                the automated pre-checkin system.
+              </Text>
+              <Text UNSAFE_style={{ color: COLORS.GRAY_700, textAlign: 'center' }}>
+                Review the captured photo for <strong>{attendeeName}</strong> before saving.
               </Text>
               {capturedDataUrl && (
                 <View
@@ -139,7 +143,7 @@ export const BiometricEnrollmentDialog: React.FC<BiometricEnrollmentDialogProps>
               Retake
             </Button>
             <Button variant="cta" onPress={handleConfirmEnrollment}>
-              Confirm Enrollment
+              Save enrollment
             </Button>
           </ButtonGroup>
         </Dialog>
