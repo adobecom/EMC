@@ -81,7 +81,7 @@ function transformConfigToColumns(config: RsvpConfigField[]): AttendeeColumnConf
     fallback: '-',
     width: 120,
     sortable: true,
-    isSticky: true
+    isSticky: false
   })
 
   // Add sticky columns at the end
@@ -227,7 +227,7 @@ function getDefaultColumns(): AttendeeColumnConfig[] {
     { key: 'email', label: 'Email', type: 'text', fallback: '-', width: 250, sortable: true },
     { key: 'mobilePhone', label: 'Phone', type: 'text', fallback: '-', width: 150, sortable: true },
     { key: 'companyName', label: 'Company', type: 'text', fallback: '-', width: 200, sortable: true },
-    { key: 'creationTime', label: 'Registered Date', type: 'text', fallback: '-', width: 120, sortable: true, isSticky: true },
+    { key: 'creationTime', label: 'Registered Date', type: 'text', fallback: '-', width: 120, sortable: true, isSticky: false },
     { key: 'registrationStatus', label: 'RSVP Status', type: 'text', fallback: 'registered', width: 130, sortable: true, isSticky: true },
     { key: 'checkedIn', label: 'Checked In', type: 'text', fallback: '-', width: 130, sortable: true, isSticky: true }
   ]
