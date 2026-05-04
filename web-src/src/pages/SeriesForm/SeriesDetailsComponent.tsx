@@ -3,17 +3,10 @@
 */
 
 import React, { useState, useEffect } from 'react'
-import {
-  View,
-  TextField,
-  TextArea,
-  Picker,
-  Item,
-  Flex,
-  Text
-} from '@adobe/react-spectrum'
+import { TextField, TextArea, Picker, PickerItem, Text } from '@react-spectrum/s2'
+import { style } from '@react-spectrum/s2/style' with { type: 'macro' }
 import { HeadingWithTooltip, LoadingSpinner } from '../../components/shared'
-import { FLEX_GAP } from '../../styles/designSystem'
+import { SPACING } from '../../styles/designSystem'
 import { useSeriesFormComponent } from '../../hooks/useSeriesFormComponent'
 import { SUPPORTED_CLOUDS } from '../../config/constants'
 import { EXTERNAL_CONFIG_URLS } from '../../config/externalConfigs'
@@ -158,7 +151,7 @@ export const SeriesDetailsComponent: React.FC = () => {
   // ============================================================================
 
   return (
-    <Flex direction="column" gap={FLEX_GAP.SECTION}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: SPACING.LG }}>
       {/* Header */}
       <HeadingWithTooltip 
         level={3}
@@ -170,30 +163,31 @@ export const SeriesDetailsComponent: React.FC = () => {
       <Text>Add details</Text>
 
       {/* Cloud and Target CMS Selection */}
-      <Flex direction="row" gap="size-200" wrap>
+      <div style={{ display: 'flex', flexDirection: 'row', gap: 16, flexWrap: 'wrap' }}>
         <Picker
+          data-testid="series-cloud-picker"
           label="Cloud Type"
           isRequired
           selectedKey={cloudType}
           onSelectionChange={handleCloudChange}
           isDisabled={isLocked}
-          width="size-2400"
+          styles={style({ width: 192 })}
         >
           {SUPPORTED_CLOUDS.map((cloud) => (
-            <Item key={cloud.id}>{cloud.name}</Item>
+            <PickerItem key={cloud.id} id={cloud.id}>{cloud.name}</PickerItem>
           ))}
         </Picker>
 
         {isLoadingCms ? (
-          <View width="size-2400">
+          <div style={{ width: 192 }}>
             <LoadingSpinner message="Loading..." />
-          </View>
+          </div>
         ) : cmsError ? (
-          <View width="size-2400" padding="size-100">
+          <div style={{ width: 192, padding: 8 }}>
             <Text UNSAFE_style={{ color: 'var(--spectrum-global-color-red-600)', fontSize: '12px' }}>
               {cmsError}
             </Text>
-          </View>
+          </div>
         ) : (
           <Picker
             label="Target CMS"
@@ -201,38 +195,38 @@ export const SeriesDetailsComponent: React.FC = () => {
             selectedKey={targetCms?.code || null}
             onSelectionChange={handleTargetCmsChange}
             isDisabled={isLocked}
-            width="size-2400"
+            styles={style({ width: 192 })}
           >
             {targetCmsOptions.map((option) => (
-              <Item key={option.code}>{option.code}</Item>
+              <PickerItem key={option.code} id={option.code}>{option.code}</PickerItem>
             ))}
           </Picker>
         )}
-      </Flex>
+      </div>
 
       {/* Series Name */}
       <TextField
+        data-testid="series-name-input"
         label="Series Name"
         isRequired
         maxLength={30}
         value={seriesName}
         onChange={handleNameChange}
         description="30 characters max"
-        width="100%"
-        validationState={seriesName.length > 0 && seriesName.length <= 30 ? 'valid' : undefined}
+        styles={style({ width: '[100%]' })}
       />
 
       {/* Series Description */}
       <TextArea
+        data-testid="series-description-input"
         label="Series Description"
         maxLength={600}
         value={seriesDescription}
         onChange={handleDescriptionChange}
         description="600 characters max"
-        width="100%"
-        height="size-1600"
+        styles={style({ width: '[100%]' })}
       />
-    </Flex>
+    </div>
   )
 }
 

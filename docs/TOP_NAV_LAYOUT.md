@@ -76,8 +76,7 @@ The application has been redesigned from a **sidebar layout** to a modern **top 
 │ [JD] John Doe ▼ │  ← Compact mode
 └─────────────────┘
     │
-    ├─ View Profile
-    └─ User ID: user@Adobe...
+    └─ View Profile
 ```
 
 ### 3. Main Content Area

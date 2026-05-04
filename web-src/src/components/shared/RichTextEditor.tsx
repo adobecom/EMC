@@ -1,6 +1,19 @@
 import React, { useEffect, useRef } from 'react'
-import { View, Text } from '@adobe/react-spectrum'
+import { Text } from '@react-spectrum/s2'
+import type Delta from 'quill-delta'
 import 'quill/dist/quill.snow.css'
+
+/** Matches toolbar capabilities; omits color/background/font/size so paste cannot add them. */
+const RTE_FORMATS = [
+  'bold',
+  'italic',
+  'underline',
+  'strike',
+  'list',
+  'indent',
+  'align',
+  'link',
+] as const
 
 interface RichTextEditorProps {
   label: string
@@ -11,69 +24,92 @@ interface RichTextEditorProps {
   description?: string
 }
 
-// Custom styles to move toolbar to bottom and make it float
+/**
+ * Layout-only overrides (position, z-index). Colors / surfaces live in index.css
+ * (`.rte-wrapper` + Quill) so light/dark Spectrum tokens apply.
+ */
 const editorStyles = `
   .rte-wrapper {
     position: relative !important;
   }
-  
+
   .rte-wrapper .ql-toolbar.ql-snow {
     position: absolute !important;
     bottom: 10px !important;
     left: 10px !important;
     right: 10px !important;
     border: none !important;
-    background: linear-gradient(to bottom, rgba(250, 250, 250, 0.98), rgba(245, 245, 245, 0.98)) !important;
     border-radius: 8px !important;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08), 0 4px 12px rgba(0, 0, 0, 0.1), 0 0 0 1px rgba(0, 0, 0, 0.05) !important;
     padding: 6px 10px !important;
     z-index: 10 !important;
   }
-  
+
   .rte-wrapper .ql-toolbar.ql-snow .ql-formats {
     margin-right: 10px !important;
   }
-  
+
   .rte-wrapper .ql-toolbar.ql-snow button,
   .rte-wrapper .ql-toolbar.ql-snow .ql-picker-label {
     border-radius: 4px !important;
   }
-  
-  .rte-wrapper .ql-toolbar.ql-snow button:hover,
-  .rte-wrapper .ql-toolbar.ql-snow .ql-picker-label:hover {
-    background-color: rgba(0, 0, 0, 0.06) !important;
-  }
-  
-  /* Make dropdowns expand upwards since toolbar is at bottom */
+
   .rte-wrapper .ql-toolbar.ql-snow .ql-picker.ql-expanded .ql-picker-options {
     top: auto !important;
     bottom: 100% !important;
     margin-bottom: 4px !important;
     border-radius: 6px !important;
-    box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.12), 0 0 0 1px rgba(0, 0, 0, 0.08) !important;
   }
-  
-  /* Also handle the align picker */
+
   .rte-wrapper .ql-toolbar.ql-snow .ql-align .ql-picker-options {
     top: auto !important;
     bottom: 100% !important;
   }
-  
+
   .rte-wrapper .ql-container.ql-snow {
     border: none !important;
     font-family: inherit !important;
   }
-  
+
   .rte-wrapper .ql-editor {
     padding: 12px !important;
     padding-bottom: 60px !important;
   }
-  
+
   .rte-wrapper .ql-editor.ql-blank::before {
     font-style: normal !important;
-    color: var(--spectrum-global-color-gray-500) !important;
   }
 `
+
+/** Quill / browsers often emit NBSP in HTML; we only support normal spaces in stored markup. */
+function normalizeNbspInRteHtml(html: string): string {
+  return html
+    .replace(/&nbsp;/gi, ' ')
+    .replace(/&#160;/g, ' ')
+    .replace(/&#x0*A0;/gi, ' ')
+    .replace(/\u00A0/g, ' ')
+}
+
+function getExportedRteHtml(quill: {
+  getText: () => string
+  getSemanticHTML: () => string
+}): string {
+  if (!quill.getText().trim()) {
+    return ''
+  }
+  return normalizeNbspInRteHtml(quill.getSemanticHTML())
+}
+
+function applyHtmlToQuill(quill: any, html: string, silent: string, isUpdatingRef: React.MutableRefObject<boolean>) {
+  isUpdatingRef.current = true
+  const trimmed = normalizeNbspInRteHtml(html).trim()
+  if (!trimmed) {
+    quill.setText('', silent)
+  } else {
+    const delta = quill.clipboard.convert({ html: trimmed, text: '' })
+    quill.setContents(delta, silent)
+  }
+  isUpdatingRef.current = false
+}
 
 export const RichTextEditor: React.FC<RichTextEditorProps> = ({
   label,
@@ -91,6 +127,8 @@ export const RichTextEditor: React.FC<RichTextEditorProps> = ({
   const valueRef = useRef(value)
   // Store the latest onChange in a ref to avoid stale closures
   const onChangeRef = useRef(onChange)
+  /** Exact `value` string last applied from props (avoids re-sync when semantic HTML !== API string). */
+  const lastAppliedValueRef = useRef<string | null>(null)
   
   // Keep refs in sync with props
   useEffect(() => {
@@ -107,42 +145,47 @@ export const RichTextEditor: React.FC<RichTextEditorProps> = ({
       if (typeof window !== 'undefined' && !quillRef.current) {
         try {
           const Quill = (await import('quill')).default
-          
+          const Delta = (await import('quill-delta')).default
+          const silent = Quill.sources?.SILENT ?? 'silent'
+
           if (editorRef.current && !quillRef.current) {
             quillRef.current = new Quill(editorRef.current, {
               theme: 'snow',
+              formats: [...RTE_FORMATS],
               modules: {
                 toolbar: [
-                  [{ 'header': [1, 2, 3, false] }],
                   ['bold', 'italic', 'underline', 'strike'],
-                  [{ 'list': 'ordered'}, { 'list': 'bullet' }],
-                  [{ 'align': [] }],
+                  [{ list: 'ordered' }, { list: 'bullet' }],
+                  [{ align: [] }],
                   ['link'],
-                  ['clean']
-                ]
+                  ['clean'],
+                ],
               },
-              placeholder: `Enter ${label.toLowerCase()}...`
+              placeholder: `Enter ${label.toLowerCase()}...`,
             })
-            
-            // Set initial value
-            if (valueRef.current) {
-              isUpdatingRef.current = true
-              quillRef.current.root.innerHTML = valueRef.current
-              isUpdatingRef.current = false
-            }
-            
+
+            // Drop Quill UI chrome if it ever appears in pasted HTML
+            quillRef.current.clipboard.addMatcher('SPAN', (node: Node, delta: Delta) => {
+              if (node instanceof HTMLElement && node.classList.contains('ql-ui')) {
+                return new Delta()
+              }
+              return delta
+            })
+
+            const initial = valueRef.current ?? ''
+            lastAppliedValueRef.current = initial
+            applyHtmlToQuill(quillRef.current, initial, silent, isUpdatingRef)
+
             // Listen for changes - only trigger onChange for user edits, not programmatic updates
             quillRef.current.on('text-change', (_delta: any, _oldDelta: any, source: string) => {
-              // Skip if this is a programmatic update or not a user edit
               if (isUpdatingRef.current || source !== 'user') {
                 return
               }
-              
-              const html = quillRef.current.root.innerHTML
-              const normalizedHtml = html === '<p><br></p>' ? '' : html
-              
-              // Only trigger onChange if content actually differs from current value
-              if (normalizedHtml !== valueRef.current) {
+
+              const normalizedHtml = getExportedRteHtml(quillRef.current)
+              const prevNormalized = normalizeNbspInRteHtml(valueRef.current ?? '')
+
+              if (normalizedHtml !== prevNormalized) {
                 onChangeRef.current(normalizedHtml)
               }
             })
@@ -163,16 +206,25 @@ export const RichTextEditor: React.FC<RichTextEditorProps> = ({
     }
   }, [label])
   
-  // Update editor content when value prop changes externally
+  // Update editor when `value` from parent changes (skip redundant applies — avoids selection jumps on each keystroke)
   useEffect(() => {
-    if (quillRef.current && quillRef.current.root.innerHTML !== value) {
-      isUpdatingRef.current = true
-      const currentSelection = quillRef.current.getSelection()
-      quillRef.current.root.innerHTML = value || ''
-      if (currentSelection) {
-        quillRef.current.setSelection(currentSelection)
-      }
-      isUpdatingRef.current = false
+    const quill = quillRef.current
+    if (!quill) {
+      return
+    }
+    if (value === lastAppliedValueRef.current) {
+      return
+    }
+    if (getExportedRteHtml(quill) === normalizeNbspInRteHtml(value ?? '')) {
+      lastAppliedValueRef.current = value
+      return
+    }
+    lastAppliedValueRef.current = value
+    const silent = 'silent'
+    const currentSelection = quill.getSelection()
+    applyHtmlToQuill(quill, value || '', silent, isUpdatingRef)
+    if (currentSelection) {
+      quill.setSelection(currentSelection)
     }
   }, [value])
 
@@ -190,42 +242,43 @@ export const RichTextEditor: React.FC<RichTextEditorProps> = ({
   }, [])
 
   return (
-    <View marginBottom="size-200">
-      <Text UNSAFE_style={{ 
-        display: 'block', 
-        marginBottom: '8px',
-        fontSize: '14px',
-        fontWeight: 500,
-        color: 'var(--spectrum-global-color-gray-800)'
-      }}>
-        {label}{isRequired && <span style={{ color: 'var(--spectrum-global-color-red-600)' }}> *</span>}
+    <div style={{ marginBottom: 16 }}>
+      <Text
+        UNSAFE_style={{
+          display: 'block',
+          marginBottom: 8,
+          fontSize: 14,
+          fontWeight: 500,
+          color: 'var(--spectrum-global-color-gray-800)',
+        }}
+      >
+        {label}{isRequired && (
+          <span style={{ color: 'var(--spectrum-global-color-red-600)' }}> *</span>
+        )}
       </Text>
       
-      <div 
-        className="rte-wrapper"
+      <div
+        className="rte-wrapper rte-field-shell"
         style={{
-          border: '1px solid var(--spectrum-global-color-gray-400)',
-          borderRadius: '4px',
-          backgroundColor: 'white',
           minHeight: height,
-          overflow: 'hidden',
-          position: 'relative'
         }}
       >
         <div className="rte-container" ref={editorRef} style={{ minHeight: height }} />
       </div>
       
       {description && (
-        <Text UNSAFE_style={{ 
-          display: 'block',
-          marginTop: '4px',
-          fontSize: '12px',
-          color: 'var(--spectrum-global-color-gray-700)'
-        }}>
+        <Text
+          UNSAFE_style={{
+            display: 'block',
+            marginTop: 4,
+            fontSize: 12,
+            color: 'var(--spectrum-global-color-gray-700)',
+          }}
+        >
           {description}
         </Text>
       )}
-    </View>
+    </div>
   )
 }
 

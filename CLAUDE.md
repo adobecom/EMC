@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-EMC (Event Management Cloud) is an **Adobe Experience Cloud (ExC) Shell** SPA built on **Adobe App Builder**. It manages events, series, speakers, sponsors, venues, and attendees. **There is no backend in this repo** — the frontend calls external Adobe APIs (ESP and ESL) directly.
+EMC (Event Management Console) is an **Adobe Experience Cloud (ExC) Shell** SPA built on **Adobe App Builder**. It manages events, series, speakers, sponsors, venues, and attendees. **There is no backend in this repo** — the frontend calls external Adobe APIs (ESP and ESL) directly.
 
 ## Commands
 
@@ -23,15 +23,15 @@ npm run check        # lint + type-check together
 
 | Layer | Technology |
 |---|---|
-| Framework | React 16 (hooks + functional components only — no class components) |
+| Framework | React 18 (hooks + functional components only — no class components) |
 | Language | TypeScript (strict, ES2020, bundler module resolution) |
-| UI Library | Adobe React Spectrum **v3** (`@adobe/react-spectrum`) — NOT S2 |
-| Icons | `@spectrum-icons/workflow` |
+| UI Library | **React Spectrum 2** (`@react-spectrum/s2`) only |
+| Icons | `@react-spectrum/s2/icons/...` |
 | Routing | React Router 6 with HashRouter |
 | State | React Context + `useReducer` (no Redux/Zustand) |
 | Build | Adobe I/O CLI (`aio`) with Parcel |
 
-**Critical**: Use React Spectrum **v3** only. Do NOT use S2 imports (`@react-spectrum/s2`), S2 style macros, or S2 patterns.
+**Critical**: Use React Spectrum **S2** (`@react-spectrum/s2`, style macro, S2 icons) only. See `.claude/agents/spectrum-ui.md` and `.cursor/rules/react-spectrum/react-spectrum-s2.mdc`.
 
 ## Architecture
 
@@ -82,7 +82,7 @@ Set by build-time `ENVIRONMENT` variable (not hostname-based). Values: `dev` (de
 - **Barrel exports** (`index.ts`) in every module directory
 - React Spectrum layout via `Flex`/`Grid`; use `onPress` not `onClick`
 - `UNSAFE_style` / `UNSAFE_className` for non-Spectrum styling (use sparingly)
-- Design tokens from `styles/designSystem.ts` — prefer over magic numbers
+- Design tokens from `styles/designSystem.ts` — prefer over magic numbers **except** in the S2 **`style()` macro**, which requires literals only (otherwise Parcel: *Could not statically evaluate macro argument* — see `.cursor/rules/react-spectrum/react-spectrum-style-macro-s2.mdc`)
 - Naming: PascalCase components, `use` prefix for hooks, UPPER_SNAKE_CASE for constants
 
 ## Routes

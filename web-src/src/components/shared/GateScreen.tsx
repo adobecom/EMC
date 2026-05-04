@@ -2,166 +2,132 @@
  * <license header>
  */
 
-import React, { useState } from 'react'
-import { View, Text, Button, ProgressCircle } from '@adobe/react-spectrum'
-import { SPACING, COLORS, TYPOGRAPHY } from '../../styles/designSystem'
-import { GATE_BACKGROUND_IMAGES } from '../../assets/gate-backgrounds'
-
-/** Fallback background when images are unavailable */
-const GATE_BACKGROUND_FALLBACK = '#E8E8E8'
+import React, { ReactNode } from 'react'
+import {
+  Button,
+  CustomDialog,
+  DialogContainer,
+  Heading,
+  ProgressCircle,
+  Text,
+} from '@react-spectrum/s2'
+import { style } from '@react-spectrum/s2/style' with { type: 'macro' }
+import LockClose from '@react-spectrum/s2/illustrations/gradient/generic2/LockClose'
+import { TYPOGRAPHY, Z_INDEX } from '../../styles/designSystem'
+const gateBg = new URL('../../assets/gate-bg.png', import.meta.url).href
 
 /**
- * Browser access forbidden icon - from ecc-milo browser-access-forbidden-lg.svg
- * 134×94px, browser window with padlock
+ * Full-viewport decorative backdrop plus Spectrum DialogContainer.
+ * S2 modal layers portal above this; z-index sits below design-system modal tokens.
  */
-const BrowserLockIcon: React.FC = () => (
-  <svg
-    width={134}
-    height={94}
-    viewBox="0 0 134 94"
-    fill="none"
-    xmlns="http://www.w3.org/2000/svg"
-    aria-hidden
-  >
-    <path
-      d="M129.87 2H4.18301C3.00649 2 2.05273 2.95554 2.05273 4.13425V89.5043C2.05273 90.683 3.00649 91.6386 4.18301 91.6386H129.87C131.046 91.6386 132 90.683 132 89.5043V4.13425C132 2.95554 131.046 2 129.87 2Z"
-      stroke="#909090"
-      strokeWidth="3"
-      strokeLinecap="round"
-      strokeLinejoin="round"
+export const GateDialogShell: React.FC<{ children: ReactNode }> = ({ children }) => (
+  <>
+    <div
+      aria-hidden
+      style={{
+        position: 'fixed',
+        inset: 0,
+        zIndex: Z_INDEX.MODAL_BACKDROP - 1,
+        backgroundImage: `url(${gateBg})`,
+        backgroundSize: 'cover',
+        backgroundPosition: 'center',
+      }}
     />
-    <path
-      d="M131.947 15.3398H2"
-      stroke="#909090"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    />
-    <path
-      d="M21.1729 8.9375H10.5215"
-      stroke="#909090"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    />
-    <path
-      d="M81.939 46.8203H49.9848C48.8083 46.8203 47.8545 47.7758 47.8545 48.9546V72.4313C47.8545 73.61 48.8083 74.5656 49.9848 74.5656H81.939C83.1155 74.5656 84.0693 73.61 84.0693 72.4313V48.9546C84.0693 47.7758 83.1155 46.8203 81.939 46.8203Z"
-      stroke="#909090"
-      strokeWidth="3"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    />
-    <path
-      d="M76.6124 46.8221V39.1314C76.6124 33.7744 72.8209 28.981 67.5273 28.2253C60.9488 27.2862 55.3096 32.3756 55.3096 38.7845V45.755"
-      stroke="#909090"
-      strokeWidth="3"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    />
-  </svg>
+    <DialogContainer onDismiss={() => {}}>
+      {children}
+    </DialogContainer>
+  </>
 )
+
+function GateLockIllustration() {
+  // @ts-expect-error LockClose implements illustration sizing; package d.ts lists IconProps only.
+  return <LockClose aria-hidden size="L" />
+}
 
 interface GateScreenProps {
   onRequestAccess: () => void
   isLoading?: boolean
+  /** Message shown when access is denied. Defaults to sign-in prompt. */
+  message?: string
+  /** Label for the action button. Defaults to "Sign In". */
+  actionLabel?: string
 }
+
+/** Centered column layout inside CustomDialog (Dialog slot layout does not support this well). */
+const gateCustomLayout = style({
+  display: 'flex',
+  flexDirection: 'column',
+  alignItems: 'center',
+  rowGap: 16,
+  width: 'full',
+  boxSizing: 'border-box',
+})
+
+const gateTitle = style({
+  font: 'heading-lg',
+  textAlign: 'center',
+  marginY: 0,
+})
 
 /**
  * Full-screen gate shown when the user does not have sufficient access.
- * Uses Spectrum components with layout matching BlurredLoadingOverlay card pattern.
+ * CustomDialog for full layout control; DialogContainer provides the modal shell.
  */
 export const GateScreen: React.FC<GateScreenProps> = ({
   onRequestAccess,
-  isLoading = false
+  isLoading = false,
+  message = 'Please sign in with an authorized account to continue.',
+  actionLabel = 'Sign In'
 }) => {
-  const [backgroundImage] = useState(() => {
-    if (GATE_BACKGROUND_IMAGES.length === 0) return null
-    return GATE_BACKGROUND_IMAGES[
-      Math.floor(Math.random() * GATE_BACKGROUND_IMAGES.length)
-    ]
-  })
-
-  const outerStyle: React.CSSProperties = {
-    position: 'fixed',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: GATE_BACKGROUND_FALLBACK,
-    backgroundSize: 'cover',
-    backgroundPosition: 'center',
-    display: 'flex',
-    alignItems: 'center',
-    textAlign: 'center',
-    justifyContent: 'center'
-  }
-  if (backgroundImage) {
-    outerStyle.backgroundImage = `url(${backgroundImage})`
-  }
-
   return (
-    <View UNSAFE_style={outerStyle}>
-      <View
-        padding="size-800"
-        borderRadius="medium"
-        UNSAFE_style={{
-          background: 'rgba(255, 255, 255, 0.90)',
-          backdropFilter: 'blur(10px)',
-          boxShadow: '0 8px 32px rgba(0, 0, 0, 0.8)',
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          gap: '16px',
-          minWidth: 360,
-          maxWidth: 480
-        }}
+    <GateDialogShell>
+      <CustomDialog
+        size="M"
+        isDismissible={false}
+        isKeyboardDismissDisabled
+        role={isLoading ? 'dialog' : 'alertdialog'}
       >
-        {isLoading ? (
-          <>
-            <ProgressCircle
-              size="L"
-              isIndeterminate
-              aria-label="Checking access"
-            />
-            <Text UNSAFE_style={{ fontSize: '16px', fontWeight: 500 }}>
-              Checking access...
-            </Text>
-          </>
-        ) : (
-          <>
-            <Text
-              UNSAFE_style={{
-                ...TYPOGRAPHY.COMPONENT_HEADING,
-                color: COLORS.DARK_GRAY,
-                fontWeight: 600
-              }}
-            >
-              Events Management Console
-            </Text>
-
-            <View UNSAFE_style={{ margin: SPACING.XXL }}>
-              <BrowserLockIcon />
-            </View>
-
-            <Text
-              UNSAFE_style={{
-                ...TYPOGRAPHY.SECTION_DESCRIPTION,
-                color: COLORS.DARK_GRAY,
-                maxWidth: 420
-              }}
-            >
-              Please sign in with an authorized account to continue.
-            </Text>
-
-            <Button 
-            variant="accent"
-            onPress={onRequestAccess}>
-              Sign In
-            </Button>
-          </>
-        )}
-      </View>
-    </View>
+        <div className={gateCustomLayout}>
+          <Heading slot="title" styles={gateTitle}>
+            Events Management Console
+          </Heading>
+          {isLoading ? (
+            <>
+              <ProgressCircle
+                size="L"
+                isIndeterminate
+                aria-label="Checking access"
+              />
+              <Text
+                styles={style({
+                  font: 'body',
+                  fontWeight: 'medium',
+                  textAlign: 'center',
+                })}
+              >
+                Checking access...
+              </Text>
+            </>
+          ) : (
+            <>
+              <GateLockIllustration />
+              <Text
+                UNSAFE_style={{
+                  ...TYPOGRAPHY.SECTION_DESCRIPTION,
+                  maxWidth: 420,
+                  textAlign: 'center',
+                }}
+              >
+                {message}
+              </Text>
+              <Button variant="accent" onPress={onRequestAccess}>
+                {actionLabel}
+              </Button>
+            </>
+          )}
+        </div>
+      </CustomDialog>
+    </GateDialogShell>
   )
 }
 

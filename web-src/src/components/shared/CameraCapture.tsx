@@ -4,11 +4,11 @@
 
 import React, { useState, useCallback, useEffect, useMemo } from 'react'
 import { View, Flex, Button, Text } from '@adobe/react-spectrum'
-import Camera from '@spectrum-icons/workflow/Camera'
-import Refresh from '@spectrum-icons/workflow/Refresh'
-import Checkmark from '@spectrum-icons/workflow/Checkmark'
-import Close from '@spectrum-icons/workflow/Close'
-import Alert from '@spectrum-icons/workflow/Alert'
+import Camera from '@react-spectrum/s2/icons/Camera'
+import Refresh from '@react-spectrum/s2/icons/Refresh'
+import Checkmark from '@react-spectrum/s2/icons/Checkmark'
+import Close from '@react-spectrum/s2/icons/Close'
+import AlertTriangle from '@react-spectrum/s2/icons/AlertTriangle'
 import { useCamera } from '../../hooks/useCamera'
 import { useFaceDetection } from '../../hooks/useFaceDetection'
 import type { UseCameraOptions } from '../../hooks/useCamera'
@@ -169,7 +169,7 @@ export const CameraCapture: React.FC<CameraCaptureProps> = ({
           backgroundColor: COLORS.GRAY_100
         }}
       >
-        <Alert size="XL" UNSAFE_style={{ color: COLORS.GRAY_600, marginBottom: 16 }} />
+        <AlertTriangle aria-hidden UNSAFE_style={{ color: COLORS.GRAY_600, marginBottom: 16, width: 32, height: 32 }} />
         <Text UNSAFE_style={{ color: COLORS.GRAY_700, textAlign: 'center', marginBottom: 16 }}>
           {error || 'Camera access is required for biometric capture.'}
         </Text>

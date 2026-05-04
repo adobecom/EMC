@@ -52,7 +52,7 @@ export const EVENT_TYPE_CONFIG: Record<EventType, EventTypeFeatures> = {
     description: 'Virtual event streamed online',
     hasVenue: false,
     hasPageMetadata: true,
-    hasMarketoIntegration: true,
+    hasMarketoIntegration: false,
     hasPhysicalCapacity: false,
     hasVirtualCapacity: true,
     hasOnDemandRecording: true,

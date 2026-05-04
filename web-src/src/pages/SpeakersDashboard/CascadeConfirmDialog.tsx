@@ -12,20 +12,10 @@
  */
 
 import React, { useMemo } from 'react'
-import {
-  Dialog,
-  DialogTrigger,
-  Heading,
-  Divider,
-  Content,
-  ButtonGroup,
-  Button,
-  View,
-  Flex,
-  Text
-} from '@adobe/react-spectrum'
-import Alert from '@spectrum-icons/workflow/Alert'
-import Link from '@spectrum-icons/workflow/Link'
+import { Button, ButtonGroup, Dialog, DialogTrigger, Content, Heading, Text } from '@react-spectrum/s2'
+import { style } from '@react-spectrum/s2/style' with { type: 'macro' }
+import AlertTriangle from '@react-spectrum/s2/icons/AlertTriangle'
+import Link from '@react-spectrum/s2/icons/Link'
 import { SpeakerDashboardItem } from './SpeakersDashboard'
 import { EventApiResponse } from '../../types/domain'
 import { COLORS } from '../../styles/designSystem'
@@ -88,125 +78,129 @@ export const CascadeConfirmDialog: React.FC<CascadeConfirmDialogProps> = ({
     <DialogTrigger isOpen={isOpen} onOpenChange={(open) => !open && onClose()}>
       <div style={{ display: 'none' }} />
       <Dialog size="M">
-        <Heading>{actionText.title}</Heading>
-        <Divider />
-        <Content>
-          <Flex direction="column" gap="size-300">
-            {/* Warning Header */}
-            <View
-              padding="size-200"
-              borderRadius="medium"
-              UNSAFE_style={{
-                backgroundColor: 'var(--spectrum-global-color-yellow-100)',
-                border: '1px solid var(--spectrum-global-color-yellow-400)'
-              }}
-            >
-              <Flex alignItems="center" gap="size-150">
-                <Alert size="S" UNSAFE_style={{ color: 'var(--spectrum-global-color-yellow-600)' }} />
-                <Text>
-                  <strong>{speakerName}</strong> is currently linked to{' '}
-                  <strong>{eventCount} {eventCount === 1 ? 'event' : 'events'}</strong>.
-                </Text>
-              </Flex>
-            </View>
-            
-            <Text>{actionText.description}</Text>
-            
-            {/* Linked Events Preview */}
-            {eventCount > 0 && (
-              <View
-                padding="size-200"
-                borderWidth="thin"
-                borderColor="gray-300"
-                borderRadius="medium"
-                backgroundColor="gray-50"
-                maxHeight="size-2000"
-                UNSAFE_style={{ overflowY: 'auto' }}
-              >
-                <Flex direction="column" gap="size-100">
-                  <Flex alignItems="center" gap="size-100">
-                    <Link size="S" />
-                    <Text UNSAFE_style={{ fontWeight: 'bold', fontSize: '14px' }}>
-                      Linked Events:
+        {({close}) => (
+          <>
+            <Heading slot="title">{actionText.title}</Heading>
+            <Content>
+              <div className={style({display: 'flex', flexDirection: 'column', gap: 24})}>
+                {/* Warning Header */}
+                <div
+                  style={{
+                    padding: 16,
+                    borderRadius: 8,
+                    backgroundColor: 'var(--spectrum-global-color-yellow-100)',
+                    border: '1px solid var(--spectrum-global-color-yellow-400)',
+                  }}
+                >
+                  <div className={style({display: 'flex', alignItems: 'center', gap: 12})}>
+                    <AlertTriangle aria-hidden />
+                    <Text>
+                      <strong>{speakerName}</strong> is currently linked to{' '}
+                      <strong>{eventCount} {eventCount === 1 ? 'event' : 'events'}</strong>.
                     </Text>
-                  </Flex>
-                  <Flex direction="column" gap="size-50" marginStart="size-300">
-                    {events.slice(0, 5).map(event => (
-                      <Text key={event.eventId} UNSAFE_style={{ fontSize: '13px' }}>
-                        • {event.enTitle || event.title || event.eventId}
+                  </div>
+                </div>
+
+                <Text>{actionText.description}</Text>
+
+                {/* Linked Events Preview */}
+                {eventCount > 0 && (
+                  <div
+                    style={{
+                      padding: 16,
+                      border: '1px solid var(--spectrum-global-color-gray-300)',
+                      borderRadius: 8,
+                      backgroundColor: 'var(--spectrum-global-color-gray-50)',
+                      maxHeight: 160,
+                      overflowY: 'auto',
+                    }}
+                  >
+                    <div className={style({display: 'flex', flexDirection: 'column', gap: 8})}>
+                      <div className={style({display: 'flex', alignItems: 'center', gap: 8})}>
+                        <Link />
+                        <Text UNSAFE_style={{ fontWeight: 'bold', fontSize: '14px' }}>
+                          Linked Events:
+                        </Text>
+                      </div>
+                      <div className={style({display: 'flex', flexDirection: 'column', gap: 4})} style={{ marginInlineStart: '24px' }}>
+                        {events.slice(0, 5).map(event => (
+                          <Text key={event.eventId} UNSAFE_style={{ fontSize: '13px' }}>
+                            • {event.enTitle || event.title || event.eventId}
+                          </Text>
+                        ))}
+                        {eventCount > 5 && (
+                          <Text UNSAFE_style={{ fontSize: '13px', color: 'var(--spectrum-global-color-gray-600)' }}>
+                            ... and {eventCount - 5} more
+                          </Text>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Action Options */}
+                <div className={style({display: 'flex', flexDirection: 'column', gap: 16})}>
+                  {/* Cascade Option */}
+                  <div
+                    role="button"
+                    tabIndex={0}
+                    onClick={() => onConfirm(true)}
+                    onKeyDown={(e) => e.key === 'Enter' && onConfirm(true)}
+                    style={{
+                      padding: '16px',
+                      border: '1px solid var(--spectrum-global-color-gray-300)',
+                      borderRadius: '4px',
+                      cursor: 'pointer',
+                      transition: 'background-color 0.15s ease'
+                    }}
+                    onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--spectrum-global-color-gray-100)'}
+                    onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                  >
+                    <div className={style({display: 'flex', flexDirection: 'column', gap: 4})}>
+                      <Text UNSAFE_style={{ fontWeight: 'bold', color: action === 'delete' ? COLORS.RED_600 : 'inherit' }}>
+                        {actionText.cascadeLabel}
                       </Text>
-                    ))}
-                    {eventCount > 5 && (
                       <Text UNSAFE_style={{ fontSize: '13px', color: 'var(--spectrum-global-color-gray-600)' }}>
-                        ... and {eventCount - 5} more
+                        {actionText.cascadeDescription}
                       </Text>
-                    )}
-                  </Flex>
-                </Flex>
-              </View>
-            )}
-            
-            {/* Action Options */}
-            <Flex direction="column" gap="size-200">
-              {/* Cascade Option */}
-              <div
-                role="button"
-                tabIndex={0}
-                onClick={() => onConfirm(true)}
-                onKeyDown={(e) => e.key === 'Enter' && onConfirm(true)}
-                style={{
-                  padding: '16px',
-                  border: '1px solid var(--spectrum-global-color-gray-300)',
-                  borderRadius: '4px',
-                  cursor: 'pointer',
-                  transition: 'background-color 0.15s ease'
-                }}
-                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--spectrum-global-color-gray-100)'}
-                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
-              >
-                <Flex direction="column" gap="size-50">
-                  <Text UNSAFE_style={{ fontWeight: 'bold', color: action === 'delete' ? COLORS.RED_600 : 'inherit' }}>
-                    {actionText.cascadeLabel}
-                  </Text>
-                  <Text UNSAFE_style={{ fontSize: '13px', color: 'var(--spectrum-global-color-gray-600)' }}>
-                    {actionText.cascadeDescription}
-                  </Text>
-                </Flex>
+                    </div>
+                  </div>
+
+                  {/* Local Only Option */}
+                  <div
+                    role="button"
+                    tabIndex={0}
+                    onClick={() => onConfirm(false)}
+                    onKeyDown={(e) => e.key === 'Enter' && onConfirm(false)}
+                    style={{
+                      padding: '16px',
+                      border: '1px solid var(--spectrum-global-color-gray-300)',
+                      borderRadius: '4px',
+                      cursor: 'pointer',
+                      transition: 'background-color 0.15s ease'
+                    }}
+                    onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--spectrum-global-color-gray-100)'}
+                    onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                  >
+                    <div className={style({display: 'flex', flexDirection: 'column', gap: 4})}>
+                      <Text UNSAFE_style={{ fontWeight: 'bold' }}>
+                        {actionText.localLabel}
+                      </Text>
+                      <Text UNSAFE_style={{ fontSize: '13px', color: 'var(--spectrum-global-color-gray-600)' }}>
+                        {actionText.localDescription}
+                      </Text>
+                    </div>
+                  </div>
+                </div>
               </div>
-              
-              {/* Local Only Option */}
-              <div
-                role="button"
-                tabIndex={0}
-                onClick={() => onConfirm(false)}
-                onKeyDown={(e) => e.key === 'Enter' && onConfirm(false)}
-                style={{
-                  padding: '16px',
-                  border: '1px solid var(--spectrum-global-color-gray-300)',
-                  borderRadius: '4px',
-                  cursor: 'pointer',
-                  transition: 'background-color 0.15s ease'
-                }}
-                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--spectrum-global-color-gray-100)'}
-                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
-              >
-                <Flex direction="column" gap="size-50">
-                  <Text UNSAFE_style={{ fontWeight: 'bold' }}>
-                    {actionText.localLabel}
-                  </Text>
-                  <Text UNSAFE_style={{ fontSize: '13px', color: 'var(--spectrum-global-color-gray-600)' }}>
-                    {actionText.localDescription}
-                  </Text>
-                </Flex>
-              </div>
-            </Flex>
-          </Flex>
-        </Content>
-        <ButtonGroup>
-          <Button variant="secondary" onPress={onClose}>
-            Cancel
-          </Button>
-        </ButtonGroup>
+            </Content>
+            <ButtonGroup>
+              <Button variant="secondary" onPress={() => { onClose(); close() }}>
+                Cancel
+              </Button>
+            </ButtonGroup>
+          </>
+        )}
       </Dialog>
     </DialogTrigger>
   )

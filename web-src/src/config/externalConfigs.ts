@@ -64,6 +64,14 @@ export const EXTERNAL_CONFIG_URLS = {
    * Structure: { data: [{ template-path, template-name, template-image, supported-event-type }] }
    */
   seriesTemplates: `${ADOBE_EVENT_LIBS_BASE}/series-templates.json`,
+
+  /**
+   * URL pattern overrides per series (multi-sheet, env-aware)
+   * Used by: useCustomDetailPagePath hook during event creation
+   * Structure: multi-sheet JSON with keys "data" (prod), "data-stage", "data-dev"
+   *   each containing { total, offset, limit, data: [{ seriesId, pattern }] }
+   */
+  urlPatterns: `${ADOBE_EVENT_LIBS_BASE}/url-patterns.json`,
 } as const
 
 /**

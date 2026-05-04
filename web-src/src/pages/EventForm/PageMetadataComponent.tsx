@@ -3,14 +3,9 @@
 */
 
 import React, { useState, useEffect, useRef, useCallback } from 'react'
-import {
-  Flex,
-  Heading,
-  Text,
-  Picker,
-  Item
-} from '@adobe/react-spectrum'
-import { TYPOGRAPHY, FLEX_GAP } from '../../styles/designSystem'
+import { Picker, PickerItem, Text, Heading } from '@react-spectrum/s2'
+import { style } from '@react-spectrum/s2/style' with { type: 'macro' }
+import { TYPOGRAPHY, COLORS } from '../../styles/designSystem'
 import { useEventFormComponent } from '../../hooks/useEventFormComponent'
 import { apiService, cachedApi } from '../../services/api'
 import { PublishingProfile } from '../../types/domain'
@@ -107,13 +102,24 @@ export const PageMetadataComponent: React.FC = () => {
         const existingProfile = publishingProfileRef.current
         
         if (existingProfile?.profileId) {
-          // Update existing profile
-          await apiService.updatePublishingProfile(existingProfile.profileId, {
+          // Update existing profile (ApiService refreshes modificationTime before PUT)
+          const updateResult = await apiService.updatePublishingProfile(existingProfile.profileId, {
             name: existingProfile.name,
             description: existingProfile.description,
             metadata: currentMetadata,
             modificationTime: existingProfile.modificationTime,
           })
+          if (
+            updateResult &&
+            typeof updateResult === 'object' &&
+            !('error' in updateResult) &&
+            (updateResult as PublishingProfile).profileId
+          ) {
+            publishingProfileRef.current = {
+              ...existingProfile,
+              ...(updateResult as PublishingProfile),
+            }
+          }
         } else {
           // Create new profile and assign to event
           const createResult = await apiService.createPublishingProfile({
@@ -240,33 +246,33 @@ export const PageMetadataComponent: React.FC = () => {
 
   if (isLoading) {
     return (
-      <Flex direction="column" gap={FLEX_GAP.FIELD}>
+      <div className={style({display: 'flex', flexDirection: 'column', gap: 16})}>
         <Heading level={3} UNSAFE_style={TYPOGRAPHY.COMPONENT_HEADING}>
           Page metadata management
         </Heading>
         <Text>Loading metadata options...</Text>
-      </Flex>
+      </div>
     )
   }
 
   if (error) {
     return (
-      <Flex direction="column" gap={FLEX_GAP.FIELD}>
+      <div className={style({display: 'flex', flexDirection: 'column', gap: 16})}>
         <Heading level={3} UNSAFE_style={TYPOGRAPHY.COMPONENT_HEADING}>
           Page metadata management
         </Heading>
-        <Text UNSAFE_style={{ color: 'var(--spectrum-global-color-red-600)' }}>
+        <Text UNSAFE_style={{ color: COLORS.STATUS_CANCELLED }}>
           {error}
         </Text>
-      </Flex>
+      </div>
     )
   }
 
   const fields = catalogue?.data?.data || []
 
   return (
-    <Flex direction="column" gap={FLEX_GAP.SECTION}>
-      <Flex direction="column" gap={FLEX_GAP.TIGHT}>
+    <div className={style({display: 'flex', flexDirection: 'column', gap: 24})}>
+      <div className={style({display: 'flex', flexDirection: 'column', gap: 8})}>
         <Heading level={3} UNSAFE_style={TYPOGRAPHY.COMPONENT_HEADING}>
           Page metadata management
         </Heading>
@@ -274,7 +280,7 @@ export const PageMetadataComponent: React.FC = () => {
           Configure tracking and metadata settings for your event. Set your primary product name 
           to ensure accurate analytics tracking and reporting for your webinar event page.
         </Text>
-      </Flex>
+      </div>
 
       {fields.map((field: MetadataField) => {
         const fieldOptions: MetadataOption[] = catalogue?.[field.key]?.data || []
@@ -288,6 +294,7 @@ export const PageMetadataComponent: React.FC = () => {
         return (
           <Picker
             key={field.key}
+            data-testid={`meta-${field.key}-input`}
             label={`${field.name} *`}
             placeholder={`Select ${field.name.toLowerCase()}`}
             selectedKey={currentValue || `no-${field.key}`}
@@ -295,10 +302,10 @@ export const PageMetadataComponent: React.FC = () => {
             isRequired
             items={allOptions}
           >
-            {(item) => <Item key={item.key}>{item.label}</Item>}
+            {(item) => <PickerItem id={item.key}>{item.label}</PickerItem>}
           </Picker>
         )
       })}
-    </Flex>
+    </div>
   )
 }

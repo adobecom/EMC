@@ -23,3 +23,9 @@ export * from './attendee'
 
 // Campaign-related types
 export * from './campaign'
+
+// RBAC types
+export * from './rbac'
+
+// RBAC API types (scopes, groups, roles, permissions)
+export * from './rbacApi'

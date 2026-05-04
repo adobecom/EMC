@@ -74,7 +74,7 @@ export const BiometricEnrollmentDialog: React.FC<BiometricEnrollmentDialogProps>
   return (
     <DialogTrigger
       isOpen={isOpen}
-      onOpenChange={(open) => { if (!open) onClose() }}
+      onOpenChange={(open: boolean) => { if (!open) onClose() }}
     >
       <div style={{ display: 'none' }} />
       {step === 'consent' ? (

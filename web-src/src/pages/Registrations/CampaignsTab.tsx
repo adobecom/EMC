@@ -2,35 +2,92 @@
 * <license header>
 */
 
-import React, { useState, useCallback, useMemo } from 'react'
-import {
-  View,
-  Flex,
-  Text,
-  Button,
-  ActionButton,
-  DialogTrigger,
-  Dialog,
-  Heading,
-  Content,
-  ButtonGroup,
-  TextField,
-  NumberField,
-  Switch,
-  AlertDialog,
-  Divider,
-  Picker,
-  Item
-} from '@adobe/react-spectrum'
-import Add from '@spectrum-icons/workflow/Add'
-import Edit from '@spectrum-icons/workflow/Edit'
-import Delete from '@spectrum-icons/workflow/Delete'
-import Copy from '@spectrum-icons/workflow/Copy'
+import React, { useState, useCallback, useMemo, useEffect } from 'react'
+import { Button, ButtonGroup, TextField, Picker, PickerItem, DialogTrigger, Dialog, Content, Heading, Text, ActionButton, NumberField, Switch, AlertDialog, SearchField } from '@react-spectrum/s2'
+import { style } from "@react-spectrum/s2/style" with { type: "macro" }
+import Add from '@react-spectrum/s2/icons/Add'
+import Edit from '@react-spectrum/s2/icons/Edit'
+import RemoveCircle from '@react-spectrum/s2/icons/RemoveCircle'
+import Copy from '@react-spectrum/s2/icons/Copy'
+import Download from '@react-spectrum/s2/icons/Download'
 import type { EventApiResponse } from '../../types/domain'
 import type { Campaign, CampaignFormData, CampaignStatus } from '../../types/campaign'
 import { calculateCampaignStats } from '../../types/campaign'
-import { DataTable, TableColumn } from '../../components/shared'
-import { COLORS, SPACING } from '../../styles/designSystem'
+import ChannelIllustration from '@react-spectrum/s2/illustrations/linear/Channel'
+import NoSearchResults from '@react-spectrum/s2/illustrations/linear/NoSearchResults'
+import { DataTable, TableColumn, ResourceEmptyState } from '../../components/shared'
+import { COLORS } from '../../styles/designSystem'
+import { useHasPermission } from '../../hooks/useHasPermission'
+import { generateCsv, downloadCsv, type CsvColumn, sanitizeFilename, exportDatetime } from '../../utils/csvExport'
+
+const DEFAULT_CAMPAIGN_PAGE_SIZE = 20
+const CAMPAIGN_PAGE_SIZE_OPTIONS = [10, 20, 50, 100] as const
+
+const CAMPAIGN_CSV_COLUMNS: CsvColumn[] = [
+  { key: 'campaignId', label: 'Campaign ID' },
+  { key: 'name', label: 'Campaign Name' },
+  { key: 'url', label: 'URL' },
+  { key: 'status', label: 'Status' },
+  { key: 'attendeeCount', label: 'Registrations (count)' },
+  { key: 'attendeeLimit', label: 'Registration limit' },
+  { key: 'waitlistAttendeeCount', label: 'Waitlisted' },
+  { key: 'creationTime', label: 'Creation time (UTC)' },
+  { key: 'modificationTime', label: 'Modification time (UTC)' },
+]
+
+function formatCampaignEpochForCsv(ms: number): string {
+  return Number.isFinite(ms) ? new Date(ms).toISOString() : ''
+}
+
+function isCampaignPageSize(n: number): n is (typeof CAMPAIGN_PAGE_SIZE_OPTIONS)[number] {
+  return (CAMPAIGN_PAGE_SIZE_OPTIONS as readonly number[]).includes(n)
+}
+
+interface CampaignExportDialogProps {
+  rowCount: number
+  defaultFilename: string
+  onExport: (filename: string) => void
+  onClose: () => void
+}
+
+const CampaignExportDialog: React.FC<CampaignExportDialogProps> = ({
+  rowCount,
+  defaultFilename,
+  onExport,
+  onClose,
+}) => {
+  const [filename, setFilename] = useState(defaultFilename)
+  return (
+    <Dialog>
+      {() => (
+        <>
+          <Heading slot="title">Export Campaigns to CSV</Heading>
+          <Content>
+            <TextField
+              label="File name"
+              value={filename}
+              onChange={setFilename}
+              description=".csv will be appended automatically"
+              styles={style({ width: '[100%]' })}
+            />
+          </Content>
+          <ButtonGroup>
+            <Button variant="secondary" onPress={onClose}>
+              <Text>Cancel</Text>
+            </Button>
+            <Button
+              variant="accent"
+              onPress={() => onExport(filename.trim() || 'export')}
+              isDisabled={rowCount === 0}
+            >
+              <Text>Export ({rowCount} rows)</Text>
+            </Button>
+          </ButtonGroup>
+        </>
+      )}
+    </Dialog>
+  )
+}
 
 interface CampaignsTabProps {
   eventId: string
@@ -49,14 +106,71 @@ export const CampaignsTab: React.FC<CampaignsTabProps> = ({
   onUpdateCampaign,
   onDeleteCampaign,
 }) => {
+  const canWriteEvent = useHasPermission('event', 'write')
+  const canDeleteEvent = useHasPermission('event', 'delete')
   const [isFormOpen, setIsFormOpen] = useState(false)
   const [editingCampaign, setEditingCampaign] = useState<Campaign | null>(null)
   const [campaignToDelete, setCampaignToDelete] = useState<Campaign | null>(null)
   const [pendingArchiveSave, setPendingArchiveSave] = useState<{ campaign: Campaign; formData: CampaignFormData } | null>(null)
   const [isSaving, setIsSaving] = useState(false)
   const [copiedId, setCopiedId] = useState<string | null>(null)
+  const [searchQuery, setSearchQuery] = useState('')
+  const [tablePageSize, setTablePageSize] = useState(DEFAULT_CAMPAIGN_PAGE_SIZE)
+  const [isCampaignExportOpen, setIsCampaignExportOpen] = useState(false)
+
+  const [formName, setFormName] = useState('')
+  const [formAttendeeLimit, setFormAttendeeLimit] = useState<number | undefined>(undefined)
+  const [formNoCapacityLimit, setFormNoCapacityLimit] = useState(false)
+  const [formStatus, setFormStatus] = useState<CampaignStatus>('Active')
+
+  const eventCapacity = event?.attendeeLimit
+
+  useEffect(() => {
+    setSearchQuery('')
+    setTablePageSize(DEFAULT_CAMPAIGN_PAGE_SIZE)
+  }, [eventId])
+
+  useEffect(() => {
+    if (!isFormOpen) return
+    if (editingCampaign) {
+      setFormName(editingCampaign.name || '')
+      setFormAttendeeLimit(editingCampaign.attendeeLimit)
+      setFormStatus(editingCampaign.status)
+      setFormNoCapacityLimit(false)
+    } else {
+      setFormName('')
+      setFormAttendeeLimit(undefined)
+      setFormNoCapacityLimit(false)
+      setFormStatus('Active')
+    }
+  }, [isFormOpen, editingCampaign])
+
+  const formHasValidLimit = useMemo(
+    () =>
+      formNoCapacityLimit
+        ? eventCapacity != null
+        : formAttendeeLimit != null &&
+          !Number.isNaN(formAttendeeLimit) &&
+          formAttendeeLimit >= 1,
+    [formNoCapacityLimit, eventCapacity, formAttendeeLimit]
+  )
+
+  const formIsValid = useMemo(
+    () => formName.trim().length > 0 && formHasValidLimit,
+    [formName, formHasValidLimit]
+  )
 
   const stats = useMemo(() => calculateCampaignStats(campaigns), [campaigns])
+
+  const filteredCampaigns = useMemo(() => {
+    const q = searchQuery.trim().toLowerCase()
+    if (!q) return campaigns
+    return campaigns.filter((c) => {
+      const name = (c.name ?? '').toLowerCase()
+      const id = (c.campaignId ?? '').toLowerCase()
+      return name.includes(q) || id.includes(q)
+    })
+  }, [campaigns, searchQuery])
 
   const performSaveCampaign = useCallback(async (campaign: Campaign | null, formData: CampaignFormData) => {
     setIsSaving(true)
@@ -88,6 +202,30 @@ export const CampaignsTab: React.FC<CampaignsTabProps> = ({
     await performSaveCampaign(editingCampaign, formData)
   }, [editingCampaign, performSaveCampaign])
 
+  const handleSubmitCampaignForm = useCallback(() => {
+    const trimmed = formName.trim()
+    if (!trimmed) return
+    const effectiveLimit =
+      formNoCapacityLimit && eventCapacity != null
+        ? eventCapacity
+        : formAttendeeLimit != null && !Number.isNaN(formAttendeeLimit)
+          ? formAttendeeLimit
+          : undefined
+    void handleSaveCampaign({
+      name: trimmed,
+      attendeeLimit: effectiveLimit,
+      status: editingCampaign ? formStatus : 'Active',
+    })
+  }, [
+    formName,
+    formNoCapacityLimit,
+    eventCapacity,
+    formAttendeeLimit,
+    formStatus,
+    editingCampaign,
+    handleSaveCampaign,
+  ])
+
   const handleDeleteCampaign = useCallback(async () => {
     if (!campaignToDelete) return
     try {
@@ -118,6 +256,45 @@ export const CampaignsTab: React.FC<CampaignsTabProps> = ({
     setIsFormOpen(true)
   }, [])
 
+  const buildCampaignCsv = useCallback(() => {
+    const rows: Record<string, unknown>[] = filteredCampaigns.map((c) => ({
+      campaignId: c.campaignId,
+      name: c.name,
+      url: c.url,
+      status: c.status,
+      attendeeCount: c.attendeeCount,
+      attendeeLimit: c.attendeeLimit,
+      waitlistAttendeeCount: c.waitlistAttendeeCount,
+      creationTime: formatCampaignEpochForCsv(c.creationTime),
+      modificationTime: formatCampaignEpochForCsv(c.modificationTime),
+    }))
+    return generateCsv(rows, CAMPAIGN_CSV_COLUMNS)
+  }, [filteredCampaigns])
+
+  const campaignsTableEmptyState = useMemo(() => {
+    if (campaigns.length === 0) {
+      return (
+        <ResourceEmptyState
+          fillContainer
+          illustration={<ChannelIllustration aria-hidden />}
+          title="No campaigns yet"
+          description="Create campaigns to track registrations from different sources like email, social media, or partner promotions."
+        />
+      )
+    }
+    if (filteredCampaigns.length === 0) {
+      return (
+        <ResourceEmptyState
+          fillContainer
+          illustration={<NoSearchResults aria-hidden />}
+          title="No matching campaigns"
+          description="Try adjusting your search, or clear the search field to see all campaigns."
+        />
+      )
+    }
+    return undefined
+  }, [campaigns.length, filteredCampaigns.length])
+
   const columns: TableColumn<Campaign>[] = useMemo(() => [
     {
       key: 'name',
@@ -129,11 +306,23 @@ export const CampaignsTab: React.FC<CampaignsTabProps> = ({
       )
     },
     {
+      key: 'campaignId',
+      name: 'CAMPAIGN ID',
+      width: 200,
+      sortable: true,
+      cellNoWrap: true,
+      render: (campaign) => (
+        <Text UNSAFE_style={{ fontFamily: 'monospace', fontSize: '13px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+          {campaign.campaignId}
+        </Text>
+      )
+    },
+    {
       key: 'url',
       name: 'URL',
       width: 200,
       render: (campaign) => (
-        <Flex alignItems="center" gap="size-100">
+        <div className={style({display: 'flex', alignItems: 'center', gap: 8})}>
           <Text UNSAFE_style={{ fontFamily: 'monospace', fontSize: '13px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
             {campaign.url}
           </Text>
@@ -144,7 +333,7 @@ export const CampaignsTab: React.FC<CampaignsTabProps> = ({
                 onPress={() => handleCopyUrl(campaign)}
                 aria-label="Copy URL"
               >
-                <Copy size="S" />
+                <Copy />
               </ActionButton>
               {copiedId === campaign.campaignId && (
                 <Text UNSAFE_style={{ fontSize: '11px', color: COLORS.STATUS_DRAFT }}>
@@ -153,7 +342,7 @@ export const CampaignsTab: React.FC<CampaignsTabProps> = ({
               )}
             </>
           )}
-        </Flex>
+        </div>
       )
     },
     {
@@ -185,106 +374,163 @@ export const CampaignsTab: React.FC<CampaignsTabProps> = ({
       width: 100,
       sortable: true,
       render: (campaign) => (
-        <View
-          UNSAFE_style={{
-            display: 'inline-block',
-            padding: '4px 12px',
-            borderRadius: '16px',
-            backgroundColor: campaign.status === 'Active'
-              ? 'rgba(45, 157, 146, 0.15)'
-              : 'rgba(102, 102, 102, 0.15)',
-            color: campaign.status === 'Active' ? COLORS.STATUS_DRAFT : COLORS.STATUS_ARCHIVED
-          }}
-        >
+        <div style={{
+          display: 'inline-block',
+          padding: '4px 12px',
+          borderRadius: '16px',
+          backgroundColor: campaign.status === 'Active'
+            ? 'rgba(45, 157, 146, 0.15)'
+            : 'rgba(102, 102, 102, 0.15)',
+          color: campaign.status === 'Active' ? COLORS.STATUS_DRAFT : COLORS.STATUS_ARCHIVED
+        }}>
           <Text UNSAFE_style={{ fontSize: '12px', fontWeight: 600 }}>
             {campaign.status}
           </Text>
-        </View>
+        </div>
       )
     },
     {
       key: 'actions',
-      name: '',
+      name: 'ACTIONS',
       width: 100,
+      sortable: false,
       isSticky: true,
+      cellNoWrap: true,
       render: (campaign) => (
-        <Flex gap="size-100" justifyContent="end">
-          {campaign.status === 'Active' && (
+        <div className={style({display: 'flex', gap: 8, justifyContent: 'end'})}>
+          {canWriteEvent && campaign.status === 'Active' && (
             <ActionButton
               isQuiet
               onPress={() => handleEditClick(campaign)}
               aria-label="Edit campaign"
             >
-              <Edit size="S" />
+              <Edit />
             </ActionButton>
           )}
-          <ActionButton
-            isQuiet
-            isDisabled={campaign.attendeeCount > 0}
-            onPress={() => setCampaignToDelete(campaign)}
-            aria-label="Delete campaign"
-          >
-            <Delete size="S" />
-          </ActionButton>
-        </Flex>
+          {canDeleteEvent && (
+            <ActionButton
+              isQuiet
+              isDisabled={campaign.attendeeCount > 0}
+              onPress={() => setCampaignToDelete(campaign)}
+              aria-label="Delete campaign"
+            >
+              <RemoveCircle />
+            </ActionButton>
+          )}
+        </div>
       )
     }
-  ], [handleCopyUrl, handleEditClick, copiedId])
+  ], [handleCopyUrl, handleEditClick, copiedId, canWriteEvent, canDeleteEvent])
 
   if (!eventId) {
     return (
-      <View padding="size-400">
+      <div style={{ padding: '32px' }}>
         <Text UNSAFE_style={{ color: COLORS.GRAY_600 }}>
           Select an event to manage campaigns
         </Text>
-      </View>
+      </div>
     )
   }
 
   return (
-    <View>
+    <div>
       {/* Stats Bar */}
-      <View
-        backgroundColor="gray-100"
-        padding="size-300"
-        borderRadius="medium"
-        marginBottom="size-300"
-      >
-        <Flex gap="size-600" wrap>
+      <div style={{ backgroundColor: 'var(--spectrum-global-color-gray-100)', padding: '24px', borderRadius: '8px', marginBottom: '24px' }}>
+        <div className={style({display: 'flex', gap: 48, flexWrap: 'wrap'})}>
           <StatItem label="Total Campaigns" value={stats.totalCampaigns} />
           <StatItem label="Active" value={stats.activeCampaigns} />
           <StatItem label="Registrations" value={stats.totalRegistrations} />
           <StatItem label="Waitlisted" value={stats.totalWaitlisted} />
-        </Flex>
-      </View>
+        </div>
+      </div>
 
-      {/* Header with Add Button */}
-      <Flex
-        justifyContent="space-between"
-        alignItems="center"
-        marginBottom="size-200"
+      {/* Add campaign + table tools */}
+      <div
+        className={style({
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'end',
+          flexWrap: 'wrap',
+          gap: 16,
+          marginBottom: 16,
+        })}
       >
-        <Button
-          variant="accent"
-          onPress={handleCreateClick}
-        >
-          <Add size="S" />
-          <Text>Add Campaign</Text>
-        </Button>
-      </Flex>
+        <div>
+          {canWriteEvent && (
+            <Button variant="accent" onPress={handleCreateClick}>
+              <Add />
+              <Text>Add Campaign</Text>
+            </Button>
+          )}
+        </div>
+        {campaigns.length > 0 && (
+          <div
+            className={style({
+              display: 'flex',
+              gap: 12,
+              alignItems: 'end',
+              flexWrap: 'wrap',
+            })}
+          >
+            {filteredCampaigns.length > 0 && (
+              <DialogTrigger isOpen={isCampaignExportOpen} onOpenChange={setIsCampaignExportOpen}>
+                <ActionButton aria-label="Export campaigns as CSV">
+                  <Download />
+                </ActionButton>
+                <CampaignExportDialog
+                  rowCount={filteredCampaigns.length}
+                  defaultFilename={
+                    sanitizeFilename(event?.title || event?.enTitle || 'event') +
+                    '_campaigns_' +
+                    exportDatetime()
+                  }
+                  onExport={(filename) => {
+                    downloadCsv(buildCampaignCsv(), `${filename}.csv`)
+                    setIsCampaignExportOpen(false)
+                  }}
+                  onClose={() => setIsCampaignExportOpen(false)}
+                />
+              </DialogTrigger>
+            )}
+            <Picker
+              label="Rows per page"
+              selectedKey={String(tablePageSize)}
+              onSelectionChange={(key) => {
+                const n = Number(key)
+                if (isCampaignPageSize(n)) setTablePageSize(n)
+              }}
+              styles={style({ width: 120 })}
+            >
+              {CAMPAIGN_PAGE_SIZE_OPTIONS.map((n) => (
+                <PickerItem key={n} id={String(n)}>
+                  {String(n)}
+                </PickerItem>
+              ))}
+            </Picker>
+            <div className={style({ width: 240 })}>
+              <SearchField
+                label="Search campaigns"
+                placeholder="Search by name or campaign ID"
+                value={searchQuery}
+                onChange={setSearchQuery}
+                onClear={() => setSearchQuery('')}
+                styles={style({ width: '[100%]' })}
+              />
+            </div>
+          </div>
+        )}
+      </div>
 
       {/* Campaigns Table */}
-      {campaigns.length > 0 ? (
+      <div style={{ minHeight: 480, display: 'flex', flexDirection: 'column' }}>
         <DataTable
           columns={columns}
-          data={campaigns}
+          data={filteredCampaigns}
           getItemKey={(item) => item.campaignId}
-          pageSize={10}
-          emptyState={<EmptyCampaignsState onCreateClick={handleCreateClick} />}
+          pageSize={tablePageSize}
+          emptyState={campaignsTableEmptyState}
         />
-      ) : (
-        <EmptyCampaignsState onCreateClick={handleCreateClick} />
-      )}
+      </div>
 
       {/* Create/Edit Campaign Dialog */}
       <DialogTrigger
@@ -297,82 +543,65 @@ export const CampaignsTab: React.FC<CampaignsTabProps> = ({
         }}
       >
         <div style={{ display: 'none' }} />
-        {(close) => (
-          <CampaignFormDialog
-            campaign={editingCampaign}
-            eventCapacity={event?.attendeeLimit}
-            isSaving={isSaving}
-            onSave={(data) => {
-              handleSaveCampaign(data)
-            }}
-            onCancel={close}
-          />
-        )}
+        <Dialog size="M">
+          {({close}) => (
+            <CampaignFormDialogContent
+              campaign={editingCampaign}
+              eventCapacity={eventCapacity}
+              isSaving={isSaving}
+              name={formName}
+              onNameChange={setFormName}
+              attendeeLimit={formAttendeeLimit}
+              onAttendeeLimitChange={setFormAttendeeLimit}
+              noCapacityLimit={formNoCapacityLimit}
+              onNoCapacityLimitChange={setFormNoCapacityLimit}
+              status={formStatus}
+              onStatusChange={setFormStatus}
+              isValid={formIsValid}
+              onSubmitForm={handleSubmitCampaignForm}
+              onCancel={close}
+            />
+          )}
+        </Dialog>
       </DialogTrigger>
 
       {/* Delete Confirmation Dialog */}
-      <DialogTrigger
-        isOpen={!!campaignToDelete}
-        onOpenChange={(isOpen) => !isOpen && setCampaignToDelete(null)}
-      >
+      <DialogTrigger isOpen={!!campaignToDelete} onOpenChange={(isOpen) => !isOpen && setCampaignToDelete(null)}>
         <div style={{ display: 'none' }} />
-        {(close) => (
-          <AlertDialog
-            title="Delete Campaign"
-            variant="destructive"
-            primaryActionLabel="Delete"
-            secondaryActionLabel="Cancel"
-            onPrimaryAction={() => {
-              handleDeleteCampaign()
-              close()
-            }}
-            onSecondaryAction={close}
-          >
-            Are you sure you want to delete the campaign &ldquo;{campaignToDelete?.name}&rdquo;?
-            The campaign URL will stop working.
-          </AlertDialog>
-        )}
+        <AlertDialog title="Delete Campaign" variant="destructive" primaryActionLabel="Delete" cancelLabel="Cancel"
+          onPrimaryAction={handleDeleteCampaign}
+          onCancel={() => setCampaignToDelete(null)}
+        >
+          Are you sure you want to delete the campaign &ldquo;{campaignToDelete?.name}&rdquo;?
+          The campaign URL will stop working.
+        </AlertDialog>
       </DialogTrigger>
 
       {/* Archive Campaign Confirmation Dialog */}
-      <DialogTrigger
-        isOpen={!!pendingArchiveSave}
-        onOpenChange={(isOpen) => !isOpen && setPendingArchiveSave(null)}
-      >
+      <DialogTrigger isOpen={!!pendingArchiveSave} onOpenChange={(isOpen) => !isOpen && setPendingArchiveSave(null)}>
         <div style={{ display: 'none' }} />
-        {(close) => (
-          <AlertDialog
-            title="Archive Campaign"
-            variant="warning"
-            primaryActionLabel="Archive campaign"
-            secondaryActionLabel="Cancel"
-            onPrimaryAction={() => {
-              if (pendingArchiveSave) {
-                performSaveCampaign(pendingArchiveSave.campaign, pendingArchiveSave.formData)
-              }
-              close()
-            }}
-            onSecondaryAction={close}
-          >
-            <Text>
-              You are about to archive the campaign &ldquo;{pendingArchiveSave?.campaign.name}&rdquo;.
-              This action is <strong>permanent and cannot be undone</strong>.
-            </Text>
-            <Text UNSAFE_style={{ marginTop: '12px', display: 'block' }}>
-              Once archived:
-            </Text>
-            <ul style={{ marginTop: '8px', paddingLeft: '20px' }}>
-              <li>The campaign cannot be reactivated</li>
-              <li>The campaign cannot be edited</li>
-              <li>Existing registrations will remain, but no new registrations will be accepted through this campaign</li>
-            </ul>
-            <Text UNSAFE_style={{ marginTop: '12px', display: 'block' }}>
-              Are you sure you want to archive this campaign?
-            </Text>
-          </AlertDialog>
-        )}
+        <AlertDialog title="Archive Campaign" variant="warning" primaryActionLabel="Archive campaign" cancelLabel="Cancel"
+          onPrimaryAction={() => { if (pendingArchiveSave) { performSaveCampaign(pendingArchiveSave.campaign, pendingArchiveSave.formData) } }}
+          onCancel={() => setPendingArchiveSave(null)}
+        >
+          <Text>
+            You are about to archive the campaign &ldquo;{pendingArchiveSave?.campaign.name}&rdquo;.
+            This action is <strong>permanent and cannot be undone</strong>.
+          </Text>
+          <Text UNSAFE_style={{ marginTop: '12px', display: 'block' }}>
+            Once archived:
+          </Text>
+          <ul style={{ marginTop: '8px', paddingLeft: '20px' }}>
+            <li>The campaign cannot be reactivated</li>
+            <li>The campaign cannot be edited</li>
+            <li>Existing registrations will remain, but no new registrations will be accepted through this campaign</li>
+          </ul>
+          <Text UNSAFE_style={{ marginTop: '12px', display: 'block' }}>
+            Are you sure you want to archive this campaign?
+          </Text>
+        </AlertDialog>
       </DialogTrigger>
-    </View>
+    </div>
   )
 }
 
@@ -381,7 +610,7 @@ const StatItem: React.FC<{
   value: number
   subtext?: string
 }> = ({ label, value, subtext }) => (
-  <Flex direction="column" gap="size-50">
+  <div className={style({display: 'flex', flexDirection: 'column', gap: 4})}>
     <Text UNSAFE_style={{
       fontSize: '12px',
       fontWeight: 600,
@@ -390,7 +619,7 @@ const StatItem: React.FC<{
     }}>
       {label}
     </Text>
-    <Flex alignItems="baseline" gap="size-75">
+    <div className={style({display: 'flex', alignItems: 'baseline', gap: 8})}>
       <Text UNSAFE_style={{
         fontSize: '24px',
         fontWeight: 700,
@@ -403,160 +632,120 @@ const StatItem: React.FC<{
           {subtext}
         </Text>
       )}
-    </Flex>
-  </Flex>
+    </div>
+  </div>
 )
 
-const EmptyCampaignsState: React.FC<{ onCreateClick: () => void }> = ({ onCreateClick }) => (
-  <View
-    padding="size-600"
-    UNSAFE_style={{
-      textAlign: 'center',
-      border: `2px dashed ${COLORS.GRAY_300}`,
-      borderRadius: '8px'
-    }}
-  >
-    <Heading level={3} UNSAFE_style={{ marginBottom: SPACING.MD }}>
-      No campaigns yet
-    </Heading>
-    <Text UNSAFE_style={{
-      color: COLORS.GRAY_600,
-      marginBottom: SPACING.LG,
-      display: 'block'
-    }}>
-      Create campaigns to track registrations from different sources like email, social media, or partner promotions.
-    </Text>
-    <Button variant="accent" onPress={onCreateClick}>
-      <Add size="S" />
-      <Text>Create Your First Campaign</Text>
-    </Button>
-  </View>
-)
-
-interface CampaignFormDialogProps {
+interface CampaignFormDialogContentProps {
   campaign: Campaign | null
   eventCapacity?: number
   isSaving: boolean
-  onSave: (data: CampaignFormData) => void
+  name: string
+  onNameChange: (value: string) => void
+  attendeeLimit: number | undefined
+  onAttendeeLimitChange: (value: number | undefined) => void
+  noCapacityLimit: boolean
+  onNoCapacityLimitChange: (value: boolean) => void
+  status: CampaignStatus
+  onStatusChange: (value: CampaignStatus) => void
+  isValid: boolean
+  onSubmitForm: () => void
   onCancel: () => void
 }
 
-const CampaignFormDialog: React.FC<CampaignFormDialogProps> = ({
+const CampaignFormDialogContent: React.FC<CampaignFormDialogContentProps> = ({
   campaign,
   eventCapacity,
   isSaving,
-  onSave,
+  name,
+  onNameChange,
+  attendeeLimit,
+  onAttendeeLimitChange,
+  noCapacityLimit,
+  onNoCapacityLimitChange,
+  status,
+  onStatusChange,
+  isValid,
+  onSubmitForm,
   onCancel
-}) => {
-  const [name, setName] = useState(campaign?.name || '')
-  const [attendeeLimit, setAttendeeLimit] = useState<number | undefined>(campaign?.attendeeLimit)
-  const [noCapacityLimit, setNoCapacityLimit] = useState(false)
-  const [status, setStatus] = useState<CampaignStatus>(campaign?.status ?? 'Active')
+}) => (
+  <>
+    <Heading slot="title">{campaign ? 'Edit Campaign' : 'Create Campaign'}</Heading>
+    <Content>
+      <div className={style({display: 'flex', flexDirection: 'column', gap: 24})}>
+        <TextField
+          label="Name"
+          value={name}
+          onChange={onNameChange}
+          isRequired
+          autoFocus
+          styles={style({ width: '[100%]' })}
+        />
 
-  const handleSave = () => {
-    if (!name.trim()) return
-
-    const effectiveLimit = noCapacityLimit && eventCapacity != null
-      ? eventCapacity
-      : (attendeeLimit != null && !Number.isNaN(attendeeLimit) ? attendeeLimit : undefined)
-
-    onSave({
-      name: name.trim(),
-      attendeeLimit: effectiveLimit,
-      status: campaign ? status : 'Active'
-    })
-  }
-
-  const hasValidLimit = noCapacityLimit
-    ? eventCapacity != null
-    : (attendeeLimit != null && !Number.isNaN(attendeeLimit) && attendeeLimit >= 1)
-  const isValid = name.trim().length > 0 && hasValidLimit
-
-  return (
-    <Dialog size="M">
-      <Heading>{campaign ? 'Edit Campaign' : 'Create Campaign'}</Heading>
-      <Divider />
-      <Content>
-        <Flex direction="column" gap="size-300">
-          {/* Name Field */}
+        {campaign && (
           <TextField
-            label="Name"
-            value={name}
-            onChange={setName}
-            isRequired
-            autoFocus
-            width="100%"
+            label="Campaign URL"
+            value={campaign.url}
+            isReadOnly
+            styles={style({ width: '[100%]' })}
+            description="Auto-generated from the event URL"
           />
+        )}
 
-          {/* Campaign URL (read-only, only shown when editing) */}
-          {campaign && (
-            <TextField
-              label="Campaign URL"
-              value={campaign.url}
-              isReadOnly
-              width="100%"
-              description="Auto-generated from the event URL"
+        {!campaign && (
+          <div className={style({display: 'flex', flexDirection: 'column', gap: 16})}>
+            <NumberField
+              label="Attendee limit"
+              value={noCapacityLimit && eventCapacity != null ? eventCapacity : (attendeeLimit ?? NaN)}
+              onChange={onAttendeeLimitChange}
+              minValue={1}
+              isDisabled={noCapacityLimit}
             />
-          )}
-
-          {/* Attendee Limit (only on create) */}
-          {!campaign && (
-            <Flex direction="column" gap="size-200">
-              <NumberField
-                label="Attendee limit"
-                value={noCapacityLimit && eventCapacity != null ? eventCapacity : (attendeeLimit ?? NaN)}
-                onChange={(value) => setAttendeeLimit(value)}
-                minValue={1}
-                width="100%"
-                isDisabled={noCapacityLimit}
-              />
-              <Switch
-                isSelected={noCapacityLimit}
-                onChange={setNoCapacityLimit}
-                isDisabled={eventCapacity == null}
-              >
-                No capacity limit (use full event capacity)
-              </Switch>
-              {eventCapacity == null && (
-                <Text UNSAFE_style={{ fontSize: '12px', color: COLORS.GRAY_600 }}>
-                  Event has no capacity limit set
-                </Text>
-              )}
-            </Flex>
-          )}
-
-          {/* Status Picker (only when editing; create always uses Active) */}
-          {campaign && (
-            <Picker
-              label="Status"
-              selectedKey={status}
-              onSelectionChange={(key) => setStatus(key as CampaignStatus)}
-              width="100%"
+            <Switch
+              isSelected={noCapacityLimit}
+              onChange={onNoCapacityLimitChange}
+              isDisabled={eventCapacity == null}
             >
-              <Item key="Active">Active</Item>
-              <Item key="Archived">Archived</Item>
-            </Picker>
-          )}
-        </Flex>
-      </Content>
-      <ButtonGroup>
-        <Button variant="secondary" onPress={onCancel}>
-          Cancel
-        </Button>
-        <Button
-          variant="cta"
-          onPress={handleSave}
-          isDisabled={!isValid || isSaving}
-          UNSAFE_style={{
-            backgroundColor: COLORS.BLACK,
-            borderColor: COLORS.BLACK
-          }}
-        >
-          {isSaving ? 'Saving...' : 'Save'}
-        </Button>
-      </ButtonGroup>
-    </Dialog>
-  )
-}
+              No capacity limit (use full event capacity)
+            </Switch>
+            {eventCapacity == null && (
+              <Text UNSAFE_style={{ fontSize: '12px', color: COLORS.GRAY_600 }}>
+                Event has no capacity limit set
+              </Text>
+            )}
+          </div>
+        )}
+
+        {campaign && (
+          <Picker
+            label="Status"
+            selectedKey={status}
+            onSelectionChange={(key) => onStatusChange(key as CampaignStatus)}
+            styles={style({ width: '[100%]' })}
+          >
+            <PickerItem id="Active">Active</PickerItem>
+            <PickerItem id="Archived">Archived</PickerItem>
+          </Picker>
+        )}
+      </div>
+    </Content>
+    <ButtonGroup>
+      <Button variant="secondary" onPress={onCancel}>
+        Cancel
+      </Button>
+      <Button
+        variant="accent"
+        onPress={onSubmitForm}
+        isDisabled={!isValid || isSaving}
+        UNSAFE_style={{
+          backgroundColor: COLORS.BLACK,
+          borderColor: COLORS.BLACK
+        }}
+      >
+        {isSaving ? 'Saving...' : 'Save'}
+      </Button>
+    </ButtonGroup>
+  </>
+)
 
 export default CampaignsTab

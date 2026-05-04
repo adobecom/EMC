@@ -5,7 +5,7 @@ alwaysApply: false
 ---
 # React Spectrum (with Spectrum 2)
 
-When implementing UI components in React, use the React Spectrum (S2) library to ensure that your components are accessible and follow Adobe's Spectrum 2 design system. Components should be imported from the `@react-spectrum/s2` package. Using the older `@adobe/react-spectrum` package (also called React Spectrum v3) should be avoided unless explicitly requested.
+When implementing UI in EMC, use the React Spectrum (S2) library from `@react-spectrum/s2` for accessibility and Spectrum 2. The app is S2-only (`S2Provider` + `Fonts`); do not import `@adobe/react-spectrum` (it is not a dependency).
 If you are able to browse the web, the full docs for React Spectrum (S2) are available at [https://react-spectrum.adobe.com/s2/](mdc:https:/react-spectrum.adobe.com/s2).
 
 ## Configuring your bundler
@@ -101,15 +101,6 @@ function App() {
 ```
 
 **Note**: If you're embedding Spectrum 2 as a section of a larger page rather than taking over the whole window, follow the 'Embedded sections' section below instead of using `page.css`.
-
-### Overriding the color scheme
-
-By default, the page follows the user's operating system color scheme setting, supporting both light and dark mode. The page background is set to the `base` Spectrum background layer by default. This can be configured by setting the `data-color-scheme` and `data-background` attributes on the `<html>` element. For example, to force the application to only render in light mode, set `data-color-scheme="light"`.
-```html
-<html data-color-scheme="light">
-  <!-- ... -->
-</html>
-```
 
 ### Overriding the locale
 

@@ -3,28 +3,16 @@
 */
 
 import React, { useState, useMemo, useCallback, useEffect } from 'react'
-import {
-  Dialog,
-  DialogContainer,
-  Content,
-  TextField,
-  Button,
-  View,
-  Flex,
-  Text,
-  ActionButton,
-  ProgressCircle,
-  SearchField,
-} from '@adobe/react-spectrum'
-import Add from '@spectrum-icons/workflow/Add'
-import ArrowLeft from '@spectrum-icons/workflow/ArrowLeft'
+import { Button, Dialog, DialogContainer, TextField, Text, SearchField, Content, Heading, ProgressCircle } from '@react-spectrum/s2'
+import { style } from '@react-spectrum/s2/style' with { type: 'macro' }
+import Add from '@react-spectrum/s2/icons/Add'
 import { SeriesSponsor, SponsorData } from '../../types/domain'
 import { ImageUploader } from '../../components/shared'
-import { TYPOGRAPHY, FLEX_GAP } from '../../styles/designSystem'
 import { apiService, cachedApi } from '../../services/api'
-import { uploadImage, UploadTracker } from '../../services/requestHelpers'
+import { extractImageFromUploadResponse, uploadImage, UploadTracker } from '../../services/requestHelpers'
 import { getCurrentEnvironment, getApiHost } from '../../config/constants'
-import { useToast } from '../../contexts'
+import { getLocalizedValue } from '../../utils/eventFormMappers'
+import { COLORS, SURFACES } from '../../styles/designSystem'
 
 interface PartnerPickerDialogProps {
   isOpen: boolean
@@ -33,18 +21,8 @@ interface PartnerPickerDialogProps {
   seriesSponsors: SeriesSponsor[]
   selectedSponsorIds: Set<string>
   seriesId: string
+  locale: string
   onSponsorsRefresh: () => void
-}
-
-/** Fetch series sponsors - used when dialog opens to ensure data is loaded */
-async function fetchSeriesSponsors(seriesId: string): Promise<SeriesSponsor[]> {
-  if (!seriesId) return []
-  const response = await cachedApi.getSponsors(seriesId)
-  if (response && !('error' in response)) {
-    const list = response.sponsors || response || []
-    return Array.isArray(list) ? list : []
-  }
-  return []
 }
 
 interface CreateFormState {
@@ -66,6 +44,7 @@ export const PartnerPickerDialog: React.FC<PartnerPickerDialogProps> = ({
   seriesSponsors,
   selectedSponsorIds,
   seriesId,
+  locale,
   onSponsorsRefresh,
 }) => {
   const [view, setView] = useState<'select' | 'create'>('select')
@@ -74,9 +53,6 @@ export const PartnerPickerDialog: React.FC<PartnerPickerDialogProps> = ({
   const [createForm, setCreateForm] = useState<CreateFormState>(initialCreateFormState)
   const [pendingFile, setPendingFile] = useState<File | null>(null)
   const [isCreating, setIsCreating] = useState(false)
-  const [localSponsors, setLocalSponsors] = useState<SeriesSponsor[]>([])
-  const [isLoadingSponsors, setIsLoadingSponsors] = useState(false)
-  const toast = useToast()
 
   useEffect(() => {
     if (isOpen) {
@@ -89,56 +65,53 @@ export const PartnerPickerDialog: React.FC<PartnerPickerDialogProps> = ({
     }
   }, [isOpen])
 
-  // Fetch series sponsors when dialog opens (ensures network call happens when user opens picker)
-  useEffect(() => {
-    if (isOpen && seriesId) {
-      setIsLoadingSponsors(true)
-      fetchSeriesSponsors(seriesId)
-        .then((sponsors) => setLocalSponsors(sponsors))
-        .catch((err) => {
-          console.error('Failed to fetch series sponsors:', err)
-          setLocalSponsors([])
-        })
-        .finally(() => setIsLoadingSponsors(false))
-    } else {
-      setLocalSponsors([])
-    }
-  }, [isOpen, seriesId])
-
-  const sponsorsToShow = localSponsors.length > 0 ? localSponsors : seriesSponsors
-
   const availableSponsors = useMemo(() => {
-    return sponsorsToShow.filter(s => !selectedSponsorIds.has(s.sponsorId))
-  }, [sponsorsToShow, selectedSponsorIds])
+    return seriesSponsors.filter(s => !selectedSponsorIds.has(s.sponsorId))
+  }, [seriesSponsors, selectedSponsorIds])
+
+  const getLocalizedName = useCallback(
+    (s: SeriesSponsor) => getLocalizedValue(s, 'name', locale) || s.name || '',
+    [locale]
+  )
+
+  const getLocalizedLink = useCallback(
+    (s: SeriesSponsor) =>
+      getLocalizedValue(s, 'link', locale) || s.externalUrl || s.link || '',
+    [locale]
+  )
 
   const filteredSponsors = useMemo(() => {
     if (!searchQuery.trim()) return availableSponsors
     const q = searchQuery.toLowerCase().trim()
-    return availableSponsors.filter(s =>
-      (s.name || '').toLowerCase().includes(q)
-    )
-  }, [availableSponsors, searchQuery])
+    return availableSponsors.filter(s => {
+      const name = getLocalizedName(s).toLowerCase()
+      const link = getLocalizedLink(s).toLowerCase()
+      return name.includes(q) || link.includes(q)
+    })
+  }, [availableSponsors, searchQuery, getLocalizedName, getLocalizedLink])
 
   const handleSelectConfirm = useCallback(() => {
     if (!selectedSponsorId) return
-    const sponsor = sponsorsToShow.find(s => s.sponsorId === selectedSponsorId)
-    if (sponsor) {
-      const imageData = sponsor.image || sponsor.logo
-      const partnerData: SponsorData = {
-        id: `partner-${Date.now()}`,
-        sponsorId: sponsor.sponsorId,
-        partnerName: sponsor.name,
-        partnerUrl: sponsor.externalUrl || sponsor.link || '',
-        imageUrl: imageData?.imageUrl,
-        imageId: imageData?.imageId,
-        isSaved: true,
-        isFromSeries: true,
-        modificationTime: sponsor.modificationTime,
-      }
-      onSelect(partnerData)
-      onClose()
+    const sponsor = seriesSponsors.find(s => s.sponsorId === selectedSponsorId)
+    if (!sponsor) return
+    const imageData = sponsor.image || sponsor.logo
+    const partnerName = getLocalizedName(sponsor)
+    const partnerUrl = getLocalizedLink(sponsor)
+    const partnerData: SponsorData = {
+      id: `partner-${Date.now()}`,
+      sponsorId: sponsor.sponsorId,
+      partnerName,
+      partnerUrl,
+      imageUrl: imageData?.imageUrl,
+      imageId: imageData?.imageId,
+      isSaved: true,
+      isFromSeries: true,
+      modificationTime: sponsor.modificationTime,
+      localizations: sponsor.localizations,
     }
-  }, [selectedSponsorId, sponsorsToShow, onSelect, onClose])
+    onSelect(partnerData)
+    onClose()
+  }, [selectedSponsorId, seriesSponsors, getLocalizedName, getLocalizedLink, onSelect, onClose])
 
   const updateCreateField = useCallback((field: keyof CreateFormState, value: any) => {
     setCreateForm(prev => ({ ...prev, [field]: value }))
@@ -146,19 +119,43 @@ export const PartnerPickerDialog: React.FC<PartnerPickerDialogProps> = ({
 
   const isCreateFormValid = createForm.name.trim() !== '' && createForm.website.trim() !== ''
 
-  const handleCreatePartner = useCallback(async () => {
-    if (!isCreateFormValid) {
-      toast.error('Please enter partner name and website')
-      return
-    }
-    if (!seriesId) {
-      toast.error('Unable to add partner: no series selected')
-      return
-    }
-    setIsCreating(true)
+  const uploadSponsorImage = useCallback(
+    async (
+      file: File,
+      sponsorId: string,
+      altText: string
+    ): Promise<{ imageUrl: string; imageId: string } | null> => {
+      try {
+        const token = apiService.getAuthTokenForExternalUse()
+        if (!token) throw new Error('No authentication token available')
 
+        const env = getCurrentEnvironment()
+        const host = getApiHost('esp', env)
+        const uploadUrl = `${host}/v1/series/${seriesId}/sponsors/${sponsorId}/images`
+
+        const tracker: UploadTracker = { progress: 0 }
+        const config = {
+          targetUrl: uploadUrl,
+          altText,
+          type: 'sponsor-image',
+        }
+
+        const result = await uploadImage(file, config, token, tracker)
+        return extractImageFromUploadResponse(result)
+      } catch (err) {
+        console.error('Failed to upload sponsor image:', err)
+        return null
+      }
+    },
+    [seriesId]
+  )
+
+  const handleCreatePartner = useCallback(async () => {
+    if (!isCreateFormValid || !seriesId) return
+
+    setIsCreating(true)
     try {
-      let partnerUrl = createForm.website
+      let partnerUrl = createForm.website.trim()
       if (partnerUrl && !partnerUrl.startsWith('https://')) {
         if (partnerUrl.startsWith('http://')) {
           partnerUrl = partnerUrl.replace('http://', 'https://')
@@ -172,34 +169,18 @@ export const PartnerPickerDialog: React.FC<PartnerPickerDialogProps> = ({
         link: partnerUrl,
       }
 
-      const response = await apiService.createSponsor(sponsorPayload, seriesId, 'en-US')
+      const response = await cachedApi.createSponsor(sponsorPayload, seriesId, locale)
 
       if (response && !('error' in response)) {
         const savedSponsor = response.sponsor || response
         const sponsorId = savedSponsor.sponsorId
 
-        let uploadedImage: { imageUrl: string; imageId: string } | null = null
+        let photo: { imageUrl: string; imageId: string } | undefined
         if (pendingFile && sponsorId) {
-          try {
-            const token = apiService.getAuthTokenForExternalUse()
-            if (token) {
-              const env = getCurrentEnvironment()
-              const host = getApiHost('esp', env)
-              const uploadUrl = `${host}/v1/series/${seriesId}/sponsors/${sponsorId}/images`
-              const tracker: UploadTracker = { progress: 0 }
-              const config = {
-                targetUrl: uploadUrl,
-                altText: createForm.name || 'Partner logo',
-                type: 'sponsor-logo',
-              }
-              const result = await uploadImage(pendingFile, config, token, tracker)
-              const imageData = result.image || result
-              if (imageData.imageUrl && imageData.imageId) {
-                uploadedImage = { imageUrl: imageData.imageUrl, imageId: imageData.imageId }
-              }
-            }
-          } catch (err) {
-            console.error('Failed to upload sponsor image:', err)
+          const altText = createForm.name.trim() || 'Partner logo'
+          const uploaded = await uploadSponsorImage(pendingFile, sponsorId, altText)
+          if (uploaded) {
+            photo = uploaded
           }
         }
 
@@ -213,27 +194,30 @@ export const PartnerPickerDialog: React.FC<PartnerPickerDialogProps> = ({
           isSaved: true,
           isFromSeries: true,
           modificationTime: savedSponsor.modificationTime,
-          ...(uploadedImage ? {
-            imageUrl: uploadedImage.imageUrl,
-            imageId: uploadedImage.imageId,
-          } : {}),
+          ...(photo ? { imageUrl: photo.imageUrl, imageId: photo.imageId } : {}),
         }
 
         onSelect(newPartner)
         onClose()
       } else {
-        const errMsg = (response as { error?: string })?.error || 'Failed to create partner'
-        toast.error(errMsg)
         console.error('Failed to create partner:', response)
       }
     } catch (error) {
-      const errMsg = error instanceof Error ? error.message : 'Failed to create partner'
-      toast.error(errMsg)
       console.error('Failed to create partner:', error)
     } finally {
       setIsCreating(false)
     }
-  }, [createForm, pendingFile, seriesId, isCreateFormValid, onSelect, onClose, onSponsorsRefresh, toast])
+  }, [
+    createForm,
+    pendingFile,
+    seriesId,
+    locale,
+    isCreateFormValid,
+    onSelect,
+    onClose,
+    onSponsorsRefresh,
+    uploadSponsorImage,
+  ])
 
   const handleSwitchToCreate = useCallback(() => {
     setView('create')
@@ -245,53 +229,62 @@ export const PartnerPickerDialog: React.FC<PartnerPickerDialogProps> = ({
     setView('select')
   }, [])
 
-  const renderSelectView = () => (
+  const renderSelectContent = () => (
     <>
-      <Flex justifyContent="space-between" alignItems="center" marginBottom="size-200">
-        <Flex alignItems="center" gap="size-100">
-          <Text UNSAFE_style={TYPOGRAPHY.COMPONENT_HEADING}>Select Partner</Text>
-          {isLoadingSponsors && (
-            <ProgressCircle size="S" isIndeterminate aria-label="Loading partners" />
-          )}
-        </Flex>
-        <Flex gap="size-100" alignItems="center">
-          <ActionButton onPress={handleSwitchToCreate} aria-label="Create new partner">
-            <Add />
-          </ActionButton>
-          <Button
-            variant="accent"
-            onPress={handleSelectConfirm}
-            isDisabled={!selectedSponsorId}
-          >
-            <Text>Select</Text>
-          </Button>
-        </Flex>
-      </Flex>
-
+      <div className={style({display: 'flex', justifyContent: 'end', gap: 8, marginBottom: 16})}>
+        <Button variant="secondary" onPress={handleSwitchToCreate} aria-label="Create new partner">
+          <Add />
+          <Text>New Partner</Text>
+        </Button>
+        <Button variant="accent" onPress={handleSelectConfirm} isDisabled={!selectedSponsorId}>
+          <Text>Select Partner</Text>
+        </Button>
+      </div>
       <SearchField
         label="Search partners"
         value={searchQuery}
         onChange={setSearchQuery}
-        width="100%"
-        marginBottom="size-300"
+        styles={style({ width: '[100%]', marginBottom: 24 })}
       />
 
       {filteredSponsors.length === 0 ? (
-        <View padding="size-400" UNSAFE_style={{ textAlign: 'center' }}>
-          <Text>No partners available. Create a new one using the + button above.</Text>
-        </View>
+        <div style={{ padding: '32px', textAlign: 'center' }}>
+          <Text UNSAFE_style={{ color: COLORS.GRAY_600 }}>
+            {searchQuery.trim()
+              ? 'No partners match your search. Try a different query or create a new partner.'
+              : 'No partners available. Create a new partner to get started.'}
+          </Text>
+        </div>
       ) : (
-        <Flex direction="column" gap="size-100">
-          {filteredSponsors.map((sponsor) => {
+        <div
+          style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(3, 1fr)',
+            gap: '12px',
+            maxHeight: '400px',
+            overflowY: 'auto',
+            padding: '4px',
+          }}
+        >
+          {filteredSponsors.map(sponsor => {
             const imageData = sponsor.image || sponsor.logo
             const isSelected = selectedSponsorId === sponsor.sponsorId
+            const displayName = getLocalizedName(sponsor)
+            const displayLink = getLocalizedLink(sponsor)
+            const initials = displayName
+              .split(/\s+/)
+              .map((w: string) => w[0])
+              .join('')
+              .slice(0, 2)
+              .toUpperCase() || '?'
+
             return (
               <div
                 key={sponsor.sponsorId}
+                onClick={() => setSelectedSponsorId(sponsor.sponsorId)}
                 role="option"
                 aria-selected={isSelected}
                 tabIndex={0}
-                onClick={() => setSelectedSponsorId(sponsor.sponsorId)}
                 onKeyDown={(e) => {
                   if (e.key === 'Enter' || e.key === ' ') {
                     e.preventDefault()
@@ -299,139 +292,168 @@ export const PartnerPickerDialog: React.FC<PartnerPickerDialogProps> = ({
                   }
                 }}
                 style={{
-                  padding: '12px',
+                  padding: '16px 12px',
+                  border: isSelected ? `2px solid ${SURFACES.SELECTED_RING}` : `1px solid ${SURFACES.BORDER}`,
                   borderRadius: '8px',
-                  border: isSelected
-                    ? '2px solid var(--spectrum-global-color-blue-500)'
-                    : '1px solid var(--spectrum-global-color-gray-300)',
-                  backgroundColor: isSelected
-                    ? 'var(--spectrum-global-color-blue-100)'
-                    : 'var(--spectrum-global-color-gray-50)',
                   cursor: 'pointer',
+                  backgroundColor: isSelected ? SURFACES.SELECTED_FILL : SURFACES.CANVAS,
                   display: 'flex',
+                  flexDirection: 'column',
                   alignItems: 'center',
+                  textAlign: 'center',
                   gap: '8px',
+                  transition: 'border-color 0.15s, background-color 0.15s',
                   outline: 'none',
                 }}
               >
-                {imageData?.imageUrl && (
+                {imageData?.imageUrl ? (
+                  <img
+                    src={imageData.imageUrl}
+                    alt={displayName}
+                    style={{
+                      width: '56px',
+                      height: '56px',
+                      borderRadius: '8px',
+                      objectFit: 'contain',
+                      border: `1px solid ${SURFACES.BORDER}`,
+                    }}
+                  />
+                ) : (
                   <div
                     style={{
-                      width: '40px',
-                      height: '40px',
-                      borderRadius: '6px',
-                      overflow: 'hidden',
-                      flexShrink: 0,
+                      width: '56px',
+                      height: '56px',
+                      borderRadius: '8px',
+                      backgroundColor: SURFACES.CHROME,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      color: COLORS.GRAY_600,
+                      fontSize: '16px',
+                      fontWeight: 'bold',
                     }}
                   >
-                    <img
-                      src={imageData.imageUrl}
-                      alt={sponsor.name}
-                      style={{ width: '100%', height: '100%', objectFit: 'contain' }}
-                    />
+                    {initials}
                   </div>
                 )}
-                <div style={{ display: 'flex', flexDirection: 'column', minWidth: 0 }}>
-                  <span style={{ fontWeight: 600 }}>{sponsor.name}</span>
-                  {(sponsor.externalUrl || sponsor.link) && (
-                    <span style={{ fontSize: '12px', color: 'var(--spectrum-global-color-gray-600)' }}>
-                      {sponsor.externalUrl || sponsor.link}
-                    </span>
-                  )}
+                <div>
+                  <div style={{ fontWeight: 600, fontSize: '13px', lineHeight: '18px' }}>{displayName}</div>
+                  {displayLink ? (
+                    <div
+                      style={{
+                        fontSize: '11px',
+                        color: COLORS.GRAY_600,
+                        lineHeight: '16px',
+                        marginTop: '2px',
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                        whiteSpace: 'nowrap',
+                        maxWidth: '140px',
+                      }}
+                    >
+                      {displayLink}
+                    </div>
+                  ) : null}
                 </div>
               </div>
             )
           })}
-        </Flex>
+        </div>
       )}
     </>
   )
 
-  const renderCreateView = () => (
+  const renderCreateContent = () => (
     <>
-      <Flex justifyContent="space-between" alignItems="center" marginBottom="size-200">
-        <Flex alignItems="center" gap="size-100">
-          <ActionButton onPress={handleBackToSelect} isQuiet aria-label="Back to search">
-            <ArrowLeft />
-          </ActionButton>
-          <Text UNSAFE_style={TYPOGRAPHY.COMPONENT_HEADING}>New Partner</Text>
-        </Flex>
-      </Flex>
+      <div className={style({display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16})}>
+        <Button variant="secondary" size="S" onPress={handleBackToSelect} aria-label="Back to search">
+          <Text>Back</Text>
+        </Button>
+      </div>
+      <form>
+        <div className={style({display: 'flex', flexDirection: 'column', gap: 24})}>
+          <div className={style({display: 'flex', gap: 32, alignItems: 'start'})}>
+            <div style={{ textAlign: 'center' }}>
+              <ImageUploader
+                label=""
+                imageUrl={createForm.imageUrl || ''}
+                imageId={createForm.imageId || ''}
+                imageKind="sponsor-image"
+                altText={createForm.name || 'Partner logo'}
+                maxSizeMB={25}
+                width={280}
+                dropzoneTitle="Add partner image"
+                dropzoneDimensions="584px x 306px, max 25MB"
+                deferUpload={true}
+                pendingFile={pendingFile || undefined}
+                onFileSelected={(file) => setPendingFile(file)}
+                onChange={(imageUrl, imageId) => {
+                  updateCreateField('imageUrl', imageUrl)
+                  updateCreateField('imageId', imageId)
+                }}
+                onRemove={() => {
+                  setPendingFile(null)
+                  updateCreateField('imageUrl', undefined)
+                  updateCreateField('imageId', undefined)
+                }}
+              />
+            </div>
 
-      <Flex direction="column" gap={FLEX_GAP.FIELD}>
-        <Flex gap={FLEX_GAP.LARGE} alignItems="start">
-          <View UNSAFE_style={{ textAlign: 'center' }}>
-            <ImageUploader
-              label=""
-              imageUrl={createForm.imageUrl || ''}
-              imageId={createForm.imageId || ''}
-              imageKind="sponsor-logo"
-              altText={createForm.name || 'Partner logo'}
-              maxSizeMB={25}
-              width={200}
-              dropzoneTitle="Add partner image"
-              dropzoneDimensions="584px x 306px, max 25MB"
-              deferUpload={true}
-              pendingFile={pendingFile || undefined}
-              onFileSelected={(file) => setPendingFile(file)}
-              onChange={(imageUrl, imageId) => {
-                updateCreateField('imageUrl', imageUrl)
-                updateCreateField('imageId', imageId)
-              }}
-              onRemove={() => {
-                setPendingFile(null)
-                updateCreateField('imageUrl', undefined)
-                updateCreateField('imageId', undefined)
-              }}
-            />
-          </View>
-
-          <Flex direction="column" gap={FLEX_GAP.FIELD} flex={1}>
-            <TextField
-              label="Partner Name"
-              value={createForm.name}
-              onChange={(v) => updateCreateField('name', v)}
-              isRequired
-              width="100%"
-            />
-            <TextField
-              label="Partner Website"
-              value={createForm.website}
-              onChange={(v) => updateCreateField('website', v)}
-              placeholder="www.example.com"
-              isRequired
-              width="100%"
-            />
-          </Flex>
-        </Flex>
-
-        <Flex justifyContent="end" marginTop="size-200">
-          <Button
-            variant="accent"
-            onPress={handleCreatePartner}
-            isDisabled={!isCreateFormValid || isCreating}
-          >
-            {isCreating ? (
-              <>
-                <ProgressCircle size="S" isIndeterminate aria-label="Creating" />
-                <Text>Creating...</Text>
-              </>
-            ) : (
-              <Text>Add Partner</Text>
-            )}
-          </Button>
-        </Flex>
-      </Flex>
+            <div className={style({display: 'flex', flexDirection: 'column', gap: 16, flexGrow: 1})}>
+              <TextField
+                label="Partner Name"
+                value={createForm.name}
+                onChange={(v) => updateCreateField('name', v)}
+                isRequired
+                styles={style({ width: '[100%]' })}
+              />
+              <TextField
+                label="Partner Website"
+                value={createForm.website}
+                onChange={(v) => updateCreateField('website', v)}
+                placeholder="www.example.com"
+                isRequired
+                styles={style({ width: '[100%]' })}
+              />
+            </div>
+          </div>
+        </div>
+      </form>
+      <div className={style({display: 'flex', justifyContent: 'end', alignItems: 'center', marginTop: 16})}>
+        <Button
+          variant="accent"
+          onPress={handleCreatePartner}
+          isDisabled={!isCreateFormValid || isCreating}
+        >
+          {isCreating ? (
+            <>
+              <ProgressCircle size="S" isIndeterminate aria-label="Creating" />
+              <Text>Creating...</Text>
+            </>
+          ) : (
+            <Text>Add Partner</Text>
+          )}
+        </Button>
+      </div>
     </>
   )
 
   return (
     <DialogContainer onDismiss={onClose}>
       {isOpen && (
-        <Dialog size="L" isDismissable UNSAFE_style={{ maxHeight: '80vh' }}>
-          <Content UNSAFE_style={{ overflow: 'auto' }}>
-            {view === 'select' ? renderSelectView() : renderCreateView()}
-          </Content>
+        <Dialog data-testid="partner-picker-dialog" size="L" isDismissible>
+          {() => (
+            <>
+              <Heading slot="title">
+                {view === 'select' ? 'Select Partner' : 'New Partner'}
+              </Heading>
+              <Content>
+                <div style={{ overflow: 'auto', maxHeight: '60vh' }}>
+                  {view === 'select' ? renderSelectContent() : renderCreateContent()}
+                </div>
+              </Content>
+            </>
+          )}
         </Dialog>
       )}
     </DialogContainer>

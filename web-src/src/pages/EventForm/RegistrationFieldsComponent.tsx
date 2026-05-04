@@ -3,18 +3,12 @@
 */
 
 import React, { useState, useEffect } from 'react'
-import {
-  View,
-  Flex,
-  Switch,
-  TextField,
-  RadioGroup,
-  Radio,
-  Text
-} from '@adobe/react-spectrum'
+import { TextField, RadioGroup, Radio, Text, Switch } from '@react-spectrum/s2'
+import { style } from "@react-spectrum/s2/style" with { type: "macro" }
 import { HeadingWithTooltip } from '../../components/shared'
-import LinkOut from '@spectrum-icons/workflow/LinkOut'
-import DragHandle from '@spectrum-icons/workflow/DragHandle'
+import { COLORS, SURFACES } from '../../styles/designSystem'
+import OpenIn from '@react-spectrum/s2/icons/OpenIn'
+import Move from '@react-spectrum/s2/icons/Move'
 
 /**
  * Configuration field structure from the JSON configs
@@ -310,18 +304,18 @@ export const RegistrationFieldsComponent: React.FC<RegistrationFieldsComponentPr
     const cloudName = cloudType === 'CreativeCloud' ? 'Creative Cloud' : 'Experience Cloud'
     
     return (
-      <Flex direction="column" gap="size-200">
+      <div className={style({display: 'flex', flexDirection: 'column', gap: 16})}>
         {mandatedFieldNames.length > 0 && (
-          <Text UNSAFE_style={{ color: 'var(--spectrum-global-color-gray-700)' }}>
+          <Text UNSAFE_style={{ color: COLORS.GRAY_800 }}>
             Note: <strong>{cloudName}</strong> required fields include <strong>{mandatedFieldsDisplay}</strong>
           </Text>
         )}
         
-        <View
-          UNSAFE_style={{
-            backgroundColor: 'var(--spectrum-global-color-gray-100)',
+        <div
+          style={{
+            backgroundColor: SURFACES.SUBTLE,
             borderRadius: '8px',
-            padding: 'var(--spectrum-global-dimension-size-600)'
+            padding: '48px'
           }}
         >
           {/* Header row - 4 columns now with drag handle */}
@@ -332,21 +326,21 @@ export const RegistrationFieldsComponent: React.FC<RegistrationFieldsComponentPr
             alignItems: 'center',
             marginBottom: '12px'
           }}>
-            <Text UNSAFE_style={{ fontWeight: 600, fontSize: '12px', color: 'var(--spectrum-global-color-gray-600)' }}>
+            <Text UNSAFE_style={{ fontWeight: 600, fontSize: '12px', color: COLORS.GRAY_600 }}>
               FIELD CATEGORIES
             </Text>
-            <Text UNSAFE_style={{ fontWeight: 600, fontSize: '12px', color: 'var(--spectrum-global-color-gray-600)' }}>
+            <Text UNSAFE_style={{ fontWeight: 600, fontSize: '12px', color: COLORS.GRAY_600 }}>
               INCLUDE ON FORM
             </Text>
-            <Text UNSAFE_style={{ fontWeight: 600, fontSize: '12px', color: 'var(--spectrum-global-color-gray-600)' }}>
+            <Text UNSAFE_style={{ fontWeight: 600, fontSize: '12px', color: COLORS.GRAY_600 }}>
               MAKE IT REQUIRED
             </Text>
             {/* Drag handle header - empty placeholder */}
-            <span style={{ fontWeight: 600, fontSize: '12px', color: 'var(--spectrum-global-color-gray-600)' }} />
+            <span style={{ fontWeight: 600, fontSize: '12px', color: COLORS.GRAY_600 }} />
           </div>
 
           {/* Field rows */}
-          <Flex direction="column" gap="size-100">
+          <div className={style({display: 'flex', flexDirection: 'column', gap: 8})} >
             {sortedDisplayFields.map((displayField, displayIndex) => {
               const { fieldName, isMandated } = displayField
               const isVisible = visibleFields.includes(fieldName)
@@ -372,14 +366,14 @@ export const RegistrationFieldsComponent: React.FC<RegistrationFieldsComponentPr
                     padding: '12px 16px',
                     borderRadius: '6px',
                     backgroundColor: isDragging 
-                      ? 'var(--spectrum-global-color-gray-200)' 
+                      ? SURFACES.PILL_BG 
                       : isVisible
-                        ? 'var(--spectrum-global-color-gray-50)'
+                        ? SURFACES.CANVAS
                         : 'transparent',
                     border: isDragOver 
-                      ? '2px solid var(--spectrum-global-color-blue-500)' 
+                      ? `2px solid ${SURFACES.SELECTED_RING}` 
                       : isVisible
-                        ? '1px solid var(--spectrum-global-color-gray-300)'
+                        ? `1px solid ${SURFACES.BORDER}`
                         : '1px solid transparent',
                     opacity: isDragging ? 0.5 : 1,
                     transition: 'border-color 0.2s, background-color 0.2s',
@@ -391,7 +385,7 @@ export const RegistrationFieldsComponent: React.FC<RegistrationFieldsComponentPr
                     {isMandated && (
                       <Text UNSAFE_style={{ 
                         fontSize: '11px', 
-                        color: 'var(--spectrum-global-color-gray-500)',
+                        color: COLORS.GRAY_500,
                         marginLeft: '8px',
                         fontWeight: 400
                       }}>
@@ -400,6 +394,7 @@ export const RegistrationFieldsComponent: React.FC<RegistrationFieldsComponentPr
                     )}
                   </Text>
                   <Switch
+                    data-testid={`rsvp-field-${fieldName}-visible`}
                     isSelected={isVisible}
                     onChange={(checked) => handleVisibleToggle(fieldName, checked)}
                     isDisabled={isMandated}
@@ -407,6 +402,7 @@ export const RegistrationFieldsComponent: React.FC<RegistrationFieldsComponentPr
                     Appears on form
                   </Switch>
                   <Switch
+                    data-testid={`rsvp-field-${fieldName}-required`}
                     isSelected={isRequired}
                     onChange={(checked) => handleRequiredToggle(fieldName, checked)}
                     isDisabled={!isVisible || isMandated}
@@ -414,45 +410,43 @@ export const RegistrationFieldsComponent: React.FC<RegistrationFieldsComponentPr
                     Required field
                   </Switch>
                   {/* Drag handle - only visible for selected fields */}
-                  <View
-                    UNSAFE_style={{
+                  <div
+                    style={{
                       display: 'flex',
                       justifyContent: 'center',
                       alignItems: 'center',
                       cursor: canDrag ? 'grab' : 'default',
-                      color: canDrag 
-                        ? 'var(--spectrum-global-color-gray-600)' 
-                        : 'var(--spectrum-global-color-gray-300)',
+                      color: canDrag ? COLORS.GRAY_600 : SURFACES.BORDER,
                       opacity: canDrag ? 1 : 0.3
                     }}
                   >
-                    <DragHandle size="S" />
-                  </View>
+                    <Move />
+                  </div>
                 </div>
               )
             })}
-          </Flex>
-        </View>
-      </Flex>
+          </div>
+        </div>
+      </div>
     )
   }
 
   const renderMarketoForm = () => (
-    <Flex direction="column" gap="size-200">
-      <Flex direction="row" gap="size-100" alignItems="center">
+    <div className={style({display: 'flex', flexDirection: 'column', gap: 16})}>
+      <div className={style({display: 'flex', gap: 8, alignItems: 'center'})}>
         <HeadingWithTooltip
           level={4}
           tooltip="Please enter the Marketo form URL generated by the Milo Marketo Configurator."
         >
           Marketo form URL
         </HeadingWithTooltip>
-      </Flex>
+      </div>
 
       <Text>
         Configure the Marketo RSVP Form here:{' '}
         <a href="https://milo.adobe.com/tools/marketo" target="_blank" rel="noopener noreferrer">
           https://milo.adobe.com/tools/marketo
-          <LinkOut size="S" UNSAFE_style={{ marginLeft: '4px', verticalAlign: 'middle' }} />
+          <OpenIn UNSAFE_style={{ marginLeft: '4px', verticalAlign: 'middle' }} />
         </a>
       </Text>
 
@@ -460,24 +454,24 @@ export const RegistrationFieldsComponent: React.FC<RegistrationFieldsComponentPr
         value={marketoFormUrl}
         onChange={onMarketoFormUrlChange}
         placeholder="Enter Marketo form URL"
-        width="100%"
+        styles={style({ width: '[100%]' })}
       />
-    </Flex>
+    </div>
   )
 
   if (loading) {
     return (
-      <View padding="size-400">
+      <div style={{ padding: '32px' }}>
         <Text>Loading registration field configurations...</Text>
-      </View>
+      </div>
     )
   }
 
   if (error) {
     return (
-      <View padding="size-400">
-        <Text UNSAFE_style={{ color: 'var(--spectrum-global-color-red-600)' }}>{error}</Text>
-      </View>
+      <div style={{ padding: '32px' }}>
+        <Text UNSAFE_style={{ color: COLORS.STATUS_CANCELLED }}>{error}</Text>
+      </div>
     )
   }
 
@@ -485,7 +479,7 @@ export const RegistrationFieldsComponent: React.FC<RegistrationFieldsComponentPr
   const isWebinar = cloudType === 'ExperienceCloud' && eventType === 'Virtual'
 
   return (
-    <Flex direction="column" gap="size-300">
+    <div className={style({display: 'flex', flexDirection: 'column', gap: 24})}>
       <HeadingWithTooltip
         level={3}
         tooltip="Configure which fields appear on the registration form and which are required."
@@ -494,7 +488,7 @@ export const RegistrationFieldsComponent: React.FC<RegistrationFieldsComponentPr
       </HeadingWithTooltip>
 
       {isWebinar && (
-        <Flex direction="column" gap="size-200">
+        <div className={style({display: 'flex', flexDirection: 'column', gap: 16})}>
           <Text UNSAFE_style={{ fontWeight: 600 }}>Select format and additional fields</Text>
           <RadioGroup
             label=""
@@ -506,11 +500,11 @@ export const RegistrationFieldsComponent: React.FC<RegistrationFieldsComponentPr
             <Radio value="ESP">Basic form</Radio>
             <Radio value="Marketo">Marketo</Radio>
           </RadioGroup>
-        </Flex>
+        </div>
       )}
 
       {registrationType === 'ESP' ? renderBasicFormTable() : renderMarketoForm()}
-    </Flex>
+    </div>
   )
 }
 

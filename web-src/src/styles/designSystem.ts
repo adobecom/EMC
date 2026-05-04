@@ -112,49 +112,8 @@ export const LAYOUT_DIMENSIONS = {
 } as const
 
 // ============================================================
-// Calculated Heights
-// ============================================================
-
-/**
- * Safe area height for form layouts
- * Accounts for global nav (56px) + form action bar (60px) + padding (5px)
- */
-export const SAFE_AREA_HEIGHT = LAYOUT_DIMENSIONS.GNAV_HEIGHT + LAYOUT_DIMENSIONS.ACTION_BAR_HEIGHT + 5 // 121px
-
-/**
- * Content area height for pages with both gnav and action bar
- */
-export const FORM_CONTENT_HEIGHT = `calc(100vh - ${SAFE_AREA_HEIGHT}px)`
-
-/**
- * Full viewport height minus just the gnav
- */
-export const CONTENT_HEIGHT_NO_ACTION_BAR = `calc(100vh - ${LAYOUT_DIMENSIONS.GNAV_HEIGHT}px)`
-
-// ============================================================
 // Common Style Objects
 // ============================================================
-
-/**
- * Sticky positioning for side navigation
- */
-export const SIDE_NAV_STICKY_STYLES = {
-  alignSelf: 'flex-start' as const,
-  display: 'flex' as const,
-  flexDirection: 'column' as const,
-  overflow: 'auto' as const,
-  minHeight: FORM_CONTENT_HEIGHT,
-  maxHeight: FORM_CONTENT_HEIGHT,
-}
-
-/**
- * Scrollable content area with safe height
- */
-export const SCROLLABLE_CONTENT_STYLES = {
-  minHeight: FORM_CONTENT_HEIGHT,
-  maxHeight: FORM_CONTENT_HEIGHT,
-  overflow: 'auto' as const,
-}
 
 /**
  * Sticky global navigation
@@ -163,19 +122,6 @@ export const STICKY_GNAV_STYLES = {
   position: 'sticky' as const,
   top: 0,
   zIndex: 1000,
-}
-
-/**
- * Fixed action bar at bottom
- */
-export const FIXED_ACTION_BAR_STYLES = {
-  position: 'fixed' as const,
-  bottom: 0,
-  left: 0,
-  right: 0,
-  height: `${LAYOUT_DIMENSIONS.ACTION_BAR_HEIGHT}px`,
-  zIndex: 100,
-  boxShadow: '0 -2px 8px rgba(0, 0, 0, 0.15)',
 }
 
 // ============================================================
@@ -204,13 +150,12 @@ export const Z_INDEX = {
  * Adobe brand colors and semantic colors
  */
 export const COLORS = {
-  ADOBE_RED: '#EB1000',
-  
   // Grays
   GRAY_100: 'var(--spectrum-global-color-gray-100)',
   GRAY_200: 'var(--spectrum-global-color-gray-200)',
   GRAY_300: 'var(--spectrum-global-color-gray-300)',
   GRAY_400: 'var(--spectrum-global-color-gray-400)',
+  GRAY_500: 'var(--spectrum-global-color-gray-500)',
   GRAY_600: 'var(--spectrum-global-color-gray-600)',
   GRAY_700: 'var(--spectrum-global-color-gray-700)',
   GRAY_800: 'var(--spectrum-global-color-gray-800)',
@@ -221,9 +166,10 @@ export const COLORS = {
   // Red
   RED_600: 'var(--spectrum-global-color-red-600)',
   
-  // Semantic
+  // Semantic (theme-aware where noted)
   BLACK: '#000000',
-  DARK_GRAY: '#2C2C2C',
+  /** Primary heading / high-contrast text — follows Spectrum gray scale in light and dark */
+  DARK_GRAY: 'var(--spectrum-global-color-gray-900)',
   WHITE: 'white',
   TRANSPARENT: 'transparent',
   
@@ -239,9 +185,57 @@ export const COLORS = {
   STATUS_CANCELLED: '#D7373F',
 } as const
 
+/**
+ * Surfaces and borders for inline `UNSAFE_style` — backed by CSS variables (theme-aware).
+ */
+export const SURFACES = {
+  CANVAS: 'var(--s2-container-bg)',
+  /** Event/Series wizard chrome (scroll + side nav) — darker than app base in dark mode for layering */
+  EVENT_FORM_SHELL: 'var(--emc-event-form-shell-bg)',
+  /** FormCard — `--emc-form-card-bg` (light: white; dark: S2 gray-75 dark via `--emc-spectrum-s2-gray-75-dark`) */
+  FORM_CARD: 'var(--emc-form-card-bg)',
+  /** Format selection (cloud/series) modal panel — contrasts with Picker field surfaces */
+  FORMAT_DIALOG_PANEL: 'var(--emc-format-dialog-panel-bg)',
+  SUBTLE: 'var(--spectrum-global-color-gray-100)',
+  SUBTLE_WARM: 'var(--spectrum-global-color-gray-75)',
+  /** Matches S2 TextField fill (`--emc-field-bg`, #111 dark / #fff light) */
+  INPUT: 'var(--emc-field-bg)',
+  BORDER: 'var(--spectrum-global-color-gray-300)',
+  BORDER_STRONG: 'var(--spectrum-global-color-gray-400)',
+  CHROME: 'var(--spectrum-global-color-gray-400)',
+  SELECTED_FILL: 'var(--spectrum-global-color-blue-100)',
+  SELECTED_RING: 'var(--spectrum-global-color-blue-500)',
+  PILL_BG: 'var(--spectrum-global-color-gray-200)',
+} as const
+
+/**
+ * Home page background — light/dark from `index.css` (`--emc-home-gradient`)
+ */
+export const GRADIENT_BACKGROUND = 'var(--emc-home-gradient)'
+
+/**
+ * Form wizard footer: flex child at bottom of column layout (not fixed).
+ * Pair with a parent flex column + scrollable main so heights need no calc(100vh).
+ */
+export const FORM_WIZARD_FOOTER_STYLES = {
+  position: 'fixed' as const,
+  bottom: 0,
+  display: 'flex' as const,
+  alignItems: 'center' as const,
+  flexShrink: 0,
+  width: '100%' as const,
+  minHeight: `${LAYOUT_DIMENSIONS.ACTION_BAR_HEIGHT}px`,
+  backgroundColor: COLORS.BLACK,
+  boxShadow: '0 -2px 8px rgba(0, 0, 0, 0.15)',
+  zIndex: Z_INDEX.ACTION_BAR,
+}
+
 // ============================================================
 // Typography
 // ============================================================
+
+/** App sans stack — must match `:root { --emc-font-sans }` in `web-src/src/index.css` */
+export const FONT_FAMILY_SANS = 'var(--emc-font-sans)' as const
 
 /**
  * Typography styles for consistent text styling across the app
@@ -255,7 +249,8 @@ export const TYPOGRAPHY = {
    * Used in FormWizard for step titles like "Add Content", "Additional Info"
    */
   STEP_HEADING: {
-    color: COLORS.ADOBE_RED,
+    color: COLORS.GRAY_800,
+    fontFamily: FONT_FAMILY_SANS,
     fontSize: '24px',
     lineHeight: '30px',
     fontWeight: 900,
@@ -267,7 +262,8 @@ export const TYPOGRAPHY = {
    * Used for headings like "Event Information", "Venue Information", etc.
    */
   COMPONENT_HEADING: {
-    color: COLORS.BLACK,
+    color: COLORS.DARK_GRAY,
+    fontFamily: FONT_FAMILY_SANS,
     fontSize: '28px',
     lineHeight: '35px',
     fontWeight: 700,
@@ -279,6 +275,7 @@ export const TYPOGRAPHY = {
    */
   SUBSECTION_HEADING: {
     color: COLORS.GRAY_800,
+    fontFamily: FONT_FAMILY_SANS,
     fontSize: '18px',
     lineHeight: '24px',
     fontWeight: 700,
@@ -290,6 +287,7 @@ export const TYPOGRAPHY = {
    */
   FIELD_LABEL: {
     color: COLORS.GRAY_800,
+    fontFamily: FONT_FAMILY_SANS,
     fontSize: '14px',
     lineHeight: '20px',
     fontWeight: 600,
@@ -301,6 +299,7 @@ export const TYPOGRAPHY = {
    */
   HELPER_TEXT: {
     color: COLORS.GRAY_600,
+    fontFamily: FONT_FAMILY_SANS,
     fontSize: '12px',
     lineHeight: '16px',
     fontWeight: 400,
@@ -312,6 +311,7 @@ export const TYPOGRAPHY = {
    */
   SECTION_DESCRIPTION: {
     color: COLORS.GRAY_700,
+    fontFamily: FONT_FAMILY_SANS,
     fontSize: '14px',
     lineHeight: '20px',
     fontWeight: 400,
@@ -349,7 +349,7 @@ export const BORDERS = {
  * <div style={{ ...createShimmerStyle(120, 16) }} />
  */
 export const SHIMMER_BASE = {
-  background: 'linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%)',
+  background: 'var(--emc-shimmer-gradient)',
   backgroundSize: '200% 100%',
   animation: 'shimmer 1.5s infinite',
   borderRadius: '4px',
@@ -419,9 +419,9 @@ export const ACTION_BAR_BUTTON_STYLES = {
     transition: 'all 0.2s ease',
   },
   
-  // Next/Publish button (dark filled)
+  // Next/Publish button (dark filled) — fixed contrast on black footer bar (not theme gray-900)
   PRIMARY: {
-    backgroundColor: COLORS.DARK_GRAY,
+    backgroundColor: '#2c2c2c',
     color: COLORS.WHITE,
     fontWeight: 600,
     transition: 'all 0.2s ease',

@@ -4,7 +4,7 @@
 
 import React from 'react'
 import { Flex, View, Text, Heading } from '@adobe/react-spectrum'
-import Checkmark from '@spectrum-icons/workflow/Checkmark'
+import Checkmark from '@react-spectrum/s2/icons/Checkmark'
 import type { Attendee } from '../../types/attendee'
 import { getAttendeeName } from '../../types/attendee'
 import { FormCard } from '../../components/shared'
@@ -26,7 +26,7 @@ export const CheckinSuccessCard: React.FC<CheckinSuccessCardProps> = ({
   return (
     <FormCard>
       <Flex direction="column" gap="size-300" alignItems="center">
-        <Checkmark size="XXL" UNSAFE_style={{ color: COLORS.STATUS_PUBLISHED }} />
+        <Checkmark aria-hidden UNSAFE_style={{ color: COLORS.STATUS_PUBLISHED, width: 48, height: 48 }} />
 
         <Heading level={3} UNSAFE_style={{ margin: 0, color: COLORS.GRAY_800 }}>
           Check-in Confirmed

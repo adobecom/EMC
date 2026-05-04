@@ -3,31 +3,21 @@
 */
 
 import React, { useState, useEffect } from 'react'
-import {
-  View,
-  TextField,
-  DatePicker,
-  TimeField,
-  Flex,
-  Button,
-  Switch,
-  ActionButton,
-  Heading,
-  Text
-} from '@adobe/react-spectrum'
+import { Button, Text, TextField, DatePicker, TimeField, ActionButton, Heading, Switch } from '@react-spectrum/s2'
+import { style } from '@react-spectrum/s2/style' with { type: 'macro' }
 import { Time } from '@internationalized/date'
 import { parseDateTime, CalendarDateTime } from '@internationalized/date'
-import Add from '@spectrum-icons/workflow/Add'
-import Delete from '@spectrum-icons/workflow/Delete'
-import Edit from '@spectrum-icons/workflow/Edit'
-import Remove from '@spectrum-icons/workflow/Remove'
-import DragHandle from '@spectrum-icons/workflow/DragHandle'
-import ChevronDown from '@spectrum-icons/workflow/ChevronDown'
+import Add from "@react-spectrum/s2/icons/Add"
+import Edit from '@react-spectrum/s2/icons/Edit'
+import RemoveCircle from '@react-spectrum/s2/icons/RemoveCircle'
+import Move from '@react-spectrum/s2/icons/Move'
+import ChevronDown from '@react-spectrum/s2/icons/ChevronDown'
 // @ts-ignore - uuid types not installed
 import { v4 as uuidv4 } from 'uuid'
 import { HeadingWithTooltip, RichTextEditor } from '../../components/shared'
 import { AgendaItem } from '../../types/domain'
 import { useEventFormComponent } from '../../hooks/useEventFormComponent'
+import { COLORS, SURFACES } from '../../styles/designSystem'
 
 /**
  * Safely parse ISO 8601 datetime string for DatePicker
@@ -435,9 +425,9 @@ export const AgendaComponent: React.FC = () => {
   // ============================================================================
 
   return (
-    <Flex direction="column" gap="size-200">
+    <div data-testid="agenda-section" className={style({display: 'flex', flexDirection: 'column', gap: 16})}>
       {/* Header with toggles */}
-      <Flex direction="row" justifyContent="space-between" alignItems="start">
+      <div className={style({display: 'flex', justifyContent: 'space-between', alignItems: 'start'})}>
         <HeadingWithTooltip 
           level={3}
           tooltip="What is happening at your event and when? You can also specify whether the agenda should be shown post-event."
@@ -445,17 +435,18 @@ export const AgendaComponent: React.FC = () => {
           Agenda
         </HeadingWithTooltip>
         
-        <Flex direction="column" gap="size-100" alignItems="end">
-          <View UNSAFE_style={{ display: 'inline-block' }}>
+        <div className={style({display: 'flex', flexDirection: 'column', gap: 8, alignItems: 'end'})}>
+          <div style={{ display: 'inline-block' }}>
             <Switch
+              data-testid="agenda-order-by-time"
               isSelected={orderByTime}
               onChange={setOrderByTime}
             >
               Order by time
             </Switch>
-          </View>
-          
-          <View UNSAFE_style={{ display: 'inline-block' }}>
+          </div>
+
+          <div style={{ display: 'inline-block' }}>
             <Switch
               isSelected={allowDatesOutsideEvent}
               onChange={setAllowDatesOutsideEvent}
@@ -463,29 +454,25 @@ export const AgendaComponent: React.FC = () => {
             >
               Allow dates outside event window
             </Switch>
-          </View>
-        </Flex>
-      </Flex>
+          </div>
+        </div>
+      </div>
 
       {/* Agenda Items - Empty State */}
       {agendaItems.length === 0 && (
-        <View 
-          padding="size-400" 
-          backgroundColor="gray-100" 
-          borderRadius="medium"
-          UNSAFE_style={{ textAlign: 'center' }}
-        >
-          <Flex direction="column" alignItems="center" gap="size-200">
+        <div style={{ padding: '32px', backgroundColor: 'var(--spectrum-global-color-gray-100)', borderRadius: '4px', textAlign: 'center' }}>
+          <div className={style({display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 16})}>
             <Text>Create a new time slot to add to your agenda</Text>
-            <Button 
-              variant="secondary" 
+            <Button
+              data-testid="agenda-add-slot"
+              variant="secondary"
               onPress={addAgendaItem}
             >
               <Add />
               <Text>Add slot</Text>
             </Button>
-          </Flex>
-        </View>
+          </div>
+        </div>
       )}
 
       {agendaItems.map((item, index) => {
@@ -509,18 +496,18 @@ export const AgendaComponent: React.FC = () => {
               style={{
                 padding: '16px 20px',
                 border: isDragOver 
-                  ? '2px solid var(--spectrum-global-color-blue-500)' 
-                  : '1px solid var(--spectrum-global-color-gray-300)',
+                  ? `2px solid ${SURFACES.SELECTED_RING}` 
+                  : `1px solid ${SURFACES.BORDER}`,
                 borderRadius: '8px',
                 backgroundColor: isDragging 
-                  ? 'var(--spectrum-global-color-gray-100)' 
-                  : 'white',
+                  ? SURFACES.SUBTLE 
+                  : SURFACES.CANVAS,
                 opacity: isDragging ? 0.5 : 1,
                 cursor: 'default',
                 transition: 'border-color 0.2s, background-color 0.2s'
               }}
             >
-              <Flex gap="size-200">
+              <div className={style({display: 'flex', gap: 16})}>
                 {/* Content area */}
                 <div 
                   style={{ 
@@ -536,7 +523,7 @@ export const AgendaComponent: React.FC = () => {
                   {timeRange && (
                     <Text UNSAFE_style={{ 
                       fontSize: '13px', 
-                      color: 'var(--spectrum-global-color-gray-700)'
+                      color: COLORS.GRAY_800
                     }}>
                       {timeRange}
                     </Text>
@@ -545,7 +532,7 @@ export const AgendaComponent: React.FC = () => {
                   <Text UNSAFE_style={{ 
                     fontWeight: 'bold', 
                     fontSize: '16px',
-                    color: 'var(--spectrum-global-color-gray-900)'
+                    color: COLORS.DARK_GRAY
                   }}>
                     {item.title || 'Untitled'}
                   </Text>
@@ -553,7 +540,7 @@ export const AgendaComponent: React.FC = () => {
                   {truncatedDesc && (
                     <Text UNSAFE_style={{ 
                       fontSize: '14px', 
-                      color: 'var(--spectrum-global-color-gray-700)'
+                      color: COLORS.GRAY_800
                     }}>
                       {truncatedDesc}
                     </Text>
@@ -561,27 +548,27 @@ export const AgendaComponent: React.FC = () => {
                 </div>
 
                 {/* Action buttons */}
-                <Flex gap="size-100" alignItems="center" UNSAFE_style={{ flexShrink: 0 }}>
-                  <ActionButton 
-                    onPress={() => removeAgendaItem(index)} 
-                    isQuiet 
+                <div className={style({display: 'flex', gap: 8, alignItems: 'center'})} style={{ flexShrink: 0 }}>
+                  <ActionButton
+                    onPress={() => removeAgendaItem(index)}
+                    isQuiet
                     aria-label="Remove"
                   >
-                    <Remove />
+                    <RemoveCircle />
                   </ActionButton>
-                  <ActionButton 
-                    onPress={() => handleToggleEdit(index)} 
-                    isQuiet 
+                  <ActionButton
+                    onPress={() => handleToggleEdit(index)}
+                    isQuiet
                     aria-label="Edit"
                   >
                     <Edit />
                   </ActionButton>
                   {/* Drag Handle - only show when not auto-ordering */}
                   {!orderByTime && (
-                    <DragHandle />
+                    <Move />
                   )}
-                </Flex>
-              </Flex>
+                </div>
+              </div>
             </div>
           )
         }
@@ -596,15 +583,15 @@ export const AgendaComponent: React.FC = () => {
             style={{
               padding: '20px',
               border: isDragOver 
-                ? '2px solid var(--spectrum-global-color-blue-500)' 
-                : '1px solid var(--spectrum-global-color-gray-400)',
+                ? `2px solid ${SURFACES.SELECTED_RING}` 
+                : `1px solid ${COLORS.GRAY_500}`,
               borderRadius: '8px',
               transition: 'border-color 0.2s'
             }}
           >
             {/* Header with collapse toggle and delete */}
-            <Flex justifyContent="space-between" alignItems="center" marginBottom="size-200">
-              <Flex alignItems="center" gap="size-100">
+            <div className={style({display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16})}>
+              <div className={style({display: 'flex', alignItems: 'center', gap: 8})}>
                 {isItemComplete(item) && (
                   <ActionButton 
                     onPress={() => handleToggleCollapse(index)} 
@@ -612,25 +599,25 @@ export const AgendaComponent: React.FC = () => {
                     aria-label="Collapse"
                     UNSAFE_style={{ padding: 0 }}
                   >
-                    <ChevronDown size="S" />
+                    <ChevronDown />
                   </ActionButton>
                 )}
                 <Heading level={4} UNSAFE_style={{ margin: 0 }}>
                   {item.title || `Agenda Item ${index + 1}`}
                 </Heading>
-              </Flex>
-              <ActionButton 
+              </div>
+              <ActionButton
                 isQuiet
                 onPress={() => removeAgendaItem(index)}
                 aria-label="Delete"
               >
-                <Delete />
+                <RemoveCircle />
               </ActionButton>
-            </Flex>
+            </div>
 
-            <Flex direction="column" gap="size-200">
+            <div className={style({display: 'flex', flexDirection: 'column', gap: 16})}>
               {/* Date/Time Row - shows TimeField only for same-day events when clamped */}
-              <Flex direction="row" gap="size-200" wrap>
+              <div className={style({display: 'flex', gap: 16, flexWrap: 'wrap'})}>
                 {showTimeOnly ? (
                   <>
                     <TimeField
@@ -675,7 +662,7 @@ export const AgendaComponent: React.FC = () => {
                     />
                   </>
                 )}
-              </Flex>
+              </div>
 
               {/* Title */}
               <TextField
@@ -683,47 +670,48 @@ export const AgendaComponent: React.FC = () => {
                 isRequired
                 value={item.title}
                 onChange={(value) => updateAgendaItem(index, { title: value })}
-                width="100%"
+                styles={style({ width: '[100%]' })}
               />
 
               {/* Description */}
-              <View width="100%">
+              <div style={{ width: '100%' }}>
                 <RichTextEditor
                   label="Agenda Description"
                   value={item.description || ''}
                   onChange={(value) => updateAgendaItem(index, { description: value })}
                   height="200px"
                 />
-              </View>
+              </div>
 
               {/* Done button - collapse when complete */}
               {isItemComplete(item) && (
-                <Flex justifyContent="end">
-                  <Button 
-                    variant="secondary" 
+                <div className={style({display: 'flex', justifyContent: 'end'})}>
+                  <Button
+                    variant="secondary"
                     onPress={() => handleToggleCollapse(index)}
                   >
                     Done
                   </Button>
-                </Flex>
+                </div>
               )}
-            </Flex>
+            </div>
           </div>
         )
       })}
 
       {/* Add Button - only show when items exist */}
       {agendaItems.length > 0 && (
-        <Button 
-          variant="secondary" 
+        <Button
+          data-testid="agenda-add-slot"
+          variant="secondary"
           onPress={addAgendaItem}
-          width="100%"
+          styles={style({ width: '[100%]' })}
           UNSAFE_style={{
             backgroundColor: 'var(--spectrum-global-color-gray-200)',
             border: 'none',
             color: 'var(--spectrum-global-color-gray-800)',
-            justifyContent: 'flex-start',
-            paddingLeft: '16px',
+            justifyContent: 'start',
+            paddingLeft: 16,
           }}
         >
           <Add />
@@ -732,14 +720,15 @@ export const AgendaComponent: React.FC = () => {
       )}
 
       {/* Show Agenda Post-Event Toggle */}
-      <View UNSAFE_style={{ display: 'inline-block' }}>
+      <div style={{ display: 'inline-block' }}>
         <Switch
+          data-testid="agenda-post-event-switch"
           isSelected={showAgendaPostEvent}
           onChange={handleShowAgendaPostEventChange}
         >
           Show agenda post-event
         </Switch>
-      </View>
-    </Flex>
+      </div>
+    </div>
   )
 }

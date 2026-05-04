@@ -1,11 +1,13 @@
 ---
-description: Using React Spectrum (v3) components from `@adobe/react-spectrum`
+description: Fallback — React Spectrum v3 from `@adobe/react-spectrum` when S2 has no equivalent; legacy alignment
 globs: 
 alwaysApply: false
 ---
-# React Spectrum
+# React Spectrum (v3) — fallback and legacy
 
-When implementing UI components in React, use the React Spectrum library to ensure that your components are accessible and follow Adobe's Spectrum design system. Components should be imported from the `@adobe/react-spectrum` package. This library might also be referred to as "React Spectrum v3".
+**Project default is Spectrum 2** (`@react-spectrum/s2`). Use this v3 guidance only when you are matching existing v3-heavy files or when a required component or pattern is **not** available in S2.
+
+When implementing UI in v3, use the React Spectrum library for accessibility and Spectrum design system alignment. Import from `@adobe/react-spectrum`. This library is also called "React Spectrum v3".
 
 If you are able to browse the web, the entire documentation for React Spectrum is available at [react-spectrum.adobe.com/react-spectrum](mdc:https:/react-spectrum.adobe.com/react-spectrum/index.html).
 

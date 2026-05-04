@@ -8,7 +8,8 @@ Steps:
 2. Create `web-src/src/pages/$ARGUMENTS/$ARGUMENTS.tsx`:
 
 ```tsx
-import { Flex, Heading, ProgressCircle } from '@adobe/react-spectrum'
+import { Heading } from '@react-spectrum/s2'
+import { style } from '@react-spectrum/s2/style' with { type: 'macro' }
 import { useContext } from 'react'
 import { ApiContext } from '../../contexts/ApiContext'
 import { useLoadData } from '../../hooks/useLoadData'
@@ -20,10 +21,10 @@ const $ARGUMENTS = () => {
   // const { data, loading, error } = useLoadData(() => apiService.getSomething(), [])
 
   return (
-    <Flex direction="column" gap="size-300">
+    <div className={style({ display: 'flex', flexDirection: 'column', gap: 24 })}>
       <Heading level={1}>$ARGUMENTS</Heading>
       {/* page content */}
-    </Flex>
+    </div>
   )
 }
 

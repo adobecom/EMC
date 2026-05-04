@@ -1,6 +1,6 @@
 ---
 name: type-fixer
-description: Use this agent when there are TypeScript errors to resolve, especially in strict mode. Fixes type errors without using `any`, understands the EMC domain type hierarchy, and knows common error patterns from React Spectrum v3, React Context, and the form wizard system.
+description: Use this agent when there are TypeScript errors to resolve, especially in strict mode. Fixes type errors without using `any`, understands the EMC domain type hierarchy, and knows common error patterns from React Spectrum S2, React Context, and the form wizard system.
 tools: Read, Edit, Glob, Grep, Bash
 ---
 
@@ -22,11 +22,11 @@ Before defining a new interface inline, check these files. Extend or reuse exist
 
 ## Common error patterns in this codebase
 
-### React Spectrum v3 event handlers
+### React Spectrum event handlers (S2)
 ```ts
 // Error: onClick not assignable to onPress
-// Fix: use the correct Spectrum handler type
-import type { PressEvent } from '@adobe/react-spectrum'
+// Fix: use onPress; prefer inferred parameter types on handlers
+import type { PressEvent } from '@react-types/shared'
 onPress={(e: PressEvent) => handlePress(e)}
 ```
 

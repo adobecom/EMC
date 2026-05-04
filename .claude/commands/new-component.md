@@ -6,7 +6,8 @@ Steps:
 1. Create `web-src/src/components/shared/$ARGUMENTS/$ARGUMENTS.tsx` with this pattern:
 
 ```tsx
-import { /* Spectrum imports */ } from '@adobe/react-spectrum'
+import { /* Spectrum 2 imports */ } from '@react-spectrum/s2'
+import { style } from '@react-spectrum/s2/style' with { type: 'macro' }
 import type { FC } from 'react'
 
 interface ${ARGUMENTS}Props {
@@ -15,10 +16,9 @@ interface ${ARGUMENTS}Props {
 
 const $ARGUMENTS: FC<${ARGUMENTS}Props> = ({ /* destructure */ }) => {
   return (
-    // JSX using React Spectrum v3 components
-    // Use Flex/Grid for layout
-    // Use onPress not onClick
-    // Use design tokens from styles/designSystem.ts for spacing/colors
+    // JSX: React Spectrum 2 components and the style() macro
+    // Use onPress not onClick on Spectrum components
+    // Use styles/designSystem.ts where it complements S2 tokens
   )
 }
 
@@ -36,5 +36,5 @@ export type { ${ARGUMENTS}Props } from './$ARGUMENTS'
 Conventions:
 - No semicolons
 - No class components
-- Import icons from `@spectrum-icons/workflow`
+- Import icons from `@react-spectrum/s2/icons/...`
 - Use `UNSAFE_style` / `UNSAFE_className` sparingly, prefer design tokens

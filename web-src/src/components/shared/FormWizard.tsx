@@ -1,30 +1,24 @@
-/* 
+/*
 * <license header>
 */
 
 import React, { useState, useCallback } from 'react'
-import {
-  View,
-  Flex,
-  Button,
-  ProgressBar,
-  Heading,
-  Text
-} from '@adobe/react-spectrum'
+import { AlertDialog, Badge, Button, DialogTrigger, Heading, ProgressBar, StatusLight, Text } from '@react-spectrum/s2'
+import { style, iconStyle } from '@react-spectrum/s2/style' with { type: 'macro' }
 import { useNavigate } from 'react-router-dom'
-import ChevronLeft from '@spectrum-icons/workflow/ChevronLeft'
-import ChevronRight from '@spectrum-icons/workflow/ChevronRight'
-import WebPage from '@spectrum-icons/workflow/WebPage'
-import Document from '@spectrum-icons/workflow/Document'
-import Checkmark from '@spectrum-icons/workflow/Checkmark'
-import LockClosed from '@spectrum-icons/workflow/LockClosed'
-import { 
-  SIDE_NAV_STICKY_STYLES, 
-  SCROLLABLE_CONTENT_STYLES, 
-  FIXED_ACTION_BAR_STYLES,
+import ChevronLeft from '@react-spectrum/s2/icons/ChevronLeft'
+import ChevronRight from '@react-spectrum/s2/icons/ChevronRight'
+import RocketQuickActions from '@react-spectrum/s2/icons/RocketQuickActions'
+import WebPage from '@react-spectrum/s2/icons/WebPage'
+import FileText from '@react-spectrum/s2/icons/FileText'
+import {
+  LAYOUT_DIMENSIONS,
+  FORM_WIZARD_FOOTER_STYLES,
   COLORS,
+  SURFACES,
   TYPOGRAPHY
 } from '../../styles/designSystem'
+import { formatEventFormStatusLabel, getEventFormStatusLightVariant } from './eventFormStatusBadge'
 
 export interface WizardStep {
   id: string
@@ -42,12 +36,10 @@ export type EventStatus = 'draft' | 'published' | 'archived' | 'cancelled' | str
 
 interface FormWizardProps {
   steps: WizardStep[]
-  /** Called when the final publish/re-publish button is clicked */
+  /** Called when Publish / Re-publish is clicked */
   onComplete: () => Promise<void> | void
   /** Called when Save button is clicked - should save without advancing */
   onSave?: () => Promise<boolean> | boolean
-  /** Called when navigating to next step - should save before advancing */
-  onNextStep?: () => Promise<boolean> | boolean
   onCancel?: () => void
   /** Called when a preview is requested */
   onPreview?: (previewType: 'pre-event' | 'post-event') => void
@@ -67,13 +59,28 @@ interface FormWizardProps {
   eventStatus?: EventStatus
   /** Optional actions to render in the header (e.g., history button) */
   headerActions?: React.ReactNode
+  /** Content rendered when "Session Management" is selected in the side nav (outside the wizard steps) */
+  sessionContent?: React.ReactNode
+  /** True when an inline session form (add or edit) is currently open */
+  sessionHasOpenForm?: boolean
 }
+
+/** Side nav: Dashboard row hover */
+const SIDE_NAV_HOVER_BG = 'var(--spectrum-global-color-gray-200)'
+
+/** Step row: 2px left pipe (active / hover); label inset always reserves this gutter */
+const SIDE_NAV_PIPE_WIDTH = 2
+const SIDE_NAV_PIPE_GAP = 14
+const SIDE_NAV_PIPE_LEFT = 12
+const SIDE_NAV_STEP_LABEL_INSET =
+  SIDE_NAV_PIPE_LEFT + SIDE_NAV_PIPE_WIDTH + SIDE_NAV_PIPE_GAP
+const SIDE_NAV_PIPE_HOVER = 'var(--spectrum-global-color-gray-400)'
+const SIDE_NAV_PIPE_ACTIVE = 'var(--spectrum-global-color-gray-900)'
 
 export const FormWizard: React.FC<FormWizardProps> = ({
   steps,
   onComplete,
   onSave,
-  onNextStep,
   onCancel,
   onPreview,
   isSubmitting = false,
@@ -84,72 +91,82 @@ export const FormWizard: React.FC<FormWizardProps> = ({
   onMaxStepChange,
   eventTypeLabel,
   eventStatus,
-  headerActions
+  headerActions,
+  sessionContent,
+  sessionHasOpenForm = false,
 }) => {
   const [currentStepIndex, setCurrentStepIndex] = useState(0)
   const [isNavigating, setIsNavigating] = useState(false)
+  const [showSessionView, setShowSessionView] = useState(false)
+  const [pendingAction, setPendingAction] = useState<'save' | 'publish' | 'next' | null>(null)
+  const [sideNavStepHoverIndex, setSideNavStepHoverIndex] = useState<number | null>(null)
+  const [sessionHover, setSessionHover] = useState(false)
+  const [leaveSessionDialogOpen, setLeaveSessionDialogOpen] = useState(false)
+  const pendingLeaveAction = React.useRef<(() => void) | null>(null)
   const navigate = useNavigate()
 
   const currentStep = steps[currentStepIndex]
   const isFirstStep = currentStepIndex === 0
-  const isLastStep = currentStepIndex === steps.length - 1
   const progress = ((currentStepIndex + 1) / steps.length) * 100
-  
+
   // Determine if a step is accessible
   const isStepAccessible = useCallback((stepIndex: number): boolean => {
-    // Step 0 is always accessible
     if (stepIndex === 0) return true
-    
-    // Other steps require an eventId (saved at least once) and having reached that step
     return hasEventId && stepIndex <= maxStepReached
   }, [hasEventId, maxStepReached])
 
-  // Update max step reached when advancing
-  const updateMaxStep = useCallback((newStepIndex: number) => {
-    if (newStepIndex > maxStepReached) {
-      onMaxStepChange?.(newStepIndex)
+  const handlePublish = async () => {
+    if (isSubmitting || isNavigating || currentStep.isValid === false) return
+    setPendingAction('publish')
+    try {
+      await Promise.resolve(onComplete())
+    } finally {
+      setPendingAction(null)
     }
-  }, [maxStepReached, onMaxStepChange])
+  }
 
-  const handleNext = async () => {
-    if (isSubmitting || isNavigating) return
-    
-    if (!isLastStep) {
-      // For non-last steps: save and advance
+  const runSave = useCallback(
+    async (action: 'save' | 'next') => {
+      if (isSubmitting || isNavigating || !onSave) return
+
+      setPendingAction(action)
       setIsNavigating(true)
       try {
-        if (onNextStep) {
-          const success = await onNextStep()
-          if (success) {
-            const nextStep = currentStepIndex + 1
-            setCurrentStepIndex(nextStep)
-            updateMaxStep(nextStep)
+        const result = await onSave()
+        const ok = result !== false
+        if (ok && onMaxStepChange) {
+          const capped = steps.length - 1
+          const nextMax = Math.min(capped, Math.max(maxStepReached, currentStepIndex + 1))
+          if (nextMax > maxStepReached) {
+            onMaxStepChange(nextMax)
           }
-        } else {
-          // No save callback, just advance
-          const nextStep = currentStepIndex + 1
-          setCurrentStepIndex(nextStep)
-          updateMaxStep(nextStep)
+        }
+        if (ok && action === 'next') {
+          setCurrentStepIndex((i) => (i < steps.length - 1 ? i + 1 : i))
         }
       } finally {
         setIsNavigating(false)
+        setPendingAction(null)
       }
-    } else {
-      // Last step: publish/re-publish
-      onComplete()
-    }
-  }
+    },
+    [
+      isSubmitting,
+      isNavigating,
+      onSave,
+      onMaxStepChange,
+      maxStepReached,
+      currentStepIndex,
+      steps.length
+    ]
+  )
 
-  const handleSave = async () => {
-    if (isSubmitting || isNavigating || !onSave) return
-    
-    setIsNavigating(true)
-    try {
-      await onSave()
-    } finally {
-      setIsNavigating(false)
-    }
-  }
+  const handleSave = useCallback(() => {
+    void runSave('save')
+  }, [runSave])
+
+  const handleNext = useCallback(() => {
+    void runSave('next')
+  }, [runSave])
 
   const handleBack = () => {
     if (!isFirstStep && !isSubmitting && !isNavigating) {
@@ -157,50 +174,66 @@ export const FormWizard: React.FC<FormWizardProps> = ({
     }
   }
 
+  const guardLeaveSession = (action: () => void) => {
+    if (showSessionView && sessionHasOpenForm) {
+      pendingLeaveAction.current = action
+      setLeaveSessionDialogOpen(true)
+    } else {
+      action()
+    }
+  }
+
   const handleStepClick = (stepIndex: number) => {
     if (isSubmitting || isNavigating) return
-    
-    // Check if step is accessible
     if (!isStepAccessible(stepIndex)) return
-    
-    setCurrentStepIndex(stepIndex)
+    guardLeaveSession(() => {
+      setShowSessionView(false)
+      setCurrentStepIndex(stepIndex)
+    })
+  }
+
+  const handleSessionClick = () => {
+    if (isSubmitting || isNavigating) return
+    setShowSessionView(true)
   }
 
   const handleDashboardClick = () => {
     if (isSubmitting || isNavigating) return
-    
-    if (onCancel) {
-      onCancel()
-    } else {
-      navigate('/')
-    }
+    guardLeaveSession(() => {
+      if (onCancel) {
+        onCancel()
+      } else {
+        navigate('/')
+      }
+    })
   }
 
   const handlePreviewClick = (type: 'pre-event' | 'post-event') => {
     if (onPreview) {
       onPreview(type)
-    } else {
-      console.log(`Preview ${type}`)
     }
   }
 
-  // Determine step status for side nav
-  const getStepStatus = (index: number): 'completed' | 'active' | 'locked' | 'available' => {
-    if (index < currentStepIndex && hasEventId) return 'completed'
-    if (index === currentStepIndex) return 'active'
+  const getStepStatus = (index: number): 'active' | 'locked' | 'available' => {
+    if (index === currentStepIndex && !showSessionView) return 'active'
     if (!isStepAccessible(index)) return 'locked'
     return 'available'
   }
 
   const renderSideNav = () => (
-    <View
-      width="size-3000"
-      borderEndWidth="thin"
-      borderEndColor="gray-300"
-      UNSAFE_style={SIDE_NAV_STICKY_STYLES}
+    <div
+      style={{
+        width: LAYOUT_DIMENSIONS.SIDE_NAV_WIDTH,
+        display: 'flex',
+        flexDirection: 'column',
+        minHeight: 0,
+        height: '100%',
+        overflow: 'hidden',
+        backgroundColor: SURFACES.EVENT_FORM_SHELL,
+      }}
     >
-      <View padding="size-300" flex={1}>
-        <Text UNSAFE_style={{ 
+      <div data-testid="wizard-side-nav" style={{ padding: 24, flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0, overflow: 'auto' }}>
+        <Text UNSAFE_style={{
           fontSize: '12px',
           fontWeight: 500,
           color: COLORS.GRAY_700,
@@ -208,12 +241,13 @@ export const FormWizard: React.FC<FormWizardProps> = ({
           marginBottom: '16px',
           display: 'block'
         }}>
-          EVENT CREATION
+          EVENT DETAILS
         </Text>
-        
-        <Flex direction="column" gap="size-100">
-          {/* Dashboard Link */}
+
+        <div className={style({ display: 'flex', flexDirection: 'column', gap: 8 })}>
           <button
+            type="button"
+            data-testid="wizard-dashboard-button"
             onClick={handleDashboardClick}
             disabled={isSubmitting || isNavigating}
             style={{
@@ -227,41 +261,27 @@ export const FormWizard: React.FC<FormWizardProps> = ({
               fontSize: '14px',
               fontWeight: 400,
               opacity: (isSubmitting || isNavigating) ? 0.5 : 1,
-              transition: 'all 0.2s ease',
+              transition: 'background-color 0.15s ease',
               width: '100%',
             }}
             onMouseEnter={(e) => {
               if (!isSubmitting && !isNavigating) {
-                e.currentTarget.style.backgroundColor = 'rgba(235, 16, 0, 0.1)'
-                e.currentTarget.style.color = COLORS.ADOBE_RED
+                e.currentTarget.style.backgroundColor = SIDE_NAV_HOVER_BG
               }
             }}
             onMouseLeave={(e) => {
-              if (!isSubmitting && !isNavigating) {
-                e.currentTarget.style.backgroundColor = COLORS.TRANSPARENT
-                e.currentTarget.style.color = COLORS.GRAY_800
-              }
-            }}
-            onMouseDown={(e) => {
-              if (!isSubmitting && !isNavigating) {
-                e.currentTarget.style.backgroundColor = 'rgba(235, 16, 0, 0.2)'
-              }
-            }}
-            onMouseUp={(e) => {
-              if (!isSubmitting && !isNavigating) {
-                e.currentTarget.style.backgroundColor = 'rgba(235, 16, 0, 0.1)'
-              }
+              e.currentTarget.style.backgroundColor = COLORS.TRANSPARENT
             }}
           >
-            <Flex direction="row" gap="size-100" alignItems="center">
-              <ChevronLeft size="S" />
+            <div className={style({ display: 'flex', gap: 8, alignItems: 'center' })}>
+              <ChevronLeft styles={iconStyle({ color: 'gray'})} aria-hidden />
               <Text>Dashboard</Text>
-            </Flex>
+            </div>
           </button>
 
-          {/* Add Content Section */}
-          <View>
+          <div>
             <button
+              type="button"
               disabled
               style={{
                 border: 'none',
@@ -273,119 +293,158 @@ export const FormWizard: React.FC<FormWizardProps> = ({
                 borderRadius: '4px',
                 fontSize: '14px',
                 fontWeight: 400,
-                transition: 'all 0.2s ease',
                 width: '100%',
                 marginBottom: '8px'
               }}
             >
-              <Flex direction="row" gap="size-100" alignItems="center">
-                <Document size="S" />
+              <div className={style({ display: 'flex', gap: 8, alignItems: 'center' })}>
+                <FileText styles={iconStyle({ color: 'gray'})} aria-hidden />
                 <Text>Add Content</Text>
-              </Flex>
+              </div>
             </button>
-            
-            <Flex direction="column" gap="size-50">
+
+            <div className={style({ display: 'flex', flexDirection: 'column', gap: 4 })}>
               {steps.map((step, index) => {
                 const status = getStepStatus(index)
                 const isActive = status === 'active'
                 const isLocked = status === 'locked'
-                const isCompleted = status === 'completed'
                 const isDisabled = isLocked || isSubmitting || isNavigating
-                
+                const showPipe =
+                  isActive || (!isDisabled && sideNavStepHoverIndex === index)
+                const pipeColor = isActive ? SIDE_NAV_PIPE_ACTIVE : SIDE_NAV_PIPE_HOVER
+
                 return (
                   <button
+                    type="button"
                     key={step.id}
+                    data-testid={`wizard-step-${step.id}`}
                     onClick={() => handleStepClick(index)}
                     disabled={isDisabled}
                     style={{
                       border: 'none',
-                      background: isActive ? COLORS.ADOBE_RED : COLORS.TRANSPARENT,
-                      color: isActive ? COLORS.WHITE : isLocked ? COLORS.GRAY_600 : COLORS.GRAY_800,
+                      background: COLORS.TRANSPARENT,
+                      color: isLocked ? COLORS.GRAY_600 : isActive ? COLORS.DARK_GRAY : COLORS.GRAY_800,
                       padding: '8px 12px',
-                      paddingLeft: '32px',
+                      paddingLeft: SIDE_NAV_PIPE_LEFT,
                       textAlign: 'left',
                       cursor: isDisabled ? 'not-allowed' : 'pointer',
                       borderRadius: '4px',
                       fontSize: '14px',
-                      fontWeight: isActive ? 500 : 400,
-                      opacity: isLocked ? 0.6 : 1,
-                      transition: 'all 0.2s ease',
+                      fontWeight: isActive ? 700 : 400,
+                      opacity: isLocked ? 0.55 : 1,
+                      fontStyle: 'normal',
                       width: '100%',
-                      position: 'relative'
+                      position: 'relative',
+                      gap: 8,
                     }}
-                    onMouseEnter={(e) => {
-                      if (!isActive && !isDisabled) {
-                        e.currentTarget.style.backgroundColor = 'rgba(235, 16, 0, 0.1)'
-                        e.currentTarget.style.color = COLORS.ADOBE_RED
-                      }
+                    onMouseEnter={() => {
+                      if (!isDisabled) setSideNavStepHoverIndex(index)
                     }}
-                    onMouseLeave={(e) => {
-                      if (!isActive) {
-                        e.currentTarget.style.backgroundColor = COLORS.TRANSPARENT
-                        e.currentTarget.style.color = isLocked ? COLORS.GRAY_600 : COLORS.GRAY_800
-                      }
-                    }}
-                    onMouseDown={(e) => {
-                      if (!isActive && !isDisabled) {
-                        e.currentTarget.style.backgroundColor = 'rgba(235, 16, 0, 0.2)'
-                      }
-                    }}
-                    onMouseUp={(e) => {
-                      if (!isActive && !isDisabled) {
-                        e.currentTarget.style.backgroundColor = 'rgba(235, 16, 0, 0.1)'
-                      }
+                    onMouseLeave={() => {
+                      setSideNavStepHoverIndex((prev) => (prev === index ? null : prev))
                     }}
                   >
-                    {/* Status indicator */}
-                    <span style={{
-                      position: 'absolute',
-                      left: '12px',
-                      top: '50%',
-                      transform: 'translateY(-50%)',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center'
-                    }}>
-                      {isCompleted && (
-                        <Checkmark 
-                          size="XS" 
-                          UNSAFE_style={{ color: 'var(--spectrum-global-color-green-600)' }} 
-                        />
-                      )}
-                      {isLocked && (
-                        <LockClosed 
-                          size="XS" 
-                          UNSAFE_style={{ color: COLORS.GRAY_600 }} 
-                        />
-                      )}
+                    {showPipe && (
+                      <span
+                        aria-hidden
+                        style={{
+                          position: 'absolute',
+                          left: SIDE_NAV_PIPE_LEFT,
+                          top: '50%',
+                          transform: 'translateY(-50%)',
+                          width: SIDE_NAV_PIPE_WIDTH,
+                          height: '1em',
+                          backgroundColor: pipeColor,
+                          borderRadius: 0,
+                        }}
+                      />
+                    )}
+                    <span
+                      style={{
+                        display: 'block',
+                        paddingLeft: SIDE_NAV_STEP_LABEL_INSET,
+                      }}
+                    >
+                      <Text>{step.title}</Text>
                     </span>
-                    {step.title}
                   </button>
                 )
               })}
-            </Flex>
-          </View>
-        </Flex>
-      </View>
+            </div>
+          </div>
 
-      {/* Progress indicator at bottom */}
-      <View padding="size-300">
-        <Flex direction="column" gap="size-100">
-          <Flex justifyContent="space-between">
-            <Text UNSAFE_style={{ fontSize: '12px' }}>
-              Step {currentStepIndex + 1} of {steps.length}
-            </Text>
-            <Text UNSAFE_style={{ fontSize: '12px' }}>{Math.round(progress)}%</Text>
-          </Flex>
+          {sessionContent && (
+            <div style={{ marginTop: 16 }}>
+              <Text UNSAFE_style={{
+                fontSize: '12px',
+                fontWeight: 500,
+                color: COLORS.GRAY_700,
+                letterSpacing: '0.5px',
+                marginBottom: '8px',
+                display: 'block'
+              }}>
+                SESSIONS
+              </Text>
+              <button
+                type="button"
+                onClick={handleSessionClick}
+                disabled={isSubmitting || isNavigating}
+                style={{
+                  border: 'none',
+                  background: COLORS.TRANSPARENT,
+                  color: showSessionView ? COLORS.DARK_GRAY : COLORS.GRAY_800,
+                  padding: '8px 12px',
+                  paddingLeft: SIDE_NAV_PIPE_LEFT,
+                  textAlign: 'left',
+                  cursor: (isSubmitting || isNavigating) ? 'not-allowed' : 'pointer',
+                  borderRadius: '4px',
+                  fontSize: '14px',
+                  fontWeight: showSessionView ? 700 : 400,
+                  fontStyle: 'normal',
+                  width: '100%',
+                  position: 'relative',
+                }}
+                onMouseEnter={() => { if (!isSubmitting && !isNavigating) setSessionHover(true) }}
+                onMouseLeave={() => setSessionHover(false)}
+              >
+                {(showSessionView || sessionHover) && (
+                  <span
+                    aria-hidden
+                    style={{
+                      position: 'absolute',
+                      left: SIDE_NAV_PIPE_LEFT,
+                      top: '50%',
+                      transform: 'translateY(-50%)',
+                      width: SIDE_NAV_PIPE_WIDTH,
+                      height: '1em',
+                      backgroundColor: showSessionView ? SIDE_NAV_PIPE_ACTIVE : SIDE_NAV_PIPE_HOVER,
+                      borderRadius: 0,
+                    }}
+                  />
+                )}
+                <span style={{ display: 'block', paddingLeft: SIDE_NAV_STEP_LABEL_INSET }}>
+                  <Text>Session Management</Text>
+                </span>
+              </button>
+            </div>
+          )}
+        </div>
+      </div>
+
+      <div style={{ padding: '24px 24px 85px 24px', flexShrink: 0 }}>
+        <div className={style({ display: 'flex', flexDirection: 'column', gap: 8 })}>
+          <Text UNSAFE_style={{ fontSize: '12px' }}>
+            Step {currentStepIndex + 1} of {steps.length}
+          </Text>
           <ProgressBar
+            data-testid="wizard-progress"
             label="Progress"
             value={progress}
-            showValueLabel={false}
             size="S"
           />
           {!hasEventId && currentStepIndex === 0 && (
-            <Text UNSAFE_style={{ 
-              fontSize: '11px', 
+            <Text UNSAFE_style={{
+              fontSize: '11px',
               color: COLORS.GRAY_600,
               fontStyle: 'italic',
               marginTop: '4px'
@@ -393,170 +452,160 @@ export const FormWizard: React.FC<FormWizardProps> = ({
               Save to unlock other steps
             </Text>
           )}
-        </Flex>
-      </View>
-    </View>
+        </div>
+      </div>
+    </div>
   )
 
-  const renderActionBar = () => {
-    const getNextButtonText = () => {
-      if (isSubmitting) {
-        return isLastStep ? 'Publishing...' : 'Saving...'
-      }
-      if (isNavigating) {
-        return 'Saving...'
-      }
-      if (isLastStep) {
-        return isPublished ? 'Re-publish event' : 'Publish event'
-      }
-      return 'Next step'
+  const getPublishLabel = () => {
+    if (pendingAction === 'publish') {
+      return isPublished ? 'Re-publishing...' : 'Publishing...'
     }
+    return isPublished ? 'Re-publish event' : 'Publish event'
+  }
 
-    const isActionDisabled = currentStep.isValid === false || isSubmitting || isNavigating
+  const isActionDisabled = currentStep.isValid === false || isSubmitting || isNavigating
+  const isLastStep = currentStepIndex >= steps.length - 1
+  const saveLabel = pendingAction === 'save' ? 'Saving...' : 'Save'
+  const nextLabel = pendingAction === 'next' ? 'Saving...' : 'Next'
 
-    return (
-      <View
-        UNSAFE_style={{
-          ...FIXED_ACTION_BAR_STYLES,
-          backgroundColor: COLORS.ADOBE_RED,
-        }}
-      >
-        <Flex
-          direction="row"
-          justifyContent="space-between"
-          alignItems="center"
-          height="100%"
-          marginStart="size-400"
-          marginEnd="size-400"
+  const actionBarRowStyle: React.CSSProperties = {
+    display: 'flex',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    width: '100%',
+    minWidth: 0,
+    flex: 1,
+    boxSizing: 'border-box',
+    marginInlineStart: 'var(--spectrum-global-dimension-size-400)',
+    marginInlineEnd: 'var(--spectrum-global-dimension-size-400)',
+  }
+
+  const renderActionBar = () => (
+    <div style={FORM_WIZARD_FOOTER_STYLES}>
+      <div style={actionBarRowStyle}>
+        <div style={{ flexShrink: 0 }}>
+          <Button
+            data-testid="wizard-back-button"
+            variant="secondary"
+            fillStyle="outline"
+            staticColor="white"
+            onPress={handleBack}
+            isDisabled={isFirstStep || isSubmitting || isNavigating}
+          >
+            <ChevronLeft />
+          </Button>
+        </div>
+
+        <div
+          className={style({ display: 'flex', alignItems: 'center' })}
+          style={{
+            justifyContent: 'flex-end',
+            flexWrap: 'wrap',
+            gap: 'var(--spectrum-global-dimension-size-200)',
+            minWidth: 0,
+            flexShrink: 1,
+          }}
         >
-          {/* Left: Back button */}
-          <View>
-            <Button
-              variant="secondary"
-              style="outline"
-              staticColor="white"
-              onPress={handleBack}
-              isDisabled={isFirstStep || isSubmitting || isNavigating}
-            >
-              <ChevronLeft />
-            </Button>
-          </View>
-
-          {/* Right: Action buttons */}
-          <Flex direction="row" alignItems="center">
-            {/* Preview buttons - only show if event has been saved */}
-            {hasEventId && (
-              <Flex direction="row" gap="size-100" alignItems="center">
+          {hasEventId && (
+            <>
+              <div
+                className={style({ display: 'flex', gap: 8, alignItems: 'center' })}
+                style={{ flexWrap: 'wrap' }}
+              >
                 <Button
+                  data-testid="wizard-preview-pre"
                   variant="secondary"
-                  style="fill"
+                  fillStyle="fill"
+                  staticColor="white"
                   onPress={() => handlePreviewClick('pre-event')}
                   isDisabled={isSubmitting || isNavigating}
                 >
-                  <WebPage size="S" />
+                  <WebPage />
                   <Text>Pre-event</Text>
                 </Button>
                 <Button
+                  data-testid="wizard-preview-post"
                   variant="secondary"
-                  style="fill"
+                  fillStyle="fill"
+                  staticColor="white"
                   onPress={() => handlePreviewClick('post-event')}
                   isDisabled={isSubmitting || isNavigating}
                 >
-                  <WebPage size="S" />
+                  <WebPage />
                   <Text>Post-event</Text>
                 </Button>
-              </Flex>
-            )}
-
-            {/* Vertical Divider */}
-            {hasEventId && (
-              <View
-                UNSAFE_style={{
-                  width: '1px',
-                  height: '32px',
+              </div>
+              <div
+                style={{
+                  width: 1,
+                  height: 32,
                   backgroundColor: COLORS.WHITE,
                   opacity: 0.3,
-                  marginLeft: '80px',
-                  marginRight: '80px'
+                  flexShrink: 0,
                 }}
+                aria-hidden
               />
+            </>
+          )}
+
+          <div className={style({ display: 'flex', gap: 8, alignItems: 'center' })}>
+            <Button
+              data-testid="wizard-publish-button"
+              variant="accent"
+              fillStyle="fill"
+              onPress={() => guardLeaveSession(handlePublish)}
+              isDisabled={isActionDisabled || pendingAction === 'publish'}
+            >
+              <Text>{getPublishLabel()}</Text>
+              <RocketQuickActions aria-hidden />
+            </Button>
+            <Button
+              data-testid="wizard-save-button"
+              variant="secondary"
+              fillStyle="outline"
+              staticColor="white"
+              onPress={() => guardLeaveSession(handleSave)}
+              isDisabled={isActionDisabled || !onSave}
+            >
+              {saveLabel}
+            </Button>
+            {!isLastStep && (
+              <Button
+                data-testid="wizard-next-button"
+                variant="accent"
+                fillStyle="fill"
+                onPress={() => guardLeaveSession(handleNext)}
+                isDisabled={isActionDisabled || !onSave || pendingAction === 'next'}
+              >
+                <Text>{nextLabel}</Text>
+                <ChevronRight aria-hidden />
+              </Button>
             )}
+          </div>
+        </div>
+      </div>
+    </div>
+  )
 
-            {/* Save and Next buttons */}
-            <Flex direction="row" gap="size-100" alignItems="center">
-              <Button
-                variant="secondary"
-                style="outline"
-                staticColor="white"
-                onPress={handleSave}
-                isDisabled={isActionDisabled || !onSave}
-              >
-                Save
-              </Button>
-              <Button
-                variant="primary"
-                style="fill"
-                staticColor="black"
-                onPress={handleNext}
-                isDisabled={isActionDisabled}
-              >
-                <Flex direction="row-reverse" gap="size-50" alignItems="center">
-                  <Text>{getNextButtonText()}</Text>
-                  <ChevronRight size="S" />
-                </Flex>
-              </Button>
-            </Flex>
-          </Flex>
-        </Flex>
-      </View>
-    )
-  }
-
-  // Determine the display status - use provided status, or derive from isPublished
   const displayStatus = eventStatus || (isPublished ? 'published' : 'draft')
-  
-  // Status badge styling based on status
-  const getStatusBadgeStyles = (status: string): { dotColor: string; textColor: string; bgColor: string; borderColor: string } => {
-    const statusStyles: Record<string, { dotColor: string; textColor: string; bgColor: string; borderColor: string }> = {
-      draft: {
-        dotColor: COLORS.STATUS_DRAFT,
-        textColor: COLORS.GRAY_800,
-        bgColor: COLORS.WHITE,
-        borderColor: COLORS.GRAY_300
-      },
-      published: {
-        dotColor: COLORS.STATUS_PUBLISHED,
-        textColor: COLORS.GRAY_800,
-        bgColor: COLORS.WHITE,
-        borderColor: COLORS.GRAY_300
-      },
-      archived: {
-        dotColor: COLORS.STATUS_ARCHIVED,
-        textColor: COLORS.GRAY_700,
-        bgColor: COLORS.WHITE,
-        borderColor: COLORS.GRAY_300
-      },
-      cancelled: {
-        dotColor: COLORS.STATUS_CANCELLED,
-        textColor: COLORS.GRAY_800,
-        bgColor: COLORS.WHITE,
-        borderColor: COLORS.GRAY_300
-      }
-    }
-    return statusStyles[status.toLowerCase()] || statusStyles.draft
-  }
-  
-  const statusStyles = getStatusBadgeStyles(displayStatus)
-  const statusLabel = displayStatus.charAt(0).toUpperCase() + displayStatus.slice(1).toLowerCase()
+  const statusLightVariant = getEventFormStatusLightVariant(displayStatus)
+  const statusLabel = formatEventFormStatusLabel(displayStatus)
 
-  const mainContent = (
-    <View>
-      {/* Step title */}
-      <View marginBottom="size-300">
-        {/* Event type label */}
+  const mainContent = showSessionView ? (
+    <div>
+      <div style={{ marginBottom: 24 }}>
+        <Heading level={2} UNSAFE_style={TYPOGRAPHY.STEP_HEADING}>Session Management</Heading>
+      </div>
+      <div style={{ marginTop: 24, marginBottom: 32 }}>{sessionContent}</div>
+    </div>
+  ) : (
+    <div>
+      <div style={{ marginBottom: 24 }}>
         {eventTypeLabel && (
-          <Text 
-            UNSAFE_style={{ 
+          <Text
+            UNSAFE_style={{
               fontSize: '14px',
               fontWeight: 500,
               color: COLORS.GRAY_700,
@@ -567,75 +616,105 @@ export const FormWizard: React.FC<FormWizardProps> = ({
             {eventTypeLabel}
           </Text>
         )}
-        
-        {/* Heading row with status badge and optional header actions */}
-        <Flex direction="row" alignItems="center" gap="size-400">
-          <Heading level={2} UNSAFE_style={TYPOGRAPHY.STEP_HEADING}>{currentStep.title}</Heading>
-          
-          {/* Status badge */}
-          <View
-            UNSAFE_style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '8px',
-              padding: '0 8px',
-              borderRadius: '4px',
-              backgroundColor: statusStyles.bgColor,
-              flexShrink: 0
-            }}
-          >
-            {/* Status dot */}
-            <span
-              style={{
-                width: '10px',
-                height: '10px',
-                borderRadius: '50%',
-                backgroundColor: statusStyles.dotColor,
-                flexShrink: 0
-              }}
-            />
-            <Text
-              UNSAFE_style={{
-                fontSize: '14px',
-                fontWeight: 500,
-                color: statusStyles.textColor
-              }}
-            >
-              {statusLabel}
-            </Text>
-          </View>
-          
-          {/* Spacer to push header actions to the right */}
-          {headerActions && <View flex={1} />}
-          
-          {/* Optional header actions (e.g., history button) */}
-          {headerActions}
-        </Flex>
-      </View>
 
-      {/* Step content */}
-      <View marginTop="size-300" marginBottom="size-400">{currentStep.component}</View>
-    </View>
+        <div className={style({ display: 'flex', alignItems: 'center', gap: 32 })}>
+          <Heading data-testid="wizard-step-heading" level={2} UNSAFE_style={TYPOGRAPHY.STEP_HEADING}>{currentStep.title}</Heading>
+
+          <Badge
+            data-testid="wizard-status-badge"
+            variant="neutral"
+            fillStyle="subtle"
+            size="S"
+            styles={style({ flexShrink: 0 })}
+          >
+            <StatusLight variant={statusLightVariant} size="S" role="status">
+              {statusLabel}
+            </StatusLight>
+          </Badge>
+
+          {headerActions ? <div style={{ flex: 1 }} /> : null}
+          {headerActions}
+        </div>
+      </div>
+
+      <div style={{ marginTop: 24, marginBottom: 32 }}>{currentStep.component}</div>
+    </div>
+  )
+
+  const shellStyle: React.CSSProperties = {
+    display: 'flex',
+    flexDirection: 'column',
+    flex: 1,
+    minHeight: 0,
+    height: '100%',
+    width: '100%',
+    alignSelf: 'stretch',
+  }
+
+  const bodyRowStyle: React.CSSProperties = {
+    display: 'flex',
+    flex: 1,
+    minHeight: 0,
+    overflow: 'hidden',
+  }
+
+  const mainColumnStyle: React.CSSProperties = {
+    flex: 1,
+    minHeight: 0,
+    overflow: 'auto',
+    padding: 32,
+  }
+
+  const leaveSessionDialog = (
+    <DialogTrigger
+      isOpen={leaveSessionDialogOpen}
+      onOpenChange={(open) => { if (!open) setLeaveSessionDialogOpen(false) }}
+    >
+      <div style={{ display: 'none' }} />
+      <AlertDialog
+        title="Unsaved session changes"
+        variant="warning"
+        primaryActionLabel="Continue without saving"
+        cancelLabel="Go back"
+        onPrimaryAction={() => {
+          setLeaveSessionDialogOpen(false)
+          pendingLeaveAction.current?.()
+          pendingLeaveAction.current = null
+        }}
+        onCancel={() => {
+          setLeaveSessionDialogOpen(false)
+          pendingLeaveAction.current = null
+        }}
+      >
+        <Text>
+          You have unsaved changes in your sessions. Would you like to save them before proceeding?
+        </Text>
+      </AlertDialog>
+    </DialogTrigger>
   )
 
   if (showSideNav) {
     return (
-      <>
-        <Flex direction="row" gap="size-0">
+      <div data-testid="form-wizard" style={shellStyle}>
+        <div style={bodyRowStyle}>
           {renderSideNav()}
-          <View UNSAFE_style={SCROLLABLE_CONTENT_STYLES} flex={1} padding="size-400">
+          <div style={mainColumnStyle}>
             {mainContent}
-          </View>
-        </Flex>
+          </div>
+        </div>
         {renderActionBar()}
-      </>
+        {leaveSessionDialog}
+      </div>
     )
   }
 
   return (
-    <>
-      <View UNSAFE_style={SCROLLABLE_CONTENT_STYLES}>{mainContent}</View>
+    <div data-testid="form-wizard" style={shellStyle}>
+      <div style={{ ...bodyRowStyle, flexDirection: 'column' }}>
+        <div style={{ ...mainColumnStyle, flex: 1 }}>{mainContent}</div>
+      </div>
       {renderActionBar()}
-    </>
+      {leaveSessionDialog}
+    </div>
   )
 }

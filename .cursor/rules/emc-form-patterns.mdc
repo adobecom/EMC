@@ -157,7 +157,7 @@ When adding new form fields:
 // 5. Add to the appropriate step in EventForm.tsx
 
 import React from 'react'
-import { TextField } from '@adobe/react-spectrum'
+import { TextField } from '@react-spectrum/s2'
 import { FormCard } from '../../components/shared'
 import { useEventFormComponent } from '../../hooks'
 

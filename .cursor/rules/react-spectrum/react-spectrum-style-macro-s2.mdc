@@ -14,6 +14,19 @@ import {style} from '@react-spectrum/s2/style' with {type: 'macro'};
 </div>
 ```
 
+## Static evaluation (build-time)
+
+The macro runs at **compile time**. Every value inside `style({ ... })` must be something the bundler can **evaluate without running your app**.
+
+**Do not use** inside the macro object:
+
+- Imports from `designSystem.ts` or any module (e.g. `SPACING.SM`, `FORM_SPACING.FIELD_GAP`)
+- Variables, function calls, or expressions (e.g. `gap: someProp`, `padding: 8 * 2`)
+
+**Do use** literals and allowed Spectrum tokens as documented below (e.g. `padding: 12`, `gap: 16`, `backgroundColor: 'gray-100'`).
+
+If the build fails with **`Could not statically evaluate macro argument`**, a non-literal slipped into `style()`. Fix by replacing it with a numeric literal (match the design-system token value, e.g. `12` for `SPACING.SM`) or move that style to **`UNSAFE_style`** / inline `style` on a plain element where runtime values are fine.
+
 ## Values
 The `style` macro supports a constrained set of values for each CSS property, which conform to the Spectrum design system. For example, the `backgroundColor` property supports Spectrum colors, and does not allow arbitrary hex or rgb values by default. This helps make it easier to build consistent UIs that are maintainable over time.
 

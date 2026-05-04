@@ -5,9 +5,9 @@
 import React, { useState, useEffect, useCallback } from 'react'
 import { View, Heading, Text, Flex, Button } from '@adobe/react-spectrum'
 import { useSearchParams } from 'react-router-dom'
-import Checkmark from '@spectrum-icons/workflow/Checkmark'
-import Refresh from '@spectrum-icons/workflow/Refresh'
-import Alert from '@spectrum-icons/workflow/Alert'
+import Checkmark from '@react-spectrum/s2/icons/Checkmark'
+import Refresh from '@react-spectrum/s2/icons/Refresh'
+import AlertTriangle from '@react-spectrum/s2/icons/AlertTriangle'
 import type { Attendee } from '../../types/attendee'
 import { getAttendeeName } from '../../types/attendee'
 import { apiService } from '../../services/api'
@@ -203,7 +203,7 @@ export const BiometricCheckin: React.FC<BiometricCheckinProps> = ({ ims: _ims })
         <Flex direction="column" alignItems="center" justifyContent="center" gap="size-300"
           UNSAFE_style={{ padding: '80px 20px' }}
         >
-          <Alert size="XL" UNSAFE_style={{ color: COLORS.GRAY_600 }} />
+          <AlertTriangle aria-hidden UNSAFE_style={{ color: COLORS.GRAY_600, width: 32, height: 32 }} />
           <Heading level={2} UNSAFE_style={{ margin: 0, color: COLORS.GRAY_800 }}>
             Invalid or Missing Check-in Token
           </Heading>
@@ -222,7 +222,7 @@ export const BiometricCheckin: React.FC<BiometricCheckinProps> = ({ ims: _ims })
         <Flex direction="column" alignItems="center" justifyContent="center" gap="size-300"
           UNSAFE_style={{ padding: '80px 20px' }}
         >
-          <Alert size="XL" UNSAFE_style={{ color: COLORS.STATUS_CANCELLED }} />
+          <AlertTriangle aria-hidden UNSAFE_style={{ color: COLORS.STATUS_CANCELLED, width: 32, height: 32 }} />
           <Heading level={2} UNSAFE_style={{ margin: 0, color: COLORS.GRAY_800 }}>
             Not Found
           </Heading>
@@ -275,7 +275,7 @@ export const BiometricCheckin: React.FC<BiometricCheckinProps> = ({ ims: _ims })
         <Flex direction="column" alignItems="center" gap="size-300" UNSAFE_style={{ paddingTop: '24px' }}>
           <FormCard>
             <Flex direction="column" alignItems="center" gap="size-200">
-              <Checkmark size="XXL" UNSAFE_style={{ color: COLORS.STATUS_PUBLISHED }} />
+              <Checkmark aria-hidden UNSAFE_style={{ color: COLORS.STATUS_PUBLISHED, width: 48, height: 48 }} />
               <Heading level={3} UNSAFE_style={{ margin: 0, color: COLORS.GRAY_800 }}>
                 Already Checked In
               </Heading>
@@ -351,7 +351,7 @@ export const BiometricCheckin: React.FC<BiometricCheckinProps> = ({ ims: _ims })
                 width: '48px',
                 height: '48px',
                 border: `3px solid ${COLORS.GRAY_300}`,
-                borderTopColor: COLORS.ADOBE_RED,
+                borderTopColor: '#EB1000',
                 borderRadius: '50%',
                 animation: 'spin 1s linear infinite'
               }} />

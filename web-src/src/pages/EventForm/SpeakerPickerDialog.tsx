@@ -3,35 +3,20 @@
 */
 
 import React, { useState, useMemo, useCallback, useEffect } from 'react'
-import {
-  Dialog,
-  DialogContainer,
-  Heading,
-  Content,
-  TextField,
-  Button,
-  View,
-  Flex,
-  Text,
-  ActionButton,
-  ProgressCircle,
-  SearchField,
-  Form,
-} from '@adobe/react-spectrum'
-import Add from '@spectrum-icons/workflow/Add'
-import Alert from '@spectrum-icons/workflow/Alert'
-import ArrowLeft from '@spectrum-icons/workflow/ArrowLeft'
-import Delete from '@spectrum-icons/workflow/Delete'
-import LinkOut from '@spectrum-icons/workflow/LinkOut'
+import { Button, Dialog, DialogContainer, Heading, TextField, Text, SearchField, Content, ProgressCircle } from '@react-spectrum/s2'
+import { style, iconStyle } from '@react-spectrum/s2/style' with { type: 'macro' }
+import Add from '@react-spectrum/s2/icons/Add'
+import AlertTriangle from '@react-spectrum/s2/icons/AlertTriangle'
+import RemoveCircle from '@react-spectrum/s2/icons/RemoveCircle'
+import OpenIn from '@react-spectrum/s2/icons/OpenIn'
 import { SeriesSpeaker, SocialLinkFormData } from '../../types/domain'
 import { speakerHasLocalization } from '../../utils/eventFormMappers'
 import { RichTextEditor, ImageUploader } from '../../components/shared'
-import { TYPOGRAPHY, FLEX_GAP, COLORS } from '../../styles/designSystem'
+import { TYPOGRAPHY, COLORS, SURFACES } from '../../styles/designSystem'
 import { detectSocialPlatform, isValidUrl, toApiSocialLink } from '../../utils/socialPlatformDetector'
-import { cachedApi, apiService } from '../../services/api'
+import { cachedApi } from '../../services/api'
 import { getSpeakerPayload } from '../../services/payloadBuilders'
-import { uploadImage, UploadTracker } from '../../services/requestHelpers'
-import { getCurrentEnvironment, getApiHost } from '../../config/constants'
+import { uploadSpeakerSeriesImage } from '../../services/speakerImageUpload'
 
 interface SpeakerPickerDialogProps {
   isOpen: boolean
@@ -211,39 +196,6 @@ export const SpeakerPickerDialog: React.FC<SpeakerPickerDialogProps> = ({
     })
   }, [])
 
-  const uploadSpeakerImage = async (
-    file: File,
-    speakerId: string,
-    altText: string
-  ): Promise<{ imageUrl: string; imageId: string } | null> => {
-    try {
-      const token = apiService.getAuthTokenForExternalUse()
-      if (!token) throw new Error('No authentication token available')
-
-      const env = getCurrentEnvironment()
-      const host = getApiHost('esp', env)
-      const uploadUrl = `${host}/v1/series/${seriesId}/speakers/${speakerId}/images`
-
-      const tracker: UploadTracker = { progress: 0 }
-      const config = {
-        targetUrl: uploadUrl,
-        altText,
-        type: 'speaker-photo',
-      }
-
-      const result = await uploadImage(file, config, token, tracker)
-      const imageData = result.image || result
-
-      if (imageData.imageUrl && imageData.imageId) {
-        return { imageUrl: imageData.imageUrl, imageId: imageData.imageId }
-      }
-      return null
-    } catch (err) {
-      console.error('Failed to upload speaker image:', err)
-      return null
-    }
-  }
-
   const handleCreateSpeaker = useCallback(async () => {
     if (!createForm.firstName.trim() || !createForm.lastName.trim()) return
 
@@ -274,7 +226,7 @@ export const SpeakerPickerDialog: React.FC<SpeakerPickerDialogProps> = ({
         let photo: SeriesSpeaker['photo'] | undefined
         if (pendingFile) {
           const altText = `${createForm.firstName} ${createForm.lastName}`
-          const uploaded = await uploadSpeakerImage(pendingFile, speakerId, altText)
+          const uploaded = await uploadSpeakerSeriesImage(pendingFile, seriesId, speakerId, altText)
           if (uploaded) {
             photo = { imageUrl: uploaded.imageUrl, imageId: uploaded.imageId }
           }
@@ -313,42 +265,32 @@ export const SpeakerPickerDialog: React.FC<SpeakerPickerDialogProps> = ({
     return speaker.localizations?.[locale]?.title || speaker.title || ''
   }
 
-  const renderSelectView = () => (
+  const renderSelectContent = () => (
     <>
-      <Flex justifyContent="space-between" alignItems="center" marginBottom="size-200">
-        <Heading level={3} UNSAFE_style={{ margin: 0, fontSize: '20px', fontWeight: 700 }}>
-          Select Speaker
-        </Heading>
-        <Flex gap="size-100" alignItems="center">
-          <ActionButton onPress={handleSwitchToCreate} aria-label="Create new speaker">
-            <Add />
-          </ActionButton>
-          <Button
-            variant="accent"
-            onPress={handleSelectConfirm}
-            isDisabled={!selectedSpeakerId}
-          >
-            <Text>Select</Text>
-          </Button>
-        </Flex>
-      </Flex>
-
+      <div className={style({display: 'flex', justifyContent: 'end', gap: 8, marginBottom: 16})}>
+        <Button variant="secondary" onPress={handleSwitchToCreate} aria-label="Create new speaker">
+          <Add />
+          <Text>New Speaker</Text>
+        </Button>
+        <Button variant="accent" onPress={handleSelectConfirm} isDisabled={!selectedSpeakerId}>
+          <Text>Select Speaker</Text>
+        </Button>
+      </div>
       <SearchField
         label="Search speakers"
         value={searchQuery}
         onChange={setSearchQuery}
-        width="100%"
-        marginBottom="size-300"
+        styles={style({ width: '[100%]', marginBottom: 24 })}
       />
 
       {filteredSpeakers.length === 0 ? (
-        <View padding="size-400" UNSAFE_style={{ textAlign: 'center' }}>
-          <Text UNSAFE_style={{ color: 'var(--spectrum-global-color-gray-600)' }}>
+        <div style={{ padding: '32px', textAlign: 'center' }}>
+          <Text UNSAFE_style={{ color: COLORS.GRAY_600 }}>
             {searchQuery.trim()
               ? 'No speakers match your search. Try a different query or create a new speaker.'
               : 'No speakers available. Create a new speaker to get started.'}
           </Text>
-        </View>
+        </div>
       ) : (
         <div
           style={{
@@ -382,13 +324,13 @@ export const SpeakerPickerDialog: React.FC<SpeakerPickerDialogProps> = ({
                 style={{
                   padding: '16px 12px',
                   border: isSelected
-                    ? '2px solid var(--spectrum-global-color-blue-500)'
-                    : '1px solid var(--spectrum-global-color-gray-300)',
+                    ? `2px solid ${SURFACES.SELECTED_RING}`
+                    : `1px solid ${SURFACES.BORDER}`,
                   borderRadius: '8px',
                   cursor: 'pointer',
                   backgroundColor: isSelected
-                    ? 'var(--spectrum-global-color-blue-100)'
-                    : 'var(--spectrum-global-color-gray-50)',
+                    ? SURFACES.SELECTED_FILL
+                    : SURFACES.CANVAS,
                   display: 'flex',
                   flexDirection: 'column',
                   alignItems: 'center',
@@ -408,7 +350,7 @@ export const SpeakerPickerDialog: React.FC<SpeakerPickerDialogProps> = ({
                       height: '56px',
                       borderRadius: '50%',
                       objectFit: 'cover',
-                      border: '1px solid var(--spectrum-global-color-gray-300)',
+                      border: `1px solid ${SURFACES.BORDER}`,
                     }}
                   />
                 ) : (
@@ -417,11 +359,11 @@ export const SpeakerPickerDialog: React.FC<SpeakerPickerDialogProps> = ({
                       width: '56px',
                       height: '56px',
                       borderRadius: '50%',
-                      backgroundColor: 'var(--spectrum-global-color-gray-300)',
+                      backgroundColor: SURFACES.CHROME,
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
-                      color: 'var(--spectrum-global-color-gray-600)',
+                      color: COLORS.GRAY_600,
                       fontSize: '16px',
                       fontWeight: 'bold',
                     }}
@@ -442,18 +384,18 @@ export const SpeakerPickerDialog: React.FC<SpeakerPickerDialogProps> = ({
                         gap: '6px',
                         marginTop: '2px',
                         fontSize: '11px',
-                        color: COLORS.ADOBE_RED,
+                        color: COLORS.RED_600,
                         lineHeight: '16px',
                       }}
                     >
-                      <Alert size="S" UNSAFE_style={{ color: COLORS.ADOBE_RED, flexShrink: 0 }} aria-hidden />
+                      <AlertTriangle styles={iconStyle({ color: 'negative'})} aria-hidden />
                       <span>Missing title for {locale}</span>
                     </div>
                   ) : title ? (
                     <div
                       style={{
                         fontSize: '11px',
-                        color: 'var(--spectrum-global-color-gray-600)',
+                        color: COLORS.GRAY_600,
                         lineHeight: '16px',
                         marginTop: '2px',
                         overflow: 'hidden',
@@ -474,19 +416,29 @@ export const SpeakerPickerDialog: React.FC<SpeakerPickerDialogProps> = ({
     </>
   )
 
-  const renderLocalizeView = () => {
+  const renderLocalizeContent = () => {
     if (!speakerToLocalize) return null
-    const displayName = `${speakerToLocalize.firstName} ${speakerToLocalize.lastName}`
     return (
       <>
-        <Flex alignItems="center" gap="size-100" marginBottom="size-200">
-          <ActionButton onPress={handleBackFromLocalize} isQuiet aria-label="Back to search">
-            <ArrowLeft />
-          </ActionButton>
-          <Heading level={3} UNSAFE_style={{ margin: 0, fontSize: '20px', fontWeight: 700 }}>
-            Add {locale} content for {displayName}
-          </Heading>
-        </Flex>
+        <div className={style({display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16})}>
+          <Button variant="secondary" size="S" onPress={handleBackFromLocalize} aria-label="Back to search">
+            <Text>Back</Text>
+          </Button>
+          <Button
+            variant="accent"
+            onPress={handleSaveAndAddLocalization}
+            isDisabled={!localizeForm.title.trim() || isSavingLocalization}
+          >
+            {isSavingLocalization ? (
+              <>
+                <ProgressCircle size="S" isIndeterminate aria-label="Saving" />
+                <Text>Saving...</Text>
+              </>
+            ) : (
+              <Text>Save &amp; Add Speaker</Text>
+            )}
+          </Button>
+        </div>
         {!localizeForm.title.trim() && (
           <div
             role="alert"
@@ -514,15 +466,15 @@ export const SpeakerPickerDialog: React.FC<SpeakerPickerDialogProps> = ({
             </span>
           </div>
         )}
-        <Form>
-          <Flex direction="column" gap={FLEX_GAP.SECTION}>
+        <form>
+          <div className={style({display: 'flex', flexDirection: 'column', gap: 24})}>
             <TextField
               label="Title / Role"
               value={localizeForm.title}
               onChange={(v) => setLocalizeForm(prev => ({ ...prev, title: v }))}
               placeholder="e.g., Senior Product Designer"
               isRequired
-              width="100%"
+              styles={style({ width: '[100%]' })}
             />
             <RichTextEditor
               label="Bio (Optional)"
@@ -531,49 +483,29 @@ export const SpeakerPickerDialog: React.FC<SpeakerPickerDialogProps> = ({
               height="150px"
             />
             {!localizeForm.bio.trim() && (
-              <Text UNSAFE_style={{ fontSize: '12px', color: 'var(--spectrum-global-color-gray-600)', fontStyle: 'italic' }}>
+              <Text UNSAFE_style={{ fontSize: '12px', color: COLORS.GRAY_600, fontStyle: 'italic' }}>
                 No bio has been added for this locale.
               </Text>
             )}
-            <Flex gap="size-150" justifyContent="end" marginTop="size-200">
-              <Button
-                variant="accent"
-                onPress={handleSaveAndAddLocalization}
-                isDisabled={!localizeForm.title.trim() || isSavingLocalization}
-              >
-                {isSavingLocalization ? (
-                  <>
-                    <ProgressCircle size="S" isIndeterminate aria-label="Saving" />
-                    <Text>Saving...</Text>
-                  </>
-                ) : (
-                  <Text>Save &amp; Add Speaker</Text>
-                )}
-              </Button>
-            </Flex>
-          </Flex>
-        </Form>
+          </div>
+        </form>
       </>
     )
   }
 
-  const renderCreateView = () => (
+  const renderCreateContent = () => (
     <>
-      <Flex alignItems="center" gap="size-100" marginBottom="size-200">
-        <ActionButton onPress={handleBackToSelect} isQuiet aria-label="Back to search">
-          <ArrowLeft />
-        </ActionButton>
-        <Heading level={3} UNSAFE_style={{ margin: 0, fontSize: '20px', fontWeight: 700 }}>
-          New Speaker
-        </Heading>
-      </Flex>
-
-      <Form>
-        <Flex direction="column" gap={FLEX_GAP.SECTION}>
-          <Flex direction="row" gap={FLEX_GAP.FIELD} alignItems="end">
+    <div className={style({display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16})}>
+      <Button variant="secondary" size="S" onPress={handleBackToSelect} aria-label="Back to search">
+        <Text>Back</Text>
+      </Button>
+    </div>
+    <form>
+        <div className={style({display: 'flex', flexDirection: 'column', gap: 24})}>
+          <div className={style({display: 'flex', gap: 16, alignItems: 'end'})}>
             {/* Avatar placeholder */}
-            <View>
-              <View width="100%">
+            <div>
+              <div style={{ width: '100%' }}>
                 <ImageUploader
                   label="Photo"
                   imageUrl={createForm.imageUrl}
@@ -596,33 +528,33 @@ export const SpeakerPickerDialog: React.FC<SpeakerPickerDialogProps> = ({
                     updateCreateField('imageId', undefined)
                   }}
                 />
-              </View>
-            </View>
-          </Flex>
+              </div>
+            </div>
+          </div>
 
-          <Flex direction="row" gap={FLEX_GAP.FIELD}>
+          <div className={style({display: 'flex', gap: 16})}>
             <TextField
               label="First Name"
               value={createForm.firstName}
               onChange={(v) => updateCreateField('firstName', v)}
               isRequired
-              width="100%"
+              styles={style({ width: '[100%]' })}
             />
             <TextField
               label="Last Name"
               value={createForm.lastName}
               onChange={(v) => updateCreateField('lastName', v)}
               isRequired
-              width="100%"
+              styles={style({ width: '[100%]' })}
             />
-          </Flex>
+          </div>
 
           <TextField
             label="Title / Role"
             value={createForm.title}
             onChange={(v) => updateCreateField('title', v)}
             placeholder="e.g., Senior Product Designer"
-            width="100%"
+            styles={style({ width: '[100%]' })}
           />
 
           <RichTextEditor
@@ -633,29 +565,29 @@ export const SpeakerPickerDialog: React.FC<SpeakerPickerDialogProps> = ({
           />
 
           {/* Social Links */}
-          <View>
-            <Flex justifyContent="space-between" alignItems="center" marginBottom="size-100">
+          <div>
+            <div className={style({display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8})}>
               <Text UNSAFE_style={TYPOGRAPHY.FIELD_LABEL}>Social Media Links</Text>
-              <ActionButton onPress={handleAddSocialLink} isQuiet>
+              <Button variant="secondary" size="S" onPress={handleAddSocialLink}>
                 <Add />
                 <Text>Add Link</Text>
-              </ActionButton>
-            </Flex>
+              </Button>
+            </div>
 
             {createForm.socialLinks.length === 0 ? (
-              <Text UNSAFE_style={{ fontSize: '14px', color: 'var(--spectrum-global-color-gray-600)', fontStyle: 'italic' }}>
+              <Text UNSAFE_style={{ fontSize: '14px', color: COLORS.GRAY_600, fontStyle: 'italic' }}>
                 No social media links added yet.
               </Text>
             ) : (
-              <Flex direction="column" gap="size-100">
+              <div className={style({display: 'flex', flexDirection: 'column', gap: 8})}>
                 {createForm.socialLinks.map((socialLink, index) => {
                   const detectedPlatform = detectSocialPlatform(socialLink.url)
                   const valid = isValidUrl(socialLink.url)
 
                   return (
-                    <Flex key={index} gap="size-100" alignItems="center">
-                      <View
-                        UNSAFE_style={{
+                    <div key={index} className={style({display: 'flex', gap: 8, alignItems: 'center'})}>
+                      <div
+                        style={{
                           minWidth: '40px',
                           height: '40px',
                           display: 'flex',
@@ -663,66 +595,81 @@ export const SpeakerPickerDialog: React.FC<SpeakerPickerDialogProps> = ({
                           justifyContent: 'center',
                           backgroundColor: detectedPlatform
                             ? detectedPlatform.color
-                            : 'var(--spectrum-global-color-gray-400)',
+                            : COLORS.GRAY_500,
                           color: 'white',
                           borderRadius: '4px',
                           fontSize: '16px',
                           fontWeight: 'bold',
                         }}
                       >
-                        {detectedPlatform ? detectedPlatform.icon : <LinkOut />}
-                      </View>
+                        {detectedPlatform ? detectedPlatform.icon : <OpenIn />}
+                      </div>
 
                       <TextField
                         placeholder="https://..."
                         value={socialLink.url}
                         onChange={(value) => handleUpdateSocialLink(index, value)}
-                        width="100%"
-                        validationState={socialLink.url && !valid ? 'invalid' : undefined}
+                        styles={style({ width: '[100%]' })}
+                        isInvalid={!!(socialLink.url && !valid)}
                       />
 
-                      <ActionButton onPress={() => handleRemoveSocialLink(index)} isQuiet>
-                        <Delete />
-                      </ActionButton>
-                    </Flex>
+                      <Button variant="secondary" size="S" onPress={() => handleRemoveSocialLink(index)} aria-label="Remove link">
+                        <RemoveCircle />
+                      </Button>
+                    </div>
                   )
                 })}
-              </Flex>
+              </div>
             )}
-          </View>
+          </div>
 
-          <Flex justifyContent="end" marginTop="size-200">
-            <Button
-              variant="accent"
-              onPress={handleCreateSpeaker}
-              isDisabled={!isCreateFormValid || isCreating}
-            >
-              {isCreating ? (
-                <>
-                  <ProgressCircle size="S" isIndeterminate aria-label="Creating" />
-                  <Text>Creating...</Text>
-                </>
-              ) : (
-                <Text>Add Speaker</Text>
-              )}
-            </Button>
-          </Flex>
-        </Flex>
-      </Form>
+        </div>
+      </form>
+      <div className={style({display: 'flex', justifyContent: 'end', alignItems: 'center', marginTop: 16})}>
+        <Button
+          variant="accent"
+          onPress={handleCreateSpeaker}
+          isDisabled={!isCreateFormValid || isCreating}
+        >
+          {isCreating ? (
+            <>
+              <ProgressCircle size="S" isIndeterminate aria-label="Creating" />
+              <Text>Creating...</Text>
+            </>
+          ) : (
+            <Text>Add Speaker</Text>
+          )}
+        </Button>
+      </div>
     </>
   )
+
+  const speakerDisplayName = speakerToLocalize
+    ? `${speakerToLocalize.firstName} ${speakerToLocalize.lastName}`
+    : ''
 
   return (
     <DialogContainer onDismiss={onClose}>
       {isOpen && (
-        <Dialog size="L" isDismissable UNSAFE_style={{ maxHeight: '80vh' }}>
-          <Content UNSAFE_style={{ overflow: 'auto' }}>
-            {view === 'select'
-              ? renderSelectView()
-              : view === 'localize'
-                ? renderLocalizeView()
-                : renderCreateView()}
-          </Content>
+        <Dialog data-testid="speaker-picker-dialog" size="L" isDismissible>
+          {() => (
+            <>
+              <Heading slot="title">
+                {view === 'select' ? 'Select Speaker'
+                  : view === 'create' ? 'New Speaker'
+                  : `Add ${locale} content for ${speakerDisplayName}`}
+              </Heading>
+              <Content>
+                <div style={{ overflow: 'auto', maxHeight: '60vh' }}>
+                  {view === 'select'
+                    ? renderSelectContent()
+                    : view === 'localize'
+                      ? renderLocalizeContent()
+                      : renderCreateContent()}
+                </div>
+              </Content>
+            </>
+          )}
         </Dialog>
       )}
     </DialogContainer>

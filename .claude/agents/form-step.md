@@ -45,8 +45,8 @@ useEventFormComponent({
 ## Code conventions (non-negotiable)
 
 - No semicolons
-- React Spectrum v3 components only — no raw HTML inputs
+- Use React Spectrum 2 (`@react-spectrum/s2`) only — no raw HTML inputs unless necessary
 - Use `onPress` not `onClick`
-- Use `Flex`/`Grid` for layout
+- Use the `style()` macro and layout patterns consistent with other EventForm steps
 - No class components
 - Barrel exports in new directories
