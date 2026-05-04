@@ -514,6 +514,7 @@ export interface SponsorData {
   isSaved?: boolean
   isFromSeries?: boolean  // True if selected from series autocomplete
   localizations?: Record<string, SponsorLocalization>
+  ordinal?: number
   modificationTime?: number
 }
 

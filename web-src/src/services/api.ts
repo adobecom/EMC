@@ -1529,7 +1529,12 @@ class ApiService {
       `/v1/events/${eventId}/sponsors/${sponsorId}`,
       sponsorData,
       () => this.getEventSponsor(eventId, sponsorId),
-      (body, dependentData) => ({ ...body, modificationTime: dependentData.modificationTime }),
+      (body, dependentData) => ({
+        sponsorId: body.sponsorId ?? dependentData.sponsorId,
+        sponsorType: body.sponsorType ?? dependentData.sponsorType,
+        ordinal: body.ordinal ?? dependentData.ordinal,
+        modificationTime: dependentData.modificationTime,
+      }),
       'updateSponsorInEvent'
     )
   }

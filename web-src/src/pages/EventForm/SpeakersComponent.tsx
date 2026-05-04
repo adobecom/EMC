@@ -2,7 +2,7 @@
 * <license header>
 */
 
-import React, { useState, useEffect, useCallback, useRef } from 'react'
+import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react'
 import { Button, Heading, Text, Picker, PickerItem, ActionButton, ProgressCircle, TooltipTrigger, Tooltip } from '@react-spectrum/s2'
 import { style } from '@react-spectrum/s2/style' with { type: 'macro' }
 import { ProfileData, SeriesSpeaker, SpeakerType, EventApiResponse } from '../../types/domain'
@@ -130,13 +130,15 @@ export const SpeakersComponent: React.FC = () => {
         return
       }
 
+      const typeOrdinalCounters: Record<string, number> = {}
       const currentSpeakers = profiles
         .filter(p => p.speakerId && p.isSaved)
-        .map((p, index) => ({
-          speakerId: p.speakerId!,
-          speakerType: toApiSpeakerType(p.type),
-          ordinal: index,
-        }))
+        .map(p => {
+          const speakerType = toApiSpeakerType(p.type)
+          if (typeOrdinalCounters[speakerType] === undefined) typeOrdinalCounters[speakerType] = 0
+          const ordinal = typeOrdinalCounters[speakerType]++
+          return { speakerId: p.speakerId!, speakerType, ordinal }
+        })
 
       if (currentSpeakers.length === 0 && savedSpeakers.length > 0) {
         await Promise.all(
@@ -235,8 +237,22 @@ export const SpeakersComponent: React.FC = () => {
   }, [setContextSeriesSpeakers])
   const [isLoadingSpeakers, setIsLoadingSpeakers] = useState(false)
   const [pickerOpen, setPickerOpen] = useState(false)
-  const [draggedIndex, setDraggedIndex] = useState<number | null>(null)
-  const [dragOverIndex, setDragOverIndex] = useState<number | null>(null)
+  const [draggedItem, setDraggedItem] = useState<{ type: SpeakerType; idx: number } | null>(null)
+  const [dragOverItem, setDragOverItem] = useState<{ type: SpeakerType; idx: number } | null>(null)
+
+  const groupedProfiles = useMemo(() => {
+    const map = new Map<SpeakerType, { profile: ProfileData; globalIndex: number }[]>()
+    SPEAKER_TYPE_OPTIONS.forEach(opt => map.set(opt.key, []))
+    profiles.forEach((profile, globalIndex) => {
+      const type = profile.type as SpeakerType
+      if (!map.has(type)) map.set(type, [])
+      map.get(type)!.push({ profile, globalIndex })
+    })
+    for (const [key, items] of map) {
+      if (items.length === 0) map.delete(key)
+    }
+    return map
+  }, [profiles])
 
   // Use formData.seriesId when context seriesId is empty (e.g. when editing a loaded event)
   const seriesId = contextSeriesId || formData.seriesId || ''
@@ -297,54 +313,64 @@ export const SpeakersComponent: React.FC = () => {
     [profiles, updateFormData]
   )
 
-  const updateProfile = useCallback(
-    (index: number, updates: Partial<ProfileData>) => {
-      const updated = [...profiles]
-      updated[index] = { ...updated[index], ...updates }
-      updateFormData({ profiles: updated })
-    },
-    [profiles, updateFormData]
-  )
+  const handleRoleChange = useCallback((globalIndex: number, newType: SpeakerType) => {
+    const updated = profiles.map((p, i) => i === globalIndex ? { ...p, type: newType } : p)
+    const moved = updated[globalIndex]
+    const without = updated.filter((_, i) => i !== globalIndex)
+    let insertAt = without.length
+    for (let i = without.length - 1; i >= 0; i--) {
+      if (without[i].type === newType) {
+        insertAt = i + 1
+        break
+      }
+    }
+    updateFormData({ profiles: [...without.slice(0, insertAt), moved, ...without.slice(insertAt)] })
+  }, [profiles, updateFormData])
 
-  const handleDragStart = (e: React.DragEvent, index: number) => {
-    setDraggedIndex(index)
+  const handleDragStart = (e: React.DragEvent, type: SpeakerType, idx: number) => {
+    setDraggedItem({ type, idx })
     e.dataTransfer.effectAllowed = 'move'
-    e.dataTransfer.setData('text/plain', String(index))
+    e.dataTransfer.setData('text/plain', `${type}:${idx}`)
   }
 
-  const handleDragOver = (e: React.DragEvent, index: number) => {
+  const handleDragOver = (e: React.DragEvent, type: SpeakerType, idx: number) => {
     e.preventDefault()
     e.dataTransfer.dropEffect = 'move'
-    if (draggedIndex !== null && draggedIndex !== index) {
-      setDragOverIndex(index)
+    if (draggedItem !== null && draggedItem.type === type && draggedItem.idx !== idx) {
+      setDragOverItem({ type, idx })
     }
   }
 
-  const handleDragLeave = () => {
-    setDragOverIndex(null)
+  const handleDragLeave = (e: React.DragEvent) => {
+    if ((e.currentTarget as HTMLElement).contains(e.relatedTarget as Node)) return
+    setDragOverItem(null)
   }
 
-  const handleDrop = (e: React.DragEvent, dropIndex: number) => {
+  const handleDrop = (e: React.DragEvent, type: SpeakerType, dropIdx: number) => {
     e.preventDefault()
-
-    if (draggedIndex === null || draggedIndex === dropIndex) {
-      setDraggedIndex(null)
-      setDragOverIndex(null)
+    if (!draggedItem || draggedItem.type !== type || draggedItem.idx === dropIdx) {
+      setDraggedItem(null)
+      setDragOverItem(null)
       return
     }
-
+    const groupItems = groupedProfiles.get(type) || []
+    const groupProfiles = groupItems.map(item => item.profile)
+    const [dragged] = groupProfiles.splice(draggedItem.idx, 1)
+    groupProfiles.splice(dropIdx, 0, dragged)
+    // Replace positions occupied by this group in the global array
+    const sortedGlobalIndices = groupItems.map(item => item.globalIndex).sort((a, b) => a - b)
     const newProfiles = [...profiles]
-    const [draggedItem] = newProfiles.splice(draggedIndex, 1)
-    newProfiles.splice(dropIndex, 0, draggedItem)
+    sortedGlobalIndices.forEach((globalIdx, i) => {
+      newProfiles[globalIdx] = groupProfiles[i]
+    })
     updateFormData({ profiles: newProfiles })
-
-    setDraggedIndex(null)
-    setDragOverIndex(null)
+    setDraggedItem(null)
+    setDragOverItem(null)
   }
 
   const handleDragEnd = () => {
-    setDraggedIndex(null)
-    setDragOverIndex(null)
+    setDraggedItem(null)
+    setDragOverItem(null)
   }
 
   return (
@@ -359,8 +385,14 @@ export const SpeakersComponent: React.FC = () => {
       </div>
 
       <Text>
-        Add speaker and event host details. Drag to reorder. You can change each speaker&apos;s role for this event.
+        Add speaker and event host details. Drag to reorder within each role group. You can change each speaker&apos;s role for this event.
       </Text>
+
+      {profiles.length > 0 && (
+        <Text UNSAFE_style={{ ...TYPOGRAPHY.HELPER_TEXT, fontStyle: 'italic' }}>
+          The order of role groups shown here does not determine how they appear on the event landing page. Group sequencing is controlled by the page template configuration in the DA authoring documentation.
+        </Text>
+      )}
 
       {profiles.length === 0 && (
         <div
@@ -381,141 +413,167 @@ export const SpeakersComponent: React.FC = () => {
         </div>
       )}
 
-      {profiles.map((profile, index) => {
-        const displayName =
-          profile.firstName && profile.lastName
-            ? `${profile.firstName} ${profile.lastName}`
-            : `Speaker ${index + 1}`
-        const isDragging = draggedIndex === index
-        const isDragOver = dragOverIndex === index
-        const seriesSpeaker = profile.speakerId
-          ? seriesSpeakers.find(s => s.speakerId === profile.speakerId)
-          : undefined
-        const missingLocalization =
-          !!profile.isFromSeries &&
-          !!profile.speakerId &&
-          !!seriesSpeaker &&
-          !speakerHasLocalization(seriesSpeaker, locale) &&
-          !(profile.title?.trim())
-        const hasTitleNoBio =
-          locale !== 'en-US' &&
-          !!profile.isFromSeries &&
-          !!seriesSpeaker &&
-          speakerHasLocalization(seriesSpeaker, locale) &&
-          !(seriesSpeaker.localizations?.[locale]?.bio ?? seriesSpeaker.bio ?? '').trim()
-
+      {Array.from(groupedProfiles.entries()).map(([type, groupItems]) => {
+        const typeLabel = SPEAKER_TYPE_OPTIONS.find(o => o.key === type)?.label ?? type
         return (
           <div
-            key={index}
-            draggable
-            onDragStart={(e: React.DragEvent) => handleDragStart(e, index)}
-            onDragOver={(e: React.DragEvent) => handleDragOver(e, index)}
-            onDragLeave={handleDragLeave}
-            onDrop={(e: React.DragEvent) => handleDrop(e, index)}
-            onDragEnd={handleDragEnd}
+            key={type}
             style={{
-              padding: '16px',
-              border: isDragOver
-                ? `2px solid ${SURFACES.SELECTED_RING}`
-                : `1px solid ${SURFACES.BORDER}`,
+              border: `1px solid ${SURFACES.BORDER}`,
               borderRadius: '8px',
-              backgroundColor: isDragging
-                ? SURFACES.SUBTLE
-                : SURFACES.CANVAS,
-              opacity: isDragging ? 0.5 : 1,
-              transition: 'border-color 0.2s, background-color 0.2s',
+              overflow: 'hidden',
             }}
           >
-            <div className={style({display: 'flex', alignItems: 'center', gap: 16})}>
-              <span style={{ flexShrink: 0, cursor: 'grab', display: 'flex' }} aria-hidden>
-                <Move />
-              </span>
+            <div
+              style={{
+                padding: '10px 16px',
+                backgroundColor: SURFACES.SUBTLE,
+                borderBottom: `1px solid ${SURFACES.BORDER}`,
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+              }}
+            >
+              <Text UNSAFE_style={{ ...TYPOGRAPHY.FIELD_LABEL, fontWeight: 600 }}>{typeLabel}</Text>
+              <Text UNSAFE_style={{ ...TYPOGRAPHY.HELPER_TEXT }}>
+                {groupItems.length} {groupItems.length === 1 ? 'speaker' : 'speakers'}
+              </Text>
+            </div>
 
-              {profile.imageUrl ? (
-                <img
-                  src={profile.imageUrl}
-                  alt={displayName}
-                  style={{
-                    width: '40px',
-                    height: '40px',
-                    borderRadius: '50%',
-                    objectFit: 'cover',
-                    border: `1px solid ${SURFACES.BORDER}`,
-                    flexShrink: 0,
-                  }}
-                />
-              ) : (
-                <div
-                  style={{
-                    width: '40px',
-                    height: '40px',
-                    borderRadius: '50%',
-                    backgroundColor: SURFACES.CHROME,
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    color: COLORS.GRAY_600,
-                    fontSize: '14px',
-                    fontWeight: 'bold',
-                    flexShrink: 0,
-                  }}
-                >
-                  {profile.firstName?.[0] ?? ''}{profile.lastName?.[0] ?? ''}
-                </div>
-              )}
+            <div className={style({display: 'flex', flexDirection: 'column', gap: 0})}>
+              {groupItems.map(({ profile, globalIndex }, groupIdx) => {
+                const displayName =
+                  profile.firstName && profile.lastName
+                    ? `${profile.firstName} ${profile.lastName}`
+                    : `Speaker ${globalIndex + 1}`
+                const isDragging = draggedItem?.type === type && draggedItem.idx === groupIdx
+                const isDragOver = dragOverItem?.type === type && dragOverItem.idx === groupIdx
+                const seriesSpeaker = profile.speakerId
+                  ? seriesSpeakers.find(s => s.speakerId === profile.speakerId)
+                  : undefined
+                const missingLocalization =
+                  !!profile.isFromSeries &&
+                  !!profile.speakerId &&
+                  !!seriesSpeaker &&
+                  !speakerHasLocalization(seriesSpeaker, locale) &&
+                  !(profile.title?.trim())
+                const hasTitleNoBio =
+                  locale !== 'en-US' &&
+                  !!profile.isFromSeries &&
+                  !!seriesSpeaker &&
+                  speakerHasLocalization(seriesSpeaker, locale) &&
+                  !(seriesSpeaker.localizations?.[locale]?.bio ?? seriesSpeaker.bio ?? '').trim()
 
-              <div className={style({display: 'flex', flexDirection: 'column', flexGrow: 1})} style={{minWidth: 0}}>
-                <div className={style({display: 'flex', alignItems: 'center', gap: 8})}>
-                  <Text UNSAFE_style={{ fontWeight: 600, fontSize: '14px' }}>{displayName}</Text>
-                  {missingLocalization && (
-                    <TooltipTrigger delay={0}>
-                      <ActionButton isQuiet aria-label={`Missing ${locale} content`}>
-                        <AlertTriangle
-                          UNSAFE_style={{ color: COLORS.RED_600 }}
-                        />
-                      </ActionButton>
-                      <Tooltip>
-                        This speaker is missing a localized title for {locale}. Add it in the
-                        Speakers dashboard or when adding the speaker to avoid display issues.
-                      </Tooltip>
-                    </TooltipTrigger>
-                  )}
-                </div>
-                {profile.title && (
-                  <Text
-                    UNSAFE_style={{
-                      fontSize: '12px',
-                      color: COLORS.GRAY_600,
-                      overflow: 'hidden',
-                      textOverflow: 'ellipsis',
-                      whiteSpace: 'nowrap',
+                return (
+                  <div
+                    key={globalIndex}
+                    draggable
+                    onDragStart={(e: React.DragEvent) => handleDragStart(e, type, groupIdx)}
+                    onDragOver={(e: React.DragEvent) => handleDragOver(e, type, groupIdx)}
+                    onDragLeave={handleDragLeave}
+                    onDrop={(e: React.DragEvent) => handleDrop(e, type, groupIdx)}
+                    onDragEnd={handleDragEnd}
+                    style={{
+                      padding: '16px',
+                      borderBottom: groupIdx < groupItems.length - 1 ? `1px solid ${SURFACES.BORDER}` : 'none',
+                      border: isDragOver ? `2px solid ${SURFACES.SELECTED_RING}` : undefined,
+                      backgroundColor: isDragging ? SURFACES.SUBTLE : SURFACES.CANVAS,
+                      opacity: isDragging ? 0.5 : 1,
+                      transition: 'border-color 0.2s, background-color 0.2s',
                     }}
                   >
-                    {profile.title}
-                  </Text>
-                )}
-                {hasTitleNoBio && (
-                  <Text UNSAFE_style={{ fontSize: '11px', color: COLORS.GRAY_500, fontStyle: 'italic' }}>
-                    No bio for this locale
-                  </Text>
-                )}
-              </div>
+                    <div className={style({display: 'flex', alignItems: 'center', gap: 16})}>
+                      <span style={{ flexShrink: 0, cursor: 'grab', display: 'flex' }} aria-hidden>
+                        <Move />
+                      </span>
 
-              <Picker
-                label="Role"
-                labelPosition="side"
-                selectedKey={profile.type}
-                onSelectionChange={(key) => updateProfile(index, { type: key as SpeakerType })}
-                styles={style({ width: 192 })}
-              >
-                {SPEAKER_TYPE_OPTIONS.map(option => (
-                  <PickerItem key={option.key} id={option.key}>{option.label}</PickerItem>
-                ))}
-              </Picker>
+                      {profile.imageUrl ? (
+                        <img
+                          src={profile.imageUrl}
+                          alt={displayName}
+                          style={{
+                            width: '40px',
+                            height: '40px',
+                            borderRadius: '50%',
+                            objectFit: 'cover',
+                            border: `1px solid ${SURFACES.BORDER}`,
+                            flexShrink: 0,
+                          }}
+                        />
+                      ) : (
+                        <div
+                          style={{
+                            width: '40px',
+                            height: '40px',
+                            borderRadius: '50%',
+                            backgroundColor: SURFACES.CHROME,
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            color: COLORS.GRAY_600,
+                            fontSize: '14px',
+                            fontWeight: 'bold',
+                            flexShrink: 0,
+                          }}
+                        >
+                          {profile.firstName?.[0] ?? ''}{profile.lastName?.[0] ?? ''}
+                        </div>
+                      )}
 
-              <ActionButton onPress={() => removeProfile(index)} isQuiet aria-label="Remove speaker">
-                <RemoveCircle />
-              </ActionButton>
+                      <div className={style({display: 'flex', flexDirection: 'column', flexGrow: 1})} style={{minWidth: 0}}>
+                        <div className={style({display: 'flex', alignItems: 'center', gap: 8})}>
+                          <Text UNSAFE_style={{ fontWeight: 600, fontSize: '14px' }}>{displayName}</Text>
+                          {missingLocalization && (
+                            <TooltipTrigger delay={0}>
+                              <ActionButton isQuiet aria-label={`Missing ${locale} content`}>
+                                <AlertTriangle UNSAFE_style={{ color: COLORS.RED_600 }} />
+                              </ActionButton>
+                              <Tooltip>
+                                This speaker is missing a localized title for {locale}. Add it in the
+                                Speakers dashboard or when adding the speaker to avoid display issues.
+                              </Tooltip>
+                            </TooltipTrigger>
+                          )}
+                        </div>
+                        {profile.title && (
+                          <Text
+                            UNSAFE_style={{
+                              fontSize: '12px',
+                              color: COLORS.GRAY_600,
+                              overflow: 'hidden',
+                              textOverflow: 'ellipsis',
+                              whiteSpace: 'nowrap',
+                            }}
+                          >
+                            {profile.title}
+                          </Text>
+                        )}
+                        {hasTitleNoBio && (
+                          <Text UNSAFE_style={{ fontSize: '11px', color: COLORS.GRAY_500, fontStyle: 'italic' }}>
+                            No bio for this locale
+                          </Text>
+                        )}
+                      </div>
+
+                      <Picker
+                        label="Role"
+                        labelPosition="side"
+                        selectedKey={profile.type}
+                        onSelectionChange={(key) => handleRoleChange(globalIndex, key as SpeakerType)}
+                        styles={style({ width: 192 })}
+                      >
+                        {SPEAKER_TYPE_OPTIONS.map(option => (
+                          <PickerItem key={option.key} id={option.key}>{option.label}</PickerItem>
+                        ))}
+                      </Picker>
+
+                      <ActionButton onPress={() => removeProfile(globalIndex)} isQuiet aria-label="Remove speaker">
+                        <RemoveCircle />
+                      </ActionButton>
+                    </div>
+                  </div>
+                )
+              })}
             </div>
           </div>
         )
