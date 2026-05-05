@@ -561,6 +561,7 @@ export const Sessions: React.FC<SessionsProps> = ({ onOpenFormChange }) => {
           seriesSpeakers={seriesSpeakers}
           onSpeakersRefresh={refreshSeriesSpeakers}
           onDirtyChange={onOpenFormChange}
+          allSessions={sessions}
         />
       )}
     </div>
