@@ -238,7 +238,7 @@ Each "screen" is a `<section hidden>` in `index.html`. State transitions just to
     </section>
 
     <section id="screen-event" hidden>
-      <h1>Biometric Check-in</h1>
+      <h1>Check-in</h1>
       <div id="event-banner"></div>
     </section>
 

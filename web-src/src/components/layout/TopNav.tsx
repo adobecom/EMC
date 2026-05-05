@@ -67,11 +67,11 @@ const TopNav: React.FC<TopNavProps> = ({ ims }) => {
         >
           <div>
             <a href="/">
-              <svg 
-                xmlns="http://www.w3.org/2000/svg" 
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
                 viewBox="0 0 64.57 35"
                 width="80"
-                height="auto"
+                height="43"
                 style={{ display: 'block' }}
               >
                 <path 
@@ -105,6 +105,14 @@ const TopNav: React.FC<TopNavProps> = ({ ims }) => {
                 to="/events"
               >
                 <Text>Events</Text>
+              </NavLink>
+            )}
+            {canReadEvents && (
+              <NavLink
+                className={({ isActive }) => `nav-link ${isActive ? 'is-selected' : ''}`}
+                to="/checkin"
+              >
+                <Text>Check-in</Text>
               </NavLink>
             )}
             {canReadEvents && (

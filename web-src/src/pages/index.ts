@@ -18,6 +18,7 @@ export { UserProfile } from './UserProfile'
 export { EventsDashboard } from './EventsDashboard'
 export { SeriesDashboard } from './SeriesDashboard'
 export { Registrations } from './Registrations'
+export { BiometricCheckin } from './BiometricCheckin'
 export { SpeakersDashboard } from './SpeakersDashboard'
 export { OverviewDashboard } from './OverviewDashboard'
 

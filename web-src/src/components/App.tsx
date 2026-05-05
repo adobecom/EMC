@@ -47,6 +47,7 @@ import {
   UserManagement,
   ScopeGroupManagement,
   RoleManagement,
+  BiometricCheckin,
 } from '../pages'
 
 interface AppProps {
@@ -132,6 +133,7 @@ const AppContent: React.FC<{ runtime: Runtime, colorScheme: ColorScheme }> = ({ 
                             <Route path='/events/edit/:id' element={<ProtectedRoute resource="event" access="write" redirectTo="/events"><EventForm ims={ims} /></ProtectedRoute>} />
                             <Route path='/registrations' element={<Registrations ims={ims} />} />
                             <Route path='/registrations/:eventId' element={<Registrations ims={ims} />} />
+                            <Route path='/checkin' element={<BiometricCheckin ims={ims} />} />
                             <Route path='/speakers' element={<SpeakersDashboard ims={ims} />} />
                             <Route path='/users' element={<UserManagement ims={ims} />} />
                             <Route path='/access' element={<ScopeGroupManagement ims={ims} />} />

@@ -3,7 +3,7 @@
 */
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react'
-import { Tabs, TabList, Tab, TabPanel } from '@react-spectrum/s2'
+import { Button, Text } from '@react-spectrum/s2'
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom'
 import type { EventApiResponse } from '../../types/domain'
 import type { Attendee, AttendeeStats, AttendeeColumnConfig } from '../../types/attendee'
@@ -305,51 +305,69 @@ export const Registrations: React.FC<RegistrationsProps> = ({ ims: _ims }) => {
         </div>
       )}
 
-      {/* Tabbed Content Area */}
+      {/* Tab strip: S2 buttons + conditional panels (no v3 Tabs) */}
       <div style={{ marginTop: '16px' }}>
-        <Tabs
-          aria-label="Registrations Dashboard"
-          selectedKey={selectedTab}
-          onSelectionChange={(key) => setSelectedTab(String(key))}
+        <div
+          style={{
+            display: 'flex',
+            gap: 8,
+            flexWrap: 'nowrap',
+            overflowX: 'auto',
+            paddingBottom: 4,
+            borderBottom: '1px solid var(--spectrum-global-color-gray-200)',
+          }}
         >
-          <TabList>
-            <Tab id="registrations">Registrations</Tab>
-            <Tab id="campaigns">Campaigns</Tab>
-            <Tab id="sessions">Sessions</Tab>
-          </TabList>
-          <TabPanel id="registrations">
-            <div style={{ paddingTop: '24px' }}>
-              <RegistrationsTab
-                selectedEventId={selectedEventId}
-                attendees={attendees}
-                columnConfig={effectiveColumnConfig}
-                onAttendeesRefresh={handleAttendeesRefresh}
-                campaigns={campaigns}
-                eventTitle={selectedEvent?.title || selectedEvent?.enTitle || ''}
-              />
-            </div>
-          </TabPanel>
-          <TabPanel id="campaigns">
-            <div style={{ paddingTop: '24px' }}>
-              <CampaignsTab
-                eventId={selectedEventId}
-                event={selectedEvent}
-                campaigns={campaigns}
-                onCreateCampaign={handleCreateCampaign}
-                onUpdateCampaign={handleUpdateCampaign}
-                onDeleteCampaign={handleDeleteCampaign}
-              />
-            </div>
-          </TabPanel>
-          <TabPanel id="sessions">
-            <div style={{ paddingTop: '24px' }}>
-              <SessionsTab
-                eventId={selectedEventId}
-                attendees={attendees}
-              />
-            </div>
-          </TabPanel>
-        </Tabs>
+          <Button
+            variant={selectedTab === 'registrations' ? 'accent' : 'secondary'}
+            onPress={() => setSelectedTab('registrations')}
+          >
+            <Text>Registrations</Text>
+          </Button>
+          <Button
+            variant={selectedTab === 'campaigns' ? 'accent' : 'secondary'}
+            onPress={() => setSelectedTab('campaigns')}
+          >
+            <Text>Campaigns</Text>
+          </Button>
+          <Button
+            variant={selectedTab === 'sessions' ? 'accent' : 'secondary'}
+            onPress={() => setSelectedTab('sessions')}
+          >
+            <Text>Sessions</Text>
+          </Button>
+        </div>
+        {selectedTab === 'registrations' && (
+          <div style={{ paddingTop: '24px' }}>
+            <RegistrationsTab
+              selectedEventId={selectedEventId}
+              attendees={attendees}
+              columnConfig={effectiveColumnConfig}
+              onAttendeesRefresh={handleAttendeesRefresh}
+              campaigns={campaigns}
+              eventTitle={selectedEvent?.title || selectedEvent?.enTitle || ''}
+            />
+          </div>
+        )}
+        {selectedTab === 'campaigns' && (
+          <div style={{ paddingTop: '24px' }}>
+            <CampaignsTab
+              eventId={selectedEventId}
+              event={selectedEvent}
+              campaigns={campaigns}
+              onCreateCampaign={handleCreateCampaign}
+              onUpdateCampaign={handleUpdateCampaign}
+              onDeleteCampaign={handleDeleteCampaign}
+            />
+          </div>
+        )}
+        {selectedTab === 'sessions' && (
+          <div style={{ paddingTop: '24px' }}>
+            <SessionsTab
+              eventId={selectedEventId}
+              attendees={attendees}
+            />
+          </div>
+        )}
       </div>
 
       <BlurredLoadingOverlay

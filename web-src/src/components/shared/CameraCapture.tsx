@@ -3,7 +3,7 @@
 */
 
 import React, { useState, useCallback, useEffect, useMemo } from 'react'
-import { View, Flex, Button, Text } from '@adobe/react-spectrum'
+import { Button, Text } from '@react-spectrum/s2'
 import Camera from '@react-spectrum/s2/icons/Camera'
 import Refresh from '@react-spectrum/s2/icons/Refresh'
 import Checkmark from '@react-spectrum/s2/icons/Checkmark'
@@ -155,10 +155,8 @@ export const CameraCapture: React.FC<CameraCaptureProps> = ({
   // Permission denied state
   if (permission === 'denied' || permission === 'error') {
     return (
-      <View
-        borderRadius="medium"
-        padding="size-400"
-        UNSAFE_style={{
+      <div
+        style={{
           ...BORDERS.DOTTED_GRAY,
           width: `${width}px`,
           height: `${height}px`,
@@ -166,14 +164,17 @@ export const CameraCapture: React.FC<CameraCaptureProps> = ({
           flexDirection: 'column',
           alignItems: 'center',
           justifyContent: 'center',
-          backgroundColor: COLORS.GRAY_100
+          backgroundColor: COLORS.GRAY_100,
+          borderRadius: 8,
+          padding: 32,
+          boxSizing: 'border-box',
         }}
       >
         <AlertTriangle aria-hidden UNSAFE_style={{ color: COLORS.GRAY_600, marginBottom: 16, width: 32, height: 32 }} />
         <Text UNSAFE_style={{ color: COLORS.GRAY_700, textAlign: 'center', marginBottom: 16 }}>
           {error || 'Camera access is required for biometric capture.'}
         </Text>
-        <Flex gap="size-100">
+        <div style={{ display: 'flex', gap: 8, justifyContent: 'center' }}>
           <Button variant="secondary" onPress={() => startCamera()}>
             Try Again
           </Button>
@@ -182,23 +183,23 @@ export const CameraCapture: React.FC<CameraCaptureProps> = ({
               Cancel
             </Button>
           )}
-        </Flex>
-      </View>
+        </div>
+      </div>
     )
   }
 
   return (
-    <Flex direction="column" gap="size-200" alignItems="center">
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 16, alignItems: 'center' }}>
       {/* Video / Captured Image Display */}
-      <View
-        borderRadius="medium"
-        UNSAFE_style={{
+      <div
+        style={{
           width: `${width}px`,
           height: `${height}px`,
           overflow: 'hidden',
           border: `2px solid ${isStreaming || capturedImage ? COLORS.GRAY_300 : COLORS.GRAY_200}`,
           backgroundColor: COLORS.BLACK,
-          position: 'relative'
+          position: 'relative',
+          borderRadius: 8,
         }}
       >
         {/* Live video feed */}
@@ -255,11 +256,11 @@ export const CameraCapture: React.FC<CameraCaptureProps> = ({
             pointerEvents: 'none'
           }} />
         )}
-      </View>
+      </div>
 
       {/* Face detection status indicator */}
       {showFaceDetection && (
-        <Flex alignItems="center" gap="size-100" UNSAFE_style={{ height: '20px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, height: '20px' }}>
           {!isModelLoaded && !modelError && (
             <Text UNSAFE_style={{ color: COLORS.GRAY_600, fontSize: '13px' }}>
               Loading face detection...
@@ -288,18 +289,18 @@ export const CameraCapture: React.FC<CameraCaptureProps> = ({
               Position your face in the frame
             </Text>
           )}
-        </Flex>
+        </div>
       )}
 
       {/* Hidden canvas for capture */}
       <canvas ref={canvasRef as React.RefObject<HTMLCanvasElement>} style={{ display: 'none' }} />
 
       {/* Action Buttons */}
-      <Flex gap="size-100" justifyContent="center">
+      <div style={{ display: 'flex', gap: 8, justifyContent: 'center' }}>
         {!capturedImage ? (
           <>
             <Button
-              variant="cta"
+              variant="accent"
               onPress={handleCapture}
               isDisabled={captureDisabled}
             >
@@ -319,13 +320,13 @@ export const CameraCapture: React.FC<CameraCaptureProps> = ({
               <Refresh />
               <Text>Retake</Text>
             </Button>
-            <Button variant="cta" onPress={handleUsePhoto}>
+            <Button variant="accent" onPress={handleUsePhoto}>
               <Checkmark />
               <Text>Use Photo</Text>
             </Button>
           </>
         )}
-      </Flex>
-    </Flex>
+      </div>
+    </div>
   )
 }

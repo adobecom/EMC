@@ -7,28 +7,21 @@ import { useNavigate } from 'react-router-dom'
 import { style } from '@react-spectrum/s2/style' with { type: 'macro' }
 import {
   ActionButton,
-  Avatar,
   Badge,
-  MenuTrigger,
+  Header,
+  Heading,
   Menu,
   MenuItem,
   MenuSection,
-  Header,
-  Heading,
+  MenuTrigger,
   Text,
   Tooltip,
-  TooltipTrigger
+  TooltipTrigger,
 } from '@react-spectrum/s2'
-import User from "@react-spectrum/s2/icons/User"
-import InfoCircle from "@react-spectrum/s2/icons/InfoCircle"
-import Leave from "@react-spectrum/s2/icons/Leave"
-import UserGroup from "@react-spectrum/s2/icons/UserGroup"
-import UserSettings from "@react-spectrum/s2/icons/UserSettings"
-import UserLock from "@react-spectrum/s2/icons/UserLock"
-import Checkmark from "@react-spectrum/s2/icons/Checkmark"
+import User from '@react-spectrum/s2/icons/User'
+import UserGroup from '@react-spectrum/s2/icons/UserGroup'
 import { IMS } from '../../types'
 import { useAuth } from '../../contexts/AuthContext'
-import { useProfileAvatar } from '../../hooks/useProfileAvatar'
 import { useHasAnyPermission } from '../../hooks/useHasPermission'
 import { useGroup } from '../../contexts/GroupContext'
 
@@ -40,30 +33,18 @@ interface UserPanelProps {
 export const UserPanel: React.FC<UserPanelProps> = ({ ims, compact = false }) => {
   const navigate = useNavigate()
   const { signOut, authMode } = useAuth()
-  const { avatarUrl } = useProfileAvatar(ims)
 
-  // RBAC group switching
   const { groups, activeGroup, setActiveGroup } = useGroup()
 
-  // RBAC admin checks
   const canManageAccess = useHasAnyPermission([['scope', 'read'], ['group', 'read']])
   const canManageRoles = useHasAnyPermission([['role', 'read']])
   const showAdminSection = canManageAccess || canManageRoles
 
-  // Extract user info from IMS
   const userName = ims.profile?.name || 'Guest User'
   const userEmail = ims.profile?.email || ''
 
-  // Get initials for avatar
-  const getInitials = (name: string): string => {
-    const parts = name.split(' ')
-    if (parts.length >= 2) {
-      return `${parts[0][0]}${parts[1][0]}`.toUpperCase()
-    }
-    return name.substring(0, 2).toUpperCase()
-  }
-
-  const handleMenuAction = (key: React.Key) => {
+  const handleMenuAction = (key: string) => {
+    if (key === 'shell-info') return
     if (key === 'profile') {
       navigate('/profile')
     } else if (key === 'signout') {
@@ -72,12 +53,11 @@ export const UserPanel: React.FC<UserPanelProps> = ({ ims, compact = false }) =>
       navigate('/access')
     } else if (key === 'roles') {
       navigate('/roles')
-    } else if (typeof key === 'string' && key.startsWith('group_')) {
+    } else if (key.startsWith('group_')) {
       setActiveGroup(key.replace('group_', ''))
     }
   }
 
-  // If no IMS profile, show minimal panel
   const panelShell = (children: React.ReactNode) => (
     <div
       className={compact ? 'user-panel-compact' : ''}
@@ -153,57 +133,35 @@ export const UserPanel: React.FC<UserPanelProps> = ({ ims, compact = false }) =>
         }
       >
         {compactGroupIndicator}
+        {!compact && (
+          <div className={`${style({ display: 'flex', flexDirection: 'column', gap: 2, flexGrow: 1 })} user-info-container`}>
+            <Text UNSAFE_className="user-name">
+              {userName}
+            </Text>
+            {userEmail && (
+              <Text UNSAFE_className="user-email">
+                {userEmail}
+              </Text>
+            )}
+          </div>
+        )}
+        {compact && (
+          <Text UNSAFE_className="user-name" UNSAFE_style={{ maxWidth: 160, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+            {userName}
+          </Text>
+        )}
         <MenuTrigger>
           <ActionButton
             data-testid="user-panel"
             isQuiet
+            aria-label={`Account menu for ${userName}`}
             UNSAFE_className={compact ? 'user-panel-button-compact' : 'user-panel-button'}
           >
-            <div className={style({ display: 'flex', alignItems: 'center', gap: 12, width: '[100%]' })}>
-              {/* Avatar: image when available, else initials */}
-              {avatarUrl ? (
-                <Avatar
-                  size={compact ? 32 : 40}
-                  src={avatarUrl}
-                  alt={userName}
-                />
-              ) : (
-                <div
-                  className="user-avatar"
-                  style={{
-                    background: 'var(--spectrum-global-color-blue-600)',
-                    width: compact ? 32 : 40,
-                    height: compact ? 32 : 40,
-                    borderRadius: 8,
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                  }}
-                >
-                  <Text UNSAFE_className={compact ? 'user-initials-compact' : 'user-initials'}>
-                    {getInitials(userName)}
-                  </Text>
-                </div>
-              )}
-
-              {/* User info - only show name in compact mode */}
-              <div className={`${style({ display: 'flex', flexDirection: 'column', gap: 2, flexGrow: 1 })} user-info-container`}>
-                <Text UNSAFE_className="user-name">
-                  {userName}
-                </Text>
-                {!compact && userEmail && (
-                  <Text UNSAFE_className="user-email">
-                    {userEmail}
-                  </Text>
-                )}
-              </div>
-            </div>
+            <User />
           </ActionButton>
-
-          <Menu onAction={handleMenuAction} UNSAFE_style={{ minWidth: '240px' }}>
-            <MenuSection>
+          <Menu onAction={(k) => handleMenuAction(String(k))}>
+            <MenuSection aria-label="Account">
               <MenuItem id="profile" textValue="View Profile">
-                <User />
                 <Text slot="label">View Profile</Text>
               </MenuItem>
             </MenuSection>
@@ -214,13 +172,15 @@ export const UserPanel: React.FC<UserPanelProps> = ({ ims, compact = false }) =>
                 </Header>
                 {groups.map(group => (
                   <MenuItem
-                    key={`group_${group.groupId}`}
+                    key={group.groupId}
                     id={`group_${group.groupId}`}
-                    textValue={group.name}
+                    textValue={group.scopeName ? `${group.name} (${group.scopeName})` : group.name}
                   >
-                    {activeGroup?.groupId === group.groupId ? <Checkmark /> : <UserGroup />}
-                    <Text slot="label">{group.name}</Text>
-                    {group.scopeName && <Text slot="description">{group.scopeName}</Text>}
+                    <Text slot="label">
+                      {activeGroup?.groupId === group.groupId ? '✓ ' : ''}
+                      {group.name}
+                      {group.scopeName ? ` — ${group.scopeName}` : ''}
+                    </Text>
                   </MenuItem>
                 ))}
               </MenuSection>
@@ -232,29 +192,25 @@ export const UserPanel: React.FC<UserPanelProps> = ({ ims, compact = false }) =>
                 </Header>
                 {canManageAccess ? (
                   <MenuItem id="access" textValue="Access Management">
-                    <UserSettings />
                     <Text slot="label">Access Management</Text>
                   </MenuItem>
                 ) : null}
                 {canManageRoles ? (
                   <MenuItem id="roles" textValue="Roles">
-                    <UserLock />
                     <Text slot="label">Roles</Text>
                   </MenuItem>
                 ) : null}
               </MenuSection>
             ) : null}
             {authMode === 'standalone' ? (
-              <MenuSection>
+              <MenuSection aria-label="Session">
                 <MenuItem id="signout" textValue="Sign Out">
-                  <Leave />
                   <Text slot="label">Sign Out</Text>
                 </MenuItem>
               </MenuSection>
             ) : (
-              <MenuSection aria-label="shell-mode">
-                <MenuItem id="shell-info" textValue="Managed by Experience Cloud">
-                  <InfoCircle />
+              <MenuSection aria-label="Sign out information">
+                <MenuItem id="shell-info" textValue="Sign out via Experience Cloud" isDisabled>
                   <Text slot="label">Sign out via Experience Cloud</Text>
                 </MenuItem>
               </MenuSection>
@@ -263,7 +219,6 @@ export const UserPanel: React.FC<UserPanelProps> = ({ ims, compact = false }) =>
         </MenuTrigger>
       </div>
 
-      {/* Organization indicator - only show in full mode */}
       {!compact && ims.org && (
         <div className={style({ display: 'flex', alignItems: 'center', gap: 8 })} style={{ marginTop: 'var(--spectrum-global-dimension-size-150)' }}>
           <Text UNSAFE_className="org-label">

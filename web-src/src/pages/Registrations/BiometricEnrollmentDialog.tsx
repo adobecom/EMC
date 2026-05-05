@@ -4,17 +4,16 @@
 
 import React, { useState, useCallback } from 'react'
 import {
-  DialogTrigger,
-  Dialog,
-  Heading,
-  Content,
-  Divider,
-  ButtonGroup,
   Button,
+  ButtonGroup,
+  Content,
+  Dialog,
+  DialogTrigger,
+  Divider,
+  Heading,
   Text,
-  Flex,
-  View
-} from '@adobe/react-spectrum'
+} from '@react-spectrum/s2'
+import { style } from '@react-spectrum/s2/style' with { type: 'macro' }
 import type { Attendee } from '../../types/attendee'
 import { getAttendeeName } from '../../types/attendee'
 import { CameraCapture, BiometricConsentDialog } from '../../components/shared'
@@ -85,10 +84,12 @@ export const BiometricEnrollmentDialog: React.FC<BiometricEnrollmentDialogProps>
         />
       ) : step === 'capture' ? (
         <Dialog>
-          <Heading>Capture Face Photo</Heading>
-          <Divider />
+          <Heading slot="title">Capture Face Photo</Heading>
           <Content>
-            <Flex direction="column" gap="size-200" alignItems="center">
+            <Divider size="S" />
+            <div
+              className={style({ display: 'flex', flexDirection: 'column', gap: 16, alignItems: 'center', marginTop: 16 })}
+            >
               <Text UNSAFE_style={{ color: COLORS.GRAY_700 }}>
                 Position <strong>{attendeeName}</strong>&apos;s face within the guide and capture a clear photo.
               </Text>
@@ -99,15 +100,17 @@ export const BiometricEnrollmentDialog: React.FC<BiometricEnrollmentDialogProps>
                 width={400}
                 height={300}
               />
-            </Flex>
+            </div>
           </Content>
         </Dialog>
       ) : (
         <Dialog>
-          <Heading>Thank you</Heading>
-          <Divider />
+          <Heading slot="title">Thank you</Heading>
           <Content>
-            <Flex direction="column" gap="size-200" alignItems="center">
+            <Divider size="S" />
+            <div
+              className={style({ display: 'flex', flexDirection: 'column', gap: 16, alignItems: 'center', marginTop: 16 })}
+            >
               <Text UNSAFE_style={{ color: COLORS.GRAY_700, textAlign: 'center', maxWidth: '440px' }}>
                 Thanks for consenting to biometric collection. At the event, please proceed to the fast-lane and use
                 the automated pre-checkin system.
@@ -116,13 +119,13 @@ export const BiometricEnrollmentDialog: React.FC<BiometricEnrollmentDialogProps>
                 Review the captured photo for <strong>{attendeeName}</strong> before saving.
               </Text>
               {capturedDataUrl && (
-                <View
-                  borderRadius="medium"
-                  UNSAFE_style={{
+                <div
+                  style={{
+                    borderRadius: 8,
                     overflow: 'hidden',
                     border: `2px solid ${COLORS.GRAY_300}`,
                     width: '300px',
-                    height: '225px'
+                    height: '225px',
                   }}
                 >
                   <img
@@ -134,15 +137,15 @@ export const BiometricEnrollmentDialog: React.FC<BiometricEnrollmentDialogProps>
                       objectFit: 'cover'
                     }}
                   />
-                </View>
+                </div>
               )}
-            </Flex>
+            </div>
           </Content>
           <ButtonGroup>
             <Button variant="secondary" onPress={handleRetake}>
               Retake
             </Button>
-            <Button variant="cta" onPress={handleConfirmEnrollment}>
+            <Button variant="accent" onPress={handleConfirmEnrollment}>
               Save enrollment
             </Button>
           </ButtonGroup>
