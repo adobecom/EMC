@@ -30,6 +30,7 @@ import { RichTextEditor, TagSelector } from "../../../components/shared";
 import {
   dateAndTimeToISO,
   millisToNaiveDateTimeString,
+  naiveDateTimeToUTCMillis,
   parseTimeFromDateTime,
   safeParseDateTimeString,
 } from "../../../utils/dateTime";
@@ -136,6 +137,8 @@ interface SessionFormProps {
   onSpeakersRefresh?: () => Promise<void>;
   /** Called when the form's dirty state changes (true = has unsaved edits) */
   onDirtyChange?: (isDirty: boolean) => void;
+  /** All sibling sessions in this event — used for time/location overlap detection */
+  allSessions?: Session[];
 }
 
 interface LoadedSnapshot {
@@ -159,6 +162,7 @@ export const SessionForm: React.FC<SessionFormProps> = ({
   seriesSpeakers: seriesSpeakersProp,
   onSpeakersRefresh: onSpeakersRefreshProp,
   onDirtyChange,
+  allSessions,
 }) => {
   const isEditMode = session !== null;
   const { seriesId: contextSeriesId, formData, locale } = useEventFormContext();
@@ -475,11 +479,27 @@ export const SessionForm: React.FC<SessionFormProps> = ({
     (!attendeeLimit.trim() || Number(attendeeLimit) <= 0),
   );
 
+  const hasLocationConflict = useMemo(() => {
+    if (!selectedLocationId || !date || !startTime || !endTime) return false
+    if (isEndTimeInvalid) return false
+    const tz = formData.timezone || 'UTC'
+    const currentStart = naiveDateTimeToUTCMillis(dateAndTimeToISO(date, startTime), tz)
+    const currentEnd = naiveDateTimeToUTCMillis(dateAndTimeToISO(date, endTime), tz)
+    return (allSessions ?? []).some((s) => {
+      if (s.id === session?.id) return false
+      if (s.locationId !== selectedLocationId) return false
+      const sStart = s.sessionTime?.startTimeMillis
+      const sEnd = s.sessionTime?.endTimeMillis
+      if (sStart == null || sEnd == null) return false
+      return currentStart < sEnd && currentEnd > sStart
+    })
+  }, [selectedLocationId, date, startTime, endTime, allSessions, session?.id, formData.timezone, isEndTimeInvalid])
+
   const canSave = Boolean(
     name.trim() && description.trim() && date && startTime && endTime &&
     !isDateOutOfRange && !isEndTimeInvalid &&
     !isStartTimeBeforeEventStart && !isEndTimeAfterEventEnd &&
-    !isCapacityMissing,
+    !isCapacityMissing && !hasLocationConflict,
   );
 
   const renderSpeakers = () => (
@@ -593,11 +613,17 @@ export const SessionForm: React.FC<SessionFormProps> = ({
         selectedKey={selectedLocationId ?? undefined}
         onSelectionChange={(key) => setSelectedLocationId(key ? String(key) : null)}
         isDisabled={venueLocations.length === 0}
+        isInvalid={hasLocationConflict}
       >
         {venueLocations.map((loc) => (
           <ComboBoxItem key={loc.locationId} id={loc.locationId}>{loc.name}</ComboBoxItem>
         ))}
       </ComboBox>
+      {hasLocationConflict && (
+        <Text UNSAFE_style={{ color: "var(--spectrum-global-color-red-600)", fontSize: "12px" }}>
+          This location is already booked for another session at an overlapping time.
+        </Text>
+      )}
       {venueLocations.length === 0 && (
         <Text UNSAFE_style={{ fontSize: "12px", color: "var(--spectrum-global-color-gray-600)" }}>
           No locations available for the selected venue.
