@@ -52,6 +52,7 @@ export interface SessionItemProps {
   seriesSpeakers: SeriesSpeaker[];
   onSpeakersRefresh: () => Promise<void>;
   onDirtyChange?: (isDirty: boolean) => void;
+  allSessions: Session[];
 }
 
 export const SessionItem: React.FC<SessionItemProps> = ({
@@ -64,6 +65,7 @@ export const SessionItem: React.FC<SessionItemProps> = ({
   seriesSpeakers,
   onSpeakersRefresh,
   onDirtyChange,
+  allSessions,
 }) => {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const startTime = formatTime(session.startDateTime);
@@ -146,6 +148,7 @@ export const SessionItem: React.FC<SessionItemProps> = ({
           seriesSpeakers={seriesSpeakers}
           onSpeakersRefresh={onSpeakersRefresh}
           onDirtyChange={onDirtyChange}
+          allSessions={allSessions}
         />
       )}
 
@@ -198,6 +201,7 @@ export interface SessionsListProps {
   onSpeakersRefresh: () => Promise<void>;
   /** Called when any open session form's dirty state changes */
   onDirtyChange?: (isDirty: boolean) => void;
+  allSessions: Session[];
 }
 
 export const SessionsList: React.FC<SessionsListProps> = ({
@@ -211,6 +215,7 @@ export const SessionsList: React.FC<SessionsListProps> = ({
   seriesSpeakers,
   onSpeakersRefresh,
   onDirtyChange,
+  allSessions,
 }) => {
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [editFormDirty, setEditFormDirty] = useState(false);
@@ -240,6 +245,7 @@ export const SessionsList: React.FC<SessionsListProps> = ({
           seriesSpeakers={seriesSpeakers}
           onSpeakersRefresh={onSpeakersRefresh}
           onDirtyChange={setAddFormDirty}
+          allSessions={allSessions}
         />
       )}
       {sessions.map((session) => (
@@ -254,6 +260,7 @@ export const SessionsList: React.FC<SessionsListProps> = ({
           seriesSpeakers={seriesSpeakers}
           onSpeakersRefresh={onSpeakersRefresh}
           onDirtyChange={setEditFormDirty}
+          allSessions={allSessions}
         />
       ))}
     </div>
