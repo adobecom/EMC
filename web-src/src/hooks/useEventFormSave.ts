@@ -311,7 +311,8 @@ export function useEventFormSave() {
       }
     }
     
-    // RSVP form fields
+    // RSVP form fields — field-level visibility only until ESP supports granular option payloads.
+    // TODO(PIM): serialize rsvpOptionSelections when event API exposes per-option RSVP selection.
     if (mergedData.visibleRsvpFields || mergedData.requiredRsvpFields) {
       payload.rsvpFormFields = {
         visible: mergedData.visibleRsvpFields || [],
