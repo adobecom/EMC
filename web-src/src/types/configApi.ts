@@ -94,6 +94,7 @@ export interface CustomAttributeValue {
 
 export interface CustomAttributeConfig {
   attributeId: string
+  label?: string
   name: string
   inputType: CustomAttributeInputType
   enabled: boolean

@@ -331,7 +331,7 @@ export const CustomAttributesComponent: React.FC = () => {
             {index > 0 && <Divider size="S" />}
             <div className={style({ display: 'flex', flexDirection: 'column', gap: 12 })}>
               <Heading level={4}>
-                {attr.name}
+                {attr.label || attr.name}
                 {attr.isRequired && attr.inputType === 'multi-select' && (
                   <Text UNSAFE_style={{ fontWeight: 400 }}> (Required)</Text>
                 )}

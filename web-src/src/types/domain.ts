@@ -646,6 +646,7 @@ export interface EventCustomAttributeValue {
   valueId?: string
   value: string
   displayOrder?: number
+  label?: string
 }
 
 // Agenda Item

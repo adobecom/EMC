@@ -188,6 +188,7 @@ export const ConfigManagement: React.FC<ConfigManagementProps> = () => {
   const [isAttrFormOpen, setIsAttrFormOpen] = useState(false)
   const [editingAttr, setEditingAttr] = useState<CustomAttributeConfig | null>(null)
   const [attrFormName, setAttrFormName] = useState('')
+  const [attrFormLabel, setAttrFormLabel] = useState('')
   const [attrFormInputType, setAttrFormInputType] = useState<CustomAttributeInputType>('text')
   const [attrFormValues, setAttrFormValues] = useState<CustomAttributeValue[]>([])
   const [attrFormEnabled, setAttrFormEnabled] = useState(true)
@@ -747,6 +748,7 @@ export const ConfigManagement: React.FC<ConfigManagementProps> = () => {
   const openAttrCreate = useCallback(() => {
     setEditingAttr(null)
     setAttrFormName('')
+    setAttrFormLabel('')
     setAttrFormInputType('text')
     setAttrFormValues([])
     setAttrFormEnabled(true)
@@ -756,6 +758,7 @@ export const ConfigManagement: React.FC<ConfigManagementProps> = () => {
   const openAttrEdit = useCallback((attr: CustomAttributeConfig) => {
     setEditingAttr(attr)
     setAttrFormName(attr.name)
+    setAttrFormLabel(attr.label ?? '')
     setAttrFormInputType(attr.inputType)
     setAttrFormValues(attr.values.map(v => ({ ...v, label: v.label ?? '' })))
     setAttrFormEnabled(attr.enabled)
@@ -771,6 +774,7 @@ export const ConfigManagement: React.FC<ConfigManagementProps> = () => {
     const newAttr: CustomAttributeConfig = {
       attributeId: editingAttr?.attributeId || generateUUID(),
       name: attrFormName.trim(),
+      label: attrFormLabel.trim() || undefined,
       inputType: attrFormInputType,
       enabled: attrFormEnabled,
       values: attrFormValues
@@ -822,7 +826,7 @@ export const ConfigManagement: React.FC<ConfigManagementProps> = () => {
     } finally {
       setIsSaving(false)
     }
-  }, [selectedScopeId, attrFormName, attrFormInputType, attrFormValues, attrFormEnabled, editingAttr, customAttrsConfig, apiService, toast, loadConfigs])
+  }, [selectedScopeId, attrFormName, attrFormLabel, attrFormInputType, attrFormValues, attrFormEnabled, editingAttr, customAttrsConfig, apiService, toast, loadConfigs])
 
   const handleDeleteAttr = useCallback(async (attr: CustomAttributeConfig) => {
     if (!selectedScopeId || !customAttrsConfig) return
@@ -1152,6 +1156,15 @@ export const ConfigManagement: React.FC<ConfigManagementProps> = () => {
 
   const attrColumns = useMemo(() => [
     { key: 'name', name: 'NAME', width: 200, sortable: true },
+    {
+      key: 'label',
+      name: 'LABEL',
+      width: 200,
+      sortable: true,
+      render: (item: CustomAttributeConfig) => (
+        <Text>{item.label || '-'}</Text>
+      ),
+    },
     {
       key: 'enabled',
       name: 'ENABLED',
@@ -2185,6 +2198,13 @@ export const ConfigManagement: React.FC<ConfigManagementProps> = () => {
                     styles={style({ width: '[100%]' })}
                     isRequired
                     autoFocus
+                  />
+                  <TextField
+                    label="Label"
+                    description="Display label shown to users. Falls back to Name if empty."
+                    value={attrFormLabel}
+                    onChange={setAttrFormLabel}
+                    styles={style({ width: '[100%]' })}
                   />
                   <SpectrumSwitch isSelected={attrFormEnabled} onChange={setAttrFormEnabled}>
                     Enabled
