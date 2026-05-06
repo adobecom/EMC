@@ -2,13 +2,14 @@
 * <license header>
 */
 
-import React, { useState, useEffect, useCallback } from 'react'
+import React, { useState, useEffect, useCallback, useMemo } from 'react'
 import {
   TextField,
   RadioGroup,
   Radio,
   Text,
   Switch,
+  ActionButton,
 } from '@react-spectrum/s2'
 import { style } from "@react-spectrum/s2/style" with { type: "macro" }
 import { HeadingWithTooltip } from '../../components/shared'
@@ -135,8 +136,8 @@ export const RegistrationFieldsComponent: React.FC<RegistrationFieldsComponentPr
     loadFields()
   }, [activeGroup?.scopeId, cloudType])
 
-  const validFields = fields.filter(f => f.field)
-  const mandatedFieldNames = validFields.filter(f => f.required).map(f => f.field)
+  const validFields = useMemo(() => fields.filter(f => f.field), [fields])
+  const mandatedFieldNames = useMemo(() => validFields.filter(f => f.required).map(f => f.field), [validFields])
 
   const allDisplayFields: DisplayField[] = validFields.map((f, idx) => ({
     fieldName: f.field,
@@ -194,13 +195,15 @@ export const RegistrationFieldsComponent: React.FC<RegistrationFieldsComponentPr
         onRequiredFieldsChange(newRequiredFields)
       }
     }
-  }, [mandatedFieldNames.join(','), visibleFields, requiredFields, onVisibleFieldsChange, onRequiredFieldsChange])
+  }, [mandatedFieldNames, visibleFields, requiredFields, onVisibleFieldsChange, onRequiredFieldsChange])
 
   const handleDragStart = (e: React.DragEvent, displayIndex: number) => {
     const field = sortedDisplayFields[displayIndex]
     if (!visibleFields.includes(field.fieldName)) return
 
     setExpandedOptions(new Set())
+    setOptionDrag(null)
+    setOptionDragOver(null)
     setDraggedIndex(displayIndex)
     e.dataTransfer.effectAllowed = 'move'
     e.dataTransfer.setData('text/plain', String(displayIndex))
@@ -277,6 +280,7 @@ export const RegistrationFieldsComponent: React.FC<RegistrationFieldsComponentPr
       onVisibleFieldsChange(visibleFields.filter((f) => f !== fieldName))
       onRequiredFieldsChange(requiredFields.filter((f) => f !== fieldName))
       applyOptionPatch({ [fieldName]: null })
+      setExpandedOptions(prev => { const next = new Set(prev); next.delete(fieldName); return next })
     }
   }
 
@@ -325,6 +329,7 @@ export const RegistrationFieldsComponent: React.FC<RegistrationFieldsComponentPr
   }
 
   const handleOptionDragOver = (e: React.DragEvent, fieldName: string, displayIdx: number) => {
+    e.stopPropagation()
     e.preventDefault()
     if (!optionDrag || optionDrag.fieldName !== fieldName) return
     e.dataTransfer.dropEffect = 'move'
@@ -338,6 +343,7 @@ export const RegistrationFieldsComponent: React.FC<RegistrationFieldsComponentPr
   }
 
   const handleOptionDrop = (e: React.DragEvent, fieldName: string, dropIdx: number) => {
+    e.stopPropagation()
     e.preventDefault()
     if (!optionDrag || optionDrag.fieldName !== fieldName) {
       setOptionDrag(null)
@@ -415,8 +421,8 @@ export const RegistrationFieldsComponent: React.FC<RegistrationFieldsComponentPr
             <Text UNSAFE_style={{ fontWeight: 600, fontSize: '12px', color: COLORS.GRAY_600 }}>
               MAKE IT REQUIRED
             </Text>
-            <span style={{ fontWeight: 600, fontSize: '12px', color: COLORS.GRAY_600 }} />
-            <span style={{ fontWeight: 600, fontSize: '12px', color: COLORS.GRAY_600 }} />
+            <span aria-hidden="true" />
+            <span aria-hidden="true" />
           </div>
 
           <div className={style({display: 'flex', flexDirection: 'column', gap: 8})} >
@@ -433,6 +439,13 @@ export const RegistrationFieldsComponent: React.FC<RegistrationFieldsComponentPr
               const optState = showOptionEditor ? getEffectiveOptionState(fieldName) : null
 
               const isExpanded = expandedOptions.has(fieldName)
+              const toggleExpanded = () =>
+                setExpandedOptions(prev => {
+                  const next = new Set(prev)
+                  if (isExpanded) next.delete(fieldName)
+                  else next.add(fieldName)
+                  return next
+                })
 
               return (
                 <div
@@ -498,42 +511,18 @@ export const RegistrationFieldsComponent: React.FC<RegistrationFieldsComponentPr
                       Required field
                     </Switch>
                     {showOptionEditor && optState && isVisible ? (
-                      <div
-                        role="button"
-                        aria-expanded={isExpanded}
+                      <ActionButton
+                        isQuiet
                         aria-label={`${isExpanded ? 'Collapse' : 'Expand'} options for ${label}`}
-                        tabIndex={0}
-                        onClick={() => {
-                          setExpandedOptions(prev => {
-                            const next = new Set(prev)
-                            if (isExpanded) next.delete(fieldName)
-                            else next.add(fieldName)
-                            return next
-                          })
-                        }}
-                        onKeyDown={(e) => {
-                          if (e.key === 'Enter' || e.key === ' ') {
-                            e.preventDefault()
-                            setExpandedOptions(prev => {
-                              const next = new Set(prev)
-                              if (isExpanded) next.delete(fieldName)
-                              else next.add(fieldName)
-                              return next
-                            })
-                          }
-                        }}
-                        style={{
-                          display: 'flex',
-                          justifyContent: 'center',
-                          alignItems: 'center',
-                          cursor: 'pointer',
-                          color: isExpanded ? SURFACES.SELECTED_RING : COLORS.GRAY_600,
-                        }}
+                        aria-expanded={isExpanded}
+                        onPress={toggleExpanded}
+                        UNSAFE_style={{ color: isExpanded ? SURFACES.SELECTED_RING : COLORS.GRAY_600 }}
                       >
                         <ListBulleted />
-                      </div>
-                    ) : <div />}
+                      </ActionButton>
+                    ) : null}
                     <div
+                      aria-label="Drag to reorder"
                       style={{
                         display: 'flex',
                         justifyContent: 'center',
@@ -543,7 +532,7 @@ export const RegistrationFieldsComponent: React.FC<RegistrationFieldsComponentPr
                         opacity: canDrag ? 1 : 0.3
                       }}
                     >
-                      <Move />
+                      <Move aria-hidden="true" />
                     </div>
                   </div>
 
@@ -586,6 +575,7 @@ export const RegistrationFieldsComponent: React.FC<RegistrationFieldsComponentPr
                                 Include option
                               </Switch>
                               <div
+                                aria-label="Drag to reorder"
                                 style={{
                                   display: 'flex',
                                   justifyContent: 'center',
@@ -593,7 +583,7 @@ export const RegistrationFieldsComponent: React.FC<RegistrationFieldsComponentPr
                                   cursor: 'grab'
                                 }}
                               >
-                                <Move />
+                                <Move aria-hidden="true" />
                               </div>
                             </div>
                           )

@@ -85,6 +85,8 @@ export function mergeOptionSelectionWithField(
   return { order, disabledValues }
 }
 
-export function isSelectableField(field: RsvpFormField): boolean {
+export function isSelectableField(
+  field: RsvpFormField
+): field is RsvpFormField & { options: NonNullable<RsvpFormField['options']> } {
   return (field.type === 'select' || field.type === 'multi-select') && (field.options?.length ?? 0) > 0
 }
