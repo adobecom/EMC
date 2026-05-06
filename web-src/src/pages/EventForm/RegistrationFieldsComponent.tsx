@@ -9,15 +9,13 @@ import {
   Radio,
   Text,
   Switch,
-  Disclosure,
-  DisclosureTitle,
-  DisclosurePanel,
 } from '@react-spectrum/s2'
 import { style } from "@react-spectrum/s2/style" with { type: "macro" }
 import { HeadingWithTooltip } from '../../components/shared'
 import { COLORS, SURFACES } from '../../styles/designSystem'
 import OpenIn from '@react-spectrum/s2/icons/OpenIn'
 import Move from '@react-spectrum/s2/icons/Move'
+import ListBulleted from '@react-spectrum/s2/icons/ListBulleted'
 import { useGroup } from '../../contexts/GroupContext'
 import { cachedApi } from '../../services/api'
 import { configService } from '../../services/configService'
@@ -403,7 +401,7 @@ export const RegistrationFieldsComponent: React.FC<RegistrationFieldsComponentPr
         >
           <div style={{
             display: 'grid',
-            gridTemplateColumns: '1fr 1fr 1fr 40px',
+            gridTemplateColumns: '1fr 1fr 1fr 40px 40px',
             gap: '16px',
             alignItems: 'center',
             marginBottom: '12px'
@@ -417,6 +415,7 @@ export const RegistrationFieldsComponent: React.FC<RegistrationFieldsComponentPr
             <Text UNSAFE_style={{ fontWeight: 600, fontSize: '12px', color: COLORS.GRAY_600 }}>
               MAKE IT REQUIRED
             </Text>
+            <span style={{ fontWeight: 600, fontSize: '12px', color: COLORS.GRAY_600 }} />
             <span style={{ fontWeight: 600, fontSize: '12px', color: COLORS.GRAY_600 }} />
           </div>
 
@@ -463,7 +462,7 @@ export const RegistrationFieldsComponent: React.FC<RegistrationFieldsComponentPr
                     onDragEnd={handleDragEnd}
                     style={{
                       display: 'grid',
-                      gridTemplateColumns: '1fr 1fr 1fr 40px',
+                      gridTemplateColumns: '1fr 1fr 1fr 40px 40px',
                       gap: '16px',
                       alignItems: 'center',
                       padding: '12px 16px',
@@ -498,6 +497,42 @@ export const RegistrationFieldsComponent: React.FC<RegistrationFieldsComponentPr
                     >
                       Required field
                     </Switch>
+                    {showOptionEditor && optState && isVisible ? (
+                      <div
+                        role="button"
+                        aria-expanded={isExpanded}
+                        aria-label={`${isExpanded ? 'Collapse' : 'Expand'} options for ${label}`}
+                        tabIndex={0}
+                        onClick={() => {
+                          setExpandedOptions(prev => {
+                            const next = new Set(prev)
+                            if (isExpanded) next.delete(fieldName)
+                            else next.add(fieldName)
+                            return next
+                          })
+                        }}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter' || e.key === ' ') {
+                            e.preventDefault()
+                            setExpandedOptions(prev => {
+                              const next = new Set(prev)
+                              if (isExpanded) next.delete(fieldName)
+                              else next.add(fieldName)
+                              return next
+                            })
+                          }
+                        }}
+                        style={{
+                          display: 'flex',
+                          justifyContent: 'center',
+                          alignItems: 'center',
+                          cursor: 'pointer',
+                          color: isExpanded ? SURFACES.SELECTED_RING : COLORS.GRAY_600,
+                        }}
+                      >
+                        <ListBulleted />
+                      </div>
+                    ) : <div />}
                     <div
                       style={{
                         display: 'flex',
@@ -512,75 +547,58 @@ export const RegistrationFieldsComponent: React.FC<RegistrationFieldsComponentPr
                     </div>
                   </div>
 
-                  {showOptionEditor && optState && isVisible && (
-                    <div style={{ padding: '0 16px 8px' }}>
-                      <Disclosure
-                        isExpanded={isExpanded}
-                        onExpandedChange={(expanded) => {
-                          setExpandedOptions(prev => {
-                            const next = new Set(prev)
-                            if (expanded) next.add(fieldName)
-                            else next.delete(fieldName)
-                            return next
-                          })
-                        }}
-                      >
-                        <DisclosureTitle level={4}>
-                          Options ({optState.order.length})
-                        </DisclosureTitle>
-                        <DisclosurePanel>
-                          <div className={style({ display: 'flex', flexDirection: 'column', gap: 8 })}>
-                            {optState.order.map((optValue, optDisplayIdx) => {
-                              const optLabel = fieldDef?.options?.find(o => o.value === optValue)?.label ?? optValue
-                              const optEnabled = !optState.disabledValues.includes(optValue)
-                              const oDragging = optionDrag?.fieldName === fieldName && optionDrag.index === optDisplayIdx
-                              const oOver = optionDragOver?.fieldName === fieldName && optionDragOver.index === optDisplayIdx
+                  {showOptionEditor && optState && isVisible && isExpanded && (
+                    <div style={{ borderTop: `1px solid ${SURFACES.BORDER}`, padding: '8px 16px 12px' }}>
+                      <div className={style({ display: 'flex', flexDirection: 'column', gap: 8 })}>
+                        {optState.order.map((optValue, optDisplayIdx) => {
+                          const optLabel = fieldDef?.options?.find(o => o.value === optValue)?.label ?? optValue
+                          const optEnabled = !optState.disabledValues.includes(optValue)
+                          const oDragging = optionDrag?.fieldName === fieldName && optionDrag.index === optDisplayIdx
+                          const oOver = optionDragOver?.fieldName === fieldName && optionDragOver.index === optDisplayIdx
 
-                              return (
-                                <div
-                                  key={optValue}
-                                  draggable
-                                  onDragStart={(e) => handleOptionDragStart(e, fieldName, optDisplayIdx)}
-                                  onDragOver={(e) => handleOptionDragOver(e, fieldName, optDisplayIdx)}
-                                  onDragLeave={handleOptionDragLeave}
-                                  onDrop={(e) => handleOptionDrop(e, fieldName, optDisplayIdx)}
-                                  onDragEnd={handleOptionDragEnd}
-                                  style={{
-                                    display: 'grid',
-                                    gridTemplateColumns: '1fr 1fr 40px',
-                                    gap: 12,
-                                    alignItems: 'center',
-                                    padding: '8px 12px',
-                                    borderRadius: 6,
-                                    backgroundColor: oDragging ? SURFACES.PILL_BG : SURFACES.CANVAS,
-                                    border: oOver ? `2px solid ${SURFACES.SELECTED_RING}` : `1px solid ${SURFACES.BORDER}`,
-                                    opacity: oDragging ? 0.6 : 1
-                                  }}
-                                >
-                                  <Text UNSAFE_style={{ fontSize: 13 }}>{optLabel}</Text>
-                                  <Switch
-                                    data-testid={`rsvp-option-${fieldName}-${optValue}-enabled`}
-                                    isSelected={optEnabled}
-                                    onChange={(checked) => handleOptionEnabledToggle(fieldName, optValue, checked)}
-                                  >
-                                    Include option
-                                  </Switch>
-                                  <div
-                                    style={{
-                                      display: 'flex',
-                                      justifyContent: 'center',
-                                      color: COLORS.GRAY_600,
-                                      cursor: 'grab'
-                                    }}
-                                  >
-                                    <Move />
-                                  </div>
-                                </div>
-                              )
-                            })}
-                          </div>
-                        </DisclosurePanel>
-                      </Disclosure>
+                          return (
+                            <div
+                              key={optValue}
+                              draggable
+                              onDragStart={(e) => handleOptionDragStart(e, fieldName, optDisplayIdx)}
+                              onDragOver={(e) => handleOptionDragOver(e, fieldName, optDisplayIdx)}
+                              onDragLeave={handleOptionDragLeave}
+                              onDrop={(e) => handleOptionDrop(e, fieldName, optDisplayIdx)}
+                              onDragEnd={handleOptionDragEnd}
+                              style={{
+                                display: 'grid',
+                                gridTemplateColumns: '1fr 1fr 40px',
+                                gap: 12,
+                                alignItems: 'center',
+                                padding: '8px 12px',
+                                borderRadius: 6,
+                                backgroundColor: oDragging ? SURFACES.PILL_BG : SURFACES.CANVAS,
+                                border: oOver ? `2px solid ${SURFACES.SELECTED_RING}` : 'none',
+                                opacity: oDragging ? 0.6 : 1
+                              }}
+                            >
+                              <Text UNSAFE_style={{ fontSize: 13 }}>{optLabel}</Text>
+                              <Switch
+                                data-testid={`rsvp-option-${fieldName}-${optValue}-enabled`}
+                                isSelected={optEnabled}
+                                onChange={(checked) => handleOptionEnabledToggle(fieldName, optValue, checked)}
+                              >
+                                Include option
+                              </Switch>
+                              <div
+                                style={{
+                                  display: 'flex',
+                                  justifyContent: 'center',
+                                  color: COLORS.GRAY_600,
+                                  cursor: 'grab'
+                                }}
+                              >
+                                <Move />
+                              </div>
+                            </div>
+                          )
+                        })}
+                      </div>
                     </div>
                   )}
                 </div>
