@@ -43,3 +43,4 @@ logs
 
 # PIM local state
 .pim/
+.pim.json
