@@ -87,6 +87,8 @@ export const RegistrationFieldsComponent: React.FC<RegistrationFieldsComponentPr
   const [optionDrag, setOptionDrag] = useState<{ fieldName: string; index: number } | null>(null)
   const [optionDragOver, setOptionDragOver] = useState<{ fieldName: string; index: number } | null>(null)
 
+  const [expandedOptions, setExpandedOptions] = useState<Set<string>>(new Set())
+
   const applyOptionPatch = useCallback((patch: Record<string, RsvpFieldOptionSelectionState | null>) => {
     onRsvpOptionSelectionsChange(patch)
   }, [onRsvpOptionSelectionsChange])
@@ -200,6 +202,7 @@ export const RegistrationFieldsComponent: React.FC<RegistrationFieldsComponentPr
     const field = sortedDisplayFields[displayIndex]
     if (!visibleFields.includes(field.fieldName)) return
 
+    setExpandedOptions(new Set())
     setDraggedIndex(displayIndex)
     e.dataTransfer.effectAllowed = 'move'
     e.dataTransfer.setData('text/plain', String(displayIndex))
@@ -430,14 +433,33 @@ export const RegistrationFieldsComponent: React.FC<RegistrationFieldsComponentPr
               const showOptionEditor = fieldSourceMode === 'scope' && fieldDef && isSelectableField(fieldDef)
               const optState = showOptionEditor ? getEffectiveOptionState(fieldName) : null
 
+              const isExpanded = expandedOptions.has(fieldName)
+
               return (
-                <div key={fieldName} className={style({ display: 'flex', flexDirection: 'column', gap: 8 })}>
+                <div
+                  key={fieldName}
+                  onDragOver={(e) => handleDragOver(e, displayIndex)}
+                  onDragLeave={handleDragLeave}
+                  onDrop={(e) => handleDrop(e, displayIndex)}
+                  style={{
+                    borderRadius: '6px',
+                    backgroundColor: isDragging
+                      ? SURFACES.PILL_BG
+                      : isVisible
+                        ? SURFACES.CANVAS
+                        : 'transparent',
+                    border: isDragOver
+                      ? `2px solid ${SURFACES.SELECTED_RING}`
+                      : isVisible
+                        ? `1px solid ${SURFACES.BORDER}`
+                        : '1px solid transparent',
+                    opacity: isDragging ? 0.5 : 1,
+                    transition: 'border-color 0.2s, background-color 0.2s',
+                  }}
+                >
                   <div
                     draggable={canDrag}
                     onDragStart={(e) => handleDragStart(e, displayIndex)}
-                    onDragOver={(e) => handleDragOver(e, displayIndex)}
-                    onDragLeave={handleDragLeave}
-                    onDrop={(e) => handleDrop(e, displayIndex)}
                     onDragEnd={handleDragEnd}
                     style={{
                       display: 'grid',
@@ -445,20 +467,6 @@ export const RegistrationFieldsComponent: React.FC<RegistrationFieldsComponentPr
                       gap: '16px',
                       alignItems: 'center',
                       padding: '12px 16px',
-                      borderRadius: '6px',
-                      backgroundColor: isDragging
-                        ? SURFACES.PILL_BG
-                        : isVisible
-                          ? SURFACES.CANVAS
-                          : 'transparent',
-                      border: isDragOver
-                        ? `2px solid ${SURFACES.SELECTED_RING}`
-                        : isVisible
-                          ? `1px solid ${SURFACES.BORDER}`
-                          : '1px solid transparent',
-                      opacity: isDragging ? 0.5 : 1,
-                      transition: 'border-color 0.2s, background-color 0.2s',
-                      cursor: canDrag ? 'default' : 'default'
                     }}
                   >
                     <Text UNSAFE_style={{ fontWeight: 500 }}>
@@ -505,8 +513,18 @@ export const RegistrationFieldsComponent: React.FC<RegistrationFieldsComponentPr
                   </div>
 
                   {showOptionEditor && optState && isVisible && (
-                    <div style={{ paddingLeft: 16, paddingRight: 16 }}>
-                      <Disclosure defaultExpanded={false}>
+                    <div style={{ padding: '0 16px 8px' }}>
+                      <Disclosure
+                        isExpanded={isExpanded}
+                        onExpandedChange={(expanded) => {
+                          setExpandedOptions(prev => {
+                            const next = new Set(prev)
+                            if (expanded) next.add(fieldName)
+                            else next.delete(fieldName)
+                            return next
+                          })
+                        }}
+                      >
                         <DisclosureTitle level={4}>
                           Options ({optState.order.length})
                         </DisclosureTitle>
