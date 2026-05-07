@@ -116,7 +116,7 @@ Always validate against actual source code.
 
 ## PIM — Pod Agent Protocol
 
-This project is connected to PIM pod `pod-emc-s27-configsservice-d2506b`.
+This project is connected to PIM pod `pod-emc-s27-configsservice-follow-9f4cd4`.
 PIM server: `https://d1ygncl0yqo6sv.cloudfront.net`
 
 ### Automatic Reporting
@@ -167,7 +167,7 @@ Use these only when the PIM MCP server is not configured.
 #### Getting Current Pod Context
 
 ```bash
-pim context --pod pod-emc-s27-configsservice-d2506b --scope frontend
+pim context --pod pod-emc-s27-configsservice-follow-9f4cd4 --scope frontend
 ```
 
 Use `--brief` for a quick summary or `--diff` to see only what changed since
@@ -179,7 +179,7 @@ proceeding in contested areas.
 Report blockers, decisions, spec changes, and questions manually:
 
 ```bash
-pim report --pod pod-emc-s27-configsservice-d2506b --type decision --scope frontend \
+pim report --pod pod-emc-s27-configsservice-follow-9f4cd4 --type decision --scope frontend \
   --summary "Chose Redis over Memcached for session cache" \
   --details "Redis supports pub/sub which we need for real-time invalidation..."
 ```
@@ -195,7 +195,7 @@ Types: `progress` | `blocker` | `spec_change` | `question` | `decision`
 
 ### Conflict Awareness
 
-- Check pod pressure with `pim context --pod pod-emc-s27-configsservice-d2506b --brief`
+- Check pod pressure with `pim context --pod pod-emc-s27-configsservice-follow-9f4cd4 --brief`
 - If pressure is >= 0.8, ingestion is halted — resolve conflicts first
 - When your work overlaps with another area, PIM will detect it automatically
 
