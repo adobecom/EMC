@@ -3,7 +3,7 @@
 */
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react'
-import { Tabs, TabList, Tab, TabPanel } from '@react-spectrum/s2'
+import { SegmentedControl, SegmentedControlItem } from '@react-spectrum/s2'
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom'
 import type { EventApiResponse } from '../../types/domain'
 import type { Attendee, AttendeeStats, AttendeeColumnConfig } from '../../types/attendee'
@@ -305,51 +305,44 @@ export const Registrations: React.FC<RegistrationsProps> = ({ ims: _ims }) => {
         </div>
       )}
 
-      {/* Tabbed Content Area */}
       <div style={{ marginTop: '16px' }}>
-        <Tabs
+        <SegmentedControl
           aria-label="Registrations Dashboard"
           selectedKey={selectedTab}
           onSelectionChange={(key) => setSelectedTab(String(key))}
         >
-          <TabList>
-            <Tab id="registrations">Registrations</Tab>
-            <Tab id="campaigns">Campaigns</Tab>
-            <Tab id="sessions">Sessions</Tab>
-          </TabList>
-          <TabPanel id="registrations">
-            <div style={{ paddingTop: '24px' }}>
-              <RegistrationsTab
-                selectedEventId={selectedEventId}
-                attendees={attendees}
-                columnConfig={effectiveColumnConfig}
-                onAttendeesRefresh={handleAttendeesRefresh}
-                campaigns={campaigns}
-                eventTitle={selectedEvent?.title || selectedEvent?.enTitle || ''}
-              />
-            </div>
-          </TabPanel>
-          <TabPanel id="campaigns">
-            <div style={{ paddingTop: '24px' }}>
-              <CampaignsTab
-                eventId={selectedEventId}
-                event={selectedEvent}
-                campaigns={campaigns}
-                onCreateCampaign={handleCreateCampaign}
-                onUpdateCampaign={handleUpdateCampaign}
-                onDeleteCampaign={handleDeleteCampaign}
-              />
-            </div>
-          </TabPanel>
-          <TabPanel id="sessions">
-            <div style={{ paddingTop: '24px' }}>
-              <SessionsTab
-                eventId={selectedEventId}
-                attendees={attendees}
-              />
-            </div>
-          </TabPanel>
-        </Tabs>
+          <SegmentedControlItem id="registrations">Registrations</SegmentedControlItem>
+          <SegmentedControlItem id="campaigns">Campaigns</SegmentedControlItem>
+          <SegmentedControlItem id="sessions">Sessions</SegmentedControlItem>
+        </SegmentedControl>
+        <div style={{ paddingTop: '24px' }}>
+          {selectedTab === 'registrations' && (
+            <RegistrationsTab
+              selectedEventId={selectedEventId}
+              attendees={attendees}
+              columnConfig={effectiveColumnConfig}
+              onAttendeesRefresh={handleAttendeesRefresh}
+              campaigns={campaigns}
+              eventTitle={selectedEvent?.title || selectedEvent?.enTitle || ''}
+            />
+          )}
+          {selectedTab === 'campaigns' && (
+            <CampaignsTab
+              eventId={selectedEventId}
+              event={selectedEvent}
+              campaigns={campaigns}
+              onCreateCampaign={handleCreateCampaign}
+              onUpdateCampaign={handleUpdateCampaign}
+              onDeleteCampaign={handleDeleteCampaign}
+            />
+          )}
+          {selectedTab === 'sessions' && (
+            <SessionsTab
+              eventId={selectedEventId}
+              attendees={attendees}
+            />
+          )}
+        </div>
       </div>
 
       <BlurredLoadingOverlay
