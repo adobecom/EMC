@@ -48,6 +48,16 @@ import type {
   ConfigCreateBody,
   ConfigUpdateBody,
 } from '../types/configApi'
+import type {
+  Integration,
+  IntegrationListResponse,
+  IntegrationCreateBody,
+  IntegrationUpdateBody,
+  IntegrationPingResult,
+  Delivery,
+  DeliveryListResponse,
+  RedeliverResponse,
+} from '../types/integrationApi'
 
 // ============================================================================
 // TYPES
@@ -2409,6 +2419,129 @@ class ApiService {
       operationName: 'getSeriesConfigs'
     })
   }
+
+  // --- Integrations ---
+
+  async getIntegrations(scopeId: string, pageSize = 25, pageToken?: string): Promise<IntegrationListResponse | ErrorResponse> {
+    validateString(scopeId, 'scope ID')
+    const params: Record<string, string> = { pageSize: String(pageSize) }
+    if (pageToken) params.pageToken = pageToken
+    const query = new URLSearchParams(params).toString()
+    return this.callExternalApi<IntegrationListResponse>(
+      'esp',
+      `/v1/scopes/${encodeURIComponent(scopeId)}/integrations?${query}`,
+      'GET',
+      undefined,
+      { operationName: 'getIntegrations', shouldReturnFullResponse: true }
+    )
+  }
+
+  async createIntegration(scopeId: string, data: IntegrationCreateBody): Promise<Integration | ErrorResponse> {
+    validateString(scopeId, 'scope ID')
+    validateObject(data, 'integration create body')
+    return this.callExternalApi<Integration>(
+      'esp',
+      `/v1/scopes/${encodeURIComponent(scopeId)}/integrations`,
+      'POST',
+      data,
+      { operationName: 'createIntegration', shouldReturnFullResponse: true }
+    )
+  }
+
+  async getIntegration(scopeId: string, integrationId: string): Promise<Integration | ErrorResponse> {
+    validateString(scopeId, 'scope ID')
+    validateString(integrationId, 'integration ID')
+    return this.callExternalApi<Integration>(
+      'esp',
+      `/v1/scopes/${encodeURIComponent(scopeId)}/integrations/${encodeURIComponent(integrationId)}`,
+      'GET',
+      undefined,
+      { operationName: 'getIntegration', shouldReturnFullResponse: true }
+    )
+  }
+
+  async updateIntegration(scopeId: string, integrationId: string, data: IntegrationUpdateBody): Promise<Integration | ErrorResponse> {
+    validateString(scopeId, 'scope ID')
+    validateString(integrationId, 'integration ID')
+    validateObject(data, 'integration update body')
+    return this.callExternalApi<Integration>(
+      'esp',
+      `/v1/scopes/${encodeURIComponent(scopeId)}/integrations/${encodeURIComponent(integrationId)}`,
+      'PUT',
+      data,
+      { operationName: 'updateIntegration', shouldReturnFullResponse: true }
+    )
+  }
+
+  async deleteIntegration(scopeId: string, integrationId: string): Promise<SuccessResponse | ErrorResponse> {
+    validateString(scopeId, 'scope ID')
+    validateString(integrationId, 'integration ID')
+    return this.callExternalApi(
+      'esp',
+      `/v1/scopes/${encodeURIComponent(scopeId)}/integrations/${encodeURIComponent(integrationId)}`,
+      'DELETE',
+      undefined,
+      { operationName: 'deleteIntegration' }
+    )
+  }
+
+  async pingIntegration(scopeId: string, integrationId: string): Promise<IntegrationPingResult | ErrorResponse> {
+    validateString(scopeId, 'scope ID')
+    validateString(integrationId, 'integration ID')
+    return this.callExternalApi<IntegrationPingResult>(
+      'esp',
+      `/v1/scopes/${encodeURIComponent(scopeId)}/integrations/${encodeURIComponent(integrationId)}/actions/ping`,
+      'POST',
+      undefined,
+      { operationName: 'pingIntegration', shouldReturnFullResponse: true }
+    )
+  }
+
+  async getDeliveries(
+    scopeId: string,
+    integrationId: string,
+    opts?: { pageSize?: number; pageToken?: string; status?: string }
+  ): Promise<DeliveryListResponse | ErrorResponse> {
+    validateString(scopeId, 'scope ID')
+    validateString(integrationId, 'integration ID')
+    const params: Record<string, string> = { pageSize: String(opts?.pageSize ?? 25) }
+    if (opts?.pageToken) params.pageToken = opts.pageToken
+    if (opts?.status) params.status = opts.status
+    const query = new URLSearchParams(params).toString()
+    return this.callExternalApi<DeliveryListResponse>(
+      'esp',
+      `/v1/scopes/${encodeURIComponent(scopeId)}/integrations/${encodeURIComponent(integrationId)}/deliveries?${query}`,
+      'GET',
+      undefined,
+      { operationName: 'getDeliveries', shouldReturnFullResponse: true }
+    )
+  }
+
+  async getDelivery(scopeId: string, integrationId: string, deliveryId: string): Promise<Delivery | ErrorResponse> {
+    validateString(scopeId, 'scope ID')
+    validateString(integrationId, 'integration ID')
+    validateString(deliveryId, 'delivery ID')
+    return this.callExternalApi<Delivery>(
+      'esp',
+      `/v1/scopes/${encodeURIComponent(scopeId)}/integrations/${encodeURIComponent(integrationId)}/deliveries/${encodeURIComponent(deliveryId)}`,
+      'GET',
+      undefined,
+      { operationName: 'getDelivery', shouldReturnFullResponse: true }
+    )
+  }
+
+  async redeliverDelivery(scopeId: string, integrationId: string, deliveryId: string): Promise<RedeliverResponse | ErrorResponse> {
+    validateString(scopeId, 'scope ID')
+    validateString(integrationId, 'integration ID')
+    validateString(deliveryId, 'delivery ID')
+    return this.callExternalApi<RedeliverResponse>(
+      'esp',
+      `/v1/scopes/${encodeURIComponent(scopeId)}/integrations/${encodeURIComponent(integrationId)}/deliveries/${encodeURIComponent(deliveryId)}/actions/redeliver`,
+      'POST',
+      undefined,
+      { operationName: 'redeliverDelivery', shouldReturnFullResponse: true }
+    )
+  }
 }
 
 // ============================================================================
@@ -2710,6 +2843,38 @@ export const cachedApi = {
     apiCache.invalidate(configId)
     apiCache.invalidate('getConfigsForScope')
     return result
+  },
+
+  // === INTEGRATIONS (GET Operations - Cached) ===
+  getIntegrations: (scopeId: string, pageSize?: number, pageToken?: string) =>
+    apiCache.get(
+      (id: string, ps?: number, pt?: string) => apiService.getIntegrations(id, ps, pt),
+      scopeId, pageSize, pageToken
+    ),
+
+  // Integration Mutations
+  async createIntegration(scopeId: string, data: IntegrationCreateBody) {
+    const result = await apiService.createIntegration(scopeId, data)
+    apiCache.invalidate(scopeId)
+    apiCache.invalidate('getIntegrations')
+    return result
+  },
+  async updateIntegration(scopeId: string, integrationId: string, data: IntegrationUpdateBody) {
+    const result = await apiService.updateIntegration(scopeId, integrationId, data)
+    apiCache.invalidate(scopeId)
+    apiCache.invalidate(integrationId)
+    apiCache.invalidate('getIntegrations')
+    return result
+  },
+  async deleteIntegration(scopeId: string, integrationId: string) {
+    const result = await apiService.deleteIntegration(scopeId, integrationId)
+    apiCache.invalidate(scopeId)
+    apiCache.invalidate(integrationId)
+    apiCache.invalidate('getIntegrations')
+    return result
+  },
+  async pingIntegration(scopeId: string, integrationId: string) {
+    return apiService.pingIntegration(scopeId, integrationId)
   },
 
   // === UTILITY METHODS ===

@@ -32,3 +32,6 @@ export * from './rbacApi'
 
 // Config API types (scope configs, custom attributes)
 export * from './configApi'
+
+// Integration API types (webhook integrations, delivery logs)
+export * from './integrationApi'
