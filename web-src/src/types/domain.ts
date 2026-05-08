@@ -556,6 +556,14 @@ export interface VenueData {
   useAlternativeVenueName?: boolean // Whether to show/use alternative name field
 }
 
+/** Per-field RSVP option UI state (scope-config select / multi-select). */
+export interface RsvpFieldOptionSelectionState {
+  /** Option `value` strings in display order */
+  order: string[]
+  /** Option values toggled off (all others are on) */
+  disabledValues: string[]
+}
+
 // Comprehensive Event Form Data
 export interface EventFormData {
   // Step 1: Basic Info
@@ -609,6 +617,11 @@ export interface EventFormData {
   rsvpFormFields?: Record<string, any>
   visibleRsvpFields?: string[]
   requiredRsvpFields?: string[]
+  /**
+   * Client-side RSVP option order and toggles for select / multi-select fields (scope config).
+   * Not sent on event save until ESP supports granular RSVP payloads — see useEventFormSave TODO(PIM).
+   */
+  rsvpOptionSelections?: Record<string, RsvpFieldOptionSelectionState>
   
   // Step 6: Images
   images?: EventImageData[]

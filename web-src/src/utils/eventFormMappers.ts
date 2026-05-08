@@ -159,6 +159,7 @@ export function mapApiResponseToFormData(event: EventApiResponse, locale: string
     marketoFormUrl: event.registration?.type === 'Marketo' ? (event.registration.formData || '') : '',
     visibleRsvpFields: event.rsvpFormFields?.visible || [],
     requiredRsvpFields: event.rsvpFormFields?.required || [],
+    rsvpOptionSelections: {},
     images: event.images || [],
     profiles: mapSpeakersToProfiles(event.speakers || [], locale),
     communityForumUrl: cta?.url || '',
