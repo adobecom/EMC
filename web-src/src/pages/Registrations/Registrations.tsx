@@ -60,9 +60,6 @@ export const Registrations: React.FC<RegistrationsProps> = ({ ims: _ims }) => {
   const effectiveColumnConfig = useMemo<AttendeeColumnConfig[]>(() => {
     if (!hasCampaigns) return columnConfig
 
-    const nonSticky = columnConfig.filter(c => !c.isSticky)
-    const sticky = columnConfig.filter(c => c.isSticky)
-
     const campaignColumn: AttendeeColumnConfig = {
       key: 'campaignId',
       label: 'Campaign ID',
@@ -73,7 +70,19 @@ export const Registrations: React.FC<RegistrationsProps> = ({ ims: _ims }) => {
       isSticky: true
     }
 
-    return [...nonSticky, campaignColumn, ...sticky]
+    // Keep Registered Date (creationTime) immediately before RSVP Status / Checked In,
+    // with Campaign ID directly before Registered Date when campaigns exist.
+    const creationCol = columnConfig.find(c => c.key === 'creationTime')
+    const withoutCreation = columnConfig.filter(c => c.key !== 'creationTime')
+    const leading = withoutCreation.filter(c => !c.isSticky)
+    const stickyTail = withoutCreation.filter(c => c.isSticky)
+
+    return [
+      ...leading,
+      campaignColumn,
+      ...(creationCol ? [creationCol] : []),
+      ...stickyTail
+    ]
   }, [columnConfig, hasCampaigns])
 
   // ---- Data loading ----
