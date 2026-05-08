@@ -28,6 +28,10 @@ interface MetadataCatalogue {
 
 const METADATA_CATALOGUE_URL = 'https://www.adobe.com/event-libs/assets/configs/metadata-catalogue.json'
 
+function noOptionKey(fieldKey: string): string {
+  return `no-${fieldKey}`
+}
+
 /**
  * PageMetadataComponent - Manages page metadata for webinar events
  * 
@@ -43,15 +47,22 @@ export const PageMetadataComponent: React.FC = () => {
   const [catalogue, setCatalogue] = useState<MetadataCatalogue | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  /** Increment when a publishing profile is loaded from the API or saved — drives acknowledgment sync */
+  const [profileHydrationTick, setProfileHydrationTick] = useState(0)
   
   // Track the current publishing profile for updates
   const publishingProfileRef = useRef<PublishingProfile | null>(null)
+  const catalogueRef = useRef<MetadataCatalogue | null>(null)
   
   // Ref to hold updateFormData for use in callbacks (avoids circular dependency)
   const updateFormDataRef = useRef<((updates: any) => void) | null>(null)
   
   // Keep a ref to formData for use in callbacks
   const formDataRef = useRef<any>(null)
+
+  const bumpProfileHydrationTick = useCallback(() => {
+    setProfileHydrationTick((t) => t + 1)
+  }, [])
   
   // ============================================================================
   // CONTEXT INTEGRATION
@@ -82,9 +93,10 @@ export const PageMetadataComponent: React.FC = () => {
           
           publishingProfileRef.current = actualProfile as PublishingProfile
           // Populate form data with the profile's metadata
-          if (actualProfile.metadata && updateFormDataRef.current) {
+          if (actualProfile.metadata != null && updateFormDataRef.current) {
             updateFormDataRef.current({ metadata: actualProfile.metadata })
           }
+          bumpProfileHydrationTick()
         }
       } catch (err) {
         console.error('Failed to load publishing profile:', err)
@@ -119,6 +131,7 @@ export const PageMetadataComponent: React.FC = () => {
               ...existingProfile,
               ...(updateResult as PublishingProfile),
             }
+            bumpProfileHydrationTick()
           }
         } else {
           // Create new profile and assign to event
@@ -131,12 +144,26 @@ export const PageMetadataComponent: React.FC = () => {
             // Assign the new profile to the event
             await apiService.assignPublishingProfileToEvent(eventId, createResult.profileId)
             publishingProfileRef.current = createResult as PublishingProfile
+            bumpProfileHydrationTick()
           }
         }
       } catch (err) {
         console.error('Failed to save publishing profile:', err)
         // Don't throw - we don't want to fail the entire save
       }
+    },
+    validate: () => {
+      const cat = catalogueRef.current
+      const fieldsList = cat?.data?.data
+      if (!fieldsList?.length) return true
+
+      const ack = formDataRef.current?.metadataFieldAcknowledged || {}
+      for (const field of fieldsList as MetadataField[]) {
+        if (!ack[field.key]) {
+          return `Select a value for ${field.name} (page metadata).`
+        }
+      }
+      return true
     },
   })
   
@@ -148,8 +175,22 @@ export const PageMetadataComponent: React.FC = () => {
   useEffect(() => {
     formDataRef.current = formData
   }, [formData])
+
+  useEffect(() => {
+    catalogueRef.current = catalogue
+  }, [catalogue])
   
   const metadata = formData.metadata || {}
+  const metadataFieldAcknowledged = formData.metadataFieldAcknowledged || {}
+
+  // When a profile was loaded or saved, treat server metadata as fully acknowledged for all catalogue keys
+  useEffect(() => {
+    if (!catalogue?.data?.data?.length || profileHydrationTick === 0) return
+    const keys = catalogue.data.data.map((f: MetadataField) => f.key)
+    updateFormDataRef.current?.({
+      metadataFieldAcknowledged: Object.fromEntries(keys.map((k) => [k, true])),
+    })
+  }, [catalogue, profileHydrationTick])
   
   // ============================================================================
   // LOAD PUBLISHING PROFILE ON EDIT MODE
@@ -172,15 +213,16 @@ export const PageMetadataComponent: React.FC = () => {
         
         publishingProfileRef.current = actualProfile as PublishingProfile
         // Populate form data with the profile's metadata
-        if (actualProfile.metadata) {
+        if (actualProfile.metadata != null) {
           updateFormData({ metadata: actualProfile.metadata })
         }
+        bumpProfileHydrationTick()
       }
     } catch (err) {
       console.error('Failed to load publishing profile:', err)
       // Non-fatal - profile may not exist yet
     }
-  }, [updateFormData])
+  }, [updateFormData, bumpProfileHydrationTick])
   
   useEffect(() => {
     // If we're in edit mode and have an eventId, load the publishing profile
@@ -229,15 +271,24 @@ export const PageMetadataComponent: React.FC = () => {
   // ============================================================================
 
   const handleFieldChange = (fieldKey: string, value: string) => {
-    const updatedMetadata = { ...metadata }
-    
-    if (value && !value.startsWith('No ')) {
-      updatedMetadata[fieldKey] = value
+    const prev = formDataRef.current
+    const meta = { ...(prev?.metadata || {}) }
+    const noKey = noOptionKey(fieldKey)
+    const prevAck = prev?.metadataFieldAcknowledged || {}
+
+    if (value && value !== noKey) {
+      meta[fieldKey] = value
     } else {
-      delete updatedMetadata[fieldKey]
+      delete meta[fieldKey]
     }
-    
-    updateFormData({ metadata: updatedMetadata })
+
+    updateFormData({
+      metadata: meta,
+      metadataFieldAcknowledged: {
+        ...prevAck,
+        [fieldKey]: true,
+      },
+    })
   }
 
   // ============================================================================
@@ -285,11 +336,19 @@ export const PageMetadataComponent: React.FC = () => {
       {fields.map((field: MetadataField) => {
         const fieldOptions: MetadataOption[] = catalogue?.[field.key]?.data || []
         const currentValue = metadata[field.key] || ''
-        
+        const noKey = noOptionKey(field.key)
+
         const allOptions = [
-          { key: `no-${field.key}`, label: `No ${field.name}` },
-          ...fieldOptions.map(opt => ({ key: opt.value, label: opt.value }))
+          ...fieldOptions.map(opt => ({ key: opt.value, label: opt.value })),
+          { key: noKey, label: `No ${field.name}` },
         ]
+
+        const selectedKey =
+          currentValue
+            ? currentValue
+            : metadataFieldAcknowledged[field.key]
+              ? noKey
+              : undefined
 
         return (
           <Picker
@@ -297,7 +356,7 @@ export const PageMetadataComponent: React.FC = () => {
             data-testid={`meta-${field.key}-input`}
             label={`${field.name} *`}
             placeholder={`Select ${field.name.toLowerCase()}`}
-            selectedKey={currentValue || `no-${field.key}`}
+            selectedKey={selectedKey}
             onSelectionChange={(key) => handleFieldChange(field.key, key as string)}
             isRequired
             items={allOptions}
