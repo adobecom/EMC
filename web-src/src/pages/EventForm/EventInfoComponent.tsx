@@ -122,6 +122,8 @@ const TIMEZONE_OPTIONS = getTimeZones().map((tz) => ({
   name: `${tz.name} (${tz.currentTimeFormat})`
 }))
 
+const EVENT_TITLE_MAX_LENGTH = 150
+
 /**
  * EventInfoComponent - Manages core event information
  * 
@@ -336,10 +338,10 @@ export const EventInfoComponent: React.FC = () => {
         data-testid="event-title-input"
         label="Event Title"
         isRequired
-        maxLength={80}
+        maxLength={EVENT_TITLE_MAX_LENGTH}
         value={name}
         onChange={handleNameChange}
-        description="80 characters max"
+        description={`${EVENT_TITLE_MAX_LENGTH} characters max`}
         styles={style({ width: '[100%]' })}
       />
       <div style={{ width: '100%' }}>
@@ -357,8 +359,10 @@ export const EventInfoComponent: React.FC = () => {
         <TextField
           data-testid="event-en-title-input"
           aria-label="English title for page URL"
+          maxLength={EVENT_TITLE_MAX_LENGTH}
           value={enTitle || ''}
           onChange={(value) => updateFormData({ enTitle: value })}
+          description={`${EVENT_TITLE_MAX_LENGTH} characters max`}
           styles={style({ width: '[100%]' })}
         />
       </div>
