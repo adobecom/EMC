@@ -24,7 +24,7 @@ import { getCurrentEnvironment, getApiHost, SUPPORTED_CLOUDS } from '../config/c
 import { env } from '../config/env'
 import { apiCache } from './cacheUtils'
 import { deduplicateBy } from '../utils/deduplication'
-import { prepareEslEventPutPayload } from '../utils/dataFilters'
+import { prepareEslEventPutPayload, prepareEspSeriesPutPayload } from '../utils/dataFilters'
 import type {
   RBACApiScope,
   RBACApiGroup,
@@ -775,8 +775,9 @@ class ApiService {
   async updateSeriesExternal(seriesId: string, seriesData: any): Promise<any | ErrorResponse> {
     validateString(seriesId, 'series ID')
     validateObject(seriesData, 'series data')
-    return this.callExternalApi('esp', `/v1/series/${seriesId}`, 'PUT', 
-      { ...seriesData, seriesId },
+    const payload = prepareEspSeriesPutPayload(seriesData)
+    return this.callExternalApi('esp', `/v1/series/${seriesId}`, 'PUT',
+      { ...payload, seriesId },
       { operationName: `updateSeries(${seriesId})`, shouldReturnFullResponse: true }
     )
   }
@@ -784,8 +785,9 @@ class ApiService {
   async publishSeries(seriesId: string, seriesData: any): Promise<any | ErrorResponse> {
     validateString(seriesId, 'series ID')
     validateObject(seriesData, 'series data')
+    const payload = prepareEspSeriesPutPayload(seriesData)
     return this.callExternalApi('esp', `/v1/series/${seriesId}`, 'PUT',
-      { ...seriesData, seriesId, seriesStatus: 'published' },
+      { ...payload, seriesId, seriesStatus: 'published' },
       { operationName: `publishSeries(${seriesId})`, shouldReturnFullResponse: true }
     )
   }
@@ -793,8 +795,9 @@ class ApiService {
   async unpublishSeries(seriesId: string, seriesData: any): Promise<any | ErrorResponse> {
     validateString(seriesId, 'series ID')
     validateObject(seriesData, 'series data')
+    const payload = prepareEspSeriesPutPayload(seriesData)
     return this.callExternalApi('esp', `/v1/series/${seriesId}`, 'PUT',
-      { ...seriesData, seriesId, seriesStatus: 'draft' },
+      { ...payload, seriesId, seriesStatus: 'draft' },
       { operationName: `unpublishSeries(${seriesId})`, shouldReturnFullResponse: true }
     )
   }
@@ -802,8 +805,9 @@ class ApiService {
   async archiveSeries(seriesId: string, seriesData: any): Promise<any | ErrorResponse> {
     validateString(seriesId, 'series ID')
     validateObject(seriesData, 'series data')
+    const payload = prepareEspSeriesPutPayload(seriesData)
     return this.callExternalApi('esp', `/v1/series/${seriesId}`, 'PUT',
-      { ...seriesData, seriesId, seriesStatus: 'archived' },
+      { ...payload, seriesId, seriesStatus: 'archived' },
       { operationName: `archiveSeries(${seriesId})`, shouldReturnFullResponse: true }
     )
   }
