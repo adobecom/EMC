@@ -3,7 +3,7 @@
 */
 
 import React from 'react'
-import { Button, Heading, Text } from '@react-spectrum/s2'
+import { Badge, Button, Heading, StatusLight, Text } from '@react-spectrum/s2'
 import { style } from '@react-spectrum/s2/style' with { type: 'macro' }
 import { useNavigate } from 'react-router-dom'
 import ChevronLeft from '@react-spectrum/s2/icons/ChevronLeft'
@@ -13,8 +13,10 @@ import {
   LAYOUT_DIMENSIONS,
   FORM_WIZARD_FOOTER_STYLES,
   COLORS,
+  SURFACES,
   TYPOGRAPHY
 } from '../../styles/designSystem'
+import { formatEventFormStatusLabel, getEventFormStatusLightVariant } from './eventFormStatusBadge'
 
 /** Side nav: selected / hover (Spectrum) */
 const SIDE_NAV_SELECTED_BG = 'var(--spectrum-global-color-blue-100)'
@@ -98,26 +100,8 @@ export const SingleStepFormLayout: React.FC<SingleStepFormLayoutProps> = ({
     await onPublish()
   }
 
-  const getStatusBadgeStyles = (statusValue: string): { dotColor: string; textColor: string } => {
-    const statusStyles: Record<string, { dotColor: string; textColor: string }> = {
-      draft: {
-        dotColor: COLORS.STATUS_DRAFT,
-        textColor: COLORS.GRAY_800,
-      },
-      published: {
-        dotColor: COLORS.STATUS_PUBLISHED,
-        textColor: COLORS.GRAY_800,
-      },
-      archived: {
-        dotColor: COLORS.STATUS_ARCHIVED,
-        textColor: COLORS.GRAY_700,
-      },
-    }
-    return statusStyles[statusValue.toLowerCase()] || statusStyles.draft
-  }
-
-  const statusStyles = getStatusBadgeStyles(status)
-  const statusLabel = status.charAt(0).toUpperCase() + status.slice(1).toLowerCase()
+  const statusLightVariant = getEventFormStatusLightVariant(status)
+  const statusLabel = formatEventFormStatusLabel(status)
 
   const renderSideNav = () => (
     <div
@@ -129,7 +113,7 @@ export const SingleStepFormLayout: React.FC<SingleStepFormLayoutProps> = ({
         minHeight: 0,
         height: '100%',
         overflow: 'hidden',
-        backgroundColor: COLORS.GRAY_100,
+        backgroundColor: SURFACES.EVENT_FORM_SHELL,
       }}
     >
       <div style={{ padding: 24, flex: 1, minHeight: 0, overflow: 'auto' }}>
@@ -233,6 +217,19 @@ export const SingleStepFormLayout: React.FC<SingleStepFormLayoutProps> = ({
     </div>
   )
 
+  const actionBarRowStyle: React.CSSProperties = {
+    display: 'flex',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    width: '100%',
+    minWidth: 0,
+    flex: 1,
+    boxSizing: 'border-box',
+    marginInlineStart: 'var(--spectrum-global-dimension-size-400)',
+    marginInlineEnd: 'var(--spectrum-global-dimension-size-400)',
+  }
+
   const renderActionBar = () => {
     const getSaveButtonText = () => {
       if (isSaving) return 'Saving...'
@@ -248,31 +245,48 @@ export const SingleStepFormLayout: React.FC<SingleStepFormLayoutProps> = ({
 
     return (
       <div style={FORM_WIZARD_FOOTER_STYLES}>
-        <div
-          className={style({ display: 'flex', justifyContent: 'end', alignItems: 'center', height: '[100%]', flex: 1 })}
-          style={{ marginInlineStart: 'var(--spectrum-global-dimension-size-400)', marginInlineEnd: 'var(--spectrum-global-dimension-size-400)' }}
-        >
-          <div className={style({ display: 'flex', gap: 8, alignItems: 'center' })}>
-            <Button
-              variant="secondary"
-              fillStyle="outline"
-              staticColor="white"
-              onPress={handleSave}
-              isDisabled={isActionDisabled || !onSave}
-            >
-              {getSaveButtonText()}
-            </Button>
-            <Button
-              variant="accent"
-              fillStyle="fill"
-              onPress={handlePublish}
-              isDisabled={isActionDisabled}
-            >
-              <div className={style({ display: 'flex', gap: 4, alignItems: 'center' })} style={{ flexDirection: 'row-reverse' }}>
-                <Text>{getPublishButtonText()}</Text>
-                <ChevronRight />
-              </div>
-            </Button>
+        <div style={actionBarRowStyle}>
+          <div
+            style={{
+              flexShrink: 0,
+              width: 'var(--spectrum-global-dimension-size-500)',
+              height: 'var(--spectrum-global-dimension-size-500)',
+            }}
+            aria-hidden
+          />
+
+          <div
+            className={style({ display: 'flex', alignItems: 'center' })}
+            style={{
+              justifyContent: 'flex-end',
+              flexWrap: 'wrap',
+              gap: 'var(--spectrum-global-dimension-size-200)',
+              minWidth: 0,
+              flexShrink: 1,
+            }}
+          >
+            <div className={style({ display: 'flex', gap: 8, alignItems: 'center' })}>
+              <Button
+                variant="accent"
+                fillStyle="fill"
+                onPress={handlePublish}
+                isDisabled={isActionDisabled}
+              >
+                <div className={style({ display: 'flex', gap: 4, alignItems: 'center' })} style={{ flexDirection: 'row-reverse' }}>
+                  <Text>{getPublishButtonText()}</Text>
+                  <ChevronRight />
+                </div>
+              </Button>
+              <Button
+                variant="secondary"
+                fillStyle="outline"
+                staticColor="white"
+                onPress={handleSave}
+                isDisabled={isActionDisabled || !onSave}
+              >
+                {getSaveButtonText()}
+              </Button>
+            </div>
           </div>
         </div>
       </div>
@@ -327,36 +341,16 @@ export const SingleStepFormLayout: React.FC<SingleStepFormLayoutProps> = ({
               <div className={style({ display: 'flex', alignItems: 'center', gap: 32 })}>
                 <Heading level={2} UNSAFE_style={TYPOGRAPHY.STEP_HEADING}>{title}</Heading>
 
-                <div
-                  style={{
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: '8px',
-                    padding: '0 8px',
-                    borderRadius: '4px',
-                    backgroundColor: COLORS.WHITE,
-                    flexShrink: 0
-                  }}
+                <Badge
+                  variant="neutral"
+                  fillStyle="subtle"
+                  size="S"
+                  styles={style({ flexShrink: 0 })}
                 >
-                  <span
-                    style={{
-                      width: '10px',
-                      height: '10px',
-                      borderRadius: '50%',
-                      backgroundColor: statusStyles.dotColor,
-                      flexShrink: 0
-                    }}
-                  />
-                  <Text
-                    UNSAFE_style={{
-                      fontSize: '14px',
-                      fontWeight: 500,
-                      color: statusStyles.textColor
-                    }}
-                  >
+                  <StatusLight variant={statusLightVariant} size="S" role="status">
                     {statusLabel}
-                  </Text>
-                </div>
+                  </StatusLight>
+                </Badge>
 
                 {headerActions && <div style={{ flex: 1 }} />}
                 {headerActions}

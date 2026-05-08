@@ -6,7 +6,7 @@
 */
 
 import type { EnvironmentTier } from '../config/env'
-import type { EventFormData, SeriesApiResponse } from '../types/domain'
+import type { EventApiResponse, EventFormData, SeriesApiResponse } from '../types/domain'
 import { normalizeContentRoot, normalizeRelatedDomain } from './seriesFormAutoCorrect'
 
 /**
@@ -90,19 +90,112 @@ export function normalizeRelativeUrl(resolved: string): string {
 }
 
 /**
- * Join relatedDomain, contentRoot, and the resolved pattern into a
- * single absolute detail URL (https://…), using the same domain/root
- * normalization as the series form so API `detailPagePath` matches list/get.
+ * Join relatedDomain, optional locale prefix, contentRoot, and the resolved
+ * pattern into a single absolute detail URL (https://…), using the same
+ * domain/root normalization as the series form so API `detailPagePath` matches list/get.
  */
 export function constructDetailPagePath(
   relatedDomain: string,
   contentRoot: string,
-  resolvedPattern: string
+  resolvedPattern: string,
+  localePrefix?: string
 ): string {
   const domain = normalizeRelatedDomain(relatedDomain)
+  const locale = (localePrefix ?? '')
+    .replace(/^\/+/, '')
+    .replace(/\/+$/, '')
   const root = normalizeContentRoot(contentRoot).replace(/^\/+/, '').replace(/\/+$/, '')
   const pattern = resolvedPattern.replace(/^\/+/, '')
 
-  const segments = [domain, root, pattern].filter(Boolean)
+  const segments = [domain, locale, root, pattern].filter(Boolean)
   return segments.join('/')
+}
+
+const TOKEN_REGEX = /\{(\w+)\}/g
+
+/**
+ * Distinct `{token}` names from a URL pattern string (order not guaranteed).
+ */
+export function extractUrlPatternTokens(pattern: string): string[] {
+  const seen = new Set<string>()
+  const out: string[] = []
+  pattern.replace(TOKEN_REGEX, (_m, token: string) => {
+    if (!seen.has(token)) {
+      seen.add(token)
+      out.push(token)
+    }
+    return ''
+  })
+  return out
+}
+
+function formEventTypeToApi(eventType: string): string {
+  const map: Record<string, string> = {
+    'in-person': 'InPerson',
+    webinar: 'Webinar',
+    hybrid: 'Hybrid',
+    InPerson: 'InPerson',
+    Webinar: 'Webinar',
+    Hybrid: 'Hybrid',
+  }
+  return map[eventType] || eventType
+}
+
+function effectiveEnTitleForUrl(formData: EventFormData, eventDataResp: EventApiResponse): {
+  form: string
+  saved: string
+} {
+  const formVal = (formData.enTitle || formData.name || '').trim()
+  const loc = eventDataResp.defaultLocale || 'en-US'
+  const savedVal = (
+    eventDataResp.enTitle ||
+    eventDataResp.localizations?.[loc]?.title ||
+    ''
+  ).trim()
+  return { form: formVal, saved: savedVal }
+}
+
+function formLocalStartDate(formData: EventFormData): string {
+  if (formData.startDateTime) return formData.startDateTime.split('T')[0] || ''
+  return (formData.localStartDate || '').trim()
+}
+
+/**
+ * Whether an edit may change the constructed detailPagePath for this pattern.
+ * Unknown `{tokens}` in the pattern → true (re-run collision flow until mapped in buildTokenContext).
+ */
+export function patternTokensAffectingUrlChanged(
+  pattern: string,
+  formData: EventFormData,
+  eventDataResp: EventApiResponse
+): boolean {
+  const locForm = (formData.defaultLocale || '').trim()
+  const locSaved = (eventDataResp.defaultLocale || '').trim()
+  if (locForm !== locSaved) return true
+
+  const tokens = extractUrlPatternTokens(pattern)
+  const known = new Set(['enTitle', 'seriesName', 'localStartDate', 'cloudType', 'eventType'])
+
+  for (const token of tokens) {
+    if (!known.has(token)) return true
+
+    if (token === 'enTitle') {
+      const { form, saved } = effectiveEnTitleForUrl(formData, eventDataResp)
+      if (form !== saved) return true
+    }
+    if (token === 'seriesName') {
+      if ((formData.seriesId || '') !== (eventDataResp.seriesId || '')) return true
+    }
+    if (token === 'localStartDate') {
+      if (formLocalStartDate(formData) !== (eventDataResp.localStartDate || '').trim()) return true
+    }
+    if (token === 'cloudType') {
+      if ((formData.cloudType || '') !== (eventDataResp.cloudType || '')) return true
+    }
+    if (token === 'eventType') {
+      if (formEventTypeToApi(formData.eventType || '') !== (eventDataResp.eventType || '')) return true
+    }
+  }
+
+  return false
 }

@@ -17,6 +17,7 @@ import { v4 as uuidv4 } from 'uuid'
 import { HeadingWithTooltip, RichTextEditor } from '../../components/shared'
 import { AgendaItem } from '../../types/domain'
 import { useEventFormComponent } from '../../hooks/useEventFormComponent'
+import { COLORS, SURFACES } from '../../styles/designSystem'
 
 /**
  * Safely parse ISO 8601 datetime string for DatePicker
@@ -495,12 +496,12 @@ export const AgendaComponent: React.FC = () => {
               style={{
                 padding: '16px 20px',
                 border: isDragOver 
-                  ? '2px solid #1473E6' 
-                  : '1px solid #D3D3D3',
+                  ? `2px solid ${SURFACES.SELECTED_RING}` 
+                  : `1px solid ${SURFACES.BORDER}`,
                 borderRadius: '8px',
                 backgroundColor: isDragging 
-                  ? '#F5F5F5' 
-                  : 'white',
+                  ? SURFACES.SUBTLE 
+                  : SURFACES.CANVAS,
                 opacity: isDragging ? 0.5 : 1,
                 cursor: 'default',
                 transition: 'border-color 0.2s, background-color 0.2s'
@@ -522,7 +523,7 @@ export const AgendaComponent: React.FC = () => {
                   {timeRange && (
                     <Text UNSAFE_style={{ 
                       fontSize: '13px', 
-                      color: '#4B4B4B'
+                      color: COLORS.GRAY_800
                     }}>
                       {timeRange}
                     </Text>
@@ -531,7 +532,7 @@ export const AgendaComponent: React.FC = () => {
                   <Text UNSAFE_style={{ 
                     fontWeight: 'bold', 
                     fontSize: '16px',
-                    color: '#1B1B1B'
+                    color: COLORS.DARK_GRAY
                   }}>
                     {item.title || 'Untitled'}
                   </Text>
@@ -539,7 +540,7 @@ export const AgendaComponent: React.FC = () => {
                   {truncatedDesc && (
                     <Text UNSAFE_style={{ 
                       fontSize: '14px', 
-                      color: '#4B4B4B'
+                      color: COLORS.GRAY_800
                     }}>
                       {truncatedDesc}
                     </Text>
@@ -582,8 +583,8 @@ export const AgendaComponent: React.FC = () => {
             style={{
               padding: '20px',
               border: isDragOver 
-                ? '2px solid #1473E6' 
-                : '1px solid #B8B8B8',
+                ? `2px solid ${SURFACES.SELECTED_RING}` 
+                : `1px solid ${COLORS.GRAY_500}`,
               borderRadius: '8px',
               transition: 'border-color 0.2s'
             }}

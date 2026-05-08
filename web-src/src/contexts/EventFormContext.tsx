@@ -10,8 +10,9 @@ import React, {
   useRef,
   useEffect,
   useMemo,
+  useState,
 } from 'react'
-import { EventFormData, EventApiResponse } from '../types/domain'
+import { EventFormData, EventApiResponse, SeriesSpeaker } from '../types/domain'
 import { saveFormDraft, loadFormDraft, clearFormDraft } from '../utils/formPersistence'
 import {
   applyLocaleMetadataToFormData,
@@ -103,6 +104,7 @@ type EventFormAction =
   | { type: 'SET_LOCALE'; payload: string }
   | { type: 'SET_EDIT_MODE'; payload: boolean }
   | { type: 'SET_EVENT_RESPONSE'; payload: EventApiResponse | null }
+  | { type: 'MERGE_EVENT_RESPONSE'; payload: Partial<EventApiResponse> }
   | { type: 'UPDATE_FORM_DATA'; payload: Partial<EventFormData> }
   | { type: 'POPULATE_FORM_DATA'; payload: Partial<EventFormData> }
   | { type: 'RESET_FORM_DATA'; payload: EventFormData }
@@ -144,6 +146,8 @@ export interface EventFormContextValue {
   /** Populate form from API response without marking dirty (for load/edit) */
   populateFormDataFromResponse: (updates: Partial<EventFormData>) => void
   setEventResponse: (response: EventApiResponse | null) => void
+  /** Shallow-merge into eventDataResp without changing isDirty (e.g. sync modificationTime after child mutations) */
+  mergeEventResponse: (partial: Partial<EventApiResponse>) => void
   setEventId: (id: string | null) => void
   setSeriesId: (id: string) => void
   setLocale: (locale: string) => void
@@ -169,6 +173,12 @@ export interface EventFormContextValue {
   persistToStorage: () => void
   loadFromStorage: () => boolean
   clearStorage: () => void
+
+  // Event-level data shared across form steps
+  venueLocations: any[]
+  seriesSpeakers: SeriesSpeaker[]
+  setVenueLocations: (locations: any[]) => void
+  setSeriesSpeakers: (speakers: SeriesSpeaker[]) => void
 }
 
 // ============================================================================
@@ -218,6 +228,7 @@ export const createDefaultFormData = (): EventFormData => ({
   secondaryLinkTitle: '',
   agendaItems: [],
   showAgendaPostEvent: false,
+  showSponsors: true,
   sponsors: []
 })
 
@@ -269,6 +280,13 @@ function eventFormReducer(state: EventFormState, action: EventFormAction): Event
         ...state,
         eventDataResp: action.payload,
         isDirty: false // Response just set means we're in sync
+      }
+
+    case 'MERGE_EVENT_RESPONSE':
+      if (!state.eventDataResp) return state
+      return {
+        ...state,
+        eventDataResp: { ...state.eventDataResp, ...action.payload },
       }
     
     case 'UPDATE_FORM_DATA':
@@ -400,6 +418,10 @@ export const EventFormProvider: React.FC<EventFormProviderProps> = ({
   
   // Component registry
   const componentsRef = useRef<Map<string, RegisteredComponent>>(new Map())
+
+  // Event-level data shared across form steps
+  const [venueLocations, setVenueLocations] = useState<any[]>([])
+  const [seriesSpeakers, setSeriesSpeakers] = useState<SeriesSpeaker[]>([])
   
   // ============================================================================
   // ACTIONS
@@ -415,6 +437,10 @@ export const EventFormProvider: React.FC<EventFormProviderProps> = ({
   
   const setEventResponse = useCallback((response: EventApiResponse | null) => {
     dispatch({ type: 'SET_EVENT_RESPONSE', payload: response })
+  }, [])
+
+  const mergeEventResponse = useCallback((partial: Partial<EventApiResponse>) => {
+    dispatch({ type: 'MERGE_EVENT_RESPONSE', payload: partial })
   }, [])
   
   const setEventId = useCallback((id: string | null) => {
@@ -574,6 +600,7 @@ export const EventFormProvider: React.FC<EventFormProviderProps> = ({
     updateFormData,
     populateFormDataFromResponse,
     setEventResponse,
+    mergeEventResponse,
     setEventId,
     setSeriesId,
     setLocale,
@@ -598,11 +625,20 @@ export const EventFormProvider: React.FC<EventFormProviderProps> = ({
     persistToStorage,
     loadFromStorage,
     clearStorage,
+
+    // Event-level data shared across form steps
+    venueLocations,
+    seriesSpeakers,
+    setVenueLocations,
+    setSeriesSpeakers,
   }), [
     state,
+    venueLocations,
+    seriesSpeakers,
     updateFormData,
     populateFormDataFromResponse,
     setEventResponse,
+    mergeEventResponse,
     setEventId,
     setSeriesId,
     setLocale,

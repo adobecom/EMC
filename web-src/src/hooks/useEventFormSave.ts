@@ -73,6 +73,7 @@ export function useEventFormSave() {
     seriesId,
     locale,
     isEditMode,
+    isPublished,
     saveStatus,
     eventDataResp, // Raw API response - contains modificationTime/creationTime for updates
     getRegisteredComponents,
@@ -96,7 +97,7 @@ export function useEventFormSave() {
     
     // Process each field according to the data filter
     // Note: Some fields are handled specially below (tags, eventType, dates, etc.)
-    const speciallyHandledFields = new Set(['tags', 'eventType', 'startDateTime', 'endDateTime', 'agendaItems', 'promotionalItems', 'timezone', 'inviteOnly'])
+    const speciallyHandledFields = new Set(['tags', 'eventType', 'startDateTime', 'endDateTime', 'agendaItems', 'promotionalItems', 'timezone', 'inviteOnly', 'published'])
     
     Object.entries(mergedData).forEach(([key, value]) => {
       const descriptor = EVENT_DATA_FILTER[key]
@@ -431,11 +432,13 @@ export function useEventFormSave() {
         Object.assign(payload, extraPayload)
       }
       
-      // Add publish flag if requested
+      // Published: only the explicit publish action sets true; dashboard unpublish sets false.
+      // Draft saves on an existing event must preserve server publish state (form payload usually omits `published`).
       if (publish) {
         payload.published = true
+      } else if (isEditMode && eventId) {
+        payload.published = eventDataResp?.published ?? isPublished
       } else {
-        // Ensure published is always set (required by schema)
         payload.published = payload.published ?? false
       }
       
@@ -451,6 +454,17 @@ export function useEventFormSave() {
       if (!payload.timezone) {
         // Default to America/Los_Angeles if not set (required field)
         payload.timezone = formData.timezone || 'America/Los_Angeles'
+      }
+
+      // ESL PUT must include detailPagePath for custom URL patterns; form state omits it unless extraPayload merged it.
+      if (
+        isEditMode &&
+        eventId &&
+        !isValidAttribute(payload.detailPagePath) &&
+        eventDataResp &&
+        isValidAttribute(eventDataResp.detailPagePath)
+      ) {
+        payload.detailPagePath = eventDataResp.detailPagePath
       }
       
       // 5. Call create/update API (using external ESP/ESL API)
@@ -472,7 +486,7 @@ export function useEventFormSave() {
           payload.creationTime = eventDataResp.creationTime
         }
         
-        // Update existing event
+        // Update existing event (ApiService applies prepareEslEventPutPayload before ESL PUT)
         const result = await apiService.updateEventExternal(eventId, payload, {
           forceSpWrite: false,
           liveUpdate: publish // Only live update when publishing
@@ -538,6 +552,7 @@ export function useEventFormSave() {
     seriesId,
     locale,
     isEditMode,
+    isPublished,
     eventDataResp,
     buildEventPayload,
     validateComponents,

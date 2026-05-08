@@ -31,6 +31,7 @@ const statusMap: Record<string, StatusConfig> = {
   confirmed: { variant: 'positive',    label: 'Confirmed' },
   pending:   { variant: 'notice',      label: 'Pending' },
   attended:  { variant: 'neutral',     label: 'Attended' },
+  declined:  { variant: 'negative',    label: 'Declined' },
 }
 
 export const StatusBadge: React.FC<StatusBadgeProps> = ({ status, label }) => {

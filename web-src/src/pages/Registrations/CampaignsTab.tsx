@@ -2,20 +2,92 @@
 * <license header>
 */
 
-import React, { useState, useCallback, useMemo } from 'react'
-import { Button, ButtonGroup, TextField, Picker, PickerItem, DialogTrigger, Dialog, Content, Heading, Text, ActionButton, NumberField, Switch, AlertDialog } from '@react-spectrum/s2'
+import React, { useState, useCallback, useMemo, useEffect } from 'react'
+import { Button, ButtonGroup, TextField, Picker, PickerItem, DialogTrigger, Dialog, Content, Heading, Text, ActionButton, NumberField, Switch, AlertDialog, SearchField } from '@react-spectrum/s2'
 import { style } from "@react-spectrum/s2/style" with { type: "macro" }
 import Add from '@react-spectrum/s2/icons/Add'
 import Edit from '@react-spectrum/s2/icons/Edit'
 import RemoveCircle from '@react-spectrum/s2/icons/RemoveCircle'
 import Copy from '@react-spectrum/s2/icons/Copy'
+import Download from '@react-spectrum/s2/icons/Download'
 import type { EventApiResponse } from '../../types/domain'
 import type { Campaign, CampaignFormData, CampaignStatus } from '../../types/campaign'
 import { calculateCampaignStats } from '../../types/campaign'
 import ChannelIllustration from '@react-spectrum/s2/illustrations/linear/Channel'
+import NoSearchResults from '@react-spectrum/s2/illustrations/linear/NoSearchResults'
 import { DataTable, TableColumn, ResourceEmptyState } from '../../components/shared'
 import { COLORS } from '../../styles/designSystem'
 import { useHasPermission } from '../../hooks/useHasPermission'
+import { generateCsv, downloadCsv, type CsvColumn, sanitizeFilename, exportDatetime } from '../../utils/csvExport'
+
+const DEFAULT_CAMPAIGN_PAGE_SIZE = 20
+const CAMPAIGN_PAGE_SIZE_OPTIONS = [10, 20, 50, 100] as const
+
+const CAMPAIGN_CSV_COLUMNS: CsvColumn[] = [
+  { key: 'campaignId', label: 'Campaign ID' },
+  { key: 'name', label: 'Campaign Name' },
+  { key: 'url', label: 'URL' },
+  { key: 'status', label: 'Status' },
+  { key: 'attendeeCount', label: 'Registrations (count)' },
+  { key: 'attendeeLimit', label: 'Registration limit' },
+  { key: 'waitlistAttendeeCount', label: 'Waitlisted' },
+  { key: 'creationTime', label: 'Creation time (UTC)' },
+  { key: 'modificationTime', label: 'Modification time (UTC)' },
+]
+
+function formatCampaignEpochForCsv(ms: number): string {
+  return Number.isFinite(ms) ? new Date(ms).toISOString() : ''
+}
+
+function isCampaignPageSize(n: number): n is (typeof CAMPAIGN_PAGE_SIZE_OPTIONS)[number] {
+  return (CAMPAIGN_PAGE_SIZE_OPTIONS as readonly number[]).includes(n)
+}
+
+interface CampaignExportDialogProps {
+  rowCount: number
+  defaultFilename: string
+  onExport: (filename: string) => void
+  onClose: () => void
+}
+
+const CampaignExportDialog: React.FC<CampaignExportDialogProps> = ({
+  rowCount,
+  defaultFilename,
+  onExport,
+  onClose,
+}) => {
+  const [filename, setFilename] = useState(defaultFilename)
+  return (
+    <Dialog>
+      {() => (
+        <>
+          <Heading slot="title">Export Campaigns to CSV</Heading>
+          <Content>
+            <TextField
+              label="File name"
+              value={filename}
+              onChange={setFilename}
+              description=".csv will be appended automatically"
+              styles={style({ width: '[100%]' })}
+            />
+          </Content>
+          <ButtonGroup>
+            <Button variant="secondary" onPress={onClose}>
+              <Text>Cancel</Text>
+            </Button>
+            <Button
+              variant="accent"
+              onPress={() => onExport(filename.trim() || 'export')}
+              isDisabled={rowCount === 0}
+            >
+              <Text>Export ({rowCount} rows)</Text>
+            </Button>
+          </ButtonGroup>
+        </>
+      )}
+    </Dialog>
+  )
+}
 
 const CAMPAIGNS_TABLE_TEST_IDS = {
   root: 'campaigns-table',
@@ -50,8 +122,63 @@ export const CampaignsTab: React.FC<CampaignsTabProps> = ({
   const [pendingArchiveSave, setPendingArchiveSave] = useState<{ campaign: Campaign; formData: CampaignFormData } | null>(null)
   const [isSaving, setIsSaving] = useState(false)
   const [copiedId, setCopiedId] = useState<string | null>(null)
+  const [searchQuery, setSearchQuery] = useState('')
+  const [tablePageSize, setTablePageSize] = useState(DEFAULT_CAMPAIGN_PAGE_SIZE)
+  const [isCampaignExportOpen, setIsCampaignExportOpen] = useState(false)
+
+  const [formName, setFormName] = useState('')
+  const [formAttendeeLimit, setFormAttendeeLimit] = useState<number | undefined>(undefined)
+  const [formNoCapacityLimit, setFormNoCapacityLimit] = useState(false)
+  const [formStatus, setFormStatus] = useState<CampaignStatus>('Active')
+
+  const eventCapacity = event?.attendeeLimit
+
+  useEffect(() => {
+    setSearchQuery('')
+    setTablePageSize(DEFAULT_CAMPAIGN_PAGE_SIZE)
+  }, [eventId])
+
+  useEffect(() => {
+    if (!isFormOpen) return
+    if (editingCampaign) {
+      setFormName(editingCampaign.name || '')
+      setFormAttendeeLimit(editingCampaign.attendeeLimit)
+      setFormStatus(editingCampaign.status)
+      setFormNoCapacityLimit(false)
+    } else {
+      setFormName('')
+      setFormAttendeeLimit(undefined)
+      setFormNoCapacityLimit(false)
+      setFormStatus('Active')
+    }
+  }, [isFormOpen, editingCampaign])
+
+  const formHasValidLimit = useMemo(
+    () =>
+      formNoCapacityLimit
+        ? eventCapacity != null
+        : formAttendeeLimit != null &&
+          !Number.isNaN(formAttendeeLimit) &&
+          formAttendeeLimit >= 1,
+    [formNoCapacityLimit, eventCapacity, formAttendeeLimit]
+  )
+
+  const formIsValid = useMemo(
+    () => formName.trim().length > 0 && formHasValidLimit,
+    [formName, formHasValidLimit]
+  )
 
   const stats = useMemo(() => calculateCampaignStats(campaigns), [campaigns])
+
+  const filteredCampaigns = useMemo(() => {
+    const q = searchQuery.trim().toLowerCase()
+    if (!q) return campaigns
+    return campaigns.filter((c) => {
+      const name = (c.name ?? '').toLowerCase()
+      const id = (c.campaignId ?? '').toLowerCase()
+      return name.includes(q) || id.includes(q)
+    })
+  }, [campaigns, searchQuery])
 
   const performSaveCampaign = useCallback(async (campaign: Campaign | null, formData: CampaignFormData) => {
     setIsSaving(true)
@@ -83,6 +210,30 @@ export const CampaignsTab: React.FC<CampaignsTabProps> = ({
     await performSaveCampaign(editingCampaign, formData)
   }, [editingCampaign, performSaveCampaign])
 
+  const handleSubmitCampaignForm = useCallback(() => {
+    const trimmed = formName.trim()
+    if (!trimmed) return
+    const effectiveLimit =
+      formNoCapacityLimit && eventCapacity != null
+        ? eventCapacity
+        : formAttendeeLimit != null && !Number.isNaN(formAttendeeLimit)
+          ? formAttendeeLimit
+          : undefined
+    void handleSaveCampaign({
+      name: trimmed,
+      attendeeLimit: effectiveLimit,
+      status: editingCampaign ? formStatus : 'Active',
+    })
+  }, [
+    formName,
+    formNoCapacityLimit,
+    eventCapacity,
+    formAttendeeLimit,
+    formStatus,
+    editingCampaign,
+    handleSaveCampaign,
+  ])
+
   const handleDeleteCampaign = useCallback(async () => {
     if (!campaignToDelete) return
     try {
@@ -113,6 +264,45 @@ export const CampaignsTab: React.FC<CampaignsTabProps> = ({
     setIsFormOpen(true)
   }, [])
 
+  const buildCampaignCsv = useCallback(() => {
+    const rows: Record<string, unknown>[] = filteredCampaigns.map((c) => ({
+      campaignId: c.campaignId,
+      name: c.name,
+      url: c.url,
+      status: c.status,
+      attendeeCount: c.attendeeCount,
+      attendeeLimit: c.attendeeLimit,
+      waitlistAttendeeCount: c.waitlistAttendeeCount,
+      creationTime: formatCampaignEpochForCsv(c.creationTime),
+      modificationTime: formatCampaignEpochForCsv(c.modificationTime),
+    }))
+    return generateCsv(rows, CAMPAIGN_CSV_COLUMNS)
+  }, [filteredCampaigns])
+
+  const campaignsTableEmptyState = useMemo(() => {
+    if (campaigns.length === 0) {
+      return (
+        <ResourceEmptyState
+          fillContainer
+          illustration={<ChannelIllustration aria-hidden />}
+          title="No campaigns yet"
+          description="Create campaigns to track registrations from different sources like email, social media, or partner promotions."
+        />
+      )
+    }
+    if (filteredCampaigns.length === 0) {
+      return (
+        <ResourceEmptyState
+          fillContainer
+          illustration={<NoSearchResults aria-hidden />}
+          title="No matching campaigns"
+          description="Try adjusting your search, or clear the search field to see all campaigns."
+        />
+      )
+    }
+    return undefined
+  }, [campaigns.length, filteredCampaigns.length])
+
   const columns: TableColumn<Campaign>[] = useMemo(() => [
     {
       key: 'name',
@@ -121,6 +311,18 @@ export const CampaignsTab: React.FC<CampaignsTabProps> = ({
       sortable: true,
       render: (campaign) => (
         <Text UNSAFE_style={{ fontWeight: 600 }}>{campaign.name}</Text>
+      )
+    },
+    {
+      key: 'campaignId',
+      name: 'CAMPAIGN ID',
+      width: 200,
+      sortable: true,
+      cellNoWrap: true,
+      render: (campaign) => (
+        <Text UNSAFE_style={{ fontFamily: 'monospace', fontSize: '13px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+          {campaign.campaignId}
+        </Text>
       )
     },
     {
@@ -197,9 +399,11 @@ export const CampaignsTab: React.FC<CampaignsTabProps> = ({
     },
     {
       key: 'actions',
-      name: '',
+      name: 'ACTIONS',
       width: 100,
+      sortable: false,
       isSticky: true,
+      cellNoWrap: true,
       render: (campaign) => (
         <div className={style({display: 'flex', gap: 8, justifyContent: 'end'})}>
           {canWriteEvent && campaign.status === 'Active' && (
@@ -248,37 +452,92 @@ export const CampaignsTab: React.FC<CampaignsTabProps> = ({
         </div>
       </div>
 
-      {/* Header with Add Button */}
-      {canWriteEvent && (
-        <div
-          className={style({display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16})}
-        >
-          <Button
-            variant="accent"
-            onPress={handleCreateClick}
-          >
-            <Add />
-            <Text>Add Campaign</Text>
-          </Button>
+      {/* Add campaign + table tools */}
+      <div
+        className={style({
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'end',
+          flexWrap: 'wrap',
+          gap: 16,
+          marginBottom: 16,
+        })}
+      >
+        <div>
+          {canWriteEvent && (
+            <Button variant="accent" onPress={handleCreateClick}>
+              <Add />
+              <Text>Add Campaign</Text>
+            </Button>
+          )}
         </div>
-      )}
+        {campaigns.length > 0 && (
+          <div
+            className={style({
+              display: 'flex',
+              gap: 12,
+              alignItems: 'end',
+              flexWrap: 'wrap',
+            })}
+          >
+            {filteredCampaigns.length > 0 && (
+              <DialogTrigger isOpen={isCampaignExportOpen} onOpenChange={setIsCampaignExportOpen}>
+                <ActionButton aria-label="Export campaigns as CSV">
+                  <Download />
+                </ActionButton>
+                <CampaignExportDialog
+                  rowCount={filteredCampaigns.length}
+                  defaultFilename={
+                    sanitizeFilename(event?.title || event?.enTitle || 'event') +
+                    '_campaigns_' +
+                    exportDatetime()
+                  }
+                  onExport={(filename) => {
+                    downloadCsv(buildCampaignCsv(), `${filename}.csv`)
+                    setIsCampaignExportOpen(false)
+                  }}
+                  onClose={() => setIsCampaignExportOpen(false)}
+                />
+              </DialogTrigger>
+            )}
+            <Picker
+              label="Rows per page"
+              selectedKey={String(tablePageSize)}
+              onSelectionChange={(key) => {
+                const n = Number(key)
+                if (isCampaignPageSize(n)) setTablePageSize(n)
+              }}
+              styles={style({ width: 120 })}
+            >
+              {CAMPAIGN_PAGE_SIZE_OPTIONS.map((n) => (
+                <PickerItem key={n} id={String(n)}>
+                  {String(n)}
+                </PickerItem>
+              ))}
+            </Picker>
+            <div className={style({ width: 240 })}>
+              <SearchField
+                label="Search campaigns"
+                placeholder="Search by name or campaign ID"
+                value={searchQuery}
+                onChange={setSearchQuery}
+                onClear={() => setSearchQuery('')}
+                styles={style({ width: '[100%]' })}
+              />
+            </div>
+          </div>
+        )}
+      </div>
 
       {/* Campaigns Table */}
       <div style={{ minHeight: 480, display: 'flex', flexDirection: 'column' }}>
         <DataTable
           columns={columns}
-          data={campaigns}
+          data={filteredCampaigns}
           getItemKey={(item) => item.campaignId}
-          pageSize={10}
+          pageSize={tablePageSize}
           testIds={CAMPAIGNS_TABLE_TEST_IDS}
-          emptyState={
-            <ResourceEmptyState
-              fillContainer
-              illustration={<ChannelIllustration aria-hidden />}
-              title="No campaigns yet"
-              description="Create campaigns to track registrations from different sources like email, social media, or partner promotions."
-            />
-          }
+          emptyState={campaignsTableEmptyState}
         />
       </div>
 
@@ -297,11 +556,18 @@ export const CampaignsTab: React.FC<CampaignsTabProps> = ({
           {({close}) => (
             <CampaignFormDialogContent
               campaign={editingCampaign}
-              eventCapacity={event?.attendeeLimit}
+              eventCapacity={eventCapacity}
               isSaving={isSaving}
-              onSave={(data) => {
-                handleSaveCampaign(data)
-              }}
+              name={formName}
+              onNameChange={setFormName}
+              attendeeLimit={formAttendeeLimit}
+              onAttendeeLimitChange={setFormAttendeeLimit}
+              noCapacityLimit={formNoCapacityLimit}
+              onNoCapacityLimitChange={setFormNoCapacityLimit}
+              status={formStatus}
+              onStatusChange={setFormStatus}
+              isValid={formIsValid}
+              onSubmitForm={handleSubmitCampaignForm}
               onCancel={close}
             />
           )}
@@ -383,7 +649,16 @@ interface CampaignFormDialogContentProps {
   campaign: Campaign | null
   eventCapacity?: number
   isSaving: boolean
-  onSave: (data: CampaignFormData) => void
+  name: string
+  onNameChange: (value: string) => void
+  attendeeLimit: number | undefined
+  onAttendeeLimitChange: (value: number | undefined) => void
+  noCapacityLimit: boolean
+  onNoCapacityLimitChange: (value: boolean) => void
+  status: CampaignStatus
+  onStatusChange: (value: CampaignStatus) => void
+  isValid: boolean
+  onSubmitForm: () => void
   onCancel: () => void
 }
 
@@ -391,116 +666,95 @@ const CampaignFormDialogContent: React.FC<CampaignFormDialogContentProps> = ({
   campaign,
   eventCapacity,
   isSaving,
-  onSave,
+  name,
+  onNameChange,
+  attendeeLimit,
+  onAttendeeLimitChange,
+  noCapacityLimit,
+  onNoCapacityLimitChange,
+  status,
+  onStatusChange,
+  isValid,
+  onSubmitForm,
   onCancel
-}) => {
-  const [name, setName] = useState(campaign?.name || '')
-  const [attendeeLimit, setAttendeeLimit] = useState<number | undefined>(campaign?.attendeeLimit)
-  const [noCapacityLimit, setNoCapacityLimit] = useState(false)
-  const [status, setStatus] = useState<CampaignStatus>(campaign?.status ?? 'Active')
+}) => (
+  <>
+    <Heading slot="title">{campaign ? 'Edit Campaign' : 'Create Campaign'}</Heading>
+    <Content>
+      <div className={style({display: 'flex', flexDirection: 'column', gap: 24})}>
+        <TextField
+          label="Name"
+          value={name}
+          onChange={onNameChange}
+          isRequired
+          autoFocus
+          styles={style({ width: '[100%]' })}
+        />
 
-  const handleSave = () => {
-    if (!name.trim()) return
-
-    const effectiveLimit = noCapacityLimit && eventCapacity != null
-      ? eventCapacity
-      : (attendeeLimit != null && !Number.isNaN(attendeeLimit) ? attendeeLimit : undefined)
-
-    onSave({
-      name: name.trim(),
-      attendeeLimit: effectiveLimit,
-      status: campaign ? status : 'Active'
-    })
-  }
-
-  const hasValidLimit = noCapacityLimit
-    ? eventCapacity != null
-    : (attendeeLimit != null && !Number.isNaN(attendeeLimit) && attendeeLimit >= 1)
-  const isValid = name.trim().length > 0 && hasValidLimit
-
-  return (
-    <>
-      <Heading slot="title">{campaign ? 'Edit Campaign' : 'Create Campaign'}</Heading>
-      <Content>
-        <div className={style({display: 'flex', flexDirection: 'column', gap: 24})}>
-          {/* Name Field */}
+        {campaign && (
           <TextField
-            label="Name"
-            value={name}
-            onChange={setName}
-            isRequired
-            autoFocus
+            label="Campaign URL"
+            value={campaign.url}
+            isReadOnly
             styles={style({ width: '[100%]' })}
+            description="Auto-generated from the event URL"
           />
+        )}
 
-          {/* Campaign URL (read-only, only shown when editing) */}
-          {campaign && (
-            <TextField
-              label="Campaign URL"
-              value={campaign.url}
-              isReadOnly
-              styles={style({ width: '[100%]' })}
-              description="Auto-generated from the event URL"
+        {!campaign && (
+          <div className={style({display: 'flex', flexDirection: 'column', gap: 16})}>
+            <NumberField
+              label="Attendee limit"
+              value={noCapacityLimit && eventCapacity != null ? eventCapacity : (attendeeLimit ?? NaN)}
+              onChange={onAttendeeLimitChange}
+              minValue={1}
+              isDisabled={noCapacityLimit}
             />
-          )}
-
-          {/* Attendee Limit (only on create) */}
-          {!campaign && (
-            <div className={style({display: 'flex', flexDirection: 'column', gap: 16})}>
-              <NumberField
-                label="Attendee limit"
-                value={noCapacityLimit && eventCapacity != null ? eventCapacity : (attendeeLimit ?? NaN)}
-                onChange={(value) => setAttendeeLimit(value)}
-                minValue={1}
-                isDisabled={noCapacityLimit}
-              />
-              <Switch
-                isSelected={noCapacityLimit}
-                onChange={setNoCapacityLimit}
-                isDisabled={eventCapacity == null}
-              >
-                No capacity limit (use full event capacity)
-              </Switch>
-              {eventCapacity == null && (
-                <Text UNSAFE_style={{ fontSize: '12px', color: COLORS.GRAY_600 }}>
-                  Event has no capacity limit set
-                </Text>
-              )}
-            </div>
-          )}
-
-          {/* Status Picker (only when editing; create always uses Active) */}
-          {campaign && (
-            <Picker
-              label="Status"
-              selectedKey={status}
-              onSelectionChange={(key) => setStatus(key as CampaignStatus)}
-              styles={style({ width: '[100%]' })}
+            <Switch
+              isSelected={noCapacityLimit}
+              onChange={onNoCapacityLimitChange}
+              isDisabled={eventCapacity == null}
             >
-              <PickerItem id="Active">Active</PickerItem>
-              <PickerItem id="Archived">Archived</PickerItem>
-            </Picker>
-          )}
-        </div>
-      </Content>
-      <ButtonGroup>
-        <Button variant="secondary" onPress={onCancel}>
-          Cancel
-        </Button>
-        <Button
-          variant="accent"
-          onPress={handleSave}
-          isDisabled={!isValid || isSaving}
-          UNSAFE_style={{
-            backgroundColor: COLORS.BLACK,
-            borderColor: COLORS.BLACK
-          }}
-        >
-          {isSaving ? 'Saving...' : 'Save'}
-        </Button>
-      </ButtonGroup>
-    </>
-  )
-}
+              No capacity limit (use full event capacity)
+            </Switch>
+            {eventCapacity == null && (
+              <Text UNSAFE_style={{ fontSize: '12px', color: COLORS.GRAY_600 }}>
+                Event has no capacity limit set
+              </Text>
+            )}
+          </div>
+        )}
+
+        {campaign && (
+          <Picker
+            label="Status"
+            selectedKey={status}
+            onSelectionChange={(key) => onStatusChange(key as CampaignStatus)}
+            styles={style({ width: '[100%]' })}
+          >
+            <PickerItem id="Active">Active</PickerItem>
+            <PickerItem id="Archived">Archived</PickerItem>
+          </Picker>
+        )}
+      </div>
+    </Content>
+    <ButtonGroup>
+      <Button variant="secondary" onPress={onCancel}>
+        Cancel
+      </Button>
+      <Button
+        variant="accent"
+        onPress={onSubmitForm}
+        isDisabled={!isValid || isSaving}
+        UNSAFE_style={{
+          backgroundColor: COLORS.BLACK,
+          borderColor: COLORS.BLACK
+        }}
+      >
+        {isSaving ? 'Saving...' : 'Save'}
+      </Button>
+    </ButtonGroup>
+  </>
+)
 
 export default CampaignsTab

@@ -4,7 +4,7 @@
 
 import React, { useMemo } from 'react'
 import type { Attendee, AttendeeColumnConfig } from '../../types/attendee'
-import { getAttendeeName } from '../../types/attendee'
+import { formatRegisteredDateMmDdYyyy, getAttendeeName } from '../../types/attendee'
 import { DataTable, TableColumn } from '../../components/shared'
 
 const ATTENDEE_TABLE_TEST_IDS = {
@@ -49,7 +49,11 @@ function renderCellValue(attendee: Attendee, config: AttendeeColumnConfig): Reac
     case 'registrationStatus':
       return attendee.registrationStatus || fallback || 'registered'
 
-    case 'creationTime':
+    case 'creationTime': {
+      const formatted = formatRegisteredDateMmDdYyyy(attendee.creationTime)
+      return formatted || fallback || '-'
+    }
+
     case 'modificationTime':
       const timestamp = attendee[key]
       if (timestamp) {
@@ -89,7 +93,10 @@ export const AttendeeTableComponent: React.FC<AttendeeTableComponentProps> = ({
 
     const buildColumn = (config: AttendeeColumnConfig): TableColumn<Attendee> => ({
       key: config.key,
-      name: camelToSentenceCase(config.key).toUpperCase(),
+      name: (config.label?.trim()
+        ? config.label
+        : camelToSentenceCase(config.key)
+      ).toUpperCase(),
       width: config.width || 150,
       sortable: config.sortable !== false,
       render: (item) => renderCellValue(item, config),

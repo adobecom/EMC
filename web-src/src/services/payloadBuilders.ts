@@ -8,12 +8,30 @@
  */
 
 import { cachedApi } from './api'
+import { SUPPORTED_SPEAKER_LOCALES } from '../config/localeMapping'
 import {
   SPEAKER_DATA_FILTER,
   SPONSOR_DATA_FILTER,
   splitLocalizableFields,
   isValidAttribute
 } from '../utils/dataFilters'
+
+/** Per-locale title/bio from Speakers dashboard dialog */
+export interface SpeakerDashboardLocalizationDraft {
+  title: string
+  bio: string
+}
+
+function filterSubmittableSpeakerLocaleSlice(
+  fields: Record<string, string>
+): Record<string, string> {
+  return Object.entries(fields).reduce((acc, [key, value]) => {
+    if (SPEAKER_DATA_FILTER[key]?.submittable && isValidAttribute(value)) {
+      acc[key] = value
+    }
+    return acc
+  }, {} as Record<string, string>)
+}
 
 // ============================================================================
 // SPEAKER PAYLOAD BUILDER
@@ -87,6 +105,82 @@ export async function getSpeakerPayload(
   }
 }
 
+/**
+ * Build speaker create/update payload for Speakers dashboard: one GET for edits,
+ * merge all supported locale drafts into `localizations` without dropping other locales.
+ */
+export async function buildSpeakerPayloadForDashboard(params: {
+  seriesId: string
+  speakerId?: string
+  firstName: string
+  lastName: string
+  socialLinks: unknown[]
+  localizationDrafts: Record<string, SpeakerDashboardLocalizationDraft>
+  modificationTime?: number
+}): Promise<Record<string, unknown>> {
+  const {
+    seriesId,
+    speakerId,
+    firstName,
+    lastName,
+    socialLinks,
+    localizationDrafts,
+    modificationTime,
+  } = params
+
+  const filteredSocialLinks = Array.isArray(socialLinks)
+    ? socialLinks.filter(
+        (sm: any) => sm?.link && sm.link !== '' && sm.serviceName
+      )
+    : []
+
+  let existingSpeakerPayload: Record<string, any> = {}
+  if (speakerId) {
+    const result = await cachedApi.getSpeaker(seriesId, speakerId)
+    if (!('error' in result)) {
+      existingSpeakerPayload = result
+    }
+  }
+
+  const mergedLocalizations: Record<string, Record<string, string>> = {
+    ...(existingSpeakerPayload.localizations || {}),
+  }
+
+  for (const loc of SUPPORTED_SPEAKER_LOCALES) {
+    const draft = localizationDrafts[loc] ?? { title: '', bio: '' }
+    const filteredSlice = filterSubmittableSpeakerLocaleSlice({
+      title: draft.title.trim(),
+      bio: typeof draft.bio === 'string' ? draft.bio.trim() : '',
+    })
+    const prev = mergedLocalizations[loc]
+    if (Object.keys(filteredSlice).length > 0) {
+      mergedLocalizations[loc] = { ...(prev || {}), ...filteredSlice }
+    } else if (prev && Object.keys(prev).length > 0) {
+      mergedLocalizations[loc] = prev
+    } else {
+      delete mergedLocalizations[loc]
+    }
+  }
+
+  const payload: Record<string, unknown> = {
+    firstName: firstName.trim(),
+    lastName: lastName.trim(),
+    socialLinks: filteredSocialLinks,
+    localizations: mergedLocalizations,
+  }
+
+  if (speakerId) {
+    payload.speakerId = speakerId
+    const mod =
+      modificationTime ?? existingSpeakerPayload.modificationTime
+    if (mod != null) {
+      payload.modificationTime = mod
+    }
+  }
+
+  return payload
+}
+
 // ============================================================================
 // SPONSOR PAYLOAD BUILDER
 // ============================================================================
@@ -141,13 +235,35 @@ export async function getSponsorPayload(
     return acc
   }, {} as Record<string, any>)
 
-  // Merge with existing localizations (preserves other locales)
-  return {
-    ...filteredGlobalPayload,
-    localizations: { 
-      ...existingSponsorPayload.localizations, 
-      [locale]: filteredLocalePayload 
-    },
+  // Preserve existing locale slices; only patch current locale when there is localized data.
+  // Applying [locale]: {} would wipe that locale's fields when only name/link change.
+  const localizations: Record<string, any> = {
+    ...(existingSponsorPayload.localizations || {}),
   }
+  if (Object.keys(filteredLocalePayload).length > 0) {
+    localizations[locale] = {
+      ...(existingSponsorPayload.localizations?.[locale] || {}),
+      ...filteredLocalePayload,
+    }
+  }
+
+  const merged: Record<string, any> = {
+    ...filteredGlobalPayload,
+  }
+  if (Object.keys(localizations).length > 0) {
+    merged.localizations = localizations
+  }
+
+  // SponsorUpdateBody (OpenAPI): Sponsor requires sponsorId + modificationTime in the body
+  if (sponsorData.sponsorId) {
+    merged.sponsorId = sponsorData.sponsorId
+    const modTime =
+      merged.modificationTime ?? existingSponsorPayload.modificationTime
+    if (modTime != null) {
+      merged.modificationTime = modTime
+    }
+  }
+
+  return merged
 }
 

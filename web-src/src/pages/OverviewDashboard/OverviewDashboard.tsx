@@ -72,7 +72,7 @@ const StatCard: React.FC<StatCardProps> = ({ icon, title, value, subtitle, onCli
         <Text UNSAFE_style={{
           fontSize: '42px',
           fontWeight: 700,
-          color: COLORS.BLACK,
+          color: COLORS.DARK_GRAY,
           lineHeight: 1.1
         }}>
           {value}

@@ -8,9 +8,9 @@ import { cachedApi } from '../../services/api'
 import { COLORS } from '../../styles/designSystem'
 import { LoadingSpinner } from './LoadingSpinner'
 
-/** S2 icons (Add, Close) use fill: var(--iconPrimary); default gray matches #2C2C2C chips unless overridden */
+/** S2 icons (Add, Close) use fill: var(--iconPrimary); chip bg from index.css for light/dark */
 const TAG_CHIP_STYLE: React.CSSProperties = {
-  backgroundColor: '#2C2C2C',
+  backgroundColor: 'var(--emc-tag-chip-bg)',
   display: 'flex',
   alignItems: 'center',
   gap: '8px',
@@ -28,11 +28,13 @@ interface TagGroup {
 interface TagSelectorProps {
   selectedTags: EventTag[]
   onChange: (tags: EventTag[]) => void
+  placement?: 'top' | 'bottom'
 }
 
 export const TagSelector: React.FC<TagSelectorProps> = ({
   selectedTags,
-  onChange
+  onChange,
+  placement = 'bottom'
 }) => {
   const [availableTags, setAvailableTags] = useState<EventTag[]>([])
   const [filteredGroups, setFilteredGroups] = useState<TagGroup[]>([])
@@ -240,6 +242,16 @@ export const TagSelector: React.FC<TagSelectorProps> = ({
     onChange(selectedTags.filter(tag => tag.caasId !== tagToRemove.caasId))
   }
 
+  const dropdownPositionStyle: React.CSSProperties = placement === 'top'
+    ? {
+        bottom: '100%',
+        marginBottom: '4px'
+      }
+    : {
+        top: '100%',
+        marginTop: '4px'
+      }
+
   if (isLoading) {
     return <LoadingSpinner message="Loading tags..." />
   }
@@ -277,7 +289,6 @@ export const TagSelector: React.FC<TagSelectorProps> = ({
             style={{
               position: 'absolute',
               width: '100%',
-              top: '100%',
               left: 0,
               zIndex: 1000,
               backgroundColor: 'var(--spectrum-global-color-gray-100)',
@@ -286,7 +297,7 @@ export const TagSelector: React.FC<TagSelectorProps> = ({
               boxShadow: '0 4px 16px rgba(0, 0, 0, 0.2)',
               maxHeight: '300px',
               overflowY: 'auto',
-              marginTop: '4px'
+              ...dropdownPositionStyle
             }}
           >
             <div className={style({ display: 'flex', flexDirection: 'column', gap: 12 })} style={{ padding: '12px' }}>
@@ -337,16 +348,15 @@ export const TagSelector: React.FC<TagSelectorProps> = ({
             style={{
               position: 'absolute',
               width: '100%',
-              top: '100%',
               left: 0,
               zIndex: 1000,
               backgroundColor: 'var(--spectrum-global-color-gray-100)',
               border: '1px solid var(--spectrum-global-color-gray-300)',
               borderRadius: '4px',
               boxShadow: '0 4px 16px rgba(0, 0, 0, 0.2)',
-              marginTop: '4px',
               padding: '12px',
-              textAlign: 'center'
+              textAlign: 'center',
+              ...dropdownPositionStyle
             }}
           >
             <Text UNSAFE_style={{

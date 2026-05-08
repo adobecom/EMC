@@ -16,7 +16,8 @@
 import React, { useEffect, useState, useMemo, useCallback, useRef } from 'react'
 import {
   ActionButton,
-  ActionMenu,
+  MenuTrigger,
+  Menu,
   MenuItem,
   Badge,
   Button,
@@ -35,18 +36,27 @@ import RemoveCircle from '@react-spectrum/s2/icons/RemoveCircle'
 import RotateCCW from '@react-spectrum/s2/icons/RotateCCW'
 import Add from '@react-spectrum/s2/icons/Add'
 import Link from '@react-spectrum/s2/icons/Link'
+import More from '@react-spectrum/s2/icons/More'
 import { TableColumn } from '../../components/shared/DataTable'
 import { ResourceDashboardLayout, BlurredLoadingOverlay, ResourceEmptyState } from '../../components/shared'
 import MicrophoneIllustration from '@react-spectrum/s2/illustrations/linear/Microphone'
 import LayersIllustration from '@react-spectrum/s2/illustrations/linear/Layers'
 import { SeriesSpeaker, SeriesApiResponse, EventApiResponse } from '../../types/domain'
 import { apiService, cachedApi } from '../../services/api'
+import { uploadSpeakerSeriesImage } from '../../services/speakerImageUpload'
 import { IMS } from '../../types'
 import { useToast, useGroup } from '../../contexts'
 import { createShimmerStyle, COLORS } from '../../styles/designSystem'
 import { useSafeState, useRBACFilter } from '../../hooks'
 import { useHasPermission } from '../../hooks/useHasPermission'
-import { SpeakerFormDialog } from './SpeakerFormDialog'
+import { getProfileAttr } from '../../utils/dataFilters'
+import { DEFAULT_LOCALE, SUPPORTED_SPEAKER_LOCALES } from '../../config/localeMapping'
+import { buildSpeakerPayloadForDashboard } from '../../services/payloadBuilders'
+import {
+  SpeakerFormDialog,
+  SpeakerFormSaveOptions,
+  SpeakerFormSubmitData,
+} from './SpeakerFormDialog'
 import { CascadeConfirmDialog, CascadeAction } from './CascadeConfirmDialog'
 import { SpeakerEventConnectionsDialog } from './SpeakerEventConnectionsDialog'
 
@@ -65,6 +75,29 @@ const SPEAKERS_DASHBOARD_TABLE_TEST_IDS = {
   pageInput: 'speakers-dashboard-table-page-input',
   header: (columnKey: string) => `speakers-dashboard-table-header-${columnKey}`,
   row: (itemKey: string) => `speakers-dashboard-table-row-${itemKey}`,
+}
+
+function getSpeakerDisplayTitle(item: SpeakerDashboardItem): string {
+  const row = item as unknown as Record<string, unknown>
+  const primary = getProfileAttr(row, 'title', DEFAULT_LOCALE)
+  if (typeof primary === 'string' && primary.trim()) {
+    return primary.trim()
+  }
+  for (const loc of SUPPORTED_SPEAKER_LOCALES) {
+    const t = item.localizations?.[loc]?.title
+    if (typeof t === 'string' && t.trim()) {
+      return t.trim()
+    }
+  }
+  return (item.title || '').trim()
+}
+
+function speakerTitleSearchText(item: SpeakerDashboardItem): string {
+  const chunks = [
+    item.title,
+    ...SUPPORTED_SPEAKER_LOCALES.map((loc) => item.localizations?.[loc]?.title),
+  ]
+  return chunks.filter(Boolean).join(' ').toLowerCase()
 }
 
 interface SpeakersDashboardProps {
@@ -288,23 +321,54 @@ export const SpeakersDashboard: React.FC<SpeakersDashboardProps> = () => {
     setSpeakerForConnections(speaker)
   }, [])
   
-  const handleFormSubmit = useCallback(async (speakerData: any, cascadeToEvents: boolean = false) => {
+  const handleFormSubmit = useCallback(async (
+    data: SpeakerFormSubmitData,
+    pendingFile?: File,
+    options?: SpeakerFormSaveOptions
+  ) => {
     if (!selectedSeriesId) return
+
+    const cascadeToEvents = options?.cascadeToEvents ?? false
     
     setActionInProgress(editingSpeaker?.speakerId || 'new')
     
     try {
       let result
-      
+      const altText = pendingFile
+        ? `${data.firstName} ${data.lastName}`.trim() || 'Speaker'
+        : ''
+
+      const speakerPayload = await buildSpeakerPayloadForDashboard({
+        seriesId: selectedSeriesId,
+        speakerId: editingSpeaker?.speakerId,
+        firstName: data.firstName,
+        lastName: data.lastName,
+        socialLinks: data.socialLinks,
+        localizationDrafts: data.localizationDrafts,
+        modificationTime: editingSpeaker?.modificationTime,
+      })
+
       if (editingSpeaker) {
         // Update existing speaker
         result = await apiService.updateSpeaker(
-          { ...speakerData, speakerId: editingSpeaker.speakerId, modificationTime: editingSpeaker.modificationTime },
+          speakerPayload as Record<string, unknown>,
           selectedSeriesId
         )
         
         if ('error' in result) {
           throw new Error(result.error)
+        }
+
+        if (pendingFile) {
+          const uploaded = await uploadSpeakerSeriesImage(
+            pendingFile,
+            selectedSeriesId,
+            editingSpeaker.speakerId,
+            altText
+          )
+          if (!uploaded) {
+            toast.error('Speaker saved, but profile image upload failed.')
+          }
         }
         
         // If cascade is enabled, update speaker in all linked events
@@ -313,7 +377,6 @@ export const SpeakersDashboard: React.FC<SpeakersDashboardProps> = () => {
           await Promise.all(
             events.map(async (event) => {
               try {
-                // Note: updateSpeakerInEvent might need the event speaker's speakerType and ordinal
                 await apiService.updateSpeakerInEvent(
                   { speakerId: editingSpeaker.speakerId },
                   editingSpeaker.speakerId,
@@ -329,10 +392,31 @@ export const SpeakersDashboard: React.FC<SpeakersDashboardProps> = () => {
         toast.success('Speaker updated successfully!')
       } else {
         // Create new speaker
-        result = await apiService.createSpeaker(speakerData, selectedSeriesId)
+        result = await apiService.createSpeaker(
+          speakerPayload as Record<string, unknown>,
+          selectedSeriesId
+        )
         
         if ('error' in result) {
           throw new Error(result.error)
+        }
+
+        if (pendingFile) {
+          const saved = result.speaker ?? result
+          const speakerId = saved.speakerId as string | undefined
+          if (speakerId) {
+            const uploaded = await uploadSpeakerSeriesImage(
+              pendingFile,
+              selectedSeriesId,
+              speakerId,
+              altText
+            )
+            if (!uploaded) {
+              toast.error('Speaker created, but profile image upload failed.')
+            }
+          } else {
+            toast.error('Speaker created, but profile image could not be uploaded.')
+          }
         }
         
         toast.success('Speaker created successfully!')
@@ -486,18 +570,21 @@ export const SpeakersDashboard: React.FC<SpeakersDashboardProps> = () => {
         const bName = `${b.firstName} ${b.lastName}`
         return aName.localeCompare(bName)
       },
-      render: (item) => (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-          <Text UNSAFE_style={{ fontWeight: 'bold' }}>
-            {item.firstName} {item.lastName}
-          </Text>
-          {item.title && (
-            <Text UNSAFE_style={{ fontSize: '12px', color: 'var(--spectrum-global-color-gray-600)' }}>
-              {item.title.length > 40 ? `${item.title.substring(0, 40)}...` : item.title}
+      render: (item) => {
+        const displayTitle = getSpeakerDisplayTitle(item)
+        return (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+            <Text UNSAFE_style={{ fontWeight: 'bold' }}>
+              {item.firstName} {item.lastName}
             </Text>
-          )}
-        </div>
-      )
+            {displayTitle ? (
+              <Text UNSAFE_style={{ fontSize: '12px', color: 'var(--spectrum-global-color-gray-600)' }}>
+                {displayTitle.length > 40 ? `${displayTitle.substring(0, 40)}...` : displayTitle}
+              </Text>
+            ) : null}
+          </div>
+        )
+      }
     },
     {
       key: 'eventCount',
@@ -598,29 +685,33 @@ export const SpeakersDashboard: React.FC<SpeakersDashboardProps> = () => {
         if (!hasAnyAction) return null
 
         return (
-          <ActionMenu
-            isQuiet
-            aria-label="Actions menu"
-            onAction={(key) => handleMenuAction(key as string, item)}
-            disabledKeys={eventCount === 0 ? ['view-connections'] : []}
-          >
-            {canWriteEvent && (
-              <MenuItem key="edit">
-                <Edit />
-                <Text>Edit Speaker</Text>
+          <MenuTrigger>
+            <ActionButton isQuiet aria-label="Actions menu">
+              <More />
+            </ActionButton>
+            <Menu onAction={(key) => handleMenuAction(key as string, item)}>
+              {canWriteEvent && (
+                <MenuItem id="edit" textValue="Edit Speaker">
+                  <Edit />
+                  <Text slot="label">Edit Speaker</Text>
+                </MenuItem>
+              )}
+              <MenuItem
+                id="view-connections"
+                textValue={`View Connections (${eventCount})`}
+                isDisabled={eventCount === 0}
+              >
+                <Link />
+                <Text slot="label">View Connections ({eventCount})</Text>
               </MenuItem>
-            )}
-            <MenuItem key="view-connections">
-              <Link />
-              <Text>View Connections ({eventCount})</Text>
-            </MenuItem>
-            {canDeleteEvent && (
-              <MenuItem key="delete">
-                <RemoveCircle />
-                <Text>Delete Speaker</Text>
-              </MenuItem>
-            )}
-          </ActionMenu>
+              {canDeleteEvent && (
+                <MenuItem id="delete" textValue="Delete Speaker">
+                  <RemoveCircle />
+                  <Text slot="label">Delete Speaker</Text>
+                </MenuItem>
+              )}
+            </Menu>
+          </MenuTrigger>
         )
       }
     }
@@ -847,7 +938,9 @@ export const SpeakersDashboard: React.FC<SpeakersDashboardProps> = () => {
             searchKeys={SPEAKERS_SEARCH_KEYS}
             searchFilter={(speaker, query) => {
               const fullName = `${speaker.firstName || ''} ${speaker.lastName || ''}`.toLowerCase()
-              return fullName.includes(query) || (speaker.title || '').toLowerCase().includes(query)
+              return (
+                fullName.includes(query) || speakerTitleSearchText(speaker).includes(query)
+              )
             }}
           />
         </div>

@@ -94,7 +94,7 @@ export interface SeriesTemplatesConfig {
 
 // Event image types
 export interface EventImage {
-  imageKind: 'event-card-image' | 'event-hero-image' | 'venue-image' | string
+  imageKind: 'event-card-image' | 'event-hero-image' | 'venue-image' | 'venue-additional-image' | 'venue-map-image' | string
   imageUrl?: string
   imageId?: string
   altText?: string
@@ -514,12 +514,13 @@ export interface SponsorData {
   isSaved?: boolean
   isFromSeries?: boolean  // True if selected from series autocomplete
   localizations?: Record<string, SponsorLocalization>
+  ordinal?: number
   modificationTime?: number
 }
 
 // Image types for events
 export interface EventImageData {
-  imageKind: 'event-card-image' | 'event-hero-image' | 'venue-image' | string
+  imageKind: 'event-card-image' | 'event-hero-image' | 'venue-image' | 'venue-additional-image' | 'venue-map-image' | string
   imageUrl?: string
   imageId?: string
   altText?: string
@@ -545,8 +546,9 @@ export interface VenueData {
   gmtOffset?: number
   addressComponents?: AddressComponent[] // Required by OpenAPI for venue creation
   additionalInformation?: string // "Instructions for attendees" in UI
-  venueImageUrl?: string
-  venueImageId?: string
+  /** Venue step only — ESP imageKind `venue-additional-image` / `venue-map-image`; not `venue-image` (Additional Content). */
+  venueAdditionalImageUrl?: string
+  venueAdditionalImageId?: string
   showVenuePostEvent?: boolean
   showVenueImagePostEvent?: boolean // Display image and instructions post-event
   showAdditionalInfoPostEvent?: boolean
@@ -633,6 +635,8 @@ export interface EventFormData {
   localizations?: Record<string, EventLocalization>
   localizationOverrides?: Record<string, any>
   metadata?: Record<string, any>
+  /** UI-only: user explicitly chose a catalogue option (including "No …") per metadata field key */
+  metadataFieldAcknowledged?: Record<string, boolean>
 }
 
 // Agenda Item

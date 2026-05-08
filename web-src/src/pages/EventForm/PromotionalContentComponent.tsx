@@ -10,6 +10,7 @@ import Add from "@react-spectrum/s2/icons/Add"
 import { useEventFormComponent } from '../../hooks/useEventFormComponent'
 import { configService } from '../../services/configService'
 import { HeadingWithTooltip } from '../../components/shared'
+import { COLORS, SURFACES } from '../../styles/designSystem'
 
 /**
  * Promotional content item from the config
@@ -230,8 +231,13 @@ export const PromotionalContentComponent: React.FC = () => {
       </div>
 
       {loadError && (
-        <div style={{ padding: '16px', backgroundColor: '#FFE5E5', borderRadius: '4px' }}>
-          <Text UNSAFE_style={{ color: '#C9252D' }}>
+        <div style={{
+          padding: '16px',
+          backgroundColor: SURFACES.SUBTLE,
+          borderRadius: '4px',
+          borderLeft: `4px solid ${COLORS.RED_600}`,
+        }}>
+          <Text UNSAFE_style={{ color: COLORS.RED_600 }}>
             {loadError}
           </Text>
         </div>
@@ -271,7 +277,7 @@ export const PromotionalContentComponent: React.FC = () => {
                 width: '48px',
                 height: '48px',
                 borderRadius: '8px',
-                backgroundColor: promotionDetails?.thumbnail ? 'transparent' : '#E1E1E1',
+                backgroundColor: promotionDetails?.thumbnail ? 'transparent' : SURFACES.PILL_BG,
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',

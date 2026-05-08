@@ -8,9 +8,11 @@ import { Fonts } from '@react-spectrum/s2/dist/Fonts.mjs'
 import { Provider as S2Provider } from '@react-spectrum/s2'
 import { useAuth } from '../contexts/AuthContext'
 import { GateScreen } from './shared/GateScreen'
+import type { ColorScheme } from '@react-types/provider'
 
 interface AuthGateProps {
   children: ReactNode
+  colorScheme: ColorScheme
 }
 
 /**
@@ -19,7 +21,7 @@ interface AuthGateProps {
  * - ExC Shell: gates until IMS from ready event + ESP ping succeeds.
  * - Standalone: gates until IMS init completes, user has a token, and ESP ping succeeds.
  */
-export const AuthGate: React.FC<AuthGateProps> = ({ children }) => {
+export const AuthGate: React.FC<AuthGateProps> = ({ children, colorScheme }) => {
   const { isLoading, isAuthenticated, isApiReady, pingError, signIn, retryPing } = useAuth()
 
   const showGate = isLoading || !isAuthenticated || !isApiReady
@@ -40,7 +42,7 @@ export const AuthGate: React.FC<AuthGateProps> = ({ children }) => {
     }
 
     return (
-      <S2Provider colorScheme="light">
+      <S2Provider colorScheme={colorScheme}>
         <Fonts />
         <GateScreen
           onRequestAccess={onAction}

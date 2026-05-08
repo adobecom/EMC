@@ -97,6 +97,11 @@ export function mapApiResponseToFormData(event: EventApiResponse, locale: string
   const cta = localized.cta?.[0]
 
   const venueLocalized = event.venue?.localizations?.[locale] || {}
+  const imgs = event.images || []
+  const venueStepImageRow =
+    imgs.find((i: { imageKind?: string }) => i.imageKind === 'venue-additional-image')
+    ?? imgs.find((i: { imageKind?: string }) => i.imageKind === 'venue-map-image')
+
   const venueData = event.venue ? {
     venueName: event.venue.venueName || '',
     formattedAddress: event.venue.formattedAddress || event.venue.address || '',
@@ -108,8 +113,8 @@ export function mapApiResponseToFormData(event: EventApiResponse, locale: string
       ?? event.venue.additionalInformation
       ?? event.venue.additionalInfo
       ?? '',
-    venueImageUrl: event.venue.imageUrl,
-    venueImageId: event.venue.imageId,
+    venueAdditionalImageUrl: (venueStepImageRow as { imageUrl?: string } | undefined)?.imageUrl,
+    venueAdditionalImageId: (venueStepImageRow as { imageId?: string } | undefined)?.imageId,
     showVenuePostEvent: event.showVenuePostEvent ?? true,
     showAdditionalInfoPostEvent: event.showVenueAdditionalInfoPostEvent ?? true,
     googlePlaceName: event.venue.venueName || ''
@@ -160,6 +165,7 @@ export function mapApiResponseToFormData(event: EventApiResponse, locale: string
     secondaryLinkTitle: cta?.label || '',
     agendaItems: agendaItems,
     showAgendaPostEvent: event.showAgendaPostEvent || false,
+    showSponsors: event.showSponsors ?? true,
     sponsors: mapSponsorsToFormData(event.sponsors || [], locale),
     promotionalItems: (localized.promotionalItems || [])
       .filter((item: any) => {

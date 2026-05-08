@@ -44,6 +44,7 @@ import {
   PageMetadataComponent,
   PromotionalContentComponent,
   MarketoIntegrationComponent,
+  SessionManagementComponent,
   VideoContentComponent
 } from './index'
 import { mapApiResponseToFormData } from '../../utils/eventFormMappers'
@@ -51,8 +52,8 @@ import { useEventFeatureFlags } from '../../hooks/useEventTypeFeatures'
 import { EventFormProvider, useEventFormContext, useToast, useGroup } from '../../contexts'
 import { useEventFormSave } from '../../hooks/useEventFormSave'
 import { useCustomDetailPagePath } from '../../hooks/useCustomDetailPagePath'
-import { COLORS, Z_INDEX, TYPOGRAPHY } from '../../styles/designSystem'
-import { getEspEnvParam } from '../../config/constants'
+import { COLORS, Z_INDEX, TYPOGRAPHY, SURFACES } from '../../styles/designSystem'
+import { ENVIRONMENTS, getCurrentEnvironment, getEspEnvParam } from '../../config/constants'
 
 // ============================================================================
 // FORMAT SELECTION OVERLAY
@@ -277,7 +278,8 @@ const FormatSelectionOverlay: React.FC<{
     >
       <div
         style={{
-          backgroundColor: 'var(--spectrum-global-color-gray-50)',
+          backgroundColor: SURFACES.FORMAT_DIALOG_PANEL,
+          border: '1px solid var(--spectrum-global-color-gray-300)',
           borderRadius: 8,
           padding: 40,
           width: 520,
@@ -470,6 +472,7 @@ const EventFormInner: React.FC<EventFormInnerProps> = ({ ims: _ims }) => {
   const {
     formData,
     eventId,
+    eventDataResp,
     isEditMode,
     isLoading,
     isPublished,
@@ -499,7 +502,7 @@ const EventFormInner: React.FC<EventFormInnerProps> = ({ ims: _ims }) => {
   const { publishEvent, saveDraft, isSaving, saveError } = useEventFormSave()
 
   // Custom URL pattern hook
-  const { getDetailPagePathForSave } = useCustomDetailPagePath()
+  const { getDetailPagePathForSave, shouldRunCustomDetailPagePathFlow } = useCustomDetailPagePath()
 
   // Dialog state for custom detailPagePath confirmation
   const [urlDialogState, setUrlDialogState] = useState<{
@@ -507,7 +510,11 @@ const EventFormInner: React.FC<EventFormInnerProps> = ({ ims: _ims }) => {
     collision: EventApiResponse | null
     pendingAction: 'save' | 'publish'
   } | null>(null)
+  /** Extra fields for publishEvent while PROD confirmation AlertDialog is open */
+  const prodPublishExtraRef = useRef<Record<string, any> | undefined>(undefined)
+  const [prodPublishConfirmOpen, setProdPublishConfirmOpen] = useState(false)
   const [isCheckingUrl, setIsCheckingUrl] = useState(false)
+  const [sessionHasOpenForm, setSessionHasOpenForm] = useState(false)
   
   // Show toast when saveError changes
   useEffect(() => {
@@ -673,17 +680,25 @@ const EventFormInner: React.FC<EventFormInnerProps> = ({ ims: _ims }) => {
   /**
    * Check whether the selected series requires a custom detailPagePath.
    * If so, show a confirmation/collision dialog instead of saving immediately.
-   * Returns true when save should proceed directly (no pattern or edit mode).
+   * On edit, only when URL-affecting fields changed (pattern tokens + defaultLocale).
    */
   const checkUrlPatternBeforeSave = useCallback(async (
     action: 'save' | 'publish'
   ): Promise<{ proceed: boolean; extraPayload?: Record<string, any> }> => {
-    // Only intercept on first creation (no eventId yet)
-    if (isEditMode || eventId) return { proceed: true }
+    const isExistingEvent = Boolean(isEditMode || eventId)
+    const runFlow = await shouldRunCustomDetailPagePathFlow(
+      formData.seriesId,
+      formData,
+      isExistingEvent,
+      eventDataResp
+    )
+    if (!runFlow) return { proceed: true }
 
     setIsCheckingUrl(true)
     try {
-      const result = await getDetailPagePathForSave(formData.seriesId, formData)
+      const result = await getDetailPagePathForSave(formData.seriesId, formData, {
+        excludeEventId: eventId || undefined,
+      })
       if (!result) return { proceed: true }
 
       // Pattern found — show confirmation dialog
@@ -696,7 +711,65 @@ const EventFormInner: React.FC<EventFormInnerProps> = ({ ims: _ims }) => {
     } finally {
       setIsCheckingUrl(false)
     }
-  }, [isEditMode, eventId, formData, getDetailPagePathForSave])
+  }, [
+    isEditMode,
+    eventId,
+    eventDataResp,
+    formData,
+    getDetailPagePathForSave,
+    shouldRunCustomDetailPagePathFlow,
+  ])
+
+  const runPublishEvent = useCallback(
+    async (extraPayload?: Record<string, any>) => {
+      persistToStorage()
+      await publishEvent({
+        extraPayload,
+        onSuccess: () => {
+          setPublished(true)
+          toast.success(
+            isPublished ? 'Event re-published successfully!' : 'Event published successfully!',
+            {
+              duration: 3000,
+              action: { label: 'View Events', onPress: () => navigate('/events') },
+            }
+          )
+        },
+        onError: (error) => {
+          console.error('Failed to publish event:', error)
+        },
+      })
+    },
+    [publishEvent, persistToStorage, setPublished, navigate, toast, isPublished]
+  )
+
+  const requestPublishAfterUrlResolved = useCallback(
+    async (extraPayload?: Record<string, any>) => {
+      if (getCurrentEnvironment() !== ENVIRONMENTS.PROD) {
+        await runPublishEvent(extraPayload)
+        return
+      }
+      prodPublishExtraRef.current = extraPayload
+      setProdPublishConfirmOpen(true)
+    },
+    [runPublishEvent]
+  )
+
+  const handleProdPublishConfirm = useCallback(() => {
+    const extra = prodPublishExtraRef.current
+    prodPublishExtraRef.current = undefined
+    setProdPublishConfirmOpen(false)
+    void runPublishEvent(extra)
+  }, [runPublishEvent])
+
+  const closeProdPublishDialog = useCallback(() => {
+    setProdPublishConfirmOpen(false)
+  }, [])
+
+  const cancelProdPublishDialog = useCallback(() => {
+    prodPublishExtraRef.current = undefined
+    setProdPublishConfirmOpen(false)
+  }, [])
 
   /**
    * Execute the actual save/publish after URL confirmation
@@ -706,39 +779,24 @@ const EventFormInner: React.FC<EventFormInnerProps> = ({ ims: _ims }) => {
     detailPagePath: string
   ) => {
     setUrlDialogState(null)
-    persistToStorage()
-
     const extra = { detailPagePath }
 
     if (action === 'publish') {
-      await publishEvent({
-        extraPayload: extra,
-        onSuccess: () => {
-          setPublished(true)
-          toast.success(
-            isPublished ? 'Event re-published successfully!' : 'Event published successfully!',
-            {
-              duration: 3000,
-              action: { label: 'View Events', onPress: () => navigate('/events') }
-            }
-          )
-        },
-        onError: (error) => {
-          console.error('Failed to publish event:', error)
-        }
-      })
-    } else {
-      await saveDraft({
-        extraPayload: extra,
-        onSuccess: () => {
-          toast.success('Event saved successfully!')
-        },
-        onError: (error) => {
-          console.error('Failed to save event:', error)
-        }
-      })
+      await requestPublishAfterUrlResolved(extra)
+      return
     }
-  }, [publishEvent, saveDraft, persistToStorage, setPublished, navigate, toast, isPublished])
+
+    persistToStorage()
+    await saveDraft({
+      extraPayload: extra,
+      onSuccess: () => {
+        toast.success('Event saved successfully!')
+      },
+      onError: (error) => {
+        console.error('Failed to save event:', error)
+      },
+    })
+  }, [requestPublishAfterUrlResolved, saveDraft, persistToStorage, toast])
 
   /**
    * Handle Save button click - saves to API + sessionStorage without advancing
@@ -770,28 +828,8 @@ const EventFormInner: React.FC<EventFormInnerProps> = ({ ims: _ims }) => {
     const { proceed, extraPayload } = await checkUrlPatternBeforeSave('publish')
     if (!proceed) return
 
-    persistToStorage()
-    
-    await publishEvent({
-      extraPayload,
-      onSuccess: () => {
-        setPublished(true)
-        toast.success(
-          isPublished ? 'Event re-published successfully!' : 'Event published successfully!',
-          { 
-            duration: 3000,
-            action: {
-              label: 'View Events',
-              onPress: () => navigate('/events')
-            }
-          }
-        )
-      },
-      onError: (error) => {
-        console.error('Failed to publish event:', error)
-      }
-    })
-  }, [checkUrlPatternBeforeSave, publishEvent, persistToStorage, setPublished, navigate, toast, isPublished])
+    await requestPublishAfterUrlResolved(extraPayload)
+  }, [checkUrlPatternBeforeSave, requestPublishAfterUrlResolved])
   
   /**
    * Handle max step change from FormWizard
@@ -830,6 +868,7 @@ const EventFormInner: React.FC<EventFormInnerProps> = ({ ims: _ims }) => {
     
     window.open(previewUrl.toString(), '_blank')
   }, [state.eventDataResp])
+
   
   // ============================================================================
   // STEP 1: Basic Info
@@ -845,7 +884,7 @@ const EventFormInner: React.FC<EventFormInnerProps> = ({ ims: _ims }) => {
     Boolean(formData.timezone && formData.timezone.trim() !== '') && // Timezone is required
     (hasVenue ? Boolean(formData.venue?.placeId) : true)
   
-  const step1Component = (
+  const basicInfoComponent = (
     <div className={style({display: 'flex', flexDirection: 'column', gap: 0})}>
       <FormCard>
         <EventFormatComponent />
@@ -886,7 +925,7 @@ const EventFormInner: React.FC<EventFormInnerProps> = ({ ims: _ims }) => {
   // ============================================================================
   // STEP 2: Speakers & Hosts
   // ============================================================================
-  const step2Component = (
+  const speakersHostsComponent = (
     <FormCard>
       <SpeakersComponent />
     </FormCard>
@@ -897,7 +936,7 @@ const EventFormInner: React.FC<EventFormInnerProps> = ({ ims: _ims }) => {
   // ============================================================================
   const isWebinarEvent = formData.eventType === 'webinar'
 
-  const step3Component = (
+  const additionalContentComponent = (
     <>
       <FormCard>
         <PromotionalContentComponent />
@@ -922,9 +961,19 @@ const EventFormInner: React.FC<EventFormInnerProps> = ({ ims: _ims }) => {
   // ============================================================================
   // STEP 4: RSVP
   // ============================================================================
-  const step4Component = (
+  const rsvpComponent = (
     <FormCard>
       <RegistrationConfigComponent />
+    </FormCard>
+  )
+
+
+  // ============================================================================
+  // STEP 0: Session management
+  // ============================================================================
+  const sessionManagementComponent = (
+    <FormCard>
+      <SessionManagementComponent onOpenFormChange={setSessionHasOpenForm} />
     </FormCard>
   )
   
@@ -936,28 +985,28 @@ const EventFormInner: React.FC<EventFormInnerProps> = ({ ims: _ims }) => {
       id: 'basic-info',
       title: 'Basic Info',
       description: 'Event format, tags, information, date/time, and venue',
-      component: step1Component,
+      component: basicInfoComponent,
       isValid: step1IsValid
     },
     {
       id: 'speakers-hosts',
       title: 'Speakers & Hosts',
       description: 'Add speaker and host profiles (optional)',
-      component: step2Component,
+      component: speakersHostsComponent,
       isValid: true
     },
     {
       id: 'additional-content',
       title: 'Additional Content',
       description: 'Add event images and visual content (optional)',
-      component: step3Component,
+      component: additionalContentComponent,
       isValid: true
     },
     {
       id: 'rsvp',
       title: 'RSVP',
       description: 'Configure attendance capacity and registration settings',
-      component: step4Component,
+      component: rsvpComponent,
       isValid: true
     }
   ]
@@ -996,7 +1045,7 @@ const EventFormInner: React.FC<EventFormInnerProps> = ({ ims: _ims }) => {
   return (
     <div
       style={{
-        backgroundColor: '#F5F5F5',
+        backgroundColor: SURFACES.EVENT_FORM_SHELL,
         display: 'flex',
         flexDirection: 'column',
         flex: 1,
@@ -1022,6 +1071,8 @@ const EventFormInner: React.FC<EventFormInnerProps> = ({ ims: _ims }) => {
         eventTypeLabel={getEventTypeLabel()}
         headerActions={renderHeaderActions()}
         testIds={EVENT_FORM_WIZARD_TEST_IDS}
+        sessionContent={sessionManagementComponent}
+        sessionHasOpenForm={sessionHasOpenForm}
       />
 
       {/* Format Selection Overlay — frosted glass + dialog */}
@@ -1053,6 +1104,28 @@ const EventFormInner: React.FC<EventFormInnerProps> = ({ ims: _ims }) => {
           <Text>
             You have unsaved changes. Save your work first, or discard to load this form for the
             selected group (your edits will be lost).
+          </Text>
+        </AlertDialog>
+      </DialogTrigger>
+
+      <DialogTrigger
+        isOpen={prodPublishConfirmOpen}
+        onOpenChange={(open) => {
+          if (!open) closeProdPublishDialog()
+        }}
+      >
+        <div style={{ display: 'none' }} />
+        <AlertDialog
+          title="Publish to production?"
+          variant="warning"
+          primaryActionLabel="Publish to production"
+          cancelLabel="Cancel"
+          onPrimaryAction={handleProdPublishConfirm}
+          onCancel={cancelProdPublishDialog}
+        >
+          <Text>
+            The event you are attempting to publish will be in production. Are you sure you want to
+            publish this event to production?
           </Text>
         </AlertDialog>
       </DialogTrigger>

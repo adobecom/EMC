@@ -3,17 +3,19 @@
 */
 
 import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react'
-import { Button, ButtonGroup, Text, TextField, Picker, PickerItem, Dialog, DialogContainer, Content, Heading, ActionButton, ProgressCircle } from '@react-spectrum/s2'
+import { Button, ButtonGroup, Text, TextField, Picker, PickerItem, Dialog, DialogContainer, Content, Heading, ActionButton, ProgressCircle, Checkbox } from '@react-spectrum/s2'
 import { style } from '@react-spectrum/s2/style' with { type: 'macro' }
 import { SponsorData, SeriesSponsor, EventApiResponse, SponsorType } from '../../types/domain'
 import { ImageUploader } from '../../components/shared'
-import { TYPOGRAPHY, SPACING, COLORS } from '../../styles/designSystem'
+import { TYPOGRAPHY, SPACING, COLORS, SURFACES } from '../../styles/designSystem'
 import Edit from '@react-spectrum/s2/icons/Edit'
 import Add from '@react-spectrum/s2/icons/Add'
 import { apiService, cachedApi } from '../../services/api'
+import { getSponsorPayload } from '../../services/payloadBuilders'
 import RemoveCircle from '@react-spectrum/s2/icons/RemoveCircle'
+import Move from '@react-spectrum/s2/icons/Move'
 import { useEventFormComponent } from '../../hooks/useEventFormComponent'
-import { uploadImage, UploadTracker } from '../../services/requestHelpers'
+import { extractImageFromUploadResponse, uploadImage, UploadTracker } from '../../services/requestHelpers'
 import { getCurrentEnvironment, getApiHost } from '../../config/constants'
 import { PartnerPickerDialog } from './PartnerPickerDialog'
 
@@ -42,10 +44,21 @@ const TIER_OPTIONS: TierOption[] = [
 // PARTNER DIALOG COMPONENT
 // ============================================================================
 
+type PartnerDialogSaveOptions = {
+  /** DELETE series sponsor image after update (user removed logo, no new file). */
+  removedSeriesSponsorImageId?: string
+  /** PUT upload target when user cleared UI then picked a new file in the same edit. */
+  replaceUploadImageId?: string
+}
+
 interface PartnerDialogProps {
   isOpen: boolean
   onClose: () => void
-  onSave: (partner: SponsorData, pendingFile?: File) => Promise<void>
+  onSave: (
+    partner: SponsorData,
+    pendingFile?: File,
+    saveOptions?: PartnerDialogSaveOptions
+  ) => Promise<void>
   partner?: SponsorData
   isNew: boolean
   isSaving: boolean
@@ -65,6 +78,7 @@ const PartnerDialog: React.FC<PartnerDialogProps> = ({
   const [imageId, setImageId] = useState(partner?.imageId || '')
   const [pendingFile, setPendingFile] = useState<File | undefined>()
   const [previewUrl, setPreviewUrl] = useState<string | null>(null)
+  const imageIdWhenDialogOpenedRef = useRef<string | undefined>(undefined)
 
   // Manage object URL lifecycle to prevent memory leaks
   useEffect(() => {
@@ -89,6 +103,7 @@ const PartnerDialog: React.FC<PartnerDialogProps> = ({
       setImageUrl(partner?.imageUrl || '')
       setImageId(partner?.imageId || '')
       setPendingFile(undefined)
+      imageIdWhenDialogOpenedRef.current = partner?.imageId || undefined
     }
   }, [isOpen, partner])
 
@@ -98,10 +113,21 @@ const PartnerDialog: React.FC<PartnerDialogProps> = ({
       id: partner?.id || `partner-${Date.now()}`,
       partnerName: name,
       partnerUrl: website,
+      // Omit stale URL while a new file is queued (preview uses object URL).
       imageUrl: pendingFile ? undefined : imageUrl,
-      imageId: pendingFile ? undefined : imageId,
+      // Keep imageId when replacing: uploadImage uses it for PUT .../images/{imageId}.
+      // Clearing it forced POST and broke replacement for sponsors that already had a logo.
+      imageId,
     }
-    await onSave(updatedPartner, pendingFile)
+    const openedId = imageIdWhenDialogOpenedRef.current
+    const removedSeriesSponsorImageId =
+      !isNew && openedId && !imageId && !pendingFile ? openedId : undefined
+    const replaceUploadImageId =
+      !isNew && pendingFile && !imageId && openedId ? openedId : undefined
+    await onSave(updatedPartner, pendingFile, {
+      removedSeriesSponsorImageId,
+      replaceUploadImageId,
+    })
   }
 
   const handleFileSelected = (file: File) => {
@@ -131,7 +157,7 @@ const PartnerDialog: React.FC<PartnerDialogProps> = ({
                       label=""
                       imageUrl={previewUrl || imageUrl}
                       imageId={imageId}
-                      imageKind="sponsor-logo"
+                      imageKind="sponsor-image"
                       altText={name || 'Partner logo'}
                       maxSizeMB={25}
                       width={280}
@@ -179,7 +205,7 @@ const PartnerDialog: React.FC<PartnerDialogProps> = ({
                   isDisabled={!isValid || isSaving}
                 >
                   {isSaving ? (
-                    <ProgressCircle isIndeterminate aria-label="Saving" />
+                    <ProgressCircle size="S" isIndeterminate aria-label="Saving" />
                   ) : (
                     isNew ? 'Create' : 'Save'
                   )}
@@ -202,26 +228,53 @@ interface PartnerCardProps {
   onEdit: () => void
   onRemove: () => void
   onTierChange: (tier: SponsorType) => void
+  isDragging?: boolean
+  isDragOver?: boolean
+  onDragStart?: (e: React.DragEvent) => void
+  onDragOver?: (e: React.DragEvent) => void
+  onDragLeave?: (e: React.DragEvent) => void
+  onDrop?: (e: React.DragEvent) => void
+  onDragEnd?: () => void
 }
 
 const PartnerCard: React.FC<PartnerCardProps> = ({
   partner,
   onEdit,
   onRemove,
-  onTierChange
+  onTierChange,
+  isDragging,
+  isDragOver,
+  onDragStart,
+  onDragOver,
+  onDragLeave,
+  onDrop,
+  onDragEnd,
 }) => {
   const currentTier = TIER_OPTIONS.find(t => t.key === partner.type) || TIER_OPTIONS[0]
 
   return (
     <div
+      draggable
+      onDragStart={onDragStart}
+      onDragOver={onDragOver}
+      onDragLeave={onDragLeave}
+      onDrop={onDrop}
+      onDragEnd={onDragEnd}
       style={{
-        border: '1px solid var(--spectrum-global-color-gray-700)',
+        border: isDragOver
+          ? `2px solid ${SURFACES.SELECTED_RING}`
+          : `1px solid ${SURFACES.BORDER}`,
         borderRadius: '4px',
         padding: '16px',
-        backgroundColor: 'var(--spectrum-global-color-gray-50)',
+        backgroundColor: isDragging ? SURFACES.SUBTLE : SURFACES.CANVAS,
+        opacity: isDragging ? 0.5 : 1,
+        transition: 'border-color 0.2s, background-color 0.2s',
       }}
     >
       <div className={style({display: 'flex', alignItems: 'center', gap: 16})}>
+        <span style={{ flexShrink: 0, cursor: 'grab', display: 'flex' }} aria-hidden>
+          <Move />
+        </span>
         {/* Partner Logo */}
         <div
           style={{
@@ -363,6 +416,7 @@ export const SponsorsComponent: React.FC = () => {
     formData,
     updateFormData,
     seriesId: contextSeriesId,
+    locale,
   } = useEventFormComponent({
     componentId: 'sponsors',
     
@@ -392,13 +446,16 @@ export const SponsorsComponent: React.FC = () => {
       }
       
       // Build current sponsors list from form data
-      // API requires: sponsorId, sponsorType (PascalCase enum)
+      // API requires: sponsorId, sponsorType (PascalCase enum), ordinal (per-tier position)
+      const tierOrdinalCounters: Record<string, number> = {}
       const currentSponsors = sponsors
         .filter(s => s.sponsorId && (s.isSaved || s.isFromSeries))
-        .map(s => ({
-          sponsorId: s.sponsorId!,
-          sponsorType: s.type || 'Partner' as SponsorType
-        }))
+        .map(s => {
+          const sponsorType = s.type || 'Partner' as SponsorType
+          if (tierOrdinalCounters[sponsorType] === undefined) tierOrdinalCounters[sponsorType] = 0
+          const ordinal = tierOrdinalCounters[sponsorType]++
+          return { sponsorId: s.sponsorId!, sponsorType, ordinal }
+        })
       
       // Case 1: All sponsors removed
       if (currentSponsors.length === 0 && savedSponsors.length > 0) {
@@ -425,12 +482,12 @@ export const SponsorsComponent: React.FC = () => {
               console.error(`Failed to add sponsor ${eventSponsor.sponsorId} to event:`, result)
             }
           } else {
-            // Check if sponsor exists with same type
-            const existingSponsor = savedSponsors.find((saved: any) => {
-              const idMatch = saved.sponsorId === eventSponsor.sponsorId
-              const typeMatch = saved.sponsorType === eventSponsor.sponsorType
-              return idMatch && typeMatch
-            })
+            // Check if sponsor exists with same type and ordinal
+            const existingSponsor = savedSponsors.find((saved: any) =>
+              saved.sponsorId === eventSponsor.sponsorId &&
+              saved.sponsorType === eventSponsor.sponsorType &&
+              saved.ordinal === eventSponsor.ordinal
+            )
             
             if (existingSponsor) {
               // Sponsor unchanged, do nothing
@@ -505,6 +562,25 @@ export const SponsorsComponent: React.FC = () => {
   // Picker state
   const [pickerOpen, setPickerOpen] = useState(false)
 
+  // Drag state (per-group)
+  const [draggedItem, setDraggedItem] = useState<{ tier: string; idx: number } | null>(null)
+  const [dragOverItem, setDragOverItem] = useState<{ tier: string; idx: number } | null>(null)
+
+  const groupedSponsors = useMemo(() => {
+    const map = new Map<string, { sponsor: SponsorData; globalIndex: number }[]>()
+    TIER_OPTIONS.filter(t => t.key !== 'select').forEach(opt => map.set(opt.key, []))
+    map.set('unassigned', [])
+    sponsors.forEach((sponsor, globalIndex) => {
+      const tier = sponsor.type || 'unassigned'
+      if (!map.has(tier)) map.set(tier, [])
+      map.get(tier)!.push({ sponsor, globalIndex })
+    })
+    for (const [key, items] of map) {
+      if (items.length === 0) map.delete(key)
+    }
+    return map
+  }, [sponsors])
+
   // ============================================================================
   // DATA LOADING
   // ============================================================================
@@ -542,12 +618,6 @@ export const SponsorsComponent: React.FC = () => {
   // EVENT HANDLERS
   // ============================================================================
 
-  const updateSponsor = useCallback((index: number, updates: Partial<SponsorData>) => {
-    const updated = [...sponsors]
-    updated[index] = { ...updated[index], ...updates }
-    updateFormData({ sponsors: updated })
-  }, [sponsors, updateFormData])
-
   const removeSponsor = useCallback((index: number) => {
     updateFormData({ sponsors: sponsors.filter((_, i) => i !== index) })
   }, [sponsors, updateFormData])
@@ -580,8 +650,63 @@ export const SponsorsComponent: React.FC = () => {
     }
   }, [seriesId])
 
-  const handleTierChange = (index: number, tier: SponsorType) => {
-    updateSponsor(index, { type: tier })
+  const handleTierChange = (globalIndex: number, tier: SponsorType) => {
+    const updated = sponsors.map((s, i) => i === globalIndex ? { ...s, type: tier } : s)
+    const moved = updated[globalIndex]
+    const without = updated.filter((_, i) => i !== globalIndex)
+    let insertAt = without.length
+    for (let i = without.length - 1; i >= 0; i--) {
+      if (without[i].type === tier) {
+        insertAt = i + 1
+        break
+      }
+    }
+    updateFormData({ sponsors: [...without.slice(0, insertAt), moved, ...without.slice(insertAt)] })
+  }
+
+  const handleDragStart = (e: React.DragEvent, tier: string, idx: number) => {
+    setDraggedItem({ tier, idx })
+    e.dataTransfer.effectAllowed = 'move'
+    e.dataTransfer.setData('text/plain', `${tier}:${idx}`)
+  }
+
+  const handleDragOver = (e: React.DragEvent, tier: string, idx: number) => {
+    e.preventDefault()
+    e.dataTransfer.dropEffect = 'move'
+    if (draggedItem !== null && draggedItem.tier === tier && draggedItem.idx !== idx) {
+      setDragOverItem({ tier, idx })
+    }
+  }
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    if ((e.currentTarget as HTMLElement).contains(e.relatedTarget as Node)) return
+    setDragOverItem(null)
+  }
+
+  const handleDrop = (e: React.DragEvent, tier: string, dropIdx: number) => {
+    e.preventDefault()
+    if (!draggedItem || draggedItem.tier !== tier || draggedItem.idx === dropIdx) {
+      setDraggedItem(null)
+      setDragOverItem(null)
+      return
+    }
+    const groupItems = groupedSponsors.get(tier) || []
+    const groupSponsors = groupItems.map(item => item.sponsor)
+    const [dragged] = groupSponsors.splice(draggedItem.idx, 1)
+    groupSponsors.splice(dropIdx, 0, dragged)
+    const sortedGlobalIndices = groupItems.map(item => item.globalIndex).sort((a, b) => a - b)
+    const newSponsors = [...sponsors]
+    sortedGlobalIndices.forEach((globalIdx, i) => {
+      newSponsors[globalIdx] = groupSponsors[i]
+    })
+    updateFormData({ sponsors: newSponsors })
+    setDraggedItem(null)
+    setDragOverItem(null)
+  }
+
+  const handleDragEnd = () => {
+    setDraggedItem(null)
+    setDragOverItem(null)
   }
 
   /**
@@ -608,25 +733,24 @@ export const SponsorsComponent: React.FC = () => {
       const config = {
         targetUrl: uploadUrl,
         altText: altText,
-        type: 'sponsor-logo'
+        type: 'sponsor-image'
       }
 
       const result = await uploadImage(file, config, token, tracker, existingImageId)
-      
-      // Handle different response formats - the API might wrap the image object
-      const imageData = result.image || result
-      
-      if (imageData.imageUrl && imageData.imageId) {
-        return { imageUrl: imageData.imageUrl, imageId: imageData.imageId }
-      }
-      return null
+      return extractImageFromUploadResponse(result)
     } catch (err) {
       console.error('Failed to upload sponsor image:', err)
       return null
     }
   }
 
-  const handleDialogSave = async (partner: SponsorData, pendingFile?: File) => {
+  const handleDialogSave = async (
+    partner: SponsorData,
+    pendingFile?: File,
+    saveOptions?: PartnerDialogSaveOptions
+  ) => {
+    const removedSeriesSponsorImageId = saveOptions?.removedSeriesSponsorImageId
+    const replaceUploadImageId = saveOptions?.replaceUploadImageId
     if (!seriesId) return
     
     setIsSaving(true)
@@ -652,19 +776,46 @@ export const SponsorsComponent: React.FC = () => {
       const isExisting = partner.sponsorId && (partner.isSaved || partner.isFromSeries)
       
       if (isExisting) {
+        const recordForPayload: Record<string, unknown> = {
+          sponsorId: partner.sponsorId,
+          name: sponsorData.name,
+          link: sponsorData.link,
+        }
+        if (partner.modificationTime != null) {
+          recordForPayload.modificationTime = partner.modificationTime
+        }
+        if (partner.info) {
+          recordForPayload.info = partner.info
+        }
+        const updatePayload = await getSponsorPayload(
+          recordForPayload as Record<string, any>,
+          locale,
+          seriesId
+        )
         response = await apiService.updateSponsor(
-          { ...sponsorData, modificationTime: partner.modificationTime },
+          updatePayload,
           partner.sponsorId!,
           seriesId,
-          'en-US'
+          locale
         )
       } else {
-        response = await apiService.createSponsor(sponsorData, seriesId, 'en-US')
+        response = await apiService.createSponsor(sponsorData, seriesId, locale)
       }
 
       if (response && !('error' in response)) {
         const savedSponsor = response.sponsor || response
         const sponsorId = savedSponsor.sponsorId || partner.sponsorId
+
+        if (removedSeriesSponsorImageId && sponsorId && seriesId) {
+          const delResult = await cachedApi.deleteSponsorImage(
+            seriesId,
+            sponsorId,
+            removedSeriesSponsorImageId
+          )
+          if (delResult && 'error' in delResult) {
+            console.error('Failed to delete sponsor image:', delResult)
+          }
+        }
         
         // Upload pending image if there is one
         let uploadedImage: { imageUrl: string; imageId: string } | null = null
@@ -672,10 +823,10 @@ export const SponsorsComponent: React.FC = () => {
         if (pendingFile && sponsorId) {
           const altText = partner.partnerName || 'Partner logo'
           uploadedImage = await uploadSponsorImage(
-            pendingFile, 
-            sponsorId, 
+            pendingFile,
+            sponsorId,
             altText,
-            partner.imageId
+            partner.imageId || replaceUploadImageId
           )
         }
         
@@ -723,6 +874,12 @@ export const SponsorsComponent: React.FC = () => {
     return new Set(sponsors.map(s => s.sponsorId).filter(Boolean) as string[])
   }, [sponsors])
 
+  const includePartners = formData.showSponsors ?? true
+
+  const handleIncludePartnersChange = (value: boolean) => {
+    updateFormData({ showSponsors: value })
+  }
+
   // ============================================================================
   // RENDER
   // ============================================================================
@@ -730,18 +887,38 @@ export const SponsorsComponent: React.FC = () => {
   return (
     <div className={style({display: 'flex', flexDirection: 'column', gap: 16})}>
       {/* Header */}
-      <div className={style({display: 'flex', alignItems: 'center', gap: 12})}>
-        <Heading level={3} UNSAFE_style={TYPOGRAPHY.COMPONENT_HEADING}>
-          Partners (optional)
-        </Heading>
-        {isLoadingSponsors && (
-          <ProgressCircle isIndeterminate aria-label="Loading partners" />
-        )}
+      <div className={style({display: 'flex', justifyContent: 'space-between', alignItems: 'start', gap: 16})}>
+        <div className={style({display: 'flex', alignItems: 'center', gap: 12})}>
+          <Heading level={3} UNSAFE_style={TYPOGRAPHY.COMPONENT_HEADING}>
+            Partners
+          </Heading>
+          {isLoadingSponsors && (
+            <ProgressCircle isIndeterminate aria-label="Loading partners" />
+          )}
+        </div>
+        <div className={style({display: 'flex', flexDirection: 'column', alignItems: 'end', gap: 4})}>
+          <Checkbox
+            data-testid="include-partners-checkbox"
+            isSelected={includePartners}
+            onChange={handleIncludePartnersChange}
+          >
+            Include partners
+          </Checkbox>
+          <Text UNSAFE_style={TYPOGRAPHY.HELPER_TEXT}>
+            (Partners are optional)
+          </Text>
+        </div>
       </div>
 
       <Text UNSAFE_style={TYPOGRAPHY.SECTION_DESCRIPTION}>
-        Add partners to your event landing page. You can change each partner&apos;s tier for this event.
+        Add partners to your event landing page. Drag to reorder within each tier group. You can change each partner&apos;s tier for this event.
       </Text>
+
+      {sponsors.length > 0 && (
+        <Text UNSAFE_style={{ ...TYPOGRAPHY.HELPER_TEXT, fontStyle: 'italic' }}>
+          The order of tier groups shown here does not determine how they appear on the event landing page. Tier group sequencing is controlled by the page template configuration in the DA authoring documentation.
+        </Text>
+      )}
 
       {sponsors.length === 0 && (
         <div style={{ padding: '32px', backgroundColor: 'var(--spectrum-global-color-gray-100)', borderRadius: '4px', textAlign: 'center' }}>
@@ -756,16 +933,69 @@ export const SponsorsComponent: React.FC = () => {
       )}
 
       {sponsors.length > 0 && (
-        <div className={style({display: 'flex', flexDirection: 'column', gap: 12})}>
-          {sponsors.map((partner, index) => (
-            <PartnerCard
-              key={partner.id || index}
-              partner={partner}
-              onEdit={() => handleEditClick(index)}
-              onRemove={() => removeSponsor(index)}
-              onTierChange={(tier) => handleTierChange(index, tier)}
-            />
-          ))}
+        <div className={style({display: 'flex', flexDirection: 'column', gap: 16})}>
+          {Array.from(groupedSponsors.entries()).map(([tier, groupItems]) => {
+            const tierOption = tier === 'unassigned'
+              ? { label: 'Unassigned', color: 'transparent' }
+              : TIER_OPTIONS.find(t => t.key === tier)
+            const tierLabel = tierOption?.label ?? tier
+            const tierColor = tierOption?.color ?? 'transparent'
+            return (
+              <div
+                key={tier}
+                style={{
+                  border: `1px solid ${SURFACES.BORDER}`,
+                  borderRadius: '8px',
+                  overflow: 'hidden',
+                }}
+              >
+                <div
+                  style={{
+                    padding: '10px 16px',
+                    backgroundColor: SURFACES.SUBTLE,
+                    borderBottom: `1px solid ${SURFACES.BORDER}`,
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px',
+                  }}
+                >
+                  {tierColor !== 'transparent' && (
+                    <div
+                      style={{
+                        width: '12px',
+                        height: '12px',
+                        borderRadius: '2px',
+                        backgroundColor: tierColor,
+                        flexShrink: 0,
+                      }}
+                    />
+                  )}
+                  <Text UNSAFE_style={{ ...TYPOGRAPHY.FIELD_LABEL, fontWeight: 600 }}>{tierLabel}</Text>
+                  <Text UNSAFE_style={{ ...TYPOGRAPHY.HELPER_TEXT }}>
+                    {groupItems.length} {groupItems.length === 1 ? 'partner' : 'partners'}
+                  </Text>
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', padding: '8px' }}>
+                  {groupItems.map(({ sponsor, globalIndex }, groupIdx) => (
+                    <PartnerCard
+                      key={sponsor.id || globalIndex}
+                      partner={sponsor}
+                      onEdit={() => handleEditClick(globalIndex)}
+                      onRemove={() => removeSponsor(globalIndex)}
+                      onTierChange={(newTier) => handleTierChange(globalIndex, newTier)}
+                      isDragging={draggedItem?.tier === tier && draggedItem.idx === groupIdx}
+                      isDragOver={dragOverItem?.tier === tier && dragOverItem.idx === groupIdx}
+                      onDragStart={(e) => handleDragStart(e, tier, groupIdx)}
+                      onDragOver={(e) => handleDragOver(e, tier, groupIdx)}
+                      onDragLeave={handleDragLeave}
+                      onDrop={(e) => handleDrop(e, tier, groupIdx)}
+                      onDragEnd={handleDragEnd}
+                    />
+                  ))}
+                </div>
+              </div>
+            )
+          })}
         </div>
       )}
 
@@ -776,9 +1006,9 @@ export const SponsorsComponent: React.FC = () => {
           onPress={() => setPickerOpen(true)}
           styles={style({ width: '[100%]' })}
           UNSAFE_style={{
-            backgroundColor: '#E1E1E1',
+            backgroundColor: SURFACES.PILL_BG,
             border: 'none',
-            color: '#2C2C2C',
+            color: COLORS.DARK_GRAY,
             justifyContent: 'flex-start',
             paddingLeft: '16px',
           }}
@@ -796,6 +1026,7 @@ export const SponsorsComponent: React.FC = () => {
         seriesSponsors={availableSponsors}
         selectedSponsorIds={selectedSponsorIds}
         seriesId={seriesId}
+        locale={locale}
         onSponsorsRefresh={refreshSeriesSponsors}
       />
 

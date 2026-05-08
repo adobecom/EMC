@@ -12,7 +12,6 @@ import {
   Event,
   EventFormData,
   EventApiResponse,
-  Session,
   Registration,
   Venue,
   EventHistoryResponse,
@@ -25,6 +24,7 @@ import { getCurrentEnvironment, getApiHost, SUPPORTED_CLOUDS } from '../config/c
 import { env } from '../config/env'
 import { apiCache } from './cacheUtils'
 import { deduplicateBy } from '../utils/deduplication'
+import { prepareEslEventPutPayload, prepareEspSeriesPutPayload } from '../utils/dataFilters'
 import type {
   RBACApiScope,
   RBACApiGroup,
@@ -313,24 +313,188 @@ class ApiService {
   }
 
   // Session APIs
-  async getSessions(eventId?: string): Promise<ApiListResponse<Session>> {
-    return this.callAction<ApiListResponse<Session>>('getSessions', { eventId })
+
+  async getAllEventSessions(eventId: string): Promise<any | ErrorResponse> {
+    validateString(eventId, 'event ID')
+    return this.callExternalApi('esp', `/v1/sessions?eventId=${encodeURIComponent(eventId)}`, 'GET', undefined, {
+      operationName: 'getAllEventSessions',
+      shouldReturnFullResponse: true,
+    })
   }
 
-  async getSession(id: string): Promise<ApiResponse<Session>> {
-    return this.callAction<ApiResponse<Session>>('getSession', { id })
+  async getSingleSession(id: string): Promise<any | ErrorResponse> {
+    validateString(id, 'session ID')
+    return this.callExternalApi('esp', `/v1/sessions/${encodeURIComponent(id)}`, 'GET', undefined, {
+      operationName: 'getSingleSession',
+      shouldReturnFullResponse: true,
+    })
   }
 
-  async createSession(data: Omit<Session, 'id' | 'createdAt' | 'updatedAt'>): Promise<ApiResponse<Session>> {
-    return this.callAction<ApiResponse<Session>>('createSession', data)
+  async createSession(eventId: string, data: Record<string, unknown>): Promise<any | ErrorResponse> {
+    validateString(eventId, 'event ID')
+    validateObject(data, 'session data')
+    const sessionCode = (String(data.name ?? '').replace(/\s+/g, '-').toLowerCase()).substring(0, 50) || 'session'
+    const tagsStr = typeof data.tags === 'string' ? data.tags.trim() : ''
+    const body: Record<string, unknown> = {
+      eventId,
+      enTitle: data.name ?? '',
+      title: data.name ?? '',
+      description: data.description ?? '',
+      sessionCode,
+      sessionType: 'Session',
+      published: false,
+    }
+    if (tagsStr.length > 0) {
+      body.tags = tagsStr
+    }
+    return this.callExternalApi('esp', '/v1/sessions', 'POST', body, {
+      operationName: 'createSession',
+      shouldReturnFullResponse: true,
+    })
   }
 
-  async updateSession(id: string, data: Partial<Session>): Promise<ApiResponse<Session>> {
-    return this.callAction<ApiResponse<Session>>('updateSession', { id, ...data })
+  async updateSession(id: string, eventId: string, data: Record<string, unknown>): Promise<any | ErrorResponse> {
+    validateString(id, 'session ID')
+    validateString(eventId, 'event ID')
+    validateObject(data, 'session data')
+    const sessionCode = (String(data.name ?? '').replace(/\s+/g, '-').toLowerCase()).substring(0, 50) || 'session'
+    const now = Date.now()
+    const tagsStr = typeof data.tags === 'string' ? data.tags.trim() : ''
+    const body: Record<string, unknown> = {
+      sessionId: id,
+      eventId,
+      enTitle: data.name ?? '',
+      title: data.name ?? '',
+      description: data.description ?? '',
+      sessionCode,
+      sessionType: 'Session',
+      published: false,
+      creationTime: (data.creationTime as number) ?? now,
+      modificationTime: (data.modificationTime as number) ?? now,
+    }
+    if (tagsStr.length > 0) {
+      body.tags = tagsStr
+    }
+    return this.callExternalApi('esp', `/v1/sessions/${encodeURIComponent(id)}`, 'PUT', body, {
+      operationName: 'updateSession',
+      shouldReturnFullResponse: true,
+    })
   }
 
-  async deleteSession(id: string): Promise<ApiResponse<void>> {
-    return this.callAction<ApiResponse<void>>('deleteSession', { id })
+  async deleteSession(id: string): Promise<SuccessResponse | ErrorResponse> {
+    validateString(id, 'session ID')
+    return this.callExternalApi('esp', `/v1/sessions/${encodeURIComponent(id)}`, 'DELETE', undefined, {
+      operationName: 'deleteSession',
+    })
+  }
+
+  // Session Time APIs
+
+  async getSessionTimes(sessionId?: string): Promise<any | ErrorResponse> {
+    const endpoint = sessionId
+      ? `/v1/session-times?sessionId=${encodeURIComponent(sessionId)}`
+      : '/v1/session-times'
+    return this.callExternalApi('esp', endpoint, 'GET', undefined, {
+      operationName: 'getSessionTimes',
+      shouldReturnFullResponse: true,
+    })
+  }
+
+  async getSessionTime(id: string): Promise<any | ErrorResponse> {
+    validateString(id, 'session time ID')
+    return this.callExternalApi('esp', `/v1/session-times/${encodeURIComponent(id)}`, 'GET', undefined, {
+      operationName: 'getSessionTime',
+      shouldReturnFullResponse: true,
+    })
+  }
+
+  async createSessionTime(data: Record<string, unknown>): Promise<any | ErrorResponse> {
+    validateObject(data, 'session time data')
+    return this.callExternalApi('esp', '/v1/session-times', 'POST', data, {
+      operationName: 'createSessionTime',
+      shouldReturnFullResponse: true,
+    })
+  }
+
+  async updateSessionTime(id: string, data: Record<string, unknown>): Promise<any | ErrorResponse> {
+    validateString(id, 'session time ID')
+    validateObject(data, 'session time data')
+    const now = Date.now()
+    const body = {
+      ...data,
+      sessionTimeId: id,
+      creationTime: (data.creationTime as number) ?? now,
+      modificationTime: (data.modificationTime as number) ?? now,
+    }
+    return this.callExternalApi('esp', `/v1/session-times/${encodeURIComponent(id)}`, 'PUT', body, {
+      operationName: 'updateSessionTime',
+      shouldReturnFullResponse: true,
+    })
+  }
+
+  async deleteSessionTime(id: string): Promise<SuccessResponse | ErrorResponse> {
+    validateString(id, 'session time ID')
+    return this.callExternalApi('esp', `/v1/session-times/${encodeURIComponent(id)}`, 'DELETE', undefined, {
+      operationName: 'deleteSessionTime',
+    })
+  }
+
+  /** GET /v1/session-times/{timeId}/attendees */
+  async getSessionTimeAttendees(timeId: string): Promise<any | ErrorResponse> {
+    validateString(timeId, 'session time ID')
+    return this.callExternalApi('esp', `/v1/session-times/${encodeURIComponent(timeId)}/attendees`, 'GET', undefined, {
+      operationName: 'getSessionTimeAttendees',
+      shouldReturnFullResponse: true,
+    })
+  }
+
+  /** GET /v1/sessions/{sessionId}/speakers */
+  async getSessionSpeakers(sessionId: string): Promise<any | ErrorResponse> {
+    validateString(sessionId, 'session ID')
+    return this.callExternalApi('esp', `/v1/sessions/${encodeURIComponent(sessionId)}/speakers`, 'GET', undefined, {
+      operationName: 'getSessionSpeakers',
+      shouldReturnFullResponse: true,
+    })
+  }
+
+  /** POST /v1/sessions/{sessionId}/speakers - body: { speakerId, speakerType (PascalCase), ordinal } */
+  async addSessionSpeaker(
+    sessionId: string,
+    body: { speakerId: string; speakerType: string; ordinal: number }
+  ): Promise<any | ErrorResponse> {
+    validateString(sessionId, 'session ID')
+    validateObject(body, 'speaker data')
+    return this.callExternalApi('esp', `/v1/sessions/${encodeURIComponent(sessionId)}/speakers`, 'POST', body, {
+      operationName: 'addSessionSpeaker',
+      shouldReturnFullResponse: true,
+    })
+  }
+
+  /** PUT /v1/sessions/{sessionId}/speakers/{speakerId} - body: { speakerId, speakerType, ordinal, modificationTime } */
+  async updateSessionSpeaker(
+    sessionId: string,
+    speakerId: string,
+    body: { speakerId: string; speakerType: string; ordinal: number; modificationTime: number }
+  ): Promise<any | ErrorResponse> {
+    validateString(sessionId, 'session ID')
+    validateString(speakerId, 'speaker ID')
+    validateObject(body, 'speaker data')
+    return this.callExternalApi('esp', `/v1/sessions/${encodeURIComponent(sessionId)}/speakers/${encodeURIComponent(speakerId)}`, 'PUT', body, {
+      operationName: 'updateSessionSpeaker',
+      shouldReturnFullResponse: true,
+    })
+  }
+
+  /** DELETE /v1/sessions/{sessionId}/speakers/{speakerId} */
+  async deleteSessionSpeaker(
+    sessionId: string,
+    speakerId: string
+  ): Promise<SuccessResponse | ErrorResponse> {
+    validateString(sessionId, 'session ID')
+    validateString(speakerId, 'speaker ID')
+    return this.callExternalApi('esp', `/v1/sessions/${encodeURIComponent(sessionId)}/speakers/${encodeURIComponent(speakerId)}`, 'DELETE', undefined, {
+      operationName: 'deleteSessionSpeaker',
+    })
   }
 
   // Registration APIs
@@ -611,8 +775,9 @@ class ApiService {
   async updateSeriesExternal(seriesId: string, seriesData: any): Promise<any | ErrorResponse> {
     validateString(seriesId, 'series ID')
     validateObject(seriesData, 'series data')
-    return this.callExternalApi('esp', `/v1/series/${seriesId}`, 'PUT', 
-      { ...seriesData, seriesId },
+    const payload = prepareEspSeriesPutPayload(seriesData)
+    return this.callExternalApi('esp', `/v1/series/${seriesId}`, 'PUT',
+      { ...payload, seriesId },
       { operationName: `updateSeries(${seriesId})`, shouldReturnFullResponse: true }
     )
   }
@@ -620,8 +785,9 @@ class ApiService {
   async publishSeries(seriesId: string, seriesData: any): Promise<any | ErrorResponse> {
     validateString(seriesId, 'series ID')
     validateObject(seriesData, 'series data')
+    const payload = prepareEspSeriesPutPayload(seriesData)
     return this.callExternalApi('esp', `/v1/series/${seriesId}`, 'PUT',
-      { ...seriesData, seriesId, seriesStatus: 'published' },
+      { ...payload, seriesId, seriesStatus: 'published' },
       { operationName: `publishSeries(${seriesId})`, shouldReturnFullResponse: true }
     )
   }
@@ -629,8 +795,9 @@ class ApiService {
   async unpublishSeries(seriesId: string, seriesData: any): Promise<any | ErrorResponse> {
     validateString(seriesId, 'series ID')
     validateObject(seriesData, 'series data')
+    const payload = prepareEspSeriesPutPayload(seriesData)
     return this.callExternalApi('esp', `/v1/series/${seriesId}`, 'PUT',
-      { ...seriesData, seriesId, seriesStatus: 'draft' },
+      { ...payload, seriesId, seriesStatus: 'draft' },
       { operationName: `unpublishSeries(${seriesId})`, shouldReturnFullResponse: true }
     )
   }
@@ -638,8 +805,9 @@ class ApiService {
   async archiveSeries(seriesId: string, seriesData: any): Promise<any | ErrorResponse> {
     validateString(seriesId, 'series ID')
     validateObject(seriesData, 'series data')
+    const payload = prepareEspSeriesPutPayload(seriesData)
     return this.callExternalApi('esp', `/v1/series/${seriesId}`, 'PUT',
-      { ...seriesData, seriesId, seriesStatus: 'archived' },
+      { ...payload, seriesId, seriesStatus: 'archived' },
       { operationName: `archiveSeries(${seriesId})`, shouldReturnFullResponse: true }
     )
   }
@@ -801,8 +969,9 @@ class ApiService {
   async updateEventExternal(eventId: string, payload: any, policies = { forceSpWrite: false, liveUpdate: false }): Promise<any | ErrorResponse> {
     validateString(eventId, 'event ID')
     validateObject(payload, 'event payload')
+    const body = prepareEslEventPutPayload(payload)
     return this.callExternalApi('esl', `/v1/events/${eventId}`, 'PUT',
-      { ...payload, ...policies },
+      { ...body, ...policies },
       { operationName: `updateEvent(${eventId})`, shouldReturnFullResponse: true }
     )
   }
@@ -810,8 +979,9 @@ class ApiService {
   async publishEvent(eventId: string, payload: any): Promise<any | ErrorResponse> {
     validateString(eventId, 'event ID')
     validateObject(payload, 'event payload')
+    const body = prepareEslEventPutPayload(payload)
     return this.callExternalApi('esl', `/v1/events/${eventId}`, 'PUT',
-      { ...payload, published: true, liveUpdate: true, forceSpWrite: false },
+      { ...body, published: true, liveUpdate: true, forceSpWrite: false },
       { operationName: `publishEvent(${eventId})`, shouldReturnFullResponse: true }
     )
   }
@@ -819,8 +989,9 @@ class ApiService {
   async unpublishEvent(eventId: string, payload: any): Promise<any | ErrorResponse> {
     validateString(eventId, 'event ID')
     validateObject(payload, 'event payload')
+    const body = prepareEslEventPutPayload(payload)
     return this.callExternalApi('esl', `/v1/events/${eventId}`, 'PUT',
-      { ...payload, published: false, liveUpdate: true, forceSpWrite: false },
+      { ...body, published: false, liveUpdate: true, forceSpWrite: false },
       { operationName: `unpublishEvent(${eventId})`, shouldReturnFullResponse: true }
     )
   }
@@ -828,8 +999,9 @@ class ApiService {
   async previewEvent(eventId: string, payload: any): Promise<any | ErrorResponse> {
     validateString(eventId, 'event ID')
     validateObject(payload, 'event payload')
+    const body = prepareEslEventPutPayload(payload)
     return this.callExternalApi('esl', `/v1/events/${eventId}`, 'PUT',
-      { ...payload, liveUpdate: false, forceSpWrite: true },
+      { ...body, liveUpdate: false, forceSpWrite: true },
       { operationName: `previewEvent(${eventId})` }
     )
   }
@@ -1225,7 +1397,13 @@ class ApiService {
       `/v1/events/${eventId}/speakers/${speakerId}`,
       speakerData,
       () => this.getEventSpeaker(eventId, speakerId),
-      (body, dependentData) => ({ ...body, modificationTime: dependentData.modificationTime }),
+      (body, dependentData) => ({
+        speakerId: body.speakerId ?? dependentData.speakerId,
+        speakerType: body.speakerType ?? dependentData.speakerType,
+        ordinal: body.ordinal ?? dependentData.ordinal,
+        creationTime: dependentData.creationTime,
+        modificationTime: dependentData.modificationTime,
+      }),
       'updateSpeakerInEvent'
     )
   }
@@ -1355,7 +1533,12 @@ class ApiService {
       `/v1/events/${eventId}/sponsors/${sponsorId}`,
       sponsorData,
       () => this.getEventSponsor(eventId, sponsorId),
-      (body, dependentData) => ({ ...body, modificationTime: dependentData.modificationTime }),
+      (body, dependentData) => ({
+        sponsorId: body.sponsorId ?? dependentData.sponsorId,
+        sponsorType: body.sponsorType ?? dependentData.sponsorType,
+        ordinal: body.ordinal ?? dependentData.ordinal,
+        modificationTime: dependentData.modificationTime,
+      }),
       'updateSponsorInEvent'
     )
   }
@@ -1373,6 +1556,19 @@ class ApiService {
     validateString(sponsorId, 'sponsor ID')
     return this.callExternalApi('esp', `/v1/series/${seriesId}/sponsors/${sponsorId}/images`, 'GET', undefined,
       { operationName: 'getSponsorImages', shouldReturnFullResponse: true }
+    )
+  }
+
+  async deleteSponsorImage(seriesId: string, sponsorId: string, imageId: string): Promise<any | ErrorResponse> {
+    validateString(seriesId, 'series ID')
+    validateString(sponsorId, 'sponsor ID')
+    validateString(imageId, 'image ID')
+    return this.callExternalApi(
+      'esp',
+      `/v1/series/${seriesId}/sponsors/${sponsorId}/images/${imageId}`,
+      'DELETE',
+      undefined,
+      { operationName: 'deleteSponsorImage', shouldReturnFullResponse: true }
     )
   }
 
@@ -1401,6 +1597,29 @@ class ApiService {
     validateString(eventId, 'eventId')
     return this.callExternalApi('esp', `/v1/events/${eventId}/venues`, 'GET', undefined,
       { operationName: 'getEventVenue', transformResponse: (data) => data.venues?.[0] || null }
+    )
+  }
+
+  async listVenueLocations(venueId: string): Promise<any | ErrorResponse> {
+    validateString(venueId, 'venue ID')
+    return this.callExternalApi('esp', `/v1/venues/${encodeURIComponent(venueId)}/locations`, 'GET', undefined,
+      { operationName: 'listVenueLocations', shouldReturnFullResponse: true }
+    )
+  }
+
+  async createVenueLocation(venueId: string, locationData: any): Promise<any | ErrorResponse> {
+    validateString(venueId, 'venue ID')
+    validateObject(locationData, 'location data')
+    return this.callExternalApi('esp', `/v1/venues/${encodeURIComponent(venueId)}/locations`, 'POST', locationData,
+      { operationName: 'createVenueLocation', shouldReturnFullResponse: true }
+    )
+  }
+
+  async deleteVenueLocation(venueId: string, locationId: string): Promise<any | ErrorResponse> {
+    validateString(venueId, 'venue ID')
+    validateString(locationId, 'location ID')
+    return this.callExternalApi('esp', `/v1/venues/${encodeURIComponent(venueId)}/locations/${encodeURIComponent(locationId)}`, 'DELETE', undefined,
+      { operationName: 'deleteVenueLocation' }
     )
   }
 
@@ -1458,13 +1677,14 @@ class ApiService {
    *
    * The GET attendees endpoint does not return registrationStatus on each
    * attendee object. Instead, the `?type=` query param filters by registration
-   * type. We query both `type=registered` and `type=waitlisted`, hydrate each
-   * attendee with the appropriate registrationStatus, and merge the results.
+   * type. We query `type=registered`, `type=waitlisted`, and `type=declined`,
+   * hydrate each attendee with the appropriate registrationStatus, and merge
+   * the results.
    */
   async getAllEventAttendees(eventId: string): Promise<any[] | ErrorResponse> {
     validateString(eventId, 'event ID')
 
-    const fetchByType = async (type: 'registered' | 'waitlisted'): Promise<any[] | ErrorResponse> => {
+    const fetchByType = async (type: 'registered' | 'waitlisted' | 'declined'): Promise<any[] | ErrorResponse> => {
       const result = await this.fetchAllPages<any>({
         service: 'esp',
         baseEndpoint: `/v1/events/${eventId}/attendees`,
@@ -1483,20 +1703,22 @@ class ApiService {
       }))
     }
 
-    const [registered, waitlisted] = await Promise.all([
+    const [registered, waitlisted, declined] = await Promise.all([
       fetchByType('registered'),
-      fetchByType('waitlisted')
+      fetchByType('waitlisted'),
+      fetchByType('declined')
     ])
 
-    // If both errored, return the first error
-    if ('error' in registered && 'error' in waitlisted) {
+    // If all errored, return the first error
+    if ('error' in registered && 'error' in waitlisted && 'error' in declined) {
       return registered
     }
 
     const registeredList = 'error' in registered ? [] : registered
     const waitlistedList = 'error' in waitlisted ? [] : waitlisted
+    const declinedList = 'error' in declined ? [] : declined
 
-    return registeredList.concat(waitlistedList)
+    return registeredList.concat(waitlistedList).concat(declinedList)
   }
 
   // ============================================================================
@@ -1787,7 +2009,8 @@ class ApiService {
     if (!profileData.name || typeof profileData.name !== 'string') {
       throw new Error('Publishing profile name is required')
     }
-    return this.callExternalApi('esp', '/v1/publishing-profiles', 'POST', profileData,
+    return this.callExternalApi('esp', '/v1/publishing-profiles', 'POST',
+      { ...profileData, status: 'active' },
       { operationName: 'createPublishingProfile', shouldReturnFullResponse: true }
     )
   }
@@ -1811,8 +2034,22 @@ class ApiService {
     if (!profileData.modificationTime || typeof profileData.modificationTime !== 'number') {
       throw new Error('Modification time is required for optimistic locking')
     }
-    return this.callExternalApi('esp', `/v1/publishing-profiles/${profileId}`, 'PUT', 
-      { ...profileData, profileId },
+
+    // Always use the server's current modificationTime so PUT succeeds (stale client ref or
+    // cached GET responses otherwise cause 409 conflict).
+    const latest = await this.getPublishingProfile(profileId)
+    let modificationTime = profileData.modificationTime
+    if (
+      latest &&
+      typeof latest === 'object' &&
+      !('error' in latest) &&
+      typeof (latest as { modificationTime?: unknown }).modificationTime === 'number'
+    ) {
+      modificationTime = (latest as { modificationTime: number }).modificationTime
+    }
+
+    return this.callExternalApi('esp', `/v1/publishing-profiles/${profileId}`, 'PUT',
+      { ...profileData, profileId, status: 'active', modificationTime },
       { operationName: `updatePublishingProfile(${profileId})`, shouldReturnFullResponse: true }
     )
   }
@@ -2270,6 +2507,12 @@ export const cachedApi = {
   async createSeries(data: any) {
     const result = await apiService.createSeriesExternal(data)
     apiCache.invalidate('getSeriesList')
+    if (result && typeof result === 'object' && !('error' in result)) {
+      const id = (result as { seriesId?: string }).seriesId
+      if (id) {
+        apiCache.invalidate(id)
+      }
+    }
     return result
   },
   async updateSeries(seriesId: string, data: any) {
@@ -2347,6 +2590,19 @@ export const cachedApi = {
     apiCache.invalidate(seriesId)
     apiCache.invalidate(speakerId)
     apiCache.invalidate('getSpeakers')
+    return result
+  },
+
+  async createSponsor(data: any, seriesId: string, locale: string) {
+    const result = await apiService.createSponsor(data, seriesId, locale)
+    apiCache.invalidate(seriesId)
+    apiCache.invalidate('getSponsors')
+    return result
+  },
+  async deleteSponsorImage(seriesId: string, sponsorId: string, imageId: string) {
+    const result = await apiService.deleteSponsorImage(seriesId, sponsorId, imageId)
+    apiCache.invalidate(seriesId)
+    apiCache.invalidate('getSponsors')
     return result
   },
 

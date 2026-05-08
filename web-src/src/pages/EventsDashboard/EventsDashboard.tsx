@@ -24,7 +24,7 @@ import CalendarIllustration from '@react-spectrum/s2/illustrations/linear/Calend
 import { EventDashboardItem } from '../../types/domain'
 import { apiService, cachedApi } from '../../services/api'
 import { thumbnailEnrichmentManager, venueEnrichmentManager, historyEnrichmentManager, EventThumbnail, EventVenueInfo, EventHistoryInfo } from '../../services/eventEnrichment'
-import { SPACING } from '../../styles/designSystem'
+import { SPACING, SHIMMER_BASE, SURFACES } from '../../styles/designSystem'
 import { seriesEnrichmentManager, SeriesInfo } from '../../services/seriesEnrichment'
 import { IMS } from '../../types'
 import { useToast, useGroup } from '../../contexts'
@@ -34,6 +34,11 @@ import { useHasPermission } from '../../hooks/useHasPermission'
 import { getEspEnvParam } from '../../config/constants'
 
 const EVENTS_SEARCH_KEYS = ['eventName', 'eventType', 'cloudType', 'hostEmail', 'seriesId']
+
+const eventsTableShimmerStyle: React.CSSProperties = {
+  ...SHIMMER_BASE,
+  backgroundSize: '200% 100%',
+}
 
 const FILTER_ALL = '__all__'
 const FILTER_NONE_SERIES = '__none__'
@@ -378,22 +383,10 @@ export const EventsDashboard: React.FC<EventsDashboardProps> = () => {
             break
           }
 
-          // Filter the event data to only include submittable fields
-          // filterEventData preserves ALL localizations (unlike getEventPayload which only keeps one locale)
-          const filteredPayload = filterEventData(eventResponse, 'submission')
-
-          // Prepare final payload with publish flags
-          const payload = {
-            ...filteredPayload,
-            published: isPublish,
-            liveUpdate: true,
-            forceSpWrite: false
-          }
-
-          // Call publish or unpublish API
+          // ApiService.publishEvent / unpublishEvent run prepareEslEventPutPayload (submission filter + ESL excludes)
           const result = isPublish
-            ? await apiService.publishEvent(item.eventId, payload)
-            : await apiService.unpublishEvent(item.eventId, payload)
+            ? await apiService.publishEvent(item.eventId, eventResponse)
+            : await apiService.unpublishEvent(item.eventId, eventResponse)
 
           if ('error' in result) {
             toast.error(`Failed to ${isPublish ? 'publish' : 'unpublish'} event: ${result.error}`)
@@ -550,7 +543,7 @@ export const EventsDashboard: React.FC<EventsDashboardProps> = () => {
             style={{ 
               width: '90px', 
               height: '90px', 
-              backgroundColor: '#f0f0f0', 
+              backgroundColor: SURFACES.SUBTLE,
               borderRadius: '4px',
               overflow: 'hidden',
               display: 'flex',
@@ -565,9 +558,7 @@ export const EventsDashboard: React.FC<EventsDashboardProps> = () => {
                 style={{
                   width: '100%',
                   height: '100%',
-                  background: 'linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%)',
-                  backgroundSize: '200% 100%',
-                  animation: 'shimmer 1.5s infinite'
+                  ...eventsTableShimmerStyle,
                 }}
               />
             ) : thumbnail?.imageUrl ? (
@@ -652,9 +643,7 @@ export const EventsDashboard: React.FC<EventsDashboardProps> = () => {
                 style={{
                   width: '150px',
                   height: '16px',
-                  background: 'linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%)',
-                  backgroundSize: '200% 100%',
-                  animation: 'shimmer 1.5s infinite',
+                  ...eventsTableShimmerStyle,
                   borderRadius: '4px'
                 }}
               />
@@ -663,9 +652,7 @@ export const EventsDashboard: React.FC<EventsDashboardProps> = () => {
                 style={{
                   width: '200px',
                   height: '12px',
-                  background: 'linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%)',
-                  backgroundSize: '200% 100%',
-                  animation: 'shimmer 1.5s infinite',
+                  ...eventsTableShimmerStyle,
                   borderRadius: '4px'
                 }}
               />
@@ -718,9 +705,7 @@ export const EventsDashboard: React.FC<EventsDashboardProps> = () => {
               style={{
                 width: '100px',
                 height: '16px',
-                background: 'linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%)',
-                backgroundSize: '200% 100%',
-                animation: 'shimmer 1.5s infinite',
+                ...eventsTableShimmerStyle,
                 borderRadius: '4px'
               }}
             />
@@ -774,9 +759,7 @@ export const EventsDashboard: React.FC<EventsDashboardProps> = () => {
               style={{
                 width: '120px',
                 height: '16px',
-                background: 'linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%)',
-                backgroundSize: '200% 100%',
-                animation: 'shimmer 1.5s infinite',
+                ...eventsTableShimmerStyle,
                 borderRadius: '4px'
               }}
             />
@@ -806,9 +789,7 @@ export const EventsDashboard: React.FC<EventsDashboardProps> = () => {
               style={{
                 width: '120px',
                 height: '16px',
-                background: 'linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%)',
-                backgroundSize: '200% 100%',
-                animation: 'shimmer 1.5s infinite',
+                ...eventsTableShimmerStyle,
                 borderRadius: '4px'
               }}
             />
@@ -845,9 +826,7 @@ export const EventsDashboard: React.FC<EventsDashboardProps> = () => {
               style={{
                 width: '140px',
                 height: '16px',
-                background: 'linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%)',
-                backgroundSize: '200% 100%',
-                animation: 'shimmer 1.5s infinite',
+                ...eventsTableShimmerStyle,
                 borderRadius: '4px'
               }}
             />

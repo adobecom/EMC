@@ -54,7 +54,7 @@ const EVENT_POI_OPTIONS = [
  * MarketoIntegrationComponent - Manages Marketo integration settings for events
  * 
  * Exclusivity rules:
- * - Only visible for ExperienceCloud events (not CreativeCloud)
+ * - Only visible for Experience Cloud in-person events (not webinars, not Creative Cloud)
  * - All fields are locked once the event is created (eventId exists)
  * 
  * Features:
