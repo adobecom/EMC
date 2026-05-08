@@ -8,7 +8,7 @@
  *   3. Users table for selected group (appears below groups)
  */
 
-import React, { useState, useCallback, useMemo, useEffect } from 'react'
+import React, { useState, useCallback, useMemo, useEffect, useRef } from 'react'
 import { Badge, Button, ButtonGroup, TextField, Picker, PickerItem, ComboBox, ComboBoxItem, Text, DialogTrigger, Dialog, Content, Heading, Switch, ActionButton, AlertDialog, Divider } from "@react-spectrum/s2"
 import { style } from "@react-spectrum/s2/style" with { type: "macro" }
 import EditIcon from "@react-spectrum/s2/icons/Edit"
@@ -50,7 +50,41 @@ const SCOPE_TYPE_VARIANTS: Record<ScopeType, 'positive' | 'informative' | 'neutr
   team: 'neutral',
 }
 
-const GROUP_SEARCH_KEYS = ['name', 'description']
+function scopeUserDisplayName(user: ScopeUser): string {
+  const name = [user.firstName, user.lastName].filter(Boolean).join(' ')
+  return name || user.email
+}
+
+function userMatchesQuery(user: ScopeUser, qLower: string): boolean {
+  if (!qLower) return true
+  const email = user.email?.toLowerCase() ?? ''
+  const first = user.firstName?.toLowerCase() ?? ''
+  const last = user.lastName?.toLowerCase() ?? ''
+  const display = scopeUserDisplayName(user).toLowerCase()
+  return (
+    email.includes(qLower) ||
+    first.includes(qLower) ||
+    last.includes(qLower) ||
+    display.includes(qLower)
+  )
+}
+
+function groupMetaMatchesQuery(group: RBACApiGroup, qLower: string): boolean {
+  return (
+    (group.name?.toLowerCase().includes(qLower) ?? false) ||
+    (group.description?.toLowerCase().includes(qLower) ?? false)
+  )
+}
+
+/** When non-null, member search runs only on these group IDs; group name/description still matches globally. */
+function getUserSearchFocusIdSet(
+  selectedGroup: RBACApiGroup | null,
+  expandedGroupIds: Set<string>
+): Set<string> | null {
+  if (selectedGroup) return new Set([selectedGroup.groupId])
+  if (expandedGroupIds.size > 0) return new Set(expandedGroupIds)
+  return null
+}
 
 export const ScopeGroupManagement: React.FC<ScopeGroupManagementProps> = () => {
   const apiService = useApi()
@@ -120,6 +154,11 @@ export const ScopeGroupManagement: React.FC<ScopeGroupManagementProps> = () => {
   const [expandedGroupIds, setExpandedGroupIds] = useState<Set<string>>(new Set())
   const [groupUsersMap, setGroupUsersMap] = useState<Record<string, ScopeUser[]>>({})
   const [loadingGroupIds, setLoadingGroupIds] = useState<Set<string>>(new Set())
+  const [listSearchQuery, setListSearchQuery] = useState('')
+  const [searchPrefetchLoading, setSearchPrefetchLoading] = useState(false)
+
+  const expandedGroupIdsRef = useRef(expandedGroupIds)
+  expandedGroupIdsRef.current = expandedGroupIds
 
   // Action state
   const [isSaving, setIsSaving] = useState(false)
@@ -172,6 +211,18 @@ export const ScopeGroupManagement: React.FC<ScopeGroupManagementProps> = () => {
     if (!myScopesOnly || !selectedScopeId) return groups
     return groups.filter(g => myGroupIdsInSelectedScope.has(g.groupId))
   }, [groups, myScopesOnly, selectedScopeId, myGroupIdsInSelectedScope])
+
+  const userSearchFocusIds = useMemo(
+    () => getUserSearchFocusIdSet(selectedGroup, expandedGroupIds),
+    [selectedGroup, expandedGroupIds]
+  )
+
+  const groupIdsToPrefetchForUserSearch = useMemo(() => {
+    if (userSearchFocusIds === null) {
+      return groupsForTable.map(g => g.groupId)
+    }
+    return groupsForTable.filter(g => userSearchFocusIds.has(g.groupId)).map(g => g.groupId)
+  }, [groupsForTable, userSearchFocusIds])
 
   const parentScopes = useMemo(() => {
     if (scopeFormType === 'platform') return []
@@ -256,6 +307,65 @@ export const ScopeGroupManagement: React.FC<ScopeGroupManagementProps> = () => {
     }
   }, [apiService, selectedScopeId])
 
+  const onDebouncedQueryChange = useCallback((query: string) => {
+    setListSearchQuery(query)
+  }, [])
+
+  const groupSearchFilter = useCallback(
+    (group: RBACApiGroup, q: string) => {
+      const meta = groupMetaMatchesQuery(group, q)
+      const scanUsersHere = userSearchFocusIds === null || userSearchFocusIds.has(group.groupId)
+      if (!scanUsersHere) return meta
+      const users = groupUsersMap[group.groupId]
+      if (!users) return meta
+      return meta || users.some(u => userMatchesQuery(u, q))
+    },
+    [userSearchFocusIds, groupUsersMap]
+  )
+
+  useEffect(() => {
+    if (!listSearchQuery.trim() || !selectedScopeId) {
+      setSearchPrefetchLoading(false)
+      return
+    }
+    const missing = groupIdsToPrefetchForUserSearch.filter(id => groupUsersMap[id] === undefined)
+    if (missing.length === 0) {
+      setSearchPrefetchLoading(false)
+      return
+    }
+    setSearchPrefetchLoading(true)
+    let cancelled = false
+    void Promise.all(missing.map(id => loadGroupUsersForExpand(id))).finally(() => {
+      if (!cancelled) setSearchPrefetchLoading(false)
+    })
+    return () => {
+      cancelled = true
+    }
+  }, [
+    listSearchQuery,
+    selectedScopeId,
+    groupIdsToPrefetchForUserSearch,
+    groupUsersMap,
+    loadGroupUsersForExpand,
+  ])
+
+  useEffect(() => {
+    if (!listSearchQuery.trim() || searchPrefetchLoading) return
+    const q = listSearchQuery.toLowerCase()
+    const focus = getUserSearchFocusIdSet(selectedGroup, expandedGroupIdsRef.current)
+    setExpandedGroupIds(prev => {
+      const next = new Set(prev)
+      for (const g of groupsForTable) {
+        const scanUsersHere = focus === null || focus.has(g.groupId)
+        if (!scanUsersHere) continue
+        const users = groupUsersMap[g.groupId]
+        if (!users?.length) continue
+        if (users.some(u => userMatchesQuery(u, q))) next.add(g.groupId)
+      }
+      return next
+    })
+  }, [listSearchQuery, searchPrefetchLoading, groupUsersMap, groupsForTable, selectedGroup])
+
   const handleToggleGroupExpand = useCallback((groupId: string) => {
     setExpandedGroupIds(prev => {
       const next = new Set(prev)
@@ -280,6 +390,7 @@ export const ScopeGroupManagement: React.FC<ScopeGroupManagementProps> = () => {
     setSelectedGroup(null)
     setExpandedGroupIds(new Set())
     setGroupUsersMap({})
+    setListSearchQuery('')
   }, [selectedScopeId])
 
   // Drop scope selection if it falls outside the current picker pool (e.g. My scopes on)
@@ -602,7 +713,29 @@ export const ScopeGroupManagement: React.FC<ScopeGroupManagementProps> = () => {
       name: 'NAME',
       width: 200,
       sortable: true,
-      render: (item) => <Text UNSAFE_style={{ fontWeight: 500 }}>{item.name}</Text>,
+      render: (item) => {
+        const q = listSearchQuery.trim().toLowerCase()
+        const showMatch = q.length > 0
+        const meta = groupMetaMatchesQuery(item, q)
+        const focus = getUserSearchFocusIdSet(selectedGroup, expandedGroupIds)
+        const scanUsersHere = focus === null || focus.has(item.groupId)
+        const users = groupUsersMap[item.groupId]
+        const memberMatch =
+          showMatch &&
+          scanUsersHere &&
+          Boolean(users?.some(u => userMatchesQuery(u, q)))
+        return (
+          <div className={style({ display: 'flex', flexDirection: 'column', gap: 4, alignItems: 'start' })}>
+            <Text UNSAFE_style={{ fontWeight: 500 }}>{item.name}</Text>
+            {showMatch && (meta || memberMatch) ? (
+              <div className={style({ display: 'flex', flexWrap: 'wrap', gap: 8 })} role="status">
+                {meta ? <Badge variant="informative">Group match</Badge> : null}
+                {memberMatch ? <Badge variant="positive">Member match</Badge> : null}
+              </div>
+            ) : null}
+          </div>
+        )
+      },
     },
     {
       key: 'description',
@@ -638,17 +771,18 @@ export const ScopeGroupManagement: React.FC<ScopeGroupManagementProps> = () => {
         </div>
       ),
     },
-  ], [canWriteGroup, canDeleteGroup, getRoleName, openGroupEdit])
+  ], [listSearchQuery, selectedGroup, expandedGroupIds, groupUsersMap, canWriteGroup, canDeleteGroup, getRoleName, openGroupEdit])
 
   const renderGroupExpandedContent = useCallback((group: RBACApiGroup) => {
     const users = groupUsersMap[group.groupId] || []
     const isLoading = loadingGroupIds.has(group.groupId)
+    const q = listSearchQuery.trim().toLowerCase()
 
     const sortedUsers = [...users].sort((a, b) => {
       switch (userSortKey) {
         case 'name': {
-          const aName = [a.firstName, a.lastName].filter(Boolean).join(' ') || a.email
-          const bName = [b.firstName, b.lastName].filter(Boolean).join(' ') || b.email
+          const aName = scopeUserDisplayName(a)
+          const bName = scopeUserDisplayName(b)
           return aName.localeCompare(bName)
         }
         case 'email':
@@ -657,6 +791,8 @@ export const ScopeGroupManagement: React.FC<ScopeGroupManagementProps> = () => {
           return 0
       }
     })
+
+    const visibleUsers = q ? sortedUsers.filter(u => userMatchesQuery(u, q)) : sortedUsers
 
     return (
       <div className={style({display: 'flex', flexDirection: 'column', gap: 16})}>
@@ -704,13 +840,19 @@ export const ScopeGroupManagement: React.FC<ScopeGroupManagementProps> = () => {
               No users in this group
             </Text>
           </div>
+        ) : visibleUsers.length === 0 ? (
+          <div style={{ padding: 24 }}>
+            <Text UNSAFE_style={{ color: 'var(--spectrum-global-color-gray-600)' }}>
+              No members match your search
+            </Text>
+          </div>
         ) : (
           <div className="user-card-list">
-            {sortedUsers.map(user => (
+            {visibleUsers.map(user => (
               <div className="user-card" key={user.email}>
                 <div className={style({display: 'flex', flexDirection: 'column', gap: 4, alignItems: 'start'})}>
                   <Text UNSAFE_style={{ fontWeight: 600 }}>
-                    {[user.firstName, user.lastName].filter(Boolean).join(' ') || user.email}
+                    {scopeUserDisplayName(user)}
                   </Text>
                   <Text UNSAFE_style={{ fontSize: '12px', color: 'var(--spectrum-global-color-gray-600)' }}>
                     Email: {user.email}
@@ -754,7 +896,7 @@ export const ScopeGroupManagement: React.FC<ScopeGroupManagementProps> = () => {
         )}
       </div>
     )
-  }, [groupUsersMap, loadingGroupIds, canWriteUser, canDeleteUser, getRoleName, userSortKey])
+  }, [groupUsersMap, loadingGroupIds, canWriteUser, canDeleteUser, getRoleName, userSortKey, listSearchQuery])
 
   const { loadingOverlayVisible, savingOverlayVisible } = useMemo(() => {
     const isBlockingDialogOpen =
@@ -864,6 +1006,7 @@ export const ScopeGroupManagement: React.FC<ScopeGroupManagementProps> = () => {
         {/* ── Groups table ── */}
         {selectedScopeId ? (
           <ResourceDashboardLayout
+            key={selectedScopeId}
             title="Groups"
             totalCount={groupsForTable.length}
             error={groupError}
@@ -880,8 +1023,11 @@ export const ScopeGroupManagement: React.FC<ScopeGroupManagementProps> = () => {
             emptyStateIllustration={<FolderSharedIllustration aria-hidden />}
             emptyStateTitle="No Groups"
             emptyStateDescription="Create a group in this scope to manage user access"
-            searchPlaceholder="Search groups..."
-            searchKeys={GROUP_SEARCH_KEYS}
+            searchPlaceholder="Search groups and members..."
+            searchKeys={[]}
+            searchFilter={groupSearchFilter}
+            onDebouncedQueryChange={onDebouncedQueryChange}
+            searchLoading={searchPrefetchLoading}
             renderExpandedContent={renderGroupExpandedContent}
             expandedKeys={expandedGroupIds}
             onToggleExpand={handleToggleGroupExpand}
