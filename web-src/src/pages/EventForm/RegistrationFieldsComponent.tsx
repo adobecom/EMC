@@ -44,6 +44,15 @@ const convertString = (input: string): string => {
   return parts.toUpperCase()
 }
 
+/** RSVP field list row: templated legal labels use Placeholder so the console stays scannable. */
+function rsvpFieldConsoleLabel(f: RsvpConfigField): string {
+  const label = f.Label?.trim() || ''
+  if (label.includes('[[')) {
+    return f.Placeholder?.trim() || convertString(f.Field)
+  }
+  return label || convertString(f.Field)
+}
+
 const fetchRsvpFormConfigs = async (): Promise<RsvpConfig[]> => {
   const clouds = ['CreativeCloud', 'ExperienceCloud'] as const
   return Promise.all(
@@ -117,7 +126,7 @@ export const RegistrationFieldsComponent: React.FC<RegistrationFieldsComponentPr
   // Build display fields list with original order preserved
   const allDisplayFields: DisplayField[] = validFields.map((f, idx) => ({
     fieldName: f.Field,
-    displayLabel: (f.Label && f.Label.trim()) || convertString(f.Field),
+    displayLabel: rsvpFieldConsoleLabel(f),
     isMandated: f.Required === 'x',
     originalIndex: idx
   }))
