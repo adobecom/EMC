@@ -57,7 +57,13 @@ function renderCellValue(attendee: Attendee, config: AttendeeColumnConfig): Reac
       }
       return fallback || '-'
 
-    default:
+    case 'requiresSxswTicket': {
+      const v = attendee.requiresSxswTicket
+      if (v === null || v === undefined) return fallback || '-'
+      return v ? 'yes' : 'no'
+    }
+
+    default: {
       const value = attendee[key]
       if (value === null || value === undefined || value === '') {
         return fallback || '-'
@@ -66,6 +72,7 @@ function renderCellValue(attendee: Attendee, config: AttendeeColumnConfig): Reac
         return value.join(', ')
       }
       return String(value)
+    }
   }
 }
 
