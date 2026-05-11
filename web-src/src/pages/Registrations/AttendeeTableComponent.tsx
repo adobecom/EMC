@@ -57,8 +57,8 @@ function renderCellValue(attendee: Attendee, config: AttendeeColumnConfig): Reac
       }
       return fallback || '-'
 
-    case 'requiresSxswTicket': {
-      const v = attendee.requiresSxswTicket
+    case 'requiresTicket': {
+      const v = attendee.requiresTicket
       if (v === null || v === undefined) return fallback || '-'
       return v ? 'yes' : 'no'
     }

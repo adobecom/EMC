@@ -56,7 +56,7 @@ export interface Attendee {
   isGuest?: boolean
   invitedBy?: string
   shareInfoWithPartners?: boolean
-  requiresSxswTicket?: boolean
+  requiresTicket?: boolean
   ccSentiment?: string
 
   // Campaign tracking (set via URL params, stored by the API)

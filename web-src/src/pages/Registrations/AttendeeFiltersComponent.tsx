@@ -218,7 +218,7 @@ const FilterMenu: React.FC<FilterMenuProps> = ({ menu, selectedValues, onToggle 
  */
 function formatFilterValue(key: string, value: string): string {
   if (
-    (key === 'checkedIn' || key === 'requiresSxswTicket') &&
+    (key === 'checkedIn' || key === 'requiresTicket') &&
     (value === 'true' || value === 'false')
   ) {
     return value === 'true' ? 'Yes' : 'No'
