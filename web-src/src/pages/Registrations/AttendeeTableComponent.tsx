@@ -57,8 +57,11 @@ function renderCellValue(attendee: Attendee, config: AttendeeColumnConfig): Reac
       }
       return fallback || '-'
 
-    default:
+    default: {
       const value = attendee[key]
+      if (typeof value === 'boolean') {
+        return value ? 'yes' : 'no'
+      }
       if (value === null || value === undefined || value === '') {
         return fallback || '-'
       }
@@ -66,6 +69,7 @@ function renderCellValue(attendee: Attendee, config: AttendeeColumnConfig): Reac
         return value.join(', ')
       }
       return String(value)
+    }
   }
 }
 

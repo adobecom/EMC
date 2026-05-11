@@ -97,6 +97,12 @@ export const ExportDialog: React.FC<ExportDialogProps> = ({
 
     const data = attendees.map(a => {
       const row: Record<string, unknown> = { ...a }
+      for (const k of Object.keys(row)) {
+        const v = row[k]
+        if (typeof v === 'boolean') {
+          row[k] = v ? 'Yes' : 'No'
+        }
+      }
       row.name = getAttendeeName(a)
       row.creationTime = formatRegisteredDateMmDdYyyy(a.creationTime) || ''
       if (includeCampaignName) {

@@ -31,6 +31,10 @@ export const EXTERNAL_CONFIG_URLS = {
    * RSVP form field configurations per cloud type
    * Used by: RegistrationFieldsComponent, Registrations
    * Structure: Array of { Field, Type, Label?, Required?, Placeholder?, Options? }
+   *
+   * Experience Cloud only (hosted JSON, not this repo): optional SXSW ticket field
+   * for ESP `requiresSxswTicket` — append to rsvp/experiencecloud.json, e.g.
+   * {"Field":"requiresSxswTicket","Type":"radio","Label":"Do you require a SXSW ticket?","Options":"Yes,No"}
    */
   rsvp: {
     CreativeCloud: `${ADOBE_EVENT_LIBS_BASE}/rsvp/creativecloud.json`,

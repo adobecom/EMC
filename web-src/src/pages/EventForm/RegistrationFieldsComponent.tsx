@@ -9,15 +9,9 @@ import { HeadingWithTooltip } from '../../components/shared'
 import { COLORS, SURFACES } from '../../styles/designSystem'
 import OpenIn from '@react-spectrum/s2/icons/OpenIn'
 import Move from '@react-spectrum/s2/icons/Move'
-
-/**
- * Configuration field structure from the JSON configs
- */
-interface RsvpConfigField {
-  Field: string
-  Type: string
-  Required?: string
-}
+import { configService } from '../../services/configService'
+import type { RsvpCloudType } from '../../config/externalConfigs'
+import type { RsvpConfigField } from '../../types/attendee'
 
 interface RsvpConfig {
   cloudType: string
@@ -29,6 +23,7 @@ interface RsvpConfig {
  */
 interface DisplayField {
   fieldName: string
+  displayLabel: string
   isMandated: boolean
   originalIndex: number
 }
@@ -54,30 +49,17 @@ const convertString = (input: string): string => {
   return parts.toUpperCase()
 }
 
+const SUPPORTED_RSVP_CLOUDS: RsvpCloudType[] = ['CreativeCloud', 'ExperienceCloud']
+
 /**
- * Fetches RSVP form configurations for all supported clouds
+ * Fetches RSVP form configurations for all supported clouds (cached via configService)
  */
 const fetchRsvpFormConfigs = async (): Promise<RsvpConfig[]> => {
-  const SUPPORTED_CLOUDS = [
-    { id: 'CreativeCloud', name: 'Creative Cloud' },
-    { id: 'ExperienceCloud', name: 'Experience Cloud' }
-  ]
-
   return Promise.all(
-    SUPPORTED_CLOUDS.map(async ({ id }) => {
+    SUPPORTED_RSVP_CLOUDS.map(async (id) => {
       try {
-        const response = await fetch(`https://www.adobe.com/event-libs/assets/configs/rsvp/${id.toLowerCase()}.json`)
-        if (!response.ok) {
-          console.error(`Failed to fetch RSVP config for ${id}: ${response.status} ${response.statusText}`)
-          return { cloudType: id, config: null }
-        }
-        const data = await response.json()
-        console.log(`Fetched RSVP config for ${id}:`, data)
-        
-        // Handle different possible JSON structures
-        const config = Array.isArray(data) ? data : (data.data || data.fields || data.config || null)
-        
-        return { cloudType: id, config }
+        const config = await configService.getRsvpConfig(id)
+        return { cloudType: id, config: config.length > 0 ? config : null }
       } catch (error) {
         console.error(`Failed to fetch RSVP config for ${id}:`, error)
         return { cloudType: id, config: null }
@@ -136,6 +118,7 @@ export const RegistrationFieldsComponent: React.FC<RegistrationFieldsComponentPr
   // Build display fields list with original order preserved
   const allDisplayFields: DisplayField[] = validFields.map((f, idx) => ({
     fieldName: f.Field,
+    displayLabel: (f.Label && f.Label.trim()) || convertString(f.Field),
     isMandated: f.Required === 'x',
     originalIndex: idx
   }))
@@ -299,8 +282,12 @@ export const RegistrationFieldsComponent: React.FC<RegistrationFieldsComponentPr
   }
 
   const renderBasicFormTable = () => {
-    // Format mandated fields for display
-    const mandatedFieldsDisplay = mandatedFieldNames.map((field) => convertString(field)).join(', ')
+    const mandatedFieldsDisplay = mandatedFieldNames
+      .map((field) => {
+        const f = validFields.find((x) => x.Field === field)
+        return (f?.Label && f.Label.trim()) || convertString(field)
+      })
+      .join(', ')
     const cloudName = cloudType === 'CreativeCloud' ? 'Creative Cloud' : 'Experience Cloud'
     
     return (
@@ -342,7 +329,7 @@ export const RegistrationFieldsComponent: React.FC<RegistrationFieldsComponentPr
           {/* Field rows */}
           <div className={style({display: 'flex', flexDirection: 'column', gap: 8})} >
             {sortedDisplayFields.map((displayField, displayIndex) => {
-              const { fieldName, isMandated } = displayField
+              const { fieldName, displayLabel, isMandated } = displayField
               const isVisible = visibleFields.includes(fieldName)
               const isRequired = requiredFields.includes(fieldName)
               const isDragging = draggedIndex === displayIndex
@@ -381,7 +368,7 @@ export const RegistrationFieldsComponent: React.FC<RegistrationFieldsComponentPr
                   }}
                 >
                   <Text UNSAFE_style={{ fontWeight: 500 }}>
-                    {convertString(fieldName)}
+                    {displayLabel}
                     {isMandated && (
                       <Text UNSAFE_style={{ 
                         fontSize: '11px', 

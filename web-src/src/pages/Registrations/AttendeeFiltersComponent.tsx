@@ -217,11 +217,10 @@ const FilterMenu: React.FC<FilterMenuProps> = ({ menu, selectedValues, onToggle 
  * Format filter value for display
  */
 function formatFilterValue(key: string, value: string): string {
-  // Boolean fields
-  if (key === 'checkedIn') {
+  if (value === 'true' || value === 'false') {
     return value === 'true' ? 'Yes' : 'No'
   }
-  
+
   // Registration status
   if (key === 'registrationStatus') {
     return value.charAt(0).toUpperCase() + value.slice(1)
