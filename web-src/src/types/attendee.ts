@@ -56,7 +56,6 @@ export interface Attendee {
   isGuest?: boolean
   invitedBy?: string
   shareInfoWithPartners?: boolean
-  /** Experience Cloud RSVP (optional); ESP OpenAPI BaseAttendee / EventAttendee */
   requiresSxswTicket?: boolean
   ccSentiment?: string
 

@@ -57,11 +57,14 @@ function renderCellValue(attendee: Attendee, config: AttendeeColumnConfig): Reac
       }
       return fallback || '-'
 
+    case 'requiresSxswTicket': {
+      const v = attendee.requiresSxswTicket
+      if (v === null || v === undefined) return fallback || '-'
+      return v ? 'yes' : 'no'
+    }
+
     default: {
       const value = attendee[key]
-      if (typeof value === 'boolean') {
-        return value ? 'yes' : 'no'
-      }
       if (value === null || value === undefined || value === '') {
         return fallback || '-'
       }
