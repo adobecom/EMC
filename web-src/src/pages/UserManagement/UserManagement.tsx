@@ -35,6 +35,14 @@ const ROLE_OPTIONS: { key: UserRole; label: string }[] = [
 
 const SEARCH_KEYS = ['email', 'role']
 
+const USER_MANAGEMENT_TABLE_TEST_IDS = {
+  root: 'user-management-table',
+  emptyState: 'user-management-table-empty-state',
+  pageInput: 'user-management-table-page-input',
+  header: (columnKey: string) => `user-management-table-header-${columnKey}`,
+  row: (itemKey: string) => `user-management-table-row-${itemKey}`,
+}
+
 export const UserManagement: React.FC<UserManagementProps> = () => {
   const navigate = useNavigate()
   const { allUsers, refreshUsers } = useRBAC()
@@ -376,6 +384,7 @@ export const UserManagement: React.FC<UserManagementProps> = () => {
           emptyStateIllustration={<UserGroupIllustration aria-hidden />}
           emptyStateTitle="No Users"
           emptyStateDescription="Add users to control access to EMC"
+          dataTableTestIds={USER_MANAGEMENT_TABLE_TEST_IDS}
           searchPlaceholder="Search users..."
           searchKeys={SEARCH_KEYS}
         />

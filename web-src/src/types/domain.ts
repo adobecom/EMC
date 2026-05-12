@@ -514,6 +514,7 @@ export interface SponsorData {
   isSaved?: boolean
   isFromSeries?: boolean  // True if selected from series autocomplete
   localizations?: Record<string, SponsorLocalization>
+  ordinal?: number
   modificationTime?: number
 }
 
@@ -634,6 +635,8 @@ export interface EventFormData {
   localizations?: Record<string, EventLocalization>
   localizationOverrides?: Record<string, any>
   metadata?: Record<string, any>
+  /** UI-only: user explicitly chose a catalogue option (including "No …") per metadata field key */
+  metadataFieldAcknowledged?: Record<string, boolean>
 }
 
 // Agenda Item

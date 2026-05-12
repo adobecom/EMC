@@ -9,26 +9,17 @@ import { HeadingWithTooltip } from '../../components/shared'
 import { COLORS, SURFACES } from '../../styles/designSystem'
 import OpenIn from '@react-spectrum/s2/icons/OpenIn'
 import Move from '@react-spectrum/s2/icons/Move'
-
-/**
- * Configuration field structure from the JSON configs
- */
-interface RsvpConfigField {
-  Field: string
-  Type: string
-  Required?: string
-}
+import type { RsvpConfigField } from '../../types/attendee'
+import { rsvpConfigUiLabel } from '../../utils/rsvpConfigLabels'
 
 interface RsvpConfig {
   cloudType: string
   config: RsvpConfigField[] | null
 }
 
-/**
- * Extended field with display info
- */
 interface DisplayField {
   fieldName: string
+  displayLabel: string
   isMandated: boolean
   originalIndex: number
 }
@@ -54,29 +45,20 @@ const convertString = (input: string): string => {
   return parts.toUpperCase()
 }
 
-/**
- * Fetches RSVP form configurations for all supported clouds
- */
 const fetchRsvpFormConfigs = async (): Promise<RsvpConfig[]> => {
-  const SUPPORTED_CLOUDS = [
-    { id: 'CreativeCloud', name: 'Creative Cloud' },
-    { id: 'ExperienceCloud', name: 'Experience Cloud' }
-  ]
-
+  const clouds = ['CreativeCloud', 'ExperienceCloud'] as const
   return Promise.all(
-    SUPPORTED_CLOUDS.map(async ({ id }) => {
+    clouds.map(async (id) => {
       try {
-        const response = await fetch(`https://www.adobe.com/event-libs/assets/configs/rsvp/${id.toLowerCase()}.json`)
+        const response = await fetch(
+          `https://www.adobe.com/event-libs/assets/configs/rsvp/${id.toLowerCase()}.json`
+        )
         if (!response.ok) {
-          console.error(`Failed to fetch RSVP config for ${id}: ${response.status} ${response.statusText}`)
+          console.error(`Failed to fetch RSVP config for ${id}: ${response.status}`)
           return { cloudType: id, config: null }
         }
         const data = await response.json()
-        console.log(`Fetched RSVP config for ${id}:`, data)
-        
-        // Handle different possible JSON structures
         const config = Array.isArray(data) ? data : (data.data || data.fields || data.config || null)
-        
         return { cloudType: id, config }
       } catch (error) {
         console.error(`Failed to fetch RSVP config for ${id}:`, error)
@@ -136,6 +118,7 @@ export const RegistrationFieldsComponent: React.FC<RegistrationFieldsComponentPr
   // Build display fields list with original order preserved
   const allDisplayFields: DisplayField[] = validFields.map((f, idx) => ({
     fieldName: f.Field,
+    displayLabel: rsvpConfigUiLabel(f, convertString),
     isMandated: f.Required === 'x',
     originalIndex: idx
   }))
@@ -299,7 +282,6 @@ export const RegistrationFieldsComponent: React.FC<RegistrationFieldsComponentPr
   }
 
   const renderBasicFormTable = () => {
-    // Format mandated fields for display
     const mandatedFieldsDisplay = mandatedFieldNames.map((field) => convertString(field)).join(', ')
     const cloudName = cloudType === 'CreativeCloud' ? 'Creative Cloud' : 'Experience Cloud'
     
@@ -342,7 +324,7 @@ export const RegistrationFieldsComponent: React.FC<RegistrationFieldsComponentPr
           {/* Field rows */}
           <div className={style({display: 'flex', flexDirection: 'column', gap: 8})} >
             {sortedDisplayFields.map((displayField, displayIndex) => {
-              const { fieldName, isMandated } = displayField
+              const { fieldName, displayLabel, isMandated } = displayField
               const isVisible = visibleFields.includes(fieldName)
               const isRequired = requiredFields.includes(fieldName)
               const isDragging = draggedIndex === displayIndex
@@ -381,7 +363,7 @@ export const RegistrationFieldsComponent: React.FC<RegistrationFieldsComponentPr
                   }}
                 >
                   <Text UNSAFE_style={{ fontWeight: 500 }}>
-                    {convertString(fieldName)}
+                    {displayLabel}
                     {isMandated && (
                       <Text UNSAFE_style={{ 
                         fontSize: '11px', 

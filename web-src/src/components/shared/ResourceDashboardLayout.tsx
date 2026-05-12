@@ -8,7 +8,7 @@ import { style } from '@react-spectrum/s2/style' with { type: 'macro' }
 import Refresh from "@react-spectrum/s2/icons/Refresh"
 import NoSearchResults from '@react-spectrum/s2/illustrations/linear/NoSearchResults'
 import BuildTable from '@react-spectrum/s2/illustrations/linear/BuildTable'
-import { DataTable, TableColumn, TableAction } from './DataTable'
+import { DataTable, DataTableTestIds, TableColumn, TableAction } from './DataTable'
 import { ResourceEmptyState } from './ResourceEmptyState'
 import { LoadingSpinner } from './LoadingSpinner'
 import { debounceCancellable } from '../../services/cacheUtils'
@@ -38,6 +38,7 @@ interface ResourceDashboardLayoutProps<T> {
   createButtonTestId?: string // data-testid for the default create button
   onVisibleItemsChange?: (items: T[]) => void
   onVisibleIdsChange?: (ids: string[]) => void // Callback for visible item IDs
+  dataTableTestIds?: DataTableTestIds
 
   // Empty state
   emptyStateTitle?: string
@@ -57,6 +58,11 @@ interface ResourceDashboardLayoutProps<T> {
   renderExpandedContent?: (item: T) => React.ReactNode
   expandedKeys?: Set<string>
   onToggleExpand?: (key: string) => void
+
+  /** Notified when the debounced search query changes (including cleared). */
+  onDebouncedQueryChange?: (query: string) => void
+  /** When true and the debounced query is non-empty, show the same searching state as debounce (e.g. async prefetch). */
+  searchLoading?: boolean
 }
 
 export function ResourceDashboardLayout<T extends Record<string, any>>({
@@ -75,6 +81,7 @@ export function ResourceDashboardLayout<T extends Record<string, any>>({
   createButtonTestId,
   onVisibleItemsChange,
   onVisibleIdsChange,
+  dataTableTestIds,
   emptyStateTitle = 'No Items Found',
   emptyStateDescription = 'Get started by creating your first item',
   emptyStateIllustration,
@@ -85,6 +92,8 @@ export function ResourceDashboardLayout<T extends Record<string, any>>({
   renderExpandedContent,
   expandedKeys,
   onToggleExpand,
+  onDebouncedQueryChange,
+  searchLoading = false,
 }: ResourceDashboardLayoutProps<T>): React.ReactElement {
   const [inputValue, setInputValue] = useState('')
   const [debouncedQuery, setDebouncedQuery] = useState('')
@@ -109,6 +118,10 @@ export function ResourceDashboardLayout<T extends Record<string, any>>({
       debouncedSetQuery.cancel()
     }
   }, [debouncedSetQuery])
+
+  useEffect(() => {
+    onDebouncedQueryChange?.(debouncedQuery)
+  }, [debouncedQuery, onDebouncedQueryChange])
 
   // Clear handler
   const handleClear = useCallback(() => {
@@ -175,6 +188,8 @@ export function ResourceDashboardLayout<T extends Record<string, any>>({
 
   const displayCount = debouncedQuery ? filteredData.length : totalCount
   const isSearching = inputValue !== debouncedQuery
+  const showSearchSpinner =
+    isSearching || (Boolean(searchLoading) && debouncedQuery.trim().length > 0)
 
   return (
     <div>
@@ -237,7 +252,7 @@ export function ResourceDashboardLayout<T extends Record<string, any>>({
 
         {/* Table — min height so empty IllustratedMessage centers in the band */}
         <div className={style({ flex: 1, minHeight: '[480px]', display: 'flex', flexDirection: 'column' })}>
-          {isSearching ? (
+          {showSearchSpinner ? (
             <div
               className={`${style({ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '[100%]' })} fade-in`}
             >
@@ -255,6 +270,7 @@ export function ResourceDashboardLayout<T extends Record<string, any>>({
                 renderExpandedContent={renderExpandedContent}
                 expandedKeys={expandedKeys}
                 onToggleExpand={onToggleExpand}
+                testIds={dataTableTestIds}
                 emptyState={
                   debouncedQuery ? (
                     <ResourceEmptyState

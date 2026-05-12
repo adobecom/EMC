@@ -4,9 +4,9 @@
 
 export { GateScreen } from './GateScreen'
 export { DataTable } from './DataTable'
-export type { TableColumn, TableAction } from './DataTable'
+export type { DataTableTestIds, TableColumn, TableAction } from './DataTable'
 export { FormWizard } from './FormWizard'
-export type { WizardStep, EventTypeLabel, EventStatus } from './FormWizard'
+export type { FormWizardTestIds, WizardStep, EventTypeLabel, EventStatus } from './FormWizard'
 export { StatusBadge } from './StatusBadge'
 export { LoadingSpinner } from './LoadingSpinner'
 export { BlurredLoadingOverlay } from './BlurredLoadingOverlay'
@@ -26,4 +26,3 @@ export { HistoryTimeline } from './HistoryTimeline'
 export type { HistoryResourceType } from './HistoryTimeline'
 export { RequirePermission } from './RequirePermission'
 export { GroupSwitcher } from './GroupSwitcher'
-

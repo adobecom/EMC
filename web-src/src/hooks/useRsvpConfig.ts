@@ -5,6 +5,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { configService } from '../services/configService'
 import type { RsvpConfigField, AttendeeColumnConfig } from '../types/attendee'
+import { rsvpConfigUiLabel } from '../utils/rsvpConfigLabels'
 
 /**
  * Convert camelCase to Sentence Case
@@ -16,9 +17,13 @@ function camelToSentenceCase(str: string): string {
 }
 
 /**
- * Sticky columns that should be fixed on the right side of the table
+ * Sticky columns fixed on the right (after dynamic RSVP fields).
+ * Registered date sits immediately before status and checked-in.
  */
 const STICKY_COLUMNS = ['registrationStatus', 'checkedIn']
+
+/** System-backed columns — do not duplicate from RSVP field list */
+const RESERVED_ATTENDEE_FIELDS = ['creationTime', 'modificationTime']
 
 /**
  * Fields to exclude from individual columns (combined into 'name')
@@ -39,7 +44,9 @@ function transformConfigToColumns(config: RsvpConfigField[]): AttendeeColumnConf
     f.Field && 
     f.Field.trim() !== '' && 
     !EXCLUDED_FIELD_TYPES.includes(f.Type?.toLowerCase()) &&
-    !NAME_FIELDS.includes(f.Field)
+    !NAME_FIELDS.includes(f.Field) &&
+    !RESERVED_ATTENDEE_FIELDS.includes(f.Field) &&
+    !STICKY_COLUMNS.includes(f.Field)
   )
 
   // Start with combined name column
@@ -54,20 +61,29 @@ function transformConfigToColumns(config: RsvpConfigField[]): AttendeeColumnConf
     }
   ]
 
-  // Add configured fields (excluding sticky columns for now)
-  validFields
-    .filter(f => !STICKY_COLUMNS.includes(f.Field))
-    .forEach(field => {
-      columns.push({
-        key: field.Field,
-        label: field.Label || camelToSentenceCase(field.Field),
-        type: field.Type || 'text',
-        fallback: '-',
-        width: getColumnWidth(field.Field),
-        sortable: true,
-        isSticky: false
-      })
+  // Add configured fields
+  validFields.forEach(field => {
+    columns.push({
+      key: field.Field,
+      label: rsvpConfigUiLabel(field, camelToSentenceCase),
+      type: field.Type || 'text',
+      fallback: '-',
+      width: getColumnWidth(field.Field),
+      sortable: true,
+      isSticky: false
     })
+  })
+
+  // Registered date (API creationTime) — last column before status / checked-in
+  columns.push({
+    key: 'creationTime',
+    label: 'Registered Date',
+    type: 'text',
+    fallback: '-',
+    width: 120,
+    sortable: true,
+    isSticky: false
+  })
 
   // Add sticky columns at the end
   STICKY_COLUMNS.forEach((key) => {
@@ -92,6 +108,7 @@ function transformConfigToColumns(config: RsvpConfigField[]): AttendeeColumnConf
  */
 function getDefaultLabel(key: string): string {
   const labels: Record<string, string> = {
+    creationTime: 'Registered Date',
     registrationStatus: 'RSVP Status',
     checkedIn: 'Checked In',
     campaignId: 'Campaign',
@@ -211,6 +228,7 @@ function getDefaultColumns(): AttendeeColumnConfig[] {
     { key: 'email', label: 'Email', type: 'text', fallback: '-', width: 250, sortable: true },
     { key: 'mobilePhone', label: 'Phone', type: 'text', fallback: '-', width: 150, sortable: true },
     { key: 'companyName', label: 'Company', type: 'text', fallback: '-', width: 200, sortable: true },
+    { key: 'creationTime', label: 'Registered Date', type: 'text', fallback: '-', width: 120, sortable: true, isSticky: false },
     { key: 'registrationStatus', label: 'RSVP Status', type: 'text', fallback: 'registered', width: 130, sortable: true, isSticky: true },
     { key: 'checkedIn', label: 'Checked In', type: 'text', fallback: '-', width: 130, sortable: true, isSticky: true }
   ]

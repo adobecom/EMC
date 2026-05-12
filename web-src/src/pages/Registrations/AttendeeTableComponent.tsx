@@ -4,8 +4,16 @@
 
 import React, { useMemo } from 'react'
 import type { Attendee, AttendeeColumnConfig } from '../../types/attendee'
-import { getAttendeeName } from '../../types/attendee'
+import { formatRegisteredDateMmDdYyyy, getAttendeeName } from '../../types/attendee'
 import { DataTable, TableColumn } from '../../components/shared'
+
+const ATTENDEE_TABLE_TEST_IDS = {
+  root: 'attendee-table',
+  emptyState: 'attendee-table-empty-state',
+  pageInput: 'attendee-table-page-input',
+  header: (columnKey: string) => `attendee-table-header-${columnKey}`,
+  row: (itemKey: string) => `attendee-table-row-${itemKey}`,
+}
 
 interface AttendeeTableComponentProps {
   attendees: Attendee[]
@@ -41,7 +49,11 @@ function renderCellValue(attendee: Attendee, config: AttendeeColumnConfig): Reac
     case 'registrationStatus':
       return attendee.registrationStatus || fallback || 'registered'
 
-    case 'creationTime':
+    case 'creationTime': {
+      const formatted = formatRegisteredDateMmDdYyyy(attendee.creationTime)
+      return formatted || fallback || '-'
+    }
+
     case 'modificationTime':
       const timestamp = attendee[key]
       if (timestamp) {
@@ -53,7 +65,13 @@ function renderCellValue(attendee: Attendee, config: AttendeeColumnConfig): Reac
       }
       return fallback || '-'
 
-    default:
+    case 'requiresTicket': {
+      const v = attendee.requiresTicket
+      if (v === null || v === undefined) return fallback || '-'
+      return v ? 'yes' : 'no'
+    }
+
+    default: {
       const value = attendee[key]
       if (value === null || value === undefined || value === '') {
         return fallback || '-'
@@ -62,6 +80,7 @@ function renderCellValue(attendee: Attendee, config: AttendeeColumnConfig): Reac
         return value.join(', ')
       }
       return String(value)
+    }
   }
 }
 
@@ -81,7 +100,10 @@ export const AttendeeTableComponent: React.FC<AttendeeTableComponentProps> = ({
 
     const buildColumn = (config: AttendeeColumnConfig): TableColumn<Attendee> => ({
       key: config.key,
-      name: camelToSentenceCase(config.key).toUpperCase(),
+      name: (config.label?.trim()
+        ? config.label
+        : camelToSentenceCase(config.key)
+      ).toUpperCase(),
       width: config.width || 150,
       sortable: config.sortable !== false,
       render: (item) => renderCellValue(item, config),
@@ -112,6 +134,7 @@ export const AttendeeTableComponent: React.FC<AttendeeTableComponentProps> = ({
         getItemKey={(item) => item.attendeeId}
         pageSize={20}
         emptyState={emptyState}
+        testIds={ATTENDEE_TABLE_TEST_IDS}
       />
     </div>
   )
