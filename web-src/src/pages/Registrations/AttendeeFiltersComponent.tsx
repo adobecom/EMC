@@ -7,6 +7,7 @@ import { Button, Text, ActionButton, Checkbox, Divider } from '@react-spectrum/s
 import { style } from '@react-spectrum/s2/style' with { type: 'macro' }
 import ChevronLeft from '@react-spectrum/s2/icons/ChevronLeft'
 import type { AttendeeColumnConfig, AttendeeFilters, Attendee, FilterMenuConfig } from '../../types/attendee'
+import { formatRegisteredDateMmDdYyyy } from '../../types/attendee'
 import { COLORS } from '../../styles/designSystem'
 
 interface AttendeeFiltersComponentProps {
@@ -169,7 +170,7 @@ interface FilterMenuProps {
 }
 
 const FilterMenu: React.FC<FilterMenuProps> = ({ menu, selectedValues, onToggle }) => {
-  const [isExpanded, setIsExpanded] = React.useState(true)
+  const [isExpanded, setIsExpanded] = React.useState(false)
 
   return (
     <div className={style({ paddingInline: 12 })}>
@@ -216,16 +217,24 @@ const FilterMenu: React.FC<FilterMenuProps> = ({ menu, selectedValues, onToggle 
  * Format filter value for display
  */
 function formatFilterValue(key: string, value: string): string {
-  // Boolean fields
-  if (key === 'checkedIn') {
+  if (
+    (key === 'checkedIn' || key === 'requiresTicket') &&
+    (value === 'true' || value === 'false')
+  ) {
     return value === 'true' ? 'Yes' : 'No'
   }
-  
+
   // Registration status
   if (key === 'registrationStatus') {
     return value.charAt(0).toUpperCase() + value.slice(1)
   }
-  
+
+  // Registration created-at (stored filter value is numeric epoch string)
+  if (key === 'creationTime') {
+    const formatted = formatRegisteredDateMmDdYyyy(Number(value))
+    if (formatted) return formatted
+  }
+
   return value
 }
 

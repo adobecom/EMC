@@ -179,6 +179,11 @@ export const EventInfoComponent: React.FC<EventInfoComponentProps> = ({
               variant="secondary"
             />
             <StatItem
+              label="Declined"
+              value={stats.declined.toString()}
+              variant="secondary"
+            />
+            <StatItem
               label="Checked In"
               value={stats.checkedIn.toString()}
               variant="secondary"

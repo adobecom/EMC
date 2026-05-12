@@ -53,7 +53,7 @@ import { EventFormProvider, useEventFormContext, useToast, useGroup } from '../.
 import { useEventFormSave } from '../../hooks/useEventFormSave'
 import { useCustomDetailPagePath } from '../../hooks/useCustomDetailPagePath'
 import { COLORS, Z_INDEX, TYPOGRAPHY, SURFACES } from '../../styles/designSystem'
-import { getEspEnvParam } from '../../config/constants'
+import { ENVIRONMENTS, getCurrentEnvironment, getEspEnvParam } from '../../config/constants'
 
 // ============================================================================
 // FORMAT SELECTION OVERLAY
@@ -494,7 +494,11 @@ const EventFormInner: React.FC<EventFormInnerProps> = ({ ims: _ims }) => {
     collision: EventApiResponse | null
     pendingAction: 'save' | 'publish'
   } | null>(null)
+  /** Extra fields for publishEvent while PROD confirmation AlertDialog is open */
+  const prodPublishExtraRef = useRef<Record<string, any> | undefined>(undefined)
+  const [prodPublishConfirmOpen, setProdPublishConfirmOpen] = useState(false)
   const [isCheckingUrl, setIsCheckingUrl] = useState(false)
+  const [sessionHasOpenForm, setSessionHasOpenForm] = useState(false)
   
   // Show toast when saveError changes
   useEffect(() => {
@@ -700,6 +704,60 @@ const EventFormInner: React.FC<EventFormInnerProps> = ({ ims: _ims }) => {
     shouldRunCustomDetailPagePathFlow,
   ])
 
+  const runPublishEvent = useCallback(
+    async (extraPayload?: Record<string, any>) => {
+      persistToStorage()
+      const result = await publishEvent({
+        extraPayload,
+        onSuccess: () => {
+          setPublished(true)
+          toast.success(
+            isPublished ? 'Event re-published successfully!' : 'Event published successfully!',
+            {
+              duration: 3000,
+              action: { label: 'View Events', onPress: () => navigate('/events') },
+            }
+          )
+        },
+        onError: (error) => {
+          console.error('Failed to publish event:', error)
+        },
+      })
+      if (result.success && result.eventId && !isEditMode) {
+        navigate(`/events/edit/${result.eventId}`, { replace: true })
+      }
+    },
+    [publishEvent, persistToStorage, setPublished, navigate, toast, isPublished, isEditMode]
+  )
+
+  const requestPublishAfterUrlResolved = useCallback(
+    async (extraPayload?: Record<string, any>) => {
+      if (getCurrentEnvironment() !== ENVIRONMENTS.PROD) {
+        await runPublishEvent(extraPayload)
+        return
+      }
+      prodPublishExtraRef.current = extraPayload
+      setProdPublishConfirmOpen(true)
+    },
+    [runPublishEvent]
+  )
+
+  const handleProdPublishConfirm = useCallback(() => {
+    const extra = prodPublishExtraRef.current
+    prodPublishExtraRef.current = undefined
+    setProdPublishConfirmOpen(false)
+    void runPublishEvent(extra)
+  }, [runPublishEvent])
+
+  const closeProdPublishDialog = useCallback(() => {
+    setProdPublishConfirmOpen(false)
+  }, [])
+
+  const cancelProdPublishDialog = useCallback(() => {
+    prodPublishExtraRef.current = undefined
+    setProdPublishConfirmOpen(false)
+  }, [])
+
   /**
    * Execute the actual save/publish after URL confirmation
    */
@@ -708,45 +766,27 @@ const EventFormInner: React.FC<EventFormInnerProps> = ({ ims: _ims }) => {
     detailPagePath: string
   ) => {
     setUrlDialogState(null)
-    persistToStorage()
-
     const extra = { detailPagePath }
 
     if (action === 'publish') {
-      const result = await publishEvent({
-        extraPayload: extra,
-        onSuccess: () => {
-          setPublished(true)
-          toast.success(
-            isPublished ? 'Event re-published successfully!' : 'Event published successfully!',
-            {
-              duration: 3000,
-              action: { label: 'View Events', onPress: () => navigate('/events') }
-            }
-          )
-        },
-        onError: (error) => {
-          console.error('Failed to publish event:', error)
-        }
-      })
-      if (result.success && result.eventId && !isEditMode) {
-        navigate(`/events/edit/${result.eventId}`, { replace: true })
-      }
-    } else {
-      const result = await saveDraft({
-        extraPayload: extra,
-        onSuccess: () => {
-          toast.success('Event saved successfully!')
-        },
-        onError: (error) => {
-          console.error('Failed to save event:', error)
-        }
-      })
-      if (result.success && result.eventId && !isEditMode) {
-        navigate(`/events/edit/${result.eventId}`, { replace: true })
-      }
+      await requestPublishAfterUrlResolved(extra)
+      return
     }
-  }, [publishEvent, saveDraft, persistToStorage, setPublished, navigate, toast, isPublished, isEditMode])
+
+    persistToStorage()
+    const result = await saveDraft({
+      extraPayload: extra,
+      onSuccess: () => {
+        toast.success('Event saved successfully!')
+      },
+      onError: (error) => {
+        console.error('Failed to save event:', error)
+      },
+    })
+    if (result.success && result.eventId && !isEditMode) {
+      navigate(`/events/edit/${result.eventId}`, { replace: true })
+    }
+  }, [requestPublishAfterUrlResolved, saveDraft, persistToStorage, toast, navigate, isEditMode])
 
   /**
    * Handle Save button click - saves to API + sessionStorage without advancing
@@ -782,32 +822,8 @@ const EventFormInner: React.FC<EventFormInnerProps> = ({ ims: _ims }) => {
     const { proceed, extraPayload } = await checkUrlPatternBeforeSave('publish')
     if (!proceed) return
 
-    persistToStorage()
-
-    const result = await publishEvent({
-      extraPayload,
-      onSuccess: () => {
-        setPublished(true)
-        toast.success(
-          isPublished ? 'Event re-published successfully!' : 'Event published successfully!',
-          {
-            duration: 3000,
-            action: {
-              label: 'View Events',
-              onPress: () => navigate('/events')
-            }
-          }
-        )
-      },
-      onError: (error) => {
-        console.error('Failed to publish event:', error)
-      }
-    })
-
-    if (result.success && result.eventId && !isEditMode) {
-      navigate(`/events/edit/${result.eventId}`, { replace: true })
-    }
-  }, [checkUrlPatternBeforeSave, publishEvent, persistToStorage, setPublished, navigate, toast, isPublished, isEditMode])
+    await requestPublishAfterUrlResolved(extraPayload)
+  }, [checkUrlPatternBeforeSave, requestPublishAfterUrlResolved])
   
   /**
    * Handle max step change from FormWizard
@@ -951,7 +967,7 @@ const EventFormInner: React.FC<EventFormInnerProps> = ({ ims: _ims }) => {
   // ============================================================================
   const sessionManagementComponent = (
     <FormCard>
-      <SessionManagementComponent />
+      <SessionManagementComponent onOpenFormChange={setSessionHasOpenForm} />
     </FormCard>
   )
   
@@ -1049,6 +1065,7 @@ const EventFormInner: React.FC<EventFormInnerProps> = ({ ims: _ims }) => {
         eventTypeLabel={getEventTypeLabel()}
         headerActions={renderHeaderActions()}
         sessionContent={sessionManagementComponent}
+        sessionHasOpenForm={sessionHasOpenForm}
       />
 
       {/* Format Selection Overlay — frosted glass + dialog */}
@@ -1080,6 +1097,28 @@ const EventFormInner: React.FC<EventFormInnerProps> = ({ ims: _ims }) => {
           <Text>
             You have unsaved changes. Save your work first, or discard to load this form for the
             selected group (your edits will be lost).
+          </Text>
+        </AlertDialog>
+      </DialogTrigger>
+
+      <DialogTrigger
+        isOpen={prodPublishConfirmOpen}
+        onOpenChange={(open) => {
+          if (!open) closeProdPublishDialog()
+        }}
+      >
+        <div style={{ display: 'none' }} />
+        <AlertDialog
+          title="Publish to production?"
+          variant="warning"
+          primaryActionLabel="Publish to production"
+          cancelLabel="Cancel"
+          onPrimaryAction={handleProdPublishConfirm}
+          onCancel={cancelProdPublishDialog}
+        >
+          <Text>
+            The event you are attempting to publish will be in production. Are you sure you want to
+            publish this event to production?
           </Text>
         </AlertDialog>
       </DialogTrigger>
