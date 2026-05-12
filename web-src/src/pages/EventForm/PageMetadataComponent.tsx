@@ -105,20 +105,21 @@ export const PageMetadataComponent: React.FC = () => {
     },
     onAfterSave: async (eventId: string) => {
       // Save/update the publishing profile after the event is saved
-      const currentMetadata = formDataRef.current?.metadata
-      if (!currentMetadata || Object.keys(currentMetadata).length === 0) {
-        return // Nothing to save
+      const savedMetadata = formDataRef.current?.metadata ?? {}
+      const hasMetadataKeys = Object.keys(savedMetadata).length > 0
+      const existingProfile = publishingProfileRef.current
+
+      if (!existingProfile?.profileId && !hasMetadataKeys) {
+        return // No profile yet and nothing to create
       }
-      
+
       try {
-        const existingProfile = publishingProfileRef.current
-        
         if (existingProfile?.profileId) {
-          // Update existing profile (ApiService refreshes modificationTime before PUT)
+          // Update existing profile (including clearing metadata to {})
           const updateResult = await apiService.updatePublishingProfile(existingProfile.profileId, {
             name: existingProfile.name,
             description: existingProfile.description,
-            metadata: currentMetadata,
+            metadata: savedMetadata,
             modificationTime: existingProfile.modificationTime,
           })
           if (
@@ -133,11 +134,11 @@ export const PageMetadataComponent: React.FC = () => {
             }
             bumpProfileHydrationTick()
           }
-        } else {
+        } else if (hasMetadataKeys) {
           // Create new profile and assign to event
           const createResult = await apiService.createPublishingProfile({
             name: `Event ${eventId} Profile`,
-            metadata: currentMetadata,
+            metadata: savedMetadata,
           })
           
           if (createResult && !('error' in createResult) && createResult.profileId) {

@@ -520,22 +520,23 @@ export function DataTable<T extends Record<string, any>>({
                     }}
                   >
                     <div
-                      className={style({ display: 'flex', alignItems: 'center', gap: 8 })}
+                      className="data-table-header-inner"
                       style={{ justifyContent: column.key === 'actions' ? 'flex-end' : 'flex-start' }}
                     >
-                      <Text UNSAFE_style={{
-                        fontWeight: 600,
-                        fontSize: '12px',
-                        color: isSorted ? 'var(--spectrum-global-color-gray-900)' : 'var(--spectrum-global-color-gray-600)'
-                      }}>
-                        {column.name}
-                      </Text>
-                      {isSortable && (
-                        <span style={{
-                          opacity: isSorted ? 1 : 0.3,
-                          display: 'flex',
-                          alignItems: 'center'
+                      <div className="data-table-header-label">
+                        <Text UNSAFE_style={{
+                          fontWeight: 600,
+                          fontSize: '12px',
+                          color: isSorted ? 'var(--spectrum-global-color-gray-900)' : 'var(--spectrum-global-color-gray-600)'
                         }}>
+                          {column.name}
+                        </Text>
+                      </div>
+                      {isSortable && (
+                        <span
+                          className="data-table-header-sort"
+                          style={{ opacity: isSorted ? 1 : 0.3 }}
+                        >
                           {isSorted
                             ? (sortDirection === 'asc' ? <SortUp /> : <SortDown />)
                             : <Sort />}
