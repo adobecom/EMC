@@ -5,6 +5,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { configService } from '../services/configService'
 import type { RsvpConfigField, AttendeeColumnConfig } from '../types/attendee'
+import { rsvpConfigUiLabel } from '../utils/rsvpConfigLabels'
 
 /**
  * Convert camelCase to Sentence Case
@@ -64,7 +65,7 @@ function transformConfigToColumns(config: RsvpConfigField[]): AttendeeColumnConf
   validFields.forEach(field => {
     columns.push({
       key: field.Field,
-      label: field.Label || camelToSentenceCase(field.Field),
+      label: rsvpConfigUiLabel(field, camelToSentenceCase),
       type: field.Type || 'text',
       fallback: '-',
       width: getColumnWidth(field.Field),

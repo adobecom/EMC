@@ -10,6 +10,7 @@ import { COLORS, SURFACES } from '../../styles/designSystem'
 import OpenIn from '@react-spectrum/s2/icons/OpenIn'
 import Move from '@react-spectrum/s2/icons/Move'
 import type { RsvpConfigField } from '../../types/attendee'
+import { rsvpConfigUiLabel } from '../../utils/rsvpConfigLabels'
 
 interface RsvpConfig {
   cloudType: string
@@ -42,15 +43,6 @@ interface RegistrationFieldsComponentProps {
 const convertString = (input: string): string => {
   const parts = input.replace(/([a-z])([A-Z])/g, '$1 $2')
   return parts.toUpperCase()
-}
-
-/** RSVP field list row: templated legal labels use Placeholder so the console stays scannable. */
-function rsvpFieldConsoleLabel(f: RsvpConfigField): string {
-  const label = f.Label?.trim() || ''
-  if (label.includes('[[')) {
-    return f.Placeholder?.trim() || convertString(f.Field)
-  }
-  return label || convertString(f.Field)
 }
 
 const fetchRsvpFormConfigs = async (): Promise<RsvpConfig[]> => {
@@ -126,7 +118,7 @@ export const RegistrationFieldsComponent: React.FC<RegistrationFieldsComponentPr
   // Build display fields list with original order preserved
   const allDisplayFields: DisplayField[] = validFields.map((f, idx) => ({
     fieldName: f.Field,
-    displayLabel: rsvpFieldConsoleLabel(f),
+    displayLabel: rsvpConfigUiLabel(f, convertString),
     isMandated: f.Required === 'x',
     originalIndex: idx
   }))
