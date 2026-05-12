@@ -3,6 +3,7 @@
     "defaultMode": "acceptEdits",
     "allow": [
       "Bash(ls *)",
+      "Bash(cd *)",
       "Bash(cat *)",
       "Bash(grep *)",
       "Bash(find *)",
