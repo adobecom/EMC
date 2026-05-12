@@ -70,6 +70,22 @@ interface SeriesOption {
   description?: string
 }
 
+const EVENT_FORM_WIZARD_TEST_IDS = {
+  root: 'event-form-wizard',
+  sideNav: 'event-form-side-nav',
+  dashboardButton: 'event-form-dashboard-button',
+  step: (stepId: string) => `event-form-step-${stepId}`,
+  progress: 'event-form-progress',
+  backButton: 'event-form-back-button',
+  previewPre: 'event-form-preview-pre',
+  previewPost: 'event-form-preview-post',
+  publishButton: 'event-form-publish-button',
+  saveButton: 'event-form-save-button',
+  nextButton: 'event-form-next-button',
+  stepHeading: 'event-form-step-heading',
+  statusBadge: 'event-form-status-badge',
+}
+
 /**
  * FormatSelectionOverlay - Full-screen frosted glass overlay with cloud/series selection
  * 
@@ -1054,6 +1070,7 @@ const EventFormInner: React.FC<EventFormInnerProps> = ({ ims: _ims }) => {
         onMaxStepChange={handleMaxStepChange}
         eventTypeLabel={getEventTypeLabel()}
         headerActions={renderHeaderActions()}
+        testIds={EVENT_FORM_WIZARD_TEST_IDS}
         sessionContent={sessionManagementComponent}
         sessionHasOpenForm={sessionHasOpenForm}
       />

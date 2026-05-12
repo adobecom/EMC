@@ -36,6 +36,14 @@ export interface TableAction<T> {
   onAction: (item: T) => void
 }
 
+export interface DataTableTestIds {
+  root?: string
+  emptyState?: string
+  pageInput?: string
+  header?: (columnKey: string) => string
+  row?: (itemKey: string) => string
+}
+
 interface DataTableProps<T> {
   columns: TableColumn<T>[]
   data: T[]
@@ -48,6 +56,7 @@ interface DataTableProps<T> {
   renderExpandedContent?: (item: T) => React.ReactNode
   expandedKeys?: Set<string>
   onToggleExpand?: (key: string) => void
+  testIds?: DataTableTestIds
 }
 
 const iconMap = {
@@ -275,7 +284,8 @@ export function DataTable<T extends Record<string, any>>({
   onVisibleItemsChange,
   renderExpandedContent,
   expandedKeys,
-  onToggleExpand
+  onToggleExpand,
+  testIds
 }: DataTableProps<T>): React.ReactElement {
   const isExpandable = !!renderExpandedContent
 
@@ -467,7 +477,7 @@ export function DataTable<T extends Record<string, any>>({
   if (data.length === 0 && !isLoading) {
     return (
       <div
-        data-testid="data-table-empty-state"
+        data-testid={testIds?.emptyState}
         className={style({
           display: 'flex',
           flexDirection: 'column',
@@ -489,7 +499,10 @@ export function DataTable<T extends Record<string, any>>({
   }
 
   return (
-    <div data-testid="data-table" className={style({ display: 'flex', flexDirection: 'column', gap: 12, height: '[100%]', width: '[100%]' })}>
+    <div
+      data-testid={testIds?.root ?? 'data-table'}
+      className={style({ display: 'flex', flexDirection: 'column', gap: 12, height: '[100%]', width: '[100%]' })}
+    >
       <DataTableScrollRegion layoutKey={scrollLayoutKey}>
         <table>
           <thead>
@@ -510,7 +523,7 @@ export function DataTable<T extends Record<string, any>>({
                 return (
                   <th
                     key={column.key}
-                    data-testid={`data-table-header-${column.key}`}
+                    data-testid={testIds?.header?.(column.key)}
                     onClick={() => isSortable && handleSort(column.key)}
                     className={className}
                     style={{
@@ -554,7 +567,7 @@ export function DataTable<T extends Record<string, any>>({
               const isExpanded = isExpandable && effectiveExpandedKeys.has(itemKey)
               return (
                 <React.Fragment key={itemKey}>
-                  <tr data-testid={`data-table-row-${itemKey}`} className={isExpanded ? 'expanded-parent' : ''}>
+                  <tr data-testid={testIds?.row?.(itemKey)} className={isExpanded ? 'expanded-parent' : ''}>
                     {isExpandable && (
                       <td className="data-table-td-nowrap" style={{ width: '40px', minWidth: '40px', padding: '0 8px', verticalAlign: 'middle' }}>
                         <ActionButton
@@ -639,7 +652,7 @@ export function DataTable<T extends Record<string, any>>({
           <div className={style({ display: 'flex', gap: 8, alignItems: 'center' })}>
             <input
               type="text"
-              data-testid="data-table-page-input"
+              data-testid={testIds?.pageInput}
               value={pageInputValue}
               onChange={(e) => handlePageInputChange(e.target.value)}
               onBlur={handlePageInputBlur}

@@ -7,6 +7,14 @@ import type { Attendee, AttendeeColumnConfig } from '../../types/attendee'
 import { formatRegisteredDateMmDdYyyy, getAttendeeName } from '../../types/attendee'
 import { DataTable, TableColumn } from '../../components/shared'
 
+const ATTENDEE_TABLE_TEST_IDS = {
+  root: 'attendee-table',
+  emptyState: 'attendee-table-empty-state',
+  pageInput: 'attendee-table-page-input',
+  header: (columnKey: string) => `attendee-table-header-${columnKey}`,
+  row: (itemKey: string) => `attendee-table-row-${itemKey}`,
+}
+
 interface AttendeeTableComponentProps {
   attendees: Attendee[]
   columnConfig: AttendeeColumnConfig[]
@@ -126,6 +134,7 @@ export const AttendeeTableComponent: React.FC<AttendeeTableComponentProps> = ({
         getItemKey={(item) => item.attendeeId}
         pageSize={20}
         emptyState={emptyState}
+        testIds={ATTENDEE_TABLE_TEST_IDS}
       />
     </div>
   )
