@@ -13,7 +13,7 @@ import { style } from '@react-spectrum/s2/style' with { type: 'macro' }
 import type { Attendee, AttendeeColumnConfig } from '../../types/attendee'
 import type { Campaign } from '../../types/campaign'
 import { generateCsv, downloadCsv, CsvColumn, sanitizeFilename, exportDatetime } from '../../utils/csvExport'
-import { getAttendeeName } from '../../types/attendee'
+import { formatRegisteredDateMmDdYyyy, getAttendeeName } from '../../types/attendee'
 
 const CAMPAIGN_NAME_KEY = '__campaignName__'
 
@@ -97,7 +97,12 @@ export const ExportDialog: React.FC<ExportDialogProps> = ({
 
     const data = attendees.map(a => {
       const row: Record<string, unknown> = { ...a }
+      if (typeof row.checkedIn === 'boolean') row.checkedIn = row.checkedIn ? 'Yes' : 'No'
+      if (typeof row.requiresTicket === 'boolean') {
+        row.requiresTicket = row.requiresTicket ? 'Yes' : 'No'
+      }
       row.name = getAttendeeName(a)
+      row.creationTime = formatRegisteredDateMmDdYyyy(a.creationTime) || ''
       if (includeCampaignName) {
         row.campaignName = campaignLookup.get(String(a.campaignId ?? '')) ?? ''
       }

@@ -1,6 +1,15 @@
 {
   "permissions": {
+    "defaultMode": "acceptEdits",
     "allow": [
+      "Bash(ls *)",
+      "Bash(cd *)",
+      "Bash(cat *)",
+      "Bash(grep *)",
+      "Bash(find *)",
+      "Bash(echo *)",
+      "Bash(pwd)",
+      "Bash(which *)",
       "Bash(npm run lint)",
       "Bash(npm run lint:fix)",
       "Bash(npm run type-check)",
@@ -26,7 +35,13 @@
     ],
     "deny": [
       "Bash(npm run deploy:stage)",
-      "Bash(npm run deploy:prod)"
+      "Bash(npm run deploy:prod)",
+      "Bash(rm -rf *)",
+      "Bash(git push *)",
+      "Bash(git reset --hard *)",
+      "Bash(git merge *)",
+      "Bash(* --force)",
+      "Bash(sudo *)"
     ]
   }
 }

@@ -56,6 +56,7 @@ export interface Attendee {
   isGuest?: boolean
   invitedBy?: string
   shareInfoWithPartners?: boolean
+  requiresTicket?: boolean
   ccSentiment?: string
 
   // Campaign tracking (set via URL params, stored by the API)
@@ -193,5 +194,20 @@ export function calculateAttendeeStats(attendees: Attendee[]): AttendeeStats {
 export function getAttendeeName(attendee: Attendee): string {
   const name = [attendee.firstName, attendee.lastName].filter(Boolean).join(' ')
   return name || '-'
+}
+
+/**
+ * Format an attendee registration timestamp for display and CSV (MM/DD/YYYY, local calendar).
+ */
+export function formatRegisteredDateMmDdYyyy(
+  timestamp: number | undefined | null
+): string {
+  if (timestamp == null || Number.isNaN(Number(timestamp))) return ''
+  const d = new Date(timestamp)
+  if (Number.isNaN(d.getTime())) return ''
+  const mm = String(d.getMonth() + 1).padStart(2, '0')
+  const dd = String(d.getDate()).padStart(2, '0')
+  const yyyy = d.getFullYear()
+  return `${mm}/${dd}/${yyyy}`
 }
 

@@ -89,6 +89,14 @@ const CampaignExportDialog: React.FC<CampaignExportDialogProps> = ({
   )
 }
 
+const CAMPAIGNS_TABLE_TEST_IDS = {
+  root: 'campaigns-table',
+  emptyState: 'campaigns-table-empty-state',
+  pageInput: 'campaigns-table-page-input',
+  header: (columnKey: string) => `campaigns-table-header-${columnKey}`,
+  row: (itemKey: string) => `campaigns-table-row-${itemKey}`,
+}
+
 interface CampaignsTabProps {
   eventId: string
   event: EventApiResponse | null
@@ -528,6 +536,7 @@ export const CampaignsTab: React.FC<CampaignsTabProps> = ({
           data={filteredCampaigns}
           getItemKey={(item) => item.campaignId}
           pageSize={tablePageSize}
+          testIds={CAMPAIGNS_TABLE_TEST_IDS}
           emptyState={campaignsTableEmptyState}
         />
       </div>
