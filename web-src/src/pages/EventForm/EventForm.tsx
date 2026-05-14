@@ -723,7 +723,7 @@ const EventFormInner: React.FC<EventFormInnerProps> = ({ ims: _ims }) => {
   const runPublishEvent = useCallback(
     async (extraPayload?: Record<string, any>) => {
       persistToStorage()
-      await publishEvent({
+      const result = await publishEvent({
         extraPayload,
         onSuccess: () => {
           setPublished(true)
@@ -739,8 +739,11 @@ const EventFormInner: React.FC<EventFormInnerProps> = ({ ims: _ims }) => {
           console.error('Failed to publish event:', error)
         },
       })
+      if (result.success && result.eventId && !isEditMode) {
+        navigate(`/events/edit/${result.eventId}`, { replace: true })
+      }
     },
-    [publishEvent, persistToStorage, setPublished, navigate, toast, isPublished]
+    [publishEvent, persistToStorage, setPublished, navigate, toast, isPublished, isEditMode]
   )
 
   const requestPublishAfterUrlResolved = useCallback(
@@ -787,7 +790,7 @@ const EventFormInner: React.FC<EventFormInnerProps> = ({ ims: _ims }) => {
     }
 
     persistToStorage()
-    await saveDraft({
+    const result = await saveDraft({
       extraPayload: extra,
       onSuccess: () => {
         toast.success('Event saved successfully!')
@@ -796,7 +799,10 @@ const EventFormInner: React.FC<EventFormInnerProps> = ({ ims: _ims }) => {
         console.error('Failed to save event:', error)
       },
     })
-  }, [requestPublishAfterUrlResolved, saveDraft, persistToStorage, toast])
+    if (result.success && result.eventId && !isEditMode) {
+      navigate(`/events/edit/${result.eventId}`, { replace: true })
+    }
+  }, [requestPublishAfterUrlResolved, saveDraft, persistToStorage, toast, navigate, isEditMode])
 
   /**
    * Handle Save button click - saves to API + sessionStorage without advancing
@@ -817,9 +823,13 @@ const EventFormInner: React.FC<EventFormInnerProps> = ({ ims: _ims }) => {
         console.error('Failed to save event:', error)
       }
     })
-    
+
+    if (result.success && result.eventId && !isEditMode) {
+      navigate(`/events/edit/${result.eventId}`, { replace: true })
+    }
+
     return result.success
-  }, [checkUrlPatternBeforeSave, saveDraft, persistToStorage, toast, isEditMode])
+  }, [checkUrlPatternBeforeSave, saveDraft, persistToStorage, toast, isEditMode, navigate])
   
   /**
    * Handle Publish/Re-publish button click
