@@ -25,7 +25,7 @@ export const EventTagsComponent: React.FC = () => {
   } = useEventFormComponent({
     componentId: 'event-tags',
   })
-  
+
   const selectedTags = formData.tags || []
   
   // ============================================================================

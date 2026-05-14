@@ -264,7 +264,7 @@ export interface EventApiResponse {
   localizations?: Record<string, EventLocalization>
   venue?: Record<string, any>
   agenda?: AgendaDataItem[] // Localizable array
-  rsvpFormFields?: Record<string, any>
+  rsvpFormFields?: { fields: { field: string; required?: boolean; options?: string[] }[] }
   rsvpDescription?: string // Localizable
   video?: VideoData
   registration?: RegistrationData
@@ -614,7 +614,7 @@ export interface EventFormData {
   registration?: RegistrationData
   marketoFormUrl?: string
   marketoIntegration?: MarketoIntegrationData
-  rsvpFormFields?: Record<string, any>
+  rsvpFormFields?: { field: string; required?: boolean; options?: string[] }[]
   visibleRsvpFields?: string[]
   requiredRsvpFields?: string[]
   /**
