@@ -7,7 +7,7 @@ import {
   useEventFormContext,
   ComponentCallbacks,
 } from '../contexts/EventFormContext'
-import { EventFormData } from '../types/domain'
+import { EventFormData, EventApiResponse } from '../types/domain'
 
 /**
  * Options for the useEventFormComponent hook
@@ -30,13 +30,13 @@ export interface UseEventFormComponentOptions {
    * Use for component-specific API calls (venue creation, image upload, etc.)
    * These run in parallel across all components
    */
-  onAfterSave?: (eventId: string, eventResponse: any) => Promise<void>
+  onAfterSave?: (eventId: string, eventResponse: EventApiResponse) => Promise<void>
   
   /**
    * Called when event data is loaded from API
    * Use to populate component-specific state from the response
    */
-  onLoadResponse?: (eventResponse: any) => void
+  onLoadResponse?: (eventResponse: EventApiResponse) => void
   
   /**
    * Validation function called before save

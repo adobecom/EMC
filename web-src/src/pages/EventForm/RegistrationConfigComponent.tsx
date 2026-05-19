@@ -139,6 +139,7 @@ export const RegistrationConfigComponent: React.FC = () => {
             <TooltipTrigger delay={0}>
               <ActionButton
                 isQuiet
+                aria-label="Attendee limit help"
               >
                 <InfoCircle />
               </ActionButton>
@@ -169,6 +170,7 @@ export const RegistrationConfigComponent: React.FC = () => {
             <TooltipTrigger delay={0}>
               <ActionButton
                 isQuiet
+                aria-label="Disable registration when limit reached help"
               >
                 <InfoCircle />
               </ActionButton>
@@ -191,7 +193,7 @@ export const RegistrationConfigComponent: React.FC = () => {
               <TooltipTrigger delay={0}>
                 <ActionButton
                   isQuiet
-                  
+                  aria-label="Guest registration help"
                 >
                   <InfoCircle />
                 </ActionButton>
@@ -216,7 +218,7 @@ export const RegistrationConfigComponent: React.FC = () => {
                 <TooltipTrigger delay={0}>
                   <ActionButton
                     isQuiet
-                    
+                    aria-label="Contact host help"
                   >
                     <InfoCircle />
                   </ActionButton>

@@ -183,7 +183,7 @@ export const RegistrationsTab: React.FC<RegistrationsTabProps> = ({
               marginBottom: '16px'
             }}>
               {isAdmin && filteredAttendees.length > 0 && (
-                <ActionButton data-testid="export-button" onPress={() => setIsExportOpen(true)}>
+                <ActionButton data-testid="export-button" aria-label="Export attendees" onPress={() => setIsExportOpen(true)}>
                   <Download />
                 </ActionButton>
               )}

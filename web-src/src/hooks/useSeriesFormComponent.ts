@@ -8,6 +8,7 @@ import {
   ComponentCallbacks,
   SeriesFormData,
 } from '../contexts/SeriesFormContext'
+import { SeriesApiResponse } from '../types/domain'
 
 /**
  * Options for the useSeriesFormComponent hook
@@ -26,12 +27,12 @@ export interface UseSeriesFormComponentOptions {
   /**
    * Called after the series save completes successfully
    */
-  onAfterSave?: (seriesId: string, seriesResponse: any) => Promise<void>
+  onAfterSave?: (seriesId: string, seriesResponse: SeriesApiResponse) => Promise<void>
   
   /**
    * Called when series data is loaded from API
    */
-  onLoadResponse?: (seriesResponse: any) => void
+  onLoadResponse?: (seriesResponse: SeriesApiResponse) => void
   
   /**
    * Validation function called before save

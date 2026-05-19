@@ -15,7 +15,7 @@ import { TableColumn } from '../../components/shared/DataTable'
 import { StatusBadge, ResourceDashboardLayout, BlurredLoadingOverlay } from '../../components/shared'
 import LayersIllustration from '@react-spectrum/s2/illustrations/linear/Layers'
 import { SeriesDashboardItem, EventApiResponse, SeriesApiResponse } from '../../types/domain'
-import { apiService, cachedApi } from '../../services/api'
+import { cachedApi } from '../../services/api'
 import { IMS } from '../../types'
 import { 
   seriesHistoryEnrichmentManager, 
@@ -364,7 +364,7 @@ export const SeriesDashboard: React.FC<SeriesDashboardProps> = () => {
             throw new Error('Failed to fetch series data')
           }
           // ESP validates full Series body on PUT (seriesName, templateId, modificationTime, etc.)
-          await apiService.publishSeries(item.seriesId, fullSeries as SeriesApiResponse)
+          await cachedApi.publishSeries(item.seriesId, fullSeries as SeriesApiResponse)
           
           // Reload data to reflect changes
           await loadSeriesData()
@@ -381,7 +381,7 @@ export const SeriesDashboard: React.FC<SeriesDashboardProps> = () => {
           if ('error' in fullSeries) {
             throw new Error('Failed to fetch series data')
           }
-          await apiService.unpublishSeries(item.seriesId, fullSeries as SeriesApiResponse)
+          await cachedApi.unpublishSeries(item.seriesId, fullSeries as SeriesApiResponse)
           
           // Reload data to reflect changes
           await loadSeriesData()
@@ -405,7 +405,7 @@ export const SeriesDashboard: React.FC<SeriesDashboardProps> = () => {
           if ('error' in fullSeries) {
             throw new Error('Failed to fetch series data')
           }
-          await apiService.archiveSeries(item.seriesId, fullSeries as SeriesApiResponse)
+          await cachedApi.archiveSeries(item.seriesId, fullSeries as SeriesApiResponse)
           
           // Reload data to reflect changes
           await loadSeriesData()

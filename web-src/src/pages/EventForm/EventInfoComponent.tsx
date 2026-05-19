@@ -277,6 +277,7 @@ export const EventInfoComponent: React.FC = () => {
             <TooltipTrigger delay={0}>
               <ActionButton
                 isQuiet
+                aria-label="Private event help"
               >
                 <InfoCircle />
               </ActionButton>
@@ -295,6 +296,7 @@ export const EventInfoComponent: React.FC = () => {
             <TooltipTrigger delay={0}>
               <ActionButton
                 isQuiet
+                aria-label="Invite only help"
               >
                 <InfoCircle />
               </ActionButton>
@@ -350,6 +352,7 @@ export const EventInfoComponent: React.FC = () => {
           <TooltipTrigger delay={0}>
             <ActionButton
               isQuiet
+              aria-label="SEO friendly title help"
             >
               <InfoCircle />
             </ActionButton>

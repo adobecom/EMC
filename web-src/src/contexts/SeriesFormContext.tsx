@@ -98,6 +98,7 @@ type SeriesFormAction =
   | { type: 'SET_EDIT_MODE'; payload: boolean }
   | { type: 'SET_SERIES_RESPONSE'; payload: SeriesApiResponse | null }
   | { type: 'UPDATE_FORM_DATA'; payload: Partial<SeriesFormData> }
+  | { type: 'POPULATE_FORM_DATA'; payload: Partial<SeriesFormData> }
   | { type: 'RESET_FORM_DATA'; payload: SeriesFormData }
   | { type: 'SET_DIRTY'; payload: boolean }
   | { type: 'SET_SAVE_STATUS'; payload: SaveStatus }
@@ -126,6 +127,7 @@ export interface SeriesFormContextValue {
   
   // Actions
   updateFormData: (updates: Partial<SeriesFormData>) => void
+  populateFormDataFromResponse: (updates: Partial<SeriesFormData>) => void
   setSeriesResponse: (response: SeriesApiResponse | null) => void
   setSeriesId: (id: string | null) => void
   setEditMode: (isEdit: boolean) => void
@@ -195,6 +197,13 @@ function seriesFormReducer(state: SeriesFormState, action: SeriesFormAction): Se
         ...state,
         formData: { ...state.formData, ...action.payload },
         isDirty: true
+      }
+
+    case 'POPULATE_FORM_DATA':
+      return {
+        ...state,
+        formData: { ...state.formData, ...action.payload },
+        isDirty: false
       }
     
     case 'RESET_FORM_DATA':
@@ -274,6 +283,10 @@ export const SeriesFormProvider: React.FC<SeriesFormProviderProps> = ({
   const updateFormData = useCallback((updates: Partial<SeriesFormData>) => {
     dispatch({ type: 'UPDATE_FORM_DATA', payload: updates })
   }, [])
+
+  const populateFormDataFromResponse = useCallback((updates: Partial<SeriesFormData>) => {
+    dispatch({ type: 'POPULATE_FORM_DATA', payload: updates })
+  }, [])
   
   const setSeriesResponse = useCallback((response: SeriesApiResponse | null) => {
     dispatch({ type: 'SET_SERIES_RESPONSE', payload: response })
@@ -350,6 +363,7 @@ export const SeriesFormProvider: React.FC<SeriesFormProviderProps> = ({
     
     // Actions
     updateFormData,
+    populateFormDataFromResponse,
     setSeriesResponse,
     setSeriesId,
     setEditMode,
@@ -367,6 +381,7 @@ export const SeriesFormProvider: React.FC<SeriesFormProviderProps> = ({
   }), [
     state,
     updateFormData,
+    populateFormDataFromResponse,
     setSeriesResponse,
     setSeriesId,
     setEditMode,

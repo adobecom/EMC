@@ -350,7 +350,7 @@ export const SpeakersDashboard: React.FC<SpeakersDashboardProps> = () => {
 
       if (editingSpeaker) {
         // Update existing speaker
-        result = await apiService.updateSpeaker(
+        result = await cachedApi.updateSpeaker(
           speakerPayload as Record<string, unknown>,
           selectedSeriesId
         )
@@ -392,7 +392,7 @@ export const SpeakersDashboard: React.FC<SpeakersDashboardProps> = () => {
         toast.success('Speaker updated successfully!')
       } else {
         // Create new speaker
-        result = await apiService.createSpeaker(
+        result = await cachedApi.createSpeaker(
           speakerPayload as Record<string, unknown>,
           selectedSeriesId
         )
@@ -455,7 +455,7 @@ export const SpeakersDashboard: React.FC<SpeakersDashboardProps> = () => {
       }
       
       // Delete the speaker from the series
-      const result = await apiService.deleteSpeaker(speakerToDelete.speakerId, selectedSeriesId)
+      const result = await cachedApi.deleteSpeaker(speakerToDelete.speakerId, selectedSeriesId)
       
       if (result && 'error' in result) {
         throw new Error(result.error)

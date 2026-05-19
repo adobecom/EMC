@@ -17,6 +17,7 @@ import { detectSocialPlatform, isValidUrl, toApiSocialLink } from '../../utils/s
 import { cachedApi } from '../../services/api'
 import { getSpeakerPayload } from '../../services/payloadBuilders'
 import { uploadSpeakerSeriesImage } from '../../services/speakerImageUpload'
+import { useToast } from '../../contexts'
 
 interface SpeakerPickerDialogProps {
   isOpen: boolean
@@ -57,6 +58,7 @@ export const SpeakerPickerDialog: React.FC<SpeakerPickerDialogProps> = ({
   locale,
   onSpeakersRefresh,
 }) => {
+  const toast = useToast()
   const [view, setView] = useState<'select' | 'create' | 'localize'>('select')
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedSpeakerId, setSelectedSpeakerId] = useState<string | null>(null)
@@ -148,7 +150,11 @@ export const SpeakerPickerDialog: React.FC<SpeakerPickerDialogProps> = ({
         seriesId
       )
       const result = await cachedApi.updateSpeaker(payload as any, seriesId)
-      if (result && !('error' in result)) {
+      if (result && 'error' in result) {
+        toast.error('Failed to save speaker localization')
+        return
+      }
+      if (result) {
         const updated = result.speaker ?? result
         const mergedSpeaker: SeriesSpeaker = {
           ...speakerToLocalize,
@@ -164,10 +170,11 @@ export const SpeakerPickerDialog: React.FC<SpeakerPickerDialogProps> = ({
       }
     } catch (err) {
       console.error('Failed to save speaker localization:', err)
+      toast.error('Failed to save speaker localization')
     } finally {
       setIsSavingLocalization(false)
     }
-  }, [speakerToLocalize, localizeForm, locale, seriesId, onSpeakersRefresh, onSelect, onClose])
+  }, [speakerToLocalize, localizeForm, locale, seriesId, onSpeakersRefresh, onSelect, onClose, toast])
 
   const updateCreateField = useCallback(<K extends keyof CreateFormState>(field: K, value: CreateFormState[K]) => {
     setCreateForm(prev => ({ ...prev, [field]: value }))

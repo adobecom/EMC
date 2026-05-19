@@ -493,6 +493,7 @@ const EventFormInner: React.FC<EventFormInnerProps> = ({ ims: _ims }) => {
     setSeriesId,
     loadFromStorage,
     persistToStorage,
+    getRegisteredComponents,
     state,
   } = useEventFormContext()
 
@@ -556,6 +557,16 @@ const EventFormInner: React.FC<EventFormInnerProps> = ({ ims: _ims }) => {
       setLocale(eventLocale)
       const mappedData = mapApiResponseToFormData(response as EventApiResponse, eventLocale)
       populateFormDataFromResponse(mappedData)
+
+      for (const component of getRegisteredComponents()) {
+        if (component.callbacks.onLoadResponse) {
+          try {
+            component.callbacks.onLoadResponse(response as EventApiResponse)
+          } catch (err) {
+            console.error(`Error in onLoadResponse for component ${component.id}:`, err)
+          }
+        }
+      }
     } catch (err) {
       console.error('Failed to load event:', err)
       setLoadError('Failed to load event data')
@@ -570,6 +581,7 @@ const EventFormInner: React.FC<EventFormInnerProps> = ({ ims: _ims }) => {
     setMaxStepReached,
     setLocale,
     populateFormDataFromResponse,
+    getRegisteredComponents,
   ])
 
   const reloadAfterGroupChange = useCallback(async () => {
