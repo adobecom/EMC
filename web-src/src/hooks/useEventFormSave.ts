@@ -312,6 +312,7 @@ export function useEventFormSave() {
     }
     
     // RSVP form fields — array order = display order; required/options are per-field overrides.
+    // TODO(PIM): serialize rsvpOptionSelections when event API exposes per-option RSVP selection.
     if (mergedData.rsvpFormFields?.length) {
       payload.rsvpFormFields = { fields: mergedData.rsvpFormFields }
     }
