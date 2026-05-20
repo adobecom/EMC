@@ -72,7 +72,7 @@ export const HeadingWithTooltip: React.FC<HeadingWithTooltipProps> = ({
       </Heading>
 
       <TooltipTrigger delay={0}>
-        <ActionButton isQuiet>
+        <ActionButton isQuiet aria-label={typeof tooltip === 'string' ? tooltip : 'More information'}>
           <InfoCircle />
         </ActionButton>
         <Tooltip>{tooltip}</Tooltip>

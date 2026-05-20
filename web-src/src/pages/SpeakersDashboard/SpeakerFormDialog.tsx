@@ -386,7 +386,7 @@ export const SpeakerFormDialog: React.FC<SpeakerFormDialogProps> = ({
                                 isInvalid={!!(socialLink.url && !valid)}
                               />
 
-                              <ActionButton onPress={() => handleRemoveSocialLink(index)} isQuiet>
+                              <ActionButton onPress={() => handleRemoveSocialLink(index)} isQuiet aria-label={`Remove social link ${index + 1}`}>
                                 <RemoveCircle />
                               </ActionButton>
                             </div>

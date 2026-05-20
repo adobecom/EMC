@@ -369,6 +369,7 @@ export function useEventFormSave() {
           merged = { ...merged, ...contribution }
         } catch (error) {
           console.error(`Error gathering payload from component ${component.id}:`, error)
+          throw new Error(`Failed to gather data from ${component.id}`)
         }
       }
     }

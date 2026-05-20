@@ -22,7 +22,7 @@ import { TableColumn } from '../../components/shared/DataTable'
 import { StatusBadge, ResourceDashboardLayout, BlurredLoadingOverlay } from '../../components/shared'
 import CalendarIllustration from '@react-spectrum/s2/illustrations/linear/Calendar'
 import { EventDashboardItem } from '../../types/domain'
-import { apiService, cachedApi } from '../../services/api'
+import { cachedApi } from '../../services/api'
 import { thumbnailEnrichmentManager, venueEnrichmentManager, historyEnrichmentManager, EventThumbnail, EventVenueInfo, EventHistoryInfo } from '../../services/eventEnrichment'
 import { SPACING, SHIMMER_BASE, SURFACES } from '../../styles/designSystem'
 import { seriesEnrichmentManager, SeriesInfo } from '../../services/seriesEnrichment'
@@ -117,7 +117,7 @@ export const EventsDashboard: React.FC<EventsDashboardProps> = () => {
         eventId: item.eventId,
         eventName: item.localizations?.[item.defaultLocale || 'en-US']?.title || item.title || item.enTitle || 'Untitled Event',
         seriesId: item.seriesId,
-        seriesName: item.seriesId, // TODO: Resolve series name from series ID
+        seriesName: 'Unknown series',
         cloudType: item.cloudType,
         eventType: item.eventType,
         published: item.published,
@@ -385,8 +385,8 @@ export const EventsDashboard: React.FC<EventsDashboardProps> = () => {
 
           // ApiService.publishEvent / unpublishEvent run prepareEslEventPutPayload (submission filter + ESL excludes)
           const result = isPublish
-            ? await apiService.publishEvent(item.eventId, eventResponse)
-            : await apiService.unpublishEvent(item.eventId, eventResponse)
+            ? await cachedApi.publishEvent(item.eventId, eventResponse)
+            : await cachedApi.unpublishEvent(item.eventId, eventResponse)
 
           if ('error' in result) {
             toast.error(`Failed to ${isPublish ? 'publish' : 'unpublish'} event: ${result.error}`)
@@ -491,7 +491,7 @@ export const EventsDashboard: React.FC<EventsDashboardProps> = () => {
           }
           
           // Create the event directly via API
-          const result = await apiService.createEventExternal(clonedEventData, locale)
+          const result = await cachedApi.createEvent(clonedEventData, locale)
           
           if ('error' in result) {
             toast.error(`Failed to clone event: ${result.error}`)
@@ -895,7 +895,7 @@ export const EventsDashboard: React.FC<EventsDashboardProps> = () => {
     setActionInProgress(event.eventId)
     
     try {
-      const result = await apiService.deleteEventExternal(event.eventId)
+      const result = await cachedApi.deleteEvent(event.eventId)
       
       if ('error' in result) {
         toast.error(`Failed to delete event: ${result.error}`)

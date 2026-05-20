@@ -116,6 +116,7 @@ const SeriesFormInner: React.FC<SeriesFormInnerProps> = ({ ims: _ims }) => {
     isPublished,
     state,
     updateFormData,
+    populateFormDataFromResponse,
     setSeriesId,
     setEditMode,
     setSeriesResponse,
@@ -169,7 +170,7 @@ const SeriesFormInner: React.FC<SeriesFormInnerProps> = ({ ims: _ims }) => {
       setPublished((response as SeriesApiResponse).seriesStatus === 'published')
       
       const mappedData = mapApiResponseToFormData(response as SeriesApiResponse)
-      updateFormData(mappedData)
+      populateFormDataFromResponse(mappedData)
       
     } catch (err) {
       console.error('Failed to load series:', err)
@@ -216,9 +217,9 @@ const SeriesFormInner: React.FC<SeriesFormInnerProps> = ({ ims: _ims }) => {
       
       let result
       if (isEditMode && seriesId) {
-        result = await apiService.updateSeriesExternal(seriesId, payload)
+        result = await cachedApi.updateSeries(seriesId, payload)
       } else {
-        result = await apiService.createSeriesExternal(payload)
+        result = await cachedApi.createSeries(payload)
       }
       
       if ('error' in result) {
@@ -228,6 +229,7 @@ const SeriesFormInner: React.FC<SeriesFormInnerProps> = ({ ims: _ims }) => {
       const mutationSeries = result as SeriesApiResponse
       if (!isEditMode && mutationSeries.seriesId) {
         setSeriesId(mutationSeries.seriesId)
+        navigate(`/series/edit/${mutationSeries.seriesId}`, { replace: true })
       }
 
       const idToRefresh = mutationSeries.seriesId ?? seriesId
@@ -268,6 +270,7 @@ const SeriesFormInner: React.FC<SeriesFormInnerProps> = ({ ims: _ims }) => {
     setSeriesResponse,
     toast,
     updateFormData,
+    navigate,
   ])
   
   /**
@@ -292,7 +295,7 @@ const SeriesFormInner: React.FC<SeriesFormInnerProps> = ({ ims: _ims }) => {
       if (!isEditMode || !seriesId) {
         // Step 1: Create the series first (as draft)
         const createPayload = buildApiPayload(corrected, undefined, false)
-        const createResult = await apiService.createSeriesExternal(createPayload)
+        const createResult = await cachedApi.createSeries(createPayload)
         
         if ('error' in createResult) {
           throw new Error(createResult.error?.message || 'Failed to create series')
@@ -304,6 +307,7 @@ const SeriesFormInner: React.FC<SeriesFormInnerProps> = ({ ims: _ims }) => {
         
         const newSeriesId = createResult.seriesId
         setSeriesId(newSeriesId)
+        navigate(`/series/edit/${newSeriesId}`, { replace: true })
         seriesIdForCanonicalRefresh = newSeriesId
         
         // Step 2: Publish the newly created series
@@ -321,7 +325,7 @@ const SeriesFormInner: React.FC<SeriesFormInnerProps> = ({ ims: _ims }) => {
           }
         }
         const publishPayload = buildApiPayload(corrected, publishModificationTime, true)
-        result = await apiService.publishSeries(newSeriesId, publishPayload)
+        result = await cachedApi.publishSeries(newSeriesId, publishPayload)
       } else {
         seriesIdForCanonicalRefresh = seriesId
         // For existing series: use publishSeries directly
@@ -339,7 +343,7 @@ const SeriesFormInner: React.FC<SeriesFormInnerProps> = ({ ims: _ims }) => {
           }
         }
         const publishPayload = buildApiPayload(corrected, modificationTime, true)
-        result = await apiService.publishSeries(seriesId, publishPayload)
+        result = await cachedApi.publishSeries(seriesId, publishPayload)
       }
       
       if ('error' in result) {
@@ -431,7 +435,7 @@ const SeriesFormInner: React.FC<SeriesFormInnerProps> = ({ ims: _ims }) => {
       }}
     >
       <SingleStepFormLayout
-        title="Create series"
+        title={isEditMode ? 'Edit series' : 'Create series'}
         sideNavCategory="SERIES CREATION"
         dashboardLabel="Dashboard"
         dashboardPath="/series"
