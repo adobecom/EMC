@@ -54,6 +54,7 @@ export interface SpeakerFormSubmitData {
   lastName: string
   socialLinks: SocialLink[]
   localizationDrafts: Record<string, SpeakerDashboardLocalizationDraft>
+  removedImageId?: string
 }
 
 interface SpeakerFormDialogProps {
@@ -122,6 +123,7 @@ export const SpeakerFormDialog: React.FC<SpeakerFormDialogProps> = ({
   >(emptyLocalizationDrafts)
   const [selectedLocale, setSelectedLocale] = useState<string>(DEFAULT_LOCALE)
   const [pendingFile, setPendingFile] = useState<File | null>(null)
+  const [removedImageId, setRemovedImageId] = useState<string | undefined>(undefined)
   const [shouldCascade, setShouldCascade] = useState(cascadeToEvents ?? false)
 
   const isEditing = !!speaker
@@ -144,11 +146,13 @@ export const SpeakerFormDialog: React.FC<SpeakerFormDialogProps> = ({
       setLocalizationDrafts(localizationDraftsFromSpeaker(speaker))
       setSelectedLocale(DEFAULT_LOCALE)
       setShouldCascade(cascadeToEvents ?? false)
+      setRemovedImageId(undefined)
     } else if (isOpen) {
       setFormState(initialFormState)
       setLocalizationDrafts(emptyLocalizationDrafts())
       setSelectedLocale(DEFAULT_LOCALE)
       setPendingFile(null)
+      setRemovedImageId(undefined)
       setShouldCascade(false)
     }
   }, [isOpen, speaker, cascadeToEvents])
@@ -217,10 +221,11 @@ export const SpeakerFormDialog: React.FC<SpeakerFormDialogProps> = ({
   }, [])
 
   const handleFileRemove = useCallback(() => {
+    setRemovedImageId(formState.imageId)
     setPendingFile(null)
     updateField('imageUrl', undefined)
     updateField('imageId', undefined)
-  }, [updateField])
+  }, [updateField, formState.imageId])
 
   const handleSubmit = useCallback(async () => {
     if (!formState.firstName.trim() || !formState.lastName.trim()) {
@@ -234,6 +239,7 @@ export const SpeakerFormDialog: React.FC<SpeakerFormDialogProps> = ({
         .filter((link) => link.url.trim())
         .map((link) => toApiSocialLink(link)),
       localizationDrafts: { ...localizationDrafts },
+      removedImageId,
     }
 
     await onSubmit(data, pendingFile ?? undefined, { cascadeToEvents: shouldCascade })
