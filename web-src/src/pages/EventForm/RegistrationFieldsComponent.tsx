@@ -30,9 +30,8 @@ import {
   isSelectableField,
 } from '../../utils/rsvpFieldDefinitions'
 
-/**
- * Extended field with display info
- */
+type RsvpFieldEntry = { field: string; required?: boolean; options?: string[] }
+
 interface DisplayField {
   fieldName: string
   label: string
@@ -46,33 +45,24 @@ interface RegistrationFieldsComponentProps {
   isExperienceCloud: boolean
   eventType: 'InPerson' | 'Virtual'
   cloudType: string
-  visibleFields: string[]
-  requiredFields: string[]
+  rsvpFormFields: RsvpFieldEntry[]
   registrationType: 'ESP' | 'Marketo'
   marketoFormUrl?: string
-  rsvpOptionSelections: Record<string, RsvpFieldOptionSelectionState>
-  onVisibleFieldsChange: (fields: string[]) => void
-  onRequiredFieldsChange: (fields: string[]) => void
+  onRsvpFormFieldsChange: (fields: RsvpFieldEntry[]) => void
   onRegistrationTypeChange: (type: 'ESP' | 'Marketo') => void
   onMarketoFormUrlChange: (url: string) => void
-  /** Pass `null` for a field key to remove stored option state */
-  onRsvpOptionSelectionsChange: (patch: Record<string, RsvpFieldOptionSelectionState | null>) => void
 }
 
 export const RegistrationFieldsComponent: React.FC<RegistrationFieldsComponentProps> = ({
   isExperienceCloud,
   eventType,
   cloudType,
-  visibleFields,
-  requiredFields,
+  rsvpFormFields,
   registrationType,
   marketoFormUrl = '',
-  rsvpOptionSelections,
-  onVisibleFieldsChange,
-  onRequiredFieldsChange,
+  onRsvpFormFieldsChange,
   onRegistrationTypeChange,
   onMarketoFormUrlChange,
-  onRsvpOptionSelectionsChange,
 }) => {
   const { activeGroup } = useGroup()
   const [fields, setFields] = useState<RsvpFormField[]>([])
@@ -88,9 +78,14 @@ export const RegistrationFieldsComponent: React.FC<RegistrationFieldsComponentPr
 
   const [expandedOptions, setExpandedOptions] = useState<Set<string>>(new Set())
 
-  const applyOptionPatch = useCallback((patch: Record<string, RsvpFieldOptionSelectionState | null>) => {
-    onRsvpOptionSelectionsChange(patch)
-  }, [onRsvpOptionSelectionsChange])
+  // Internal option selection state — tracks enabled/ordered options per selectable field
+  const [rsvpOptionSelections, setRsvpOptionSelections] = useState<Record<string, RsvpFieldOptionSelectionState>>(
+    () => Object.fromEntries(
+      rsvpFormFields
+        .filter(f => Array.isArray(f.options) && f.options.length > 0)
+        .map(f => [f.field, { order: f.options!, disabledValues: [] }])
+    )
+  )
 
   useEffect(() => {
     const scopeId = activeGroup?.scopeId
@@ -147,16 +142,14 @@ export const RegistrationFieldsComponent: React.FC<RegistrationFieldsComponentPr
   }))
 
   const sortedDisplayFields = [...allDisplayFields].sort((a, b) => {
-    const aIsSelected = visibleFields.includes(a.fieldName)
-    const bIsSelected = visibleFields.includes(b.fieldName)
+    const aIdx = rsvpFormFields.findIndex(f => f.field === a.fieldName)
+    const bIdx = rsvpFormFields.findIndex(f => f.field === b.fieldName)
+    const aIsSelected = aIdx !== -1
+    const bIsSelected = bIdx !== -1
 
     if (aIsSelected && !bIsSelected) return -1
     if (!aIsSelected && bIsSelected) return 1
-
-    if (aIsSelected && bIsSelected) {
-      return visibleFields.indexOf(a.fieldName) - visibleFields.indexOf(b.fieldName)
-    }
-
+    if (aIsSelected && bIsSelected) return aIdx - bIdx
     return a.originalIndex - b.originalIndex
   })
 
@@ -171,35 +164,55 @@ export const RegistrationFieldsComponent: React.FC<RegistrationFieldsComponentPr
     return mergeOptionSelectionWithField(def, rsvpOptionSelections[fieldName])
   }, [getFieldDef, rsvpOptionSelections])
 
+  // Ensure mandated fields are always visible and required
   useEffect(() => {
     if (mandatedFieldNames.length === 0) return
 
-    const missingVisibleMandated = mandatedFieldNames.filter((f) => !visibleFields.includes(f))
-    if (missingVisibleMandated.length > 0) {
-      const newVisibleFields = [...visibleFields, ...missingVisibleMandated]
-      onVisibleFieldsChange(newVisibleFields)
-
-      const missingRequiredMandated = mandatedFieldNames.filter((f) => !requiredFields.includes(f))
-      if (missingRequiredMandated.length > 0) {
-        const newRequiredFields = newVisibleFields.filter((f) =>
-          requiredFields.includes(f) || missingRequiredMandated.includes(f)
-        )
-        onRequiredFieldsChange(newRequiredFields)
-      }
+    const missingVisible = mandatedFieldNames.filter(f => !rsvpFormFields.some(e => e.field === f))
+    if (missingVisible.length > 0) {
+      const additions = missingVisible.map(f => ({ field: f, required: true as const }))
+      const updated = [
+        ...rsvpFormFields.map(f => mandatedFieldNames.includes(f.field) ? { ...f, required: true as const } : f),
+        ...additions,
+      ]
+      onRsvpFormFieldsChange(updated)
     } else {
-      const missingRequiredMandated = mandatedFieldNames.filter((f) => !requiredFields.includes(f))
-      if (missingRequiredMandated.length > 0) {
-        const newRequiredFields = visibleFields.filter((f) =>
-          requiredFields.includes(f) || missingRequiredMandated.includes(f)
+      const needsRequiredUpdate = mandatedFieldNames.some(f => {
+        const entry = rsvpFormFields.find(e => e.field === f)
+        return entry && !entry.required
+      })
+      if (needsRequiredUpdate) {
+        onRsvpFormFieldsChange(
+          rsvpFormFields.map(f => mandatedFieldNames.includes(f.field) ? { ...f, required: true } : f)
         )
-        onRequiredFieldsChange(newRequiredFields)
       }
     }
-  }, [mandatedFieldNames, visibleFields, requiredFields, onVisibleFieldsChange, onRequiredFieldsChange])
+  }, [mandatedFieldNames, rsvpFormFields, onRsvpFormFieldsChange])
+
+  // Updates internal option selections and emits updated rsvpFormFields
+  const applyOptionPatch = useCallback((patch: Record<string, RsvpFieldOptionSelectionState | null>) => {
+    const next = { ...rsvpOptionSelections }
+    for (const [key, val] of Object.entries(patch)) {
+      if (val === null || val === undefined) delete next[key]
+      else next[key] = val
+    }
+    setRsvpOptionSelections(next)
+    onRsvpFormFieldsChange(
+      rsvpFormFields.map(f => {
+        const sel = next[f.field]
+        const entry: RsvpFieldEntry = { field: f.field }
+        if (f.required) entry.required = f.required
+        if (sel?.disabledValues.length) {
+          entry.options = sel.order.filter(v => !sel.disabledValues.includes(v))
+        }
+        return entry
+      })
+    )
+  }, [rsvpOptionSelections, rsvpFormFields, onRsvpFormFieldsChange])
 
   const handleDragStart = (e: React.DragEvent, displayIndex: number) => {
     const field = sortedDisplayFields[displayIndex]
-    if (!visibleFields.includes(field.fieldName)) return
+    if (!rsvpFormFields.some(f => f.field === field.fieldName)) return
 
     setExpandedOptions(new Set())
     setOptionDrag(null)
@@ -212,7 +225,7 @@ export const RegistrationFieldsComponent: React.FC<RegistrationFieldsComponentPr
   const handleDragOver = (e: React.DragEvent, displayIndex: number) => {
     e.preventDefault()
     const field = sortedDisplayFields[displayIndex]
-    if (!visibleFields.includes(field.fieldName)) return
+    if (!rsvpFormFields.some(f => f.field === field.fieldName)) return
 
     e.dataTransfer.dropEffect = 'move'
     if (draggedIndex !== null && draggedIndex !== displayIndex) {
@@ -236,24 +249,20 @@ export const RegistrationFieldsComponent: React.FC<RegistrationFieldsComponentPr
     const draggedField = sortedDisplayFields[draggedIndex]
     const dropField = sortedDisplayFields[dropDisplayIndex]
 
-    if (!visibleFields.includes(draggedField.fieldName) || !visibleFields.includes(dropField.fieldName)) {
+    const fromIdx = rsvpFormFields.findIndex(f => f.field === draggedField.fieldName)
+    const toIdx = rsvpFormFields.findIndex(f => f.field === dropField.fieldName)
+
+    if (fromIdx === -1 || toIdx === -1) {
       setDraggedIndex(null)
       setDragOverIndex(null)
       return
     }
 
-    const newVisibleFields = [...visibleFields]
-    const draggedVisibleIdx = newVisibleFields.indexOf(draggedField.fieldName)
-    const dropVisibleIdx = newVisibleFields.indexOf(dropField.fieldName)
+    const reordered = [...rsvpFormFields]
+    const [moved] = reordered.splice(fromIdx, 1)
+    reordered.splice(toIdx, 0, moved)
 
-    const [removed] = newVisibleFields.splice(draggedVisibleIdx, 1)
-    newVisibleFields.splice(dropVisibleIdx, 0, removed)
-
-    onVisibleFieldsChange(newVisibleFields)
-
-    const newRequiredFields = newVisibleFields.filter((f) => requiredFields.includes(f))
-    onRequiredFieldsChange(newRequiredFields)
-
+    onRsvpFormFieldsChange(reordered)
     setDraggedIndex(null)
     setDragOverIndex(null)
   }
@@ -265,37 +274,42 @@ export const RegistrationFieldsComponent: React.FC<RegistrationFieldsComponentPr
 
   const handleVisibleToggle = (fieldName: string, checked: boolean) => {
     if (checked) {
-      const newVisibleFields = [...visibleFields, fieldName]
-      onVisibleFieldsChange(newVisibleFields)
-      const newRequiredFields = newVisibleFields.filter((f) => requiredFields.includes(f))
-      if (newRequiredFields.length !== requiredFields.length ||
-          !newRequiredFields.every((f, i) => f === requiredFields[i])) {
-        onRequiredFieldsChange(newRequiredFields)
-      }
+      const entry: RsvpFieldEntry = { field: fieldName }
       const def = getFieldDef(fieldName)
       if (fieldSourceMode === 'scope' && def && isSelectableField(def)) {
-        applyOptionPatch({ [fieldName]: defaultOptionSelectionFromField(def) })
+        const sel = defaultOptionSelectionFromField(def)
+        setRsvpOptionSelections(prev => ({ ...prev, [fieldName]: sel }))
       }
+      onRsvpFormFieldsChange([...rsvpFormFields, entry])
     } else {
-      onVisibleFieldsChange(visibleFields.filter((f) => f !== fieldName))
-      onRequiredFieldsChange(requiredFields.filter((f) => f !== fieldName))
-      applyOptionPatch({ [fieldName]: null })
+      setRsvpOptionSelections(prev => {
+        const next = { ...prev }
+        delete next[fieldName]
+        return next
+      })
       setExpandedOptions(prev => { const next = new Set(prev); next.delete(fieldName); return next })
+      onRsvpFormFieldsChange(rsvpFormFields.filter(f => f.field !== fieldName))
     }
   }
 
   const handleRequiredToggle = (fieldName: string, checked: boolean) => {
     if (checked) {
-      const newVisible = visibleFields.includes(fieldName) ? visibleFields : [...visibleFields, fieldName]
-      onVisibleFieldsChange(newVisible)
-      const newRequired = newVisible.filter((f) => requiredFields.includes(f) || f === fieldName)
-      onRequiredFieldsChange(newRequired)
+      const alreadyVisible = rsvpFormFields.some(f => f.field === fieldName)
       const def = getFieldDef(fieldName)
       if (fieldSourceMode === 'scope' && def && isSelectableField(def) && !rsvpOptionSelections[fieldName]) {
-        applyOptionPatch({ [fieldName]: defaultOptionSelectionFromField(def) })
+        setRsvpOptionSelections(prev => ({ ...prev, [fieldName]: defaultOptionSelectionFromField(def) }))
+      }
+      if (alreadyVisible) {
+        onRsvpFormFieldsChange(rsvpFormFields.map(f => f.field === fieldName ? { ...f, required: true } : f))
+      } else {
+        onRsvpFormFieldsChange([...rsvpFormFields, { field: fieldName, required: true }])
       }
     } else {
-      onRequiredFieldsChange(requiredFields.filter((f) => f !== fieldName))
+      onRsvpFormFieldsChange(rsvpFormFields.map(f => {
+        if (f.field !== fieldName) return f
+        const { required: _, ...rest } = f
+        return rest
+      }))
     }
   }
 
@@ -428,8 +442,8 @@ export const RegistrationFieldsComponent: React.FC<RegistrationFieldsComponentPr
           <div className={style({display: 'flex', flexDirection: 'column', gap: 8})} >
             {sortedDisplayFields.map((displayField, displayIndex) => {
               const { fieldName, label, isMandated } = displayField
-              const isVisible = visibleFields.includes(fieldName)
-              const isRequired = requiredFields.includes(fieldName)
+              const isVisible = rsvpFormFields.some(f => f.field === fieldName)
+              const isRequired = rsvpFormFields.some(f => f.field === fieldName && f.required === true)
               const isDragging = draggedIndex === displayIndex
               const isDragOver = dragOverIndex === displayIndex
               const canDrag = isVisible

@@ -311,13 +311,10 @@ export function useEventFormSave() {
       }
     }
     
-    // RSVP form fields — field-level visibility only until ESP supports granular option payloads.
+    // RSVP form fields — array order = display order; required/options are per-field overrides.
     // TODO(PIM): serialize rsvpOptionSelections when event API exposes per-option RSVP selection.
-    if (mergedData.visibleRsvpFields || mergedData.requiredRsvpFields) {
-      payload.rsvpFormFields = {
-        visible: mergedData.visibleRsvpFields || [],
-        required: mergedData.requiredRsvpFields || []
-      }
+    if (mergedData.rsvpFormFields?.length) {
+      payload.rsvpFormFields = { fields: mergedData.rsvpFormFields }
     }
     
     // Ensure seriesId is set
@@ -505,7 +502,7 @@ export function useEventFormSave() {
         }
         response = result as EventApiResponse
         savedEventId = response.eventId
-        
+
         // Update context with new event ID and store the response for subsequent updates
         setEventId(savedEventId)
         setEventResponse(response) // Store response so modificationTime/creationTime are available
