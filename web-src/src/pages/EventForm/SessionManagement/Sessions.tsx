@@ -1,10 +1,10 @@
 import React, { useState, useEffect, useCallback } from "react";
-import { ProgressCircle, Button, Heading, Text, InlineAlert } from "@react-spectrum/s2";
+import { ProgressCircle, Button, Heading, Text } from "@react-spectrum/s2";
 import AddCircle from "@react-spectrum/s2/icons/AddCircle";
 import { Session, SessionTimeInfo } from "../../../types/sessions";
 import { SessionsList } from "./SessionList";
 import type { SessionFormData } from "./SessionForm";
-import { useEventFormContext } from "../../../contexts";
+import { useEventFormContext, useToast } from "../../../contexts";
 import { EventApiResponse } from "../../../types/domain";
 import { apiService, cachedApi } from "../../../services/api";
 import { COLORS, SURFACES } from "../../../styles/designSystem";
@@ -162,7 +162,7 @@ async function createSessionTimeForSession(
   eventId: string,
   sessionId: string,
   data: SessionFormData,
-): Promise<void> {
+): Promise<SessionTimeInfo> {
   const tz = data.timezone || "UTC";
   const startTimeMillis = naiveDateTimeToUTCMillis(data.startDateTime, tz);
   const endTimeMillis = naiveDateTimeToUTCMillis(data.endDateTime, tz);
@@ -184,19 +184,19 @@ async function createSessionTimeForSession(
       sessionTimeRes.error?.message || String(sessionTimeRes.error),
     );
   }
+  return sessionTimeRes as SessionTimeInfo;
 }
 
 async function upsertSessionTimeForSession(
   eventId: string,
   sessionId: string,
   data: SessionFormData,
-): Promise<void> {
+): Promise<SessionTimeInfo> {
   const tz = data.timezone || "UTC";
   const startTimeMillis = naiveDateTimeToUTCMillis(data.startDateTime, tz);
   const endTimeMillis = naiveDateTimeToUTCMillis(data.endDateTime, tz);
   if (!data.sessionTimeId) {
-    await createSessionTimeForSession(eventId, sessionId, data);
-    return;
+    return createSessionTimeForSession(eventId, sessionId, data);
   }
 
   const updateTimeRes = await apiService.updateSessionTime(
@@ -222,6 +222,7 @@ async function upsertSessionTimeForSession(
       updateTimeRes.error?.message || String(updateTimeRes.error),
     );
   }
+  return updateTimeRes as SessionTimeInfo;
 }
 
 async function syncSessionSpeakers(
@@ -246,7 +247,12 @@ async function syncSessionSpeakers(
   );
 }
 
-export const Sessions: React.FC = () => {
+interface SessionsProps {
+  /** Called whenever an inline session form opens or closes */
+  onOpenFormChange?: (hasOpen: boolean) => void;
+}
+
+export const Sessions: React.FC<SessionsProps> = ({ onOpenFormChange }) => {
   const {
     eventId,
     mergeEventResponse,
@@ -257,8 +263,8 @@ export const Sessions: React.FC = () => {
     seriesId: contextSeriesId,
     formData,
   } = useEventFormContext();
+  const toast = useToast();
   const [sessions, setSessions] = useState<Session[]>([]);
-  const [loadError, setLoadError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [isAddingNew, setIsAddingNew] = useState(false);
   const seriesId = contextSeriesId || formData.seriesId || "";
@@ -310,12 +316,11 @@ export const Sessions: React.FC = () => {
       setSessions([]);
       return;
     }
-    setLoadError(null);
     setIsLoading(true);
     try {
       const response = await apiService.getAllEventSessions(eventId);
       if (response && "error" in response) {
-        setLoadError(response.error?.message || String(response.error));
+        toast.error(response.error?.message || String(response.error), { duration: 8000 });
         setSessions([]);
         return;
       }
@@ -329,12 +334,12 @@ export const Sessions: React.FC = () => {
     } catch (err) {
       const message =
         err instanceof Error ? err.message : "Failed to load sessions";
-      setLoadError(message);
+      toast.error(message, { duration: 8000 });
       setSessions([]);
     } finally {
       setIsLoading(false);
     }
-  }, [eventId]);
+  }, [eventId, toast]);
 
   const refreshEventConcurrencyMetadata = useCallback(
     async (id: string) => {
@@ -366,11 +371,12 @@ export const Sessions: React.FC = () => {
     if (!eventId) return;
     const res = await apiService.deleteSession(sessionId);
     if ("error" in res) {
-      setLoadError(res.error?.message || String(res.error));
-    } else {
-      setSessions((prev) => prev.filter((s) => s.id !== sessionId));
-      await refreshEventConcurrencyMetadata(eventId);
+      toast.error(res.error?.message || String(res.error), { duration: 8000 });
+      return;
     }
+    setSessions((prev) => prev.filter((s) => s.id !== sessionId));
+    await refreshEventConcurrencyMetadata(eventId);
+    toast.success("Session deleted successfully");
   };
 
   const handleAddSession = async (data: SessionFormData) => {
@@ -398,11 +404,7 @@ export const Sessions: React.FC = () => {
       await Promise.allSettled(speakerPromises);
     }
 
-    try {
-      await createSessionTimeForSession(eventId, newSession.id, data);
-    } catch (err) {
-      throw err;
-    }
+    const createdSessionTime = await createSessionTimeForSession(eventId, newSession.id, data);
 
     await refreshEventConcurrencyMetadata(eventId);
 
@@ -420,6 +422,9 @@ export const Sessions: React.FC = () => {
         isAutoRegistrationEnabled: data.isAutoRegistrationEnabled,
         attendeeLimit: data.attendeeLimit != null ? Number(data.attendeeLimit) : undefined,
         locationId: data.locationId,
+        sessionTimeId: createdSessionTime.sessionTimeId,
+        creationTime: createdSessionTime.creationTime,
+        modificationTime: createdSessionTime.modificationTime,
       },
     };
     setSessions((prev) => sortSessionsByDate([...prev, sessionWithTime]));
@@ -456,8 +461,9 @@ export const Sessions: React.FC = () => {
       updatedSessionApi = mapApiSessionToSession(res as any);
     }
 
+    let updatedSessionTime: SessionTimeInfo | undefined
     if (shouldUpdateSessionTime) {
-      await upsertSessionTimeForSession(eventId, sessionId, data);
+      updatedSessionTime = await upsertSessionTimeForSession(eventId, sessionId, data);
     }
 
     const shouldUpdateSpeakers = hasSessionSpeakersChanges(data);
@@ -491,7 +497,9 @@ export const Sessions: React.FC = () => {
                     ? Number(data.attendeeLimit)
                     : undefined,
                 locationId: data.locationId,
-                sessionTimeId: data.sessionTimeId ?? s.sessionTime?.sessionTimeId,
+                sessionTimeId: updatedSessionTime?.sessionTimeId ?? data.sessionTimeId ?? s.sessionTime?.sessionTimeId,
+                creationTime: updatedSessionTime?.creationTime ?? s.sessionTime?.creationTime,
+                modificationTime: updatedSessionTime?.modificationTime ?? s.sessionTime?.modificationTime,
               },
             }
           : s,
@@ -518,11 +526,7 @@ export const Sessions: React.FC = () => {
         </Button>
       </div>
 
-      {loadError ? (
-        <InlineAlert variant="negative" UNSAFE_style={{ marginTop: "28px" }}>
-          <Text>{loadError}</Text>
-        </InlineAlert>
-      ) : isLoading ? (
+      {isLoading ? (
         <div style={{ display: "flex", justifyContent: "center", alignItems: "center", gap: "12px", marginTop: "32px" }}>
           <ProgressCircle isIndeterminate aria-label="Loading sessions" />
           <Text>Loading sessions</Text>
@@ -556,6 +560,8 @@ export const Sessions: React.FC = () => {
           venueLocations={venueLocations}
           seriesSpeakers={seriesSpeakers}
           onSpeakersRefresh={refreshSeriesSpeakers}
+          onDirtyChange={onOpenFormChange}
+          allSessions={sessions}
         />
       )}
     </div>

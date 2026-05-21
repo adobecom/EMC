@@ -38,3 +38,23 @@ export function downloadCsv(csvContent: string, filename: string): void {
   document.body.removeChild(link)
   URL.revokeObjectURL(url)
 }
+
+/**
+ * Sanitizes a string for use as a filename stem.
+ * Replaces spaces and special characters with underscores and collapses runs.
+ */
+export function sanitizeFilename(s: string): string {
+  return (
+    s
+      .replace(/[^a-zA-Z0-9_\-]/g, '_')
+      .replace(/_+/g, '_')
+      .replace(/^_|_$/g, '') || 'export'
+  )
+}
+
+/**
+ * Returns the current datetime formatted for a filename: YYYY-MM-DD_HH-MM-SS
+ */
+export function exportDatetime(): string {
+  return new Date().toISOString().replace('T', '_').replace(/:/g, '-').slice(0, 19)
+}
