@@ -70,6 +70,7 @@ function userMatchesQuery(user: ScopeUser, qLower: string): boolean {
 }
 
 function groupMetaMatchesQuery(group: RBACApiGroup, qLower: string): boolean {
+  if (!qLower) return false
   return (
     (group.name?.toLowerCase().includes(qLower) ?? false) ||
     (group.description?.toLowerCase().includes(qLower) ?? false)
@@ -800,7 +801,8 @@ export const ScopeGroupManagement: React.FC<ScopeGroupManagementProps> = () => {
       }
     })
 
-    const visibleUsers = q ? sortedUsers.filter(u => userMatchesQuery(u, q)) : sortedUsers
+    const groupMetaMatch = q ? groupMetaMatchesQuery(group, q) : false
+    const visibleUsers = q && !groupMetaMatch ? sortedUsers.filter(u => userMatchesQuery(u, q)) : sortedUsers
 
     return (
       <div className={style({display: 'flex', flexDirection: 'column', gap: 16})}>
