@@ -2,13 +2,13 @@
 
 ## Overview
 
-A persistent **UserPanel** component has been added to display the current IMS (Identity Management System) user information in the application sidebar. This provides users with constant visibility of their authentication status and profile details.
+A persistent **UserPanel** component shows the current IMS (Identity Management System) user in the **top navigation** (right side), so authentication status and profile actions stay visible without a sidebar.
 
 ## Implementation Details
 
 ### Component: `UserPanel.tsx`
 
-**Location:** `web-src/src/components/UserPanel.tsx`
+**Location:** `web-src/src/components/user/UserPanel.tsx`
 
 **Features:**
 - ✅ Displays IMS user information (name, email, user ID)
@@ -21,18 +21,11 @@ A persistent **UserPanel** component has been added to display the current IMS (
 
 ### Integration Points
 
-#### 1. App Component (`App.tsx`)
-```typescript
-<View gridArea='sidebar' backgroundColor='gray-200' padding='size-200'>
-  <UserPanel ims={props.ims} />  {/* New: IMS-connected user panel */}
-  <SideBar ims={props.ims} />
-</View>
-```
+#### 1. Top navigation (`TopNav.tsx`)
 
-#### 2. SideBar Component (`SideBar.tsx`)
-Updated to accept `ims` prop (for future enhancements).
+`TopNav` renders the Adobe logo, primary `NavLink`s, dev token UI (localhost), and **`UserPanel ims={ims} compact`** on the right when the user is signed in (standalone mode shows **Sign In** until authenticated).
 
-#### 3. Styling (`index.css`)
+#### 2. Styling (`index.css`)
 Added custom styles for hover effects and borders.
 
 ## User Experience
@@ -133,12 +126,12 @@ export const MyComponent: React.FC<MyComponentProps> = ({ ims }) => {
 
 1. **Start the application:**
    ```bash
-   aio app run
+   npm run dev
    ```
 
 2. **Check UserPanel appears:**
-   - Look at the top of the sidebar
-   - Should show your IMS user name and email
+   - Look at the **top right** of the window (inside `TopNav`)
+   - Should show your IMS user name (compact mode may hide email in the bar; open the menu to verify)
 
 3. **Test interactions:**
    - Click on the user panel
@@ -152,9 +145,9 @@ export const MyComponent: React.FC<MyComponentProps> = ({ ims }) => {
 ### Unit Test Template
 
 ```typescript
-// __tests__/UserPanel.test.tsx
+// Example: colocate as web-src/src/components/user/UserPanel.test.tsx
 import { render, screen, fireEvent } from '@testing-library/react'
-import { UserPanel } from '../UserPanel'
+import { UserPanel } from './UserPanel'
 import { BrowserRouter } from 'react-router-dom'
 
 const mockIms = {
@@ -223,10 +216,11 @@ const handleLogout = () => {
 
 ```
 web-src/src/components/
-├── UserPanel.tsx          # New: IMS-connected user panel
-├── UserProfile.tsx        # Existing: Full profile page
-├── SideBar.tsx            # Updated: Now receives ims prop
-└── App.tsx                # Updated: Passes ims to UserPanel
+├── user/
+│   └── UserPanel.tsx      # IMS user menu (compact in TopNav)
+├── layout/
+│   └── TopNav.tsx         # Renders UserPanel on the right
+└── App.tsx                # Grid shell; TopNav in header area
 ```
 
 ## Accessibility
@@ -278,7 +272,7 @@ Works in all modern browsers:
 ## Summary
 
 The UserPanel component successfully integrates IMS user information into the application UI, providing:
-- **Persistent user context** - Always visible in sidebar
+- **Persistent user context** — Visible in the top navigation
 - **Quick profile access** - One click to full profile
 - **Organization awareness** - Shows current org context
 - **Professional appearance** - Follows Adobe design system

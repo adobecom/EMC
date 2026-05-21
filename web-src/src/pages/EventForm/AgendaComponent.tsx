@@ -631,7 +631,6 @@ export const AgendaComponent: React.FC = () => {
                     />
                     <TimeField
                       label="End Time"
-                      isRequired
                       granularity="minute"
                       value={parseTimeFromDateTime(item.endDateTime)}
                       onChange={(time) => updateAgendaItem(index, { 
@@ -653,7 +652,6 @@ export const AgendaComponent: React.FC = () => {
                     />
                     <DatePicker
                       label="End Date & Time"
-                      isRequired
                       granularity="minute"
                       value={safeParseDateTimeString(item.endDateTime)}
                       onChange={(date) => updateAgendaItem(index, { endDateTime: date?.toString() || '' })}

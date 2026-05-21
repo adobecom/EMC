@@ -1,100 +1,124 @@
-/* 
+/*
 * <license header>
 */
 
-import React, { useState, useEffect } from 'react'
-import { TextField, RadioGroup, Radio, Text, Switch } from '@react-spectrum/s2'
+import React, { useState, useEffect, useCallback, useMemo } from 'react'
+import {
+  TextField,
+  RadioGroup,
+  Radio,
+  Text,
+  Switch,
+  ActionButton,
+} from '@react-spectrum/s2'
 import { style } from "@react-spectrum/s2/style" with { type: "macro" }
 import { HeadingWithTooltip } from '../../components/shared'
 import { COLORS, SURFACES } from '../../styles/designSystem'
 import OpenIn from '@react-spectrum/s2/icons/OpenIn'
 import Move from '@react-spectrum/s2/icons/Move'
-import type { RsvpConfigField } from '../../types/attendee'
-import { rsvpConfigUiLabel } from '../../utils/rsvpConfigLabels'
+import ListBulleted from '@react-spectrum/s2/icons/ListBulleted'
+import { useGroup } from '../../contexts/GroupContext'
+import { cachedApi } from '../../services/api'
+import { configService } from '../../services/configService'
+import { hasRsvpConfig } from '../../config/externalConfigs'
+import type { RsvpFormField, RsvpScopeConfig } from '../../types/configApi'
+import type { RsvpFieldOptionSelectionState } from '../../types/domain'
+import {
+  mapLegacyRsvpConfigToFormFields,
+  mergeOptionSelectionWithField,
+  defaultOptionSelectionFromField,
+  isSelectableField,
+} from '../../utils/rsvpFieldDefinitions'
 
-interface RsvpConfig {
-  cloudType: string
-  config: RsvpConfigField[] | null
-}
+type RsvpFieldEntry = { field: string; required?: boolean; options?: string[] }
 
 interface DisplayField {
   fieldName: string
-  displayLabel: string
+  label: string
   isMandated: boolean
   originalIndex: number
 }
 
+export type RsvpFieldSourceMode = 'scope' | 'legacy'
+
 interface RegistrationFieldsComponentProps {
-  cloudType: 'CreativeCloud' | 'ExperienceCloud'
+  isExperienceCloud: boolean
   eventType: 'InPerson' | 'Virtual'
-  visibleFields: string[]
-  requiredFields: string[]
+  cloudType: string
+  rsvpFormFields: RsvpFieldEntry[]
   registrationType: 'ESP' | 'Marketo'
   marketoFormUrl?: string
-  onVisibleFieldsChange: (fields: string[]) => void
-  onRequiredFieldsChange: (fields: string[]) => void
+  onRsvpFormFieldsChange: (fields: RsvpFieldEntry[]) => void
   onRegistrationTypeChange: (type: 'ESP' | 'Marketo') => void
   onMarketoFormUrlChange: (url: string) => void
 }
 
-/**
- * Converts a camelCase or PascalCase string into an uppercase string with spaces between words.
- */
-const convertString = (input: string): string => {
-  const parts = input.replace(/([a-z])([A-Z])/g, '$1 $2')
-  return parts.toUpperCase()
-}
-
-const fetchRsvpFormConfigs = async (): Promise<RsvpConfig[]> => {
-  const clouds = ['CreativeCloud', 'ExperienceCloud'] as const
-  return Promise.all(
-    clouds.map(async (id) => {
-      try {
-        const response = await fetch(
-          `https://www.adobe.com/event-libs/assets/configs/rsvp/${id.toLowerCase()}.json`
-        )
-        if (!response.ok) {
-          console.error(`Failed to fetch RSVP config for ${id}: ${response.status}`)
-          return { cloudType: id, config: null }
-        }
-        const data = await response.json()
-        const config = Array.isArray(data) ? data : (data.data || data.fields || data.config || null)
-        return { cloudType: id, config }
-      } catch (error) {
-        console.error(`Failed to fetch RSVP config for ${id}:`, error)
-        return { cloudType: id, config: null }
-      }
-    })
-  )
-}
-
 export const RegistrationFieldsComponent: React.FC<RegistrationFieldsComponentProps> = ({
-  cloudType,
+  isExperienceCloud,
   eventType,
-  visibleFields,
-  requiredFields,
+  cloudType,
+  rsvpFormFields,
   registrationType,
   marketoFormUrl = '',
-  onVisibleFieldsChange,
-  onRequiredFieldsChange,
+  onRsvpFormFieldsChange,
   onRegistrationTypeChange,
-  onMarketoFormUrlChange
+  onMarketoFormUrlChange,
 }) => {
-  const [configs, setConfigs] = useState<RsvpConfig[]>([])
+  const { activeGroup } = useGroup()
+  const [fields, setFields] = useState<RsvpFormField[]>([])
+  const [fieldSourceMode, setFieldSourceMode] = useState<RsvpFieldSourceMode>('scope')
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  
-  // Drag and drop state
+
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null)
   const [dragOverIndex, setDragOverIndex] = useState<number | null>(null)
 
-  // Fetch configs on mount
+  const [optionDrag, setOptionDrag] = useState<{ fieldName: string; index: number } | null>(null)
+  const [optionDragOver, setOptionDragOver] = useState<{ fieldName: string; index: number } | null>(null)
+
+  const [expandedOptions, setExpandedOptions] = useState<Set<string>>(new Set())
+
+  // Internal option selection state — tracks enabled/ordered options per selectable field
+  const [rsvpOptionSelections, setRsvpOptionSelections] = useState<Record<string, RsvpFieldOptionSelectionState>>(
+    () => Object.fromEntries(
+      rsvpFormFields
+        .filter(f => Array.isArray(f.options) && f.options.length > 0)
+        .map(f => [f.field, { order: f.options!, disabledValues: [] }])
+    )
+  )
+
   useEffect(() => {
-    const loadConfigs = async () => {
+    const scopeId = activeGroup?.scopeId
+    const cloudForLegacy = hasRsvpConfig(cloudType) ? cloudType : 'CreativeCloud'
+
+    const loadFields = async () => {
       try {
         setLoading(true)
-        const fetchedConfigs = await fetchRsvpFormConfigs()
-        setConfigs(fetchedConfigs)
+        let nextFields: RsvpFormField[] = []
+        let mode: RsvpFieldSourceMode = 'legacy'
+
+        if (scopeId) {
+          const result = await cachedApi.getConfigsForScope(scopeId, 'rsvp')
+          if (!('error' in result)) {
+            const rsvpConfig = result.find(c => c.type === 'rsvp') as RsvpScopeConfig | undefined
+            const scopeFields = rsvpConfig?.rsvpFormFields ?? []
+            if (scopeFields.length > 0) {
+              nextFields = scopeFields
+              mode = 'scope'
+            }
+          } else {
+            console.warn('Scope RSVP config request failed; falling back to legacy JSON if available.', result)
+          }
+        }
+
+        if (nextFields.length === 0 && hasRsvpConfig(cloudForLegacy)) {
+          const legacyRows = await configService.getRsvpConfig(cloudForLegacy)
+          nextFields = mapLegacyRsvpConfigToFormFields(legacyRows)
+          mode = 'legacy'
+        }
+
+        setFields(nextFields)
+        setFieldSourceMode(mode)
         setError(null)
       } catch (err) {
         setError('Failed to load registration field configurations')
@@ -104,84 +128,95 @@ export const RegistrationFieldsComponent: React.FC<RegistrationFieldsComponentPr
       }
     }
 
-    loadConfigs()
-  }, [])
+    loadFields()
+  }, [activeGroup?.scopeId, cloudType])
 
-  // Get the current cloud's config
-  const cloudConfig = configs.find((c) => c.cloudType === cloudType)
-  const currentConfig = Array.isArray(cloudConfig?.config) ? cloudConfig.config : []
-  
-  // Filter out items with null-ish Field attribute and submit buttons
-  const validFields = currentConfig.filter((f) => f.Field && f.Field.trim() !== '' && f.Type !== 'submit')
-  const mandatedFieldNames = validFields.filter((f) => f.Required === 'x').map((f) => f.Field)
-  
-  // Build display fields list with original order preserved
+  const validFields = useMemo(() => fields.filter(f => f.field), [fields])
+  const mandatedFieldNames = useMemo(() => validFields.filter(f => f.required).map(f => f.field), [validFields])
+
   const allDisplayFields: DisplayField[] = validFields.map((f, idx) => ({
-    fieldName: f.Field,
-    displayLabel: rsvpConfigUiLabel(f, convertString),
-    isMandated: f.Required === 'x',
+    fieldName: f.field,
+    label: f.label,
+    isMandated: f.required,
     originalIndex: idx
   }))
 
-  // Sort fields: selected (visible) fields first, then unselected
-  // Within each group, maintain order based on visibleFields array (for selected) or original config order (for unselected)
   const sortedDisplayFields = [...allDisplayFields].sort((a, b) => {
-    const aIsSelected = visibleFields.includes(a.fieldName)
-    const bIsSelected = visibleFields.includes(b.fieldName)
-    
+    const aIdx = rsvpFormFields.findIndex(f => f.field === a.fieldName)
+    const bIdx = rsvpFormFields.findIndex(f => f.field === b.fieldName)
+    const aIsSelected = aIdx !== -1
+    const bIsSelected = bIdx !== -1
+
     if (aIsSelected && !bIsSelected) return -1
     if (!aIsSelected && bIsSelected) return 1
-    
-    // Both selected: sort by position in visibleFields array
-    if (aIsSelected && bIsSelected) {
-      return visibleFields.indexOf(a.fieldName) - visibleFields.indexOf(b.fieldName)
-    }
-    
-    // Both unselected: maintain original config order
+    if (aIsSelected && bIsSelected) return aIdx - bIdx
     return a.originalIndex - b.originalIndex
   })
 
-  // Ensure mandated fields are always included in visible and required arrays
+  const getFieldDef = useCallback(
+    (fieldName: string) => fields.filter(f => f.field).find(f => f.field === fieldName),
+    [fields]
+  )
+
+  const getEffectiveOptionState = useCallback((fieldName: string): RsvpFieldOptionSelectionState | null => {
+    const def = getFieldDef(fieldName)
+    if (!def || !isSelectableField(def)) return null
+    return mergeOptionSelectionWithField(def, rsvpOptionSelections[fieldName])
+  }, [getFieldDef, rsvpOptionSelections])
+
+  // Ensure mandated fields are always visible and required
   useEffect(() => {
     if (mandatedFieldNames.length === 0) return
 
-    // Check if any mandated fields are missing from visibleFields
-    const missingVisibleMandated = mandatedFieldNames.filter((f) => !visibleFields.includes(f))
-    if (missingVisibleMandated.length > 0) {
-      const newVisibleFields = [...visibleFields, ...missingVisibleMandated]
-      onVisibleFieldsChange(newVisibleFields)
-      
-      // Also ensure requiredFields is ordered consistently with newVisibleFields
-      const missingRequiredMandated = mandatedFieldNames.filter((f) => !requiredFields.includes(f))
-      if (missingRequiredMandated.length > 0) {
-        // Build required array in the same order as visible
-        const newRequiredFields = newVisibleFields.filter((f) => 
-          requiredFields.includes(f) || missingRequiredMandated.includes(f)
-        )
-        onRequiredFieldsChange(newRequiredFields)
-      }
+    const missingVisible = mandatedFieldNames.filter(f => !rsvpFormFields.some(e => e.field === f))
+    if (missingVisible.length > 0) {
+      const additions = missingVisible.map(f => ({ field: f, required: true as const }))
+      const updated = [
+        ...rsvpFormFields.map(f => mandatedFieldNames.includes(f.field) ? { ...f, required: true as const } : f),
+        ...additions,
+      ]
+      onRsvpFormFieldsChange(updated)
     } else {
-      // Check if any mandated fields are missing from requiredFields (visible was already complete)
-      const missingRequiredMandated = mandatedFieldNames.filter((f) => !requiredFields.includes(f))
-      if (missingRequiredMandated.length > 0) {
-        // Build required array in the same order as visible
-        const newRequiredFields = visibleFields.filter((f) => 
-          requiredFields.includes(f) || missingRequiredMandated.includes(f)
+      const needsRequiredUpdate = mandatedFieldNames.some(f => {
+        const entry = rsvpFormFields.find(e => e.field === f)
+        return entry && !entry.required
+      })
+      if (needsRequiredUpdate) {
+        onRsvpFormFieldsChange(
+          rsvpFormFields.map(f => mandatedFieldNames.includes(f.field) ? { ...f, required: true } : f)
         )
-        onRequiredFieldsChange(newRequiredFields)
       }
     }
-  }, [mandatedFieldNames.join(','), visibleFields, requiredFields, onVisibleFieldsChange, onRequiredFieldsChange])
+  }, [mandatedFieldNames, rsvpFormFields, onRsvpFormFieldsChange])
 
-  // ============================================================================
-  // DRAG AND DROP HANDLERS
-  // ============================================================================
+  // Updates internal option selections and emits updated rsvpFormFields
+  const applyOptionPatch = useCallback((patch: Record<string, RsvpFieldOptionSelectionState | null>) => {
+    const next = { ...rsvpOptionSelections }
+    for (const [key, val] of Object.entries(patch)) {
+      if (val === null || val === undefined) delete next[key]
+      else next[key] = val
+    }
+    setRsvpOptionSelections(next)
+    onRsvpFormFieldsChange(
+      rsvpFormFields.map(f => {
+        const sel = next[f.field]
+        const entry: RsvpFieldEntry = { field: f.field }
+        if (f.required) entry.required = f.required
+        if (sel?.disabledValues.length) {
+          entry.options = sel.order.filter(v => !sel.disabledValues.includes(v))
+        }
+        return entry
+      })
+    )
+  }, [rsvpOptionSelections, rsvpFormFields, onRsvpFormFieldsChange])
 
   const handleDragStart = (e: React.DragEvent, displayIndex: number) => {
     const field = sortedDisplayFields[displayIndex]
-    // Only allow dragging selected (visible) fields
-    if (!visibleFields.includes(field.fieldName)) return
-    
+    if (!rsvpFormFields.some(f => f.field === field.fieldName)) return
+
+    setExpandedOptions(new Set())
+    setOptionDrag(null)
+    setOptionDragOver(null)
     setDraggedIndex(displayIndex)
     e.dataTransfer.effectAllowed = 'move'
     e.dataTransfer.setData('text/plain', String(displayIndex))
@@ -190,9 +225,8 @@ export const RegistrationFieldsComponent: React.FC<RegistrationFieldsComponentPr
   const handleDragOver = (e: React.DragEvent, displayIndex: number) => {
     e.preventDefault()
     const field = sortedDisplayFields[displayIndex]
-    // Only allow dropping on selected (visible) fields
-    if (!visibleFields.includes(field.fieldName)) return
-    
+    if (!rsvpFormFields.some(f => f.field === field.fieldName)) return
+
     e.dataTransfer.dropEffect = 'move'
     if (draggedIndex !== null && draggedIndex !== displayIndex) {
       setDragOverIndex(displayIndex)
@@ -205,7 +239,7 @@ export const RegistrationFieldsComponent: React.FC<RegistrationFieldsComponentPr
 
   const handleDrop = (e: React.DragEvent, dropDisplayIndex: number) => {
     e.preventDefault()
-    
+
     if (draggedIndex === null || draggedIndex === dropDisplayIndex) {
       setDraggedIndex(null)
       setDragOverIndex(null)
@@ -214,29 +248,21 @@ export const RegistrationFieldsComponent: React.FC<RegistrationFieldsComponentPr
 
     const draggedField = sortedDisplayFields[draggedIndex]
     const dropField = sortedDisplayFields[dropDisplayIndex]
-    
-    // Only reorder within visible fields
-    if (!visibleFields.includes(draggedField.fieldName) || !visibleFields.includes(dropField.fieldName)) {
+
+    const fromIdx = rsvpFormFields.findIndex(f => f.field === draggedField.fieldName)
+    const toIdx = rsvpFormFields.findIndex(f => f.field === dropField.fieldName)
+
+    if (fromIdx === -1 || toIdx === -1) {
       setDraggedIndex(null)
       setDragOverIndex(null)
       return
     }
 
-    // Reorder visibleFields array
-    const newVisibleFields = [...visibleFields]
-    const draggedVisibleIdx = newVisibleFields.indexOf(draggedField.fieldName)
-    const dropVisibleIdx = newVisibleFields.indexOf(dropField.fieldName)
-    
-    const [removed] = newVisibleFields.splice(draggedVisibleIdx, 1)
-    newVisibleFields.splice(dropVisibleIdx, 0, removed)
-    
-    onVisibleFieldsChange(newVisibleFields)
-    
-    // Also reorder requiredFields to match the new visibleFields order
-    // Filter requiredFields to only include fields that are in newVisibleFields, maintaining the new order
-    const newRequiredFields = newVisibleFields.filter((f) => requiredFields.includes(f))
-    onRequiredFieldsChange(newRequiredFields)
-    
+    const reordered = [...rsvpFormFields]
+    const [moved] = reordered.splice(fromIdx, 1)
+    reordered.splice(toIdx, 0, moved)
+
+    onRsvpFormFieldsChange(reordered)
     setDraggedIndex(null)
     setDragOverIndex(null)
   }
@@ -246,53 +272,146 @@ export const RegistrationFieldsComponent: React.FC<RegistrationFieldsComponentPr
     setDragOverIndex(null)
   }
 
-  // ============================================================================
-  // FIELD TOGGLE HANDLERS
-  // ============================================================================
-
   const handleVisibleToggle = (fieldName: string, checked: boolean) => {
     if (checked) {
-      const newVisibleFields = [...visibleFields, fieldName]
-      onVisibleFieldsChange(newVisibleFields)
-      // Re-order requiredFields to match visible order (in case field was previously required)
-      const newRequiredFields = newVisibleFields.filter((f) => requiredFields.includes(f))
-      if (newRequiredFields.length !== requiredFields.length || 
-          !newRequiredFields.every((f, i) => f === requiredFields[i])) {
-        onRequiredFieldsChange(newRequiredFields)
+      const entry: RsvpFieldEntry = { field: fieldName }
+      const def = getFieldDef(fieldName)
+      if (fieldSourceMode === 'scope' && def && isSelectableField(def)) {
+        const sel = defaultOptionSelectionFromField(def)
+        setRsvpOptionSelections(prev => ({ ...prev, [fieldName]: sel }))
       }
+      onRsvpFormFieldsChange([...rsvpFormFields, entry])
     } else {
-      // Remove from both visible and required
-      onVisibleFieldsChange(visibleFields.filter((f) => f !== fieldName))
-      onRequiredFieldsChange(requiredFields.filter((f) => f !== fieldName))
+      setRsvpOptionSelections(prev => {
+        const next = { ...prev }
+        delete next[fieldName]
+        return next
+      })
+      setExpandedOptions(prev => { const next = new Set(prev); next.delete(fieldName); return next })
+      onRsvpFormFieldsChange(rsvpFormFields.filter(f => f.field !== fieldName))
     }
   }
 
   const handleRequiredToggle = (fieldName: string, checked: boolean) => {
     if (checked) {
-      // Add to both visible and required
-      const newVisible = visibleFields.includes(fieldName) ? visibleFields : [...visibleFields, fieldName]
-      onVisibleFieldsChange(newVisible)
-      // Insert the field in the required array at the position matching its order in visibleFields
-      const newRequired = newVisible.filter((f) => requiredFields.includes(f) || f === fieldName)
-      onRequiredFieldsChange(newRequired)
+      const alreadyVisible = rsvpFormFields.some(f => f.field === fieldName)
+      const def = getFieldDef(fieldName)
+      if (fieldSourceMode === 'scope' && def && isSelectableField(def) && !rsvpOptionSelections[fieldName]) {
+        setRsvpOptionSelections(prev => ({ ...prev, [fieldName]: defaultOptionSelectionFromField(def) }))
+      }
+      if (alreadyVisible) {
+        onRsvpFormFieldsChange(rsvpFormFields.map(f => f.field === fieldName ? { ...f, required: true } : f))
+      } else {
+        onRsvpFormFieldsChange([...rsvpFormFields, { field: fieldName, required: true }])
+      }
     } else {
-      // Remove from required only
-      onRequiredFieldsChange(requiredFields.filter((f) => f !== fieldName))
+      onRsvpFormFieldsChange(rsvpFormFields.map(f => {
+        if (f.field !== fieldName) return f
+        const { required: _, ...rest } = f
+        return rest
+      }))
     }
   }
 
+  const handleOptionEnabledToggle = (fieldName: string, optionValue: string, enabled: boolean) => {
+    const def = getFieldDef(fieldName)
+    if (!def || !isSelectableField(def)) return
+
+    const cur = mergeOptionSelectionWithField(def, rsvpOptionSelections[fieldName])
+    const disabled = new Set(cur.disabledValues)
+    if (enabled) {
+      disabled.delete(optionValue)
+    } else {
+      disabled.add(optionValue)
+    }
+
+    const enabledCount = cur.order.filter(v => !disabled.has(v)).length
+    if (enabledCount === 0) {
+      handleVisibleToggle(fieldName, false)
+      return
+    }
+
+    applyOptionPatch({
+      [fieldName]: { order: [...cur.order], disabledValues: Array.from(disabled) }
+    })
+  }
+
+  const handleOptionDragStart = (e: React.DragEvent, fieldName: string, displayIdx: number) => {
+    setOptionDrag({ fieldName, index: displayIdx })
+    e.dataTransfer.effectAllowed = 'move'
+    e.dataTransfer.setData('text/plain', `${fieldName}:${displayIdx}`)
+  }
+
+  const handleOptionDragOver = (e: React.DragEvent, fieldName: string, displayIdx: number) => {
+    e.stopPropagation()
+    e.preventDefault()
+    if (!optionDrag || optionDrag.fieldName !== fieldName) return
+    e.dataTransfer.dropEffect = 'move'
+    if (optionDrag.index !== displayIdx) {
+      setOptionDragOver({ fieldName, index: displayIdx })
+    }
+  }
+
+  const handleOptionDragLeave = () => {
+    setOptionDragOver(null)
+  }
+
+  const handleOptionDrop = (e: React.DragEvent, fieldName: string, dropIdx: number) => {
+    e.stopPropagation()
+    e.preventDefault()
+    if (!optionDrag || optionDrag.fieldName !== fieldName) {
+      setOptionDrag(null)
+      setOptionDragOver(null)
+      return
+    }
+    const def = getFieldDef(fieldName)
+    if (!def || !isSelectableField(def)) {
+      setOptionDrag(null)
+      setOptionDragOver(null)
+      return
+    }
+
+    const cur = mergeOptionSelectionWithField(def, rsvpOptionSelections[fieldName])
+    const from = optionDrag.index
+    if (from === dropIdx) {
+      setOptionDrag(null)
+      setOptionDragOver(null)
+      return
+    }
+
+    const order = [...cur.order]
+    const [moved] = order.splice(from, 1)
+    order.splice(dropIdx, 0, moved)
+
+    applyOptionPatch({ [fieldName]: { order, disabledValues: [...cur.disabledValues] } })
+    setOptionDrag(null)
+    setOptionDragOver(null)
+  }
+
+  const handleOptionDragEnd = () => {
+    setOptionDrag(null)
+    setOptionDragOver(null)
+  }
+
   const renderBasicFormTable = () => {
-    const mandatedFieldsDisplay = mandatedFieldNames.map((field) => convertString(field)).join(', ')
-    const cloudName = cloudType === 'CreativeCloud' ? 'Creative Cloud' : 'Experience Cloud'
-    
+    const mandatedLabels = mandatedFieldNames
+      .map(name => allDisplayFields.find(f => f.fieldName === name)?.label ?? name)
+      .join(', ')
+
     return (
       <div className={style({display: 'flex', flexDirection: 'column', gap: 16})}>
         {mandatedFieldNames.length > 0 && (
           <Text UNSAFE_style={{ color: COLORS.GRAY_800 }}>
-            Note: <strong>{cloudName}</strong> required fields include <strong>{mandatedFieldsDisplay}</strong>
+            Note: required fields include <strong>{mandatedLabels}</strong>
           </Text>
         )}
-        
+
+        {fieldSourceMode === 'legacy' && (
+          <Text UNSAFE_style={{ fontSize: 12, color: COLORS.GRAY_600 }}>
+            Using cloud RSVP field list (legacy JSON). Connect a scope RSVP config in Cloud Management for full field types and option controls.
+          </Text>
+        )}
+
         <div
           style={{
             backgroundColor: SURFACES.SUBTLE,
@@ -300,10 +419,9 @@ export const RegistrationFieldsComponent: React.FC<RegistrationFieldsComponentPr
             padding: '48px'
           }}
         >
-          {/* Header row - 4 columns now with drag handle */}
-          <div style={{ 
+          <div style={{
             display: 'grid',
-            gridTemplateColumns: '1fr 1fr 1fr 40px',
+            gridTemplateColumns: '1fr 1fr 1fr 40px 40px',
             gap: '16px',
             alignItems: 'center',
             marginBottom: '12px'
@@ -317,93 +435,176 @@ export const RegistrationFieldsComponent: React.FC<RegistrationFieldsComponentPr
             <Text UNSAFE_style={{ fontWeight: 600, fontSize: '12px', color: COLORS.GRAY_600 }}>
               MAKE IT REQUIRED
             </Text>
-            {/* Drag handle header - empty placeholder */}
-            <span style={{ fontWeight: 600, fontSize: '12px', color: COLORS.GRAY_600 }} />
+            <span aria-hidden="true" />
+            <span aria-hidden="true" />
           </div>
 
-          {/* Field rows */}
           <div className={style({display: 'flex', flexDirection: 'column', gap: 8})} >
             {sortedDisplayFields.map((displayField, displayIndex) => {
-              const { fieldName, displayLabel, isMandated } = displayField
-              const isVisible = visibleFields.includes(fieldName)
-              const isRequired = requiredFields.includes(fieldName)
+              const { fieldName, label, isMandated } = displayField
+              const isVisible = rsvpFormFields.some(f => f.field === fieldName)
+              const isRequired = rsvpFormFields.some(f => f.field === fieldName && f.required === true)
               const isDragging = draggedIndex === displayIndex
               const isDragOver = dragOverIndex === displayIndex
               const canDrag = isVisible
 
+              const fieldDef = getFieldDef(fieldName)
+              const showOptionEditor = fieldSourceMode === 'scope' && fieldDef && isSelectableField(fieldDef)
+              const optState = showOptionEditor ? getEffectiveOptionState(fieldName) : null
+
+              const isExpanded = expandedOptions.has(fieldName)
+              const toggleExpanded = () =>
+                setExpandedOptions(prev => {
+                  const next = new Set(prev)
+                  if (isExpanded) next.delete(fieldName)
+                  else next.add(fieldName)
+                  return next
+                })
+
               return (
                 <div
                   key={fieldName}
-                  draggable={canDrag}
-                  onDragStart={(e) => handleDragStart(e, displayIndex)}
                   onDragOver={(e) => handleDragOver(e, displayIndex)}
                   onDragLeave={handleDragLeave}
                   onDrop={(e) => handleDrop(e, displayIndex)}
-                  onDragEnd={handleDragEnd}
                   style={{
-                    display: 'grid',
-                    gridTemplateColumns: '1fr 1fr 1fr 40px',
-                    gap: '16px',
-                    alignItems: 'center',
-                    padding: '12px 16px',
                     borderRadius: '6px',
-                    backgroundColor: isDragging 
-                      ? SURFACES.PILL_BG 
+                    backgroundColor: isDragging
+                      ? SURFACES.PILL_BG
                       : isVisible
                         ? SURFACES.CANVAS
                         : 'transparent',
-                    border: isDragOver 
-                      ? `2px solid ${SURFACES.SELECTED_RING}` 
+                    border: isDragOver
+                      ? `2px solid ${SURFACES.SELECTED_RING}`
                       : isVisible
                         ? `1px solid ${SURFACES.BORDER}`
                         : '1px solid transparent',
                     opacity: isDragging ? 0.5 : 1,
                     transition: 'border-color 0.2s, background-color 0.2s',
-                    cursor: canDrag ? 'default' : 'default'
                   }}
                 >
-                  <Text UNSAFE_style={{ fontWeight: 500 }}>
-                    {displayLabel}
-                    {isMandated && (
-                      <Text UNSAFE_style={{ 
-                        fontSize: '11px', 
-                        color: COLORS.GRAY_500,
-                        marginLeft: '8px',
-                        fontWeight: 400
-                      }}>
-                        (Always required)
-                      </Text>
-                    )}
-                  </Text>
-                  <Switch
-                    data-testid={`rsvp-field-${fieldName}-visible`}
-                    isSelected={isVisible}
-                    onChange={(checked) => handleVisibleToggle(fieldName, checked)}
-                    isDisabled={isMandated}
-                  >
-                    Appears on form
-                  </Switch>
-                  <Switch
-                    data-testid={`rsvp-field-${fieldName}-required`}
-                    isSelected={isRequired}
-                    onChange={(checked) => handleRequiredToggle(fieldName, checked)}
-                    isDisabled={!isVisible || isMandated}
-                  >
-                    Required field
-                  </Switch>
-                  {/* Drag handle - only visible for selected fields */}
                   <div
+                    draggable={canDrag}
+                    onDragStart={(e) => handleDragStart(e, displayIndex)}
+                    onDragEnd={handleDragEnd}
                     style={{
-                      display: 'flex',
-                      justifyContent: 'center',
+                      display: 'grid',
+                      gridTemplateColumns: '1fr 1fr 1fr 40px 40px',
+                      gap: '16px',
                       alignItems: 'center',
-                      cursor: canDrag ? 'grab' : 'default',
-                      color: canDrag ? COLORS.GRAY_600 : SURFACES.BORDER,
-                      opacity: canDrag ? 1 : 0.3
+                      padding: '12px 16px',
                     }}
                   >
-                    <Move />
+                    <Text UNSAFE_style={{ fontWeight: 500 }}>
+                      {label}
+                      {isMandated && (
+                        <Text UNSAFE_style={{
+                          fontSize: '11px',
+                          color: COLORS.GRAY_500,
+                          marginLeft: '8px',
+                          fontWeight: 400
+                        }}>
+                          (Always required)
+                        </Text>
+                      )}
+                    </Text>
+                    <Switch
+                      data-testid={`rsvp-field-${fieldName}-visible`}
+                      isSelected={isVisible}
+                      onChange={(checked) => handleVisibleToggle(fieldName, checked)}
+                      isDisabled={isMandated}
+                    >
+                      Appears on form
+                    </Switch>
+                    <Switch
+                      data-testid={`rsvp-field-${fieldName}-required`}
+                      isSelected={isRequired}
+                      onChange={(checked) => handleRequiredToggle(fieldName, checked)}
+                      isDisabled={!isVisible || isMandated}
+                    >
+                      Required field
+                    </Switch>
+                    {showOptionEditor && optState && isVisible ? (
+                      <ActionButton
+                        isQuiet
+                        aria-label={`${isExpanded ? 'Collapse' : 'Expand'} options for ${label}`}
+                        aria-expanded={isExpanded}
+                        onPress={toggleExpanded}
+                        UNSAFE_style={{ color: isExpanded ? SURFACES.SELECTED_RING : COLORS.GRAY_600 }}
+                      >
+                        <ListBulleted />
+                      </ActionButton>
+                    ) : null}
+                    <div
+                      aria-label="Drag to reorder"
+                      style={{
+                        display: 'flex',
+                        justifyContent: 'center',
+                        alignItems: 'center',
+                        cursor: canDrag ? 'grab' : 'default',
+                        color: canDrag ? COLORS.GRAY_600 : SURFACES.BORDER,
+                        opacity: canDrag ? 1 : 0.3
+                      }}
+                    >
+                      <Move aria-hidden="true" />
+                    </div>
                   </div>
+
+                  {showOptionEditor && optState && isVisible && isExpanded && (
+                    <div style={{ borderTop: `1px solid ${SURFACES.BORDER}`, padding: '8px 16px 12px' }}>
+                      <div className={style({ display: 'flex', flexDirection: 'column', gap: 8 })}>
+                        {optState.order.map((optValue, optDisplayIdx) => {
+                          const optLabel = fieldDef?.options?.find(o => o.value === optValue)?.label ?? optValue
+                          const optEnabled = !optState.disabledValues.includes(optValue)
+                          const oDragging = optionDrag?.fieldName === fieldName && optionDrag.index === optDisplayIdx
+                          const oOver = optionDragOver?.fieldName === fieldName && optionDragOver.index === optDisplayIdx
+
+                          return (
+                            <div
+                              key={optValue}
+                              draggable
+                              onDragStart={(e) => handleOptionDragStart(e, fieldName, optDisplayIdx)}
+                              onDragOver={(e) => handleOptionDragOver(e, fieldName, optDisplayIdx)}
+                              onDragLeave={handleOptionDragLeave}
+                              onDrop={(e) => handleOptionDrop(e, fieldName, optDisplayIdx)}
+                              onDragEnd={handleOptionDragEnd}
+                              style={{
+                                display: 'grid',
+                                gridTemplateColumns: '1fr 1fr 40px',
+                                gap: 12,
+                                alignItems: 'center',
+                                padding: '8px 12px',
+                                borderRadius: 6,
+                                backgroundColor: oDragging ? SURFACES.PILL_BG : SURFACES.CANVAS,
+                                border: oOver ? `2px solid ${SURFACES.SELECTED_RING}` : 'none',
+                                opacity: oDragging ? 0.6 : 1
+                              }}
+                            >
+                              <Text UNSAFE_style={{ fontSize: 13 }}>{optLabel}</Text>
+                              <Switch
+                                data-testid={`rsvp-option-${fieldName}-${optValue}-enabled`}
+                                isSelected={optEnabled}
+                                onChange={(checked) => handleOptionEnabledToggle(fieldName, optValue, checked)}
+                              >
+                                Include option
+                              </Switch>
+                              <div
+                                aria-label="Drag to reorder"
+                                style={{
+                                  display: 'flex',
+                                  justifyContent: 'center',
+                                  color: COLORS.GRAY_600,
+                                  cursor: 'grab'
+                                }}
+                              >
+                                <Move aria-hidden="true" />
+                              </div>
+                            </div>
+                          )
+                        })}
+                      </div>
+                    </div>
+                  )}
                 </div>
               )
             })}
@@ -457,8 +658,7 @@ export const RegistrationFieldsComponent: React.FC<RegistrationFieldsComponentPr
     )
   }
 
-  // For webinars (ExperienceCloud Virtual), show form type selector
-  const isWebinar = cloudType === 'ExperienceCloud' && eventType === 'Virtual'
+  const isWebinar = isExperienceCloud && eventType === 'Virtual'
 
   return (
     <div className={style({display: 'flex', flexDirection: 'column', gap: 24})}>
@@ -489,4 +689,3 @@ export const RegistrationFieldsComponent: React.FC<RegistrationFieldsComponentPr
     </div>
   )
 }
-

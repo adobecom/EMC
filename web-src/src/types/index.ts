@@ -29,3 +29,6 @@ export * from './rbac'
 
 // RBAC API types (scopes, groups, roles, permissions)
 export * from './rbacApi'
+
+// Config API types (scope configs, custom attributes)
+export * from './configApi'

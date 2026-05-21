@@ -42,6 +42,12 @@ import type {
   PermissionsListResponse,
   ScopeType,
 } from '../types/rbacApi'
+import type {
+  ConfigType,
+  ScopeConfig,
+  ConfigCreateBody,
+  ConfigUpdateBody,
+} from '../types/configApi'
 
 // ============================================================================
 // TYPES
@@ -2342,6 +2348,85 @@ class ApiService {
     if ('error' in result) return result
     return result.permissions
   }
+
+  // --- Scope Configs ---
+
+  async getConfigsForScope(scopeId: string, type?: ConfigType): Promise<ScopeConfig[] | ErrorResponse> {
+    validateString(scopeId, 'scope ID')
+    const baseParams: Record<string, string> = {}
+    if (type) baseParams.type = type
+    return this.fetchAllPages<ScopeConfig>({
+      service: 'esp',
+      baseEndpoint: `/v1/scopes/${encodeURIComponent(scopeId)}/configs`,
+      listKey: 'configs',
+      baseParams,
+      operationName: 'getConfigsForScope'
+    })
+  }
+
+  async getConfigById(scopeId: string, configId: string): Promise<ScopeConfig | ErrorResponse> {
+    validateString(scopeId, 'scope ID')
+    validateString(configId, 'config ID')
+    return this.callExternalApi<ScopeConfig>('esp', `/v1/scopes/${encodeURIComponent(scopeId)}/configs/${encodeURIComponent(configId)}`, 'GET', undefined, {
+      operationName: 'getConfigById',
+      shouldReturnFullResponse: true
+    })
+  }
+
+  async createConfig(scopeId: string, data: ConfigCreateBody): Promise<ScopeConfig | ErrorResponse> {
+    validateString(scopeId, 'scope ID')
+    validateObject(data, 'config create body')
+    return this.callExternalApi<ScopeConfig>('esp', `/v1/scopes/${encodeURIComponent(scopeId)}/configs`, 'POST', data, {
+      operationName: 'createConfig',
+      shouldReturnFullResponse: true
+    })
+  }
+
+  async updateConfig(scopeId: string, configId: string, data: ConfigUpdateBody): Promise<ScopeConfig | ErrorResponse> {
+    validateString(scopeId, 'scope ID')
+    validateString(configId, 'config ID')
+    validateObject(data, 'config update body')
+    return this.callExternalApi<ScopeConfig>('esp', `/v1/scopes/${encodeURIComponent(scopeId)}/configs/${encodeURIComponent(configId)}`, 'PUT', data, {
+      operationName: 'updateConfig',
+      shouldReturnFullResponse: true
+    })
+  }
+
+  async deleteConfig(scopeId: string, configId: string): Promise<SuccessResponse | ErrorResponse> {
+    validateString(scopeId, 'scope ID')
+    validateString(configId, 'config ID')
+    return this.callExternalApi('esp', `/v1/scopes/${encodeURIComponent(scopeId)}/configs/${encodeURIComponent(configId)}`, 'DELETE', undefined, {
+      operationName: 'deleteConfig'
+    })
+  }
+
+  // --- Convenience Endpoints (resolved configs for events/series) ---
+
+  async getEventConfigs(eventId: string, type?: ConfigType): Promise<ScopeConfig[] | ErrorResponse> {
+    validateString(eventId, 'event ID')
+    const baseParams: Record<string, string> = {}
+    if (type) baseParams.type = type
+    return this.fetchAllPages<ScopeConfig>({
+      service: 'esp',
+      baseEndpoint: `/v1/events/${encodeURIComponent(eventId)}/configs`,
+      listKey: 'configs',
+      baseParams,
+      operationName: 'getEventConfigs'
+    })
+  }
+
+  async getSeriesConfigs(seriesId: string, type?: ConfigType): Promise<ScopeConfig[] | ErrorResponse> {
+    validateString(seriesId, 'series ID')
+    const baseParams: Record<string, string> = {}
+    if (type) baseParams.type = type
+    return this.fetchAllPages<ScopeConfig>({
+      service: 'esp',
+      baseEndpoint: `/v1/series/${encodeURIComponent(seriesId)}/configs`,
+      listKey: 'configs',
+      baseParams,
+      operationName: 'getSeriesConfigs'
+    })
+  }
 }
 
 // ============================================================================
@@ -2501,6 +2586,14 @@ export const cachedApi = {
   getEventPublishingProfile: (eventId: string) => apiCache.get((id: string) => apiService.getEventPublishingProfile(id), eventId),
   getCaasTags: () => apiService.getCaasTags(), // Already has internal caching
 
+  // === CONFIGS (GET Operations - Cached) ===
+  getConfigsForScope: (scopeId: string, type?: ConfigType) =>
+    apiCache.get((id: string, t?: ConfigType) => apiService.getConfigsForScope(id, t), scopeId, type),
+  getEventConfigs: (eventId: string, type?: ConfigType) =>
+    apiCache.get((id: string, t?: ConfigType) => apiService.getEventConfigs(id, t), eventId, type),
+  getSeriesConfigs: (seriesId: string, type?: ConfigType) =>
+    apiCache.get((id: string, t?: ConfigType) => apiService.getSeriesConfigs(id, t), seriesId, type),
+
   // === MUTATIONS (with cache invalidation) ===
   
   // Series Mutations
@@ -2612,6 +2705,28 @@ export const cachedApi = {
     apiCache.invalidate(eventId)
     apiCache.invalidate('getEventAttendees')
     apiCache.invalidate('getAllEventAttendees')
+    return result
+  },
+
+  // Config Mutations
+  async createConfig(scopeId: string, data: ConfigCreateBody) {
+    const result = await apiService.createConfig(scopeId, data)
+    apiCache.invalidate(scopeId)
+    apiCache.invalidate('getConfigsForScope')
+    return result
+  },
+  async updateConfig(scopeId: string, configId: string, data: ConfigUpdateBody) {
+    const result = await apiService.updateConfig(scopeId, configId, data)
+    apiCache.invalidate(scopeId)
+    apiCache.invalidate(configId)
+    apiCache.invalidate('getConfigsForScope')
+    return result
+  },
+  async deleteConfig(scopeId: string, configId: string) {
+    const result = await apiService.deleteConfig(scopeId, configId)
+    apiCache.invalidate(scopeId)
+    apiCache.invalidate(configId)
+    apiCache.invalidate('getConfigsForScope')
     return result
   },
 
