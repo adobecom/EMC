@@ -18,7 +18,6 @@ import { HeadingWithTooltip, RichTextEditor } from '../../components/shared'
 import InfoCircle from "@react-spectrum/s2/icons/InfoCircle"
 import { RegistrationFieldsComponent } from './RegistrationFieldsComponent'
 import { useEventFormComponent } from '../../hooks/useEventFormComponent'
-import type { RsvpFieldOptionSelectionState } from '../../types/domain'
 
 /**
  * RegistrationConfigComponent - Manages event registration settings
@@ -48,9 +47,7 @@ export const RegistrationConfigComponent: React.FC = () => {
   const rsvpDescription = formData.rsvpDescription || ''
   const registrationType = formData.registrationType || 'ESP'
   const marketoFormUrl = formData.marketoFormUrl || ''
-  const visibleRsvpFields = formData.visibleRsvpFields || []
-  const requiredRsvpFields = formData.requiredRsvpFields || []
-  const rsvpOptionSelections = formData.rsvpOptionSelections || {}
+  const rsvpFormFields = formData.rsvpFormFields || []
   
   // ============================================================================
   // LOCAL STATE
@@ -102,25 +99,8 @@ export const RegistrationConfigComponent: React.FC = () => {
     updateFormData({ marketoFormUrl: url })
   }
   
-  const handleVisibleFieldsChange = (fields: string[]) => {
-    updateFormData({ visibleRsvpFields: fields })
-  }
-  
-  const handleRequiredFieldsChange = (fields: string[]) => {
-    updateFormData({ requiredRsvpFields: fields })
-  }
-
-  const handleRsvpOptionSelectionsChange = (patch: Record<string, RsvpFieldOptionSelectionState | null>) => {
-    const prev = formData.rsvpOptionSelections || {}
-    const next = { ...prev }
-    for (const [key, val] of Object.entries(patch)) {
-      if (val === null || val === undefined) {
-        delete next[key]
-      } else {
-        next[key] = val
-      }
-    }
-    updateFormData({ rsvpOptionSelections: next })
+  const handleRsvpFormFieldsChange = (fields: { field: string; required?: boolean; options?: string[] }[]) => {
+    updateFormData({ rsvpFormFields: fields })
   }
   
   const handleContactHostToggle = (value: boolean) => {
@@ -270,14 +250,10 @@ export const RegistrationConfigComponent: React.FC = () => {
           isExperienceCloud={isExperienceCloud}
           eventType={isWebinar ? 'Virtual' : 'InPerson'}
           cloudType={cloudType}
-          visibleFields={visibleRsvpFields}
-          requiredFields={requiredRsvpFields}
-          rsvpOptionSelections={rsvpOptionSelections}
+          rsvpFormFields={rsvpFormFields}
           registrationType={registrationType}
           marketoFormUrl={marketoFormUrl}
-          onVisibleFieldsChange={handleVisibleFieldsChange}
-          onRequiredFieldsChange={handleRequiredFieldsChange}
-          onRsvpOptionSelectionsChange={handleRsvpOptionSelectionsChange}
+          onRsvpFormFieldsChange={handleRsvpFormFieldsChange}
           onRegistrationTypeChange={handleRegistrationTypeChange}
           onMarketoFormUrlChange={handleMarketoFormUrlChange}
         />
