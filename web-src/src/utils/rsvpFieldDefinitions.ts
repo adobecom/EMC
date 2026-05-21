@@ -5,6 +5,10 @@
 import type { RsvpFormField, RsvpFieldType } from '../types/configApi'
 import type { RsvpConfigField } from '../types/attendee'
 import type { RsvpFieldOptionSelectionState } from '../types/domain'
+import { rsvpConfigUiLabel } from './rsvpConfigLabels'
+
+const toUpperWords = (input: string): string =>
+  input.replace(/([a-z])([A-Z])/g, '$1 $2').toUpperCase()
 
 const LEGACY_EXCLUDED_TYPES = new Set(['submit', 'button', 'hidden'])
 
@@ -47,7 +51,7 @@ export function mapLegacyRsvpConfigToFormFields(rows: RsvpConfigField[]): RsvpFo
         : []
       return {
         field: r.Field.trim(),
-        label: (r.Label && r.Label.trim()) || r.Field.trim(),
+        label: rsvpConfigUiLabel(r, toUpperWords),
         placeholder: (r.Placeholder && r.Placeholder.trim()) || '',
         type,
         required: r.Required === 'x' || r.Required === 'X',

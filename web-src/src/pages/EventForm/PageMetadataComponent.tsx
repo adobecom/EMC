@@ -6,6 +6,7 @@ import React, { useState, useEffect, useRef, useCallback } from 'react'
 import { Picker, PickerItem, Text, Heading } from '@react-spectrum/s2'
 import { style } from '@react-spectrum/s2/style' with { type: 'macro' }
 import { TYPOGRAPHY, COLORS } from '../../styles/designSystem'
+import { useEventFormContext } from '../../contexts/EventFormContext'
 import { useEventFormComponent } from '../../hooks/useEventFormComponent'
 import { apiService, cachedApi } from '../../services/api'
 import { PublishingProfile } from '../../types/domain'
@@ -28,6 +29,30 @@ interface MetadataCatalogue {
 
 const METADATA_CATALOGUE_URL = 'https://www.adobe.com/event-libs/assets/configs/metadata-catalogue.json'
 
+function noOptionKey(fieldKey: string): string {
+  return `no-${fieldKey}`
+}
+
+function catalogueFieldKeys(cat: MetadataCatalogue | null): string[] {
+  const fields = cat?.data?.data
+  if (!fields?.length) return []
+  return (fields as MetadataField[]).map((f) => f.key)
+}
+
+/** ESP may return profileId on the association object while nested `profile` omits it. */
+function publishingProfileFromAssociation(profileAssociation: {
+  profile?: PublishingProfile
+  profileId?: string
+  [key: string]: unknown
+}): PublishingProfile {
+  const inner = (profileAssociation.profile ?? profileAssociation) as PublishingProfile
+  const topId = profileAssociation.profileId
+  if (typeof topId === 'string' && topId && !inner.profileId) {
+    return { ...inner, profileId: topId }
+  }
+  return inner
+}
+
 /**
  * PageMetadataComponent - Manages page metadata for webinar events
  * 
@@ -36,22 +61,76 @@ const METADATA_CATALOGUE_URL = 'https://www.adobe.com/event-libs/assets/configs/
  * Loads/saves metadata via PublishingProfile API.
  */
 export const PageMetadataComponent: React.FC = () => {
+  const { isEditMode } = useEventFormContext()
+
   // ============================================================================
   // LOCAL STATE
   // ============================================================================
-  
+
   const [catalogue, setCatalogue] = useState<MetadataCatalogue | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  
+  /** Catalogue arrived after publishing profile metadata was merged — flush acknowledgments once */
+  const [pendingProfileAckBackfill, setPendingProfileAckBackfill] = useState(false)
+
   // Track the current publishing profile for updates
   const publishingProfileRef = useRef<PublishingProfile | null>(null)
-  
+  const catalogueRef = useRef<MetadataCatalogue | null>(null)
+
   // Ref to hold updateFormData for use in callbacks (avoids circular dependency)
   const updateFormDataRef = useRef<((updates: any) => void) | null>(null)
-  
+
   // Keep a ref to formData for use in callbacks
   const formDataRef = useRef<any>(null)
+
+  const mergeAckForCatalogueKeys = useCallback(
+    (prevAck: Record<string, boolean>, keys: string[]): Record<string, boolean> => ({
+      ...prevAck,
+      ...Object.fromEntries(keys.map((k) => [k, true])),
+    }),
+    []
+  )
+
+  /** Apply association from GET publishing profile: metadata (if present) + acknowledgments when catalogue keys are known. */
+  const applyPublishingProfileFromServer = useCallback(
+    (actualProfile: PublishingProfile) => {
+      publishingProfileRef.current = actualProfile
+
+      const keys = catalogueFieldKeys(catalogueRef.current)
+      const prevAck = (formDataRef.current?.metadataFieldAcknowledged || {}) as Record<string, boolean>
+
+      if (keys.length > 0) {
+        const updates: Record<string, unknown> = {
+          metadataFieldAcknowledged: mergeAckForCatalogueKeys(prevAck, keys),
+        }
+        if (actualProfile.metadata != null) {
+          updates.metadata = actualProfile.metadata
+        }
+        updateFormDataRef.current?.(updates)
+        setPendingProfileAckBackfill(false)
+      } else {
+        if (actualProfile.metadata != null) {
+          updateFormDataRef.current?.({ metadata: actualProfile.metadata })
+        }
+        setPendingProfileAckBackfill(true)
+      }
+    },
+    [mergeAckForCatalogueKeys]
+  )
+
+  /** After profile save/create: keep acknowledgments aligned with catalogue (same intent as prior hydration tick). */
+  const syncAcknowledgmentsAfterProfileSave = useCallback(() => {
+    const keys = catalogueFieldKeys(catalogueRef.current)
+    const prevAck = (formDataRef.current?.metadataFieldAcknowledged || {}) as Record<string, boolean>
+    if (keys.length > 0) {
+      updateFormDataRef.current?.({
+        metadataFieldAcknowledged: mergeAckForCatalogueKeys(prevAck, keys),
+      })
+      setPendingProfileAckBackfill(false)
+    } else {
+      setPendingProfileAckBackfill(true)
+    }
+  }, [mergeAckForCatalogueKeys])
   
   // ============================================================================
   // CONTEXT INTEGRATION
@@ -61,7 +140,6 @@ export const PageMetadataComponent: React.FC = () => {
     formData,
     updateFormData,
     eventId,
-    isEditMode,
   } = useEventFormComponent({
     componentId: 'page-metadata',
     onLoadResponse: async (eventResponse: any) => {
@@ -76,15 +154,9 @@ export const PageMetadataComponent: React.FC = () => {
         const profileAssociation = profiles[0]
         
         if (profileAssociation && !('error' in profileAssociation)) {
-          // API returns { eventId, profileId, profile: { metadata, ... } }
-          // The actual profile data is nested inside the 'profile' property
-          const actualProfile = profileAssociation.profile || profileAssociation
-          
-          publishingProfileRef.current = actualProfile as PublishingProfile
-          // Populate form data with the profile's metadata
-          if (actualProfile.metadata && updateFormDataRef.current) {
-            updateFormDataRef.current({ metadata: actualProfile.metadata })
-          }
+          applyPublishingProfileFromServer(
+            publishingProfileFromAssociation(profileAssociation as { profile?: PublishingProfile; profileId?: string })
+          )
         }
       } catch (err) {
         console.error('Failed to load publishing profile:', err)
@@ -93,20 +165,21 @@ export const PageMetadataComponent: React.FC = () => {
     },
     onAfterSave: async (eventId: string) => {
       // Save/update the publishing profile after the event is saved
-      const currentMetadata = formDataRef.current?.metadata
-      if (!currentMetadata || Object.keys(currentMetadata).length === 0) {
-        return // Nothing to save
+      const savedMetadata = formDataRef.current?.metadata ?? {}
+      const hasMetadataKeys = Object.keys(savedMetadata).length > 0
+      const existingProfile = publishingProfileRef.current
+
+      if (!existingProfile?.profileId && !hasMetadataKeys) {
+        return // No profile yet and nothing to create
       }
-      
+
       try {
-        const existingProfile = publishingProfileRef.current
-        
         if (existingProfile?.profileId) {
-          // Update existing profile (ApiService refreshes modificationTime before PUT)
+          // Update existing profile (including clearing metadata to {})
           const updateResult = await apiService.updatePublishingProfile(existingProfile.profileId, {
             name: existingProfile.name,
             description: existingProfile.description,
-            metadata: currentMetadata,
+            metadata: savedMetadata,
             modificationTime: existingProfile.modificationTime,
           })
           if (
@@ -119,24 +192,41 @@ export const PageMetadataComponent: React.FC = () => {
               ...existingProfile,
               ...(updateResult as PublishingProfile),
             }
+            syncAcknowledgmentsAfterProfileSave()
           }
-        } else {
+        } else if (hasMetadataKeys) {
           // Create new profile and assign to event
           const createResult = await apiService.createPublishingProfile({
             name: `Event ${eventId} Profile`,
-            metadata: currentMetadata,
+            metadata: savedMetadata,
           })
           
           if (createResult && !('error' in createResult) && createResult.profileId) {
             // Assign the new profile to the event
             await apiService.assignPublishingProfileToEvent(eventId, createResult.profileId)
             publishingProfileRef.current = createResult as PublishingProfile
+            syncAcknowledgmentsAfterProfileSave()
           }
         }
       } catch (err) {
         console.error('Failed to save publishing profile:', err)
         // Don't throw - we don't want to fail the entire save
       }
+    },
+    validate: () => {
+      const cat = catalogueRef.current
+      const fieldsList = cat?.data?.data
+      if (!fieldsList?.length) return true
+
+      const ack = formDataRef.current?.metadataFieldAcknowledged || {}
+      const meta = formDataRef.current?.metadata || {}
+
+      for (const field of fieldsList as MetadataField[]) {
+        if (ack[field.key]) continue
+        if (meta[field.key]) continue
+        return `Select a value for ${field.name} (page metadata).`
+      }
+      return true
     },
   })
   
@@ -148,8 +238,27 @@ export const PageMetadataComponent: React.FC = () => {
   useEffect(() => {
     formDataRef.current = formData
   }, [formData])
+
+  useEffect(() => {
+    catalogueRef.current = catalogue
+  }, [catalogue])
   
   const metadata = formData.metadata || {}
+  const metadataFieldAcknowledged = formData.metadataFieldAcknowledged || {}
+
+  // Catalogue arrived after profile metadata was merged — backfill acknowledgments once
+  useEffect(() => {
+    if (!pendingProfileAckBackfill) return
+    if (!publishingProfileRef.current) return
+    const keys = catalogueFieldKeys(catalogue)
+    if (!keys.length) return
+
+    const prevAck = (formDataRef.current?.metadataFieldAcknowledged || {}) as Record<string, boolean>
+    updateFormDataRef.current?.({
+      metadataFieldAcknowledged: mergeAckForCatalogueKeys(prevAck, keys),
+    })
+    setPendingProfileAckBackfill(false)
+  }, [catalogue, pendingProfileAckBackfill, mergeAckForCatalogueKeys])
   
   // ============================================================================
   // LOAD PUBLISHING PROFILE ON EDIT MODE
@@ -166,22 +275,21 @@ export const PageMetadataComponent: React.FC = () => {
       const profileAssociation = profiles[0]
       
       if (profileAssociation && !('error' in profileAssociation)) {
-        // API returns { eventId, profileId, profile: { metadata, ... } }
-        // The actual profile data is nested inside the 'profile' property
-        const actualProfile = profileAssociation.profile || profileAssociation
-        
-        publishingProfileRef.current = actualProfile as PublishingProfile
-        // Populate form data with the profile's metadata
-        if (actualProfile.metadata) {
-          updateFormData({ metadata: actualProfile.metadata })
-        }
+        applyPublishingProfileFromServer(
+          publishingProfileFromAssociation(profileAssociation as { profile?: PublishingProfile; profileId?: string })
+        )
       }
     } catch (err) {
       console.error('Failed to load publishing profile:', err)
       // Non-fatal - profile may not exist yet
     }
-  }, [updateFormData])
+  }, [applyPublishingProfileFromServer])
   
+  useEffect(() => {
+    publishingProfileRef.current = null
+    setPendingProfileAckBackfill(false)
+  }, [eventId])
+
   useEffect(() => {
     // If we're in edit mode and have an eventId, load the publishing profile
     if (isEditMode && eventId && !publishingProfileRef.current) {
@@ -229,15 +337,24 @@ export const PageMetadataComponent: React.FC = () => {
   // ============================================================================
 
   const handleFieldChange = (fieldKey: string, value: string) => {
-    const updatedMetadata = { ...metadata }
-    
-    if (value && !value.startsWith('No ')) {
-      updatedMetadata[fieldKey] = value
+    const prev = formDataRef.current
+    const meta = { ...(prev?.metadata || {}) }
+    const noKey = noOptionKey(fieldKey)
+    const prevAck = prev?.metadataFieldAcknowledged || {}
+
+    if (value && value !== noKey) {
+      meta[fieldKey] = value
     } else {
-      delete updatedMetadata[fieldKey]
+      delete meta[fieldKey]
     }
-    
-    updateFormData({ metadata: updatedMetadata })
+
+    updateFormData({
+      metadata: meta,
+      metadataFieldAcknowledged: {
+        ...prevAck,
+        [fieldKey]: true,
+      },
+    })
   }
 
   // ============================================================================
@@ -285,11 +402,19 @@ export const PageMetadataComponent: React.FC = () => {
       {fields.map((field: MetadataField) => {
         const fieldOptions: MetadataOption[] = catalogue?.[field.key]?.data || []
         const currentValue = metadata[field.key] || ''
-        
+        const noKey = noOptionKey(field.key)
+
         const allOptions = [
-          { key: `no-${field.key}`, label: `No ${field.name}` },
-          ...fieldOptions.map(opt => ({ key: opt.value, label: opt.value }))
+          ...fieldOptions.map(opt => ({ key: opt.value, label: opt.value })),
+          { key: noKey, label: `No ${field.name}` },
         ]
+
+        const selectedKey =
+          currentValue
+            ? currentValue
+            : metadataFieldAcknowledged[field.key]
+              ? noKey
+              : undefined
 
         return (
           <Picker
@@ -297,7 +422,7 @@ export const PageMetadataComponent: React.FC = () => {
             data-testid={`meta-${field.key}-input`}
             label={`${field.name} *`}
             placeholder={`Select ${field.name.toLowerCase()}`}
-            selectedKey={currentValue || `no-${field.key}`}
+            selectedKey={selectedKey}
             onSelectionChange={(key) => handleFieldChange(field.key, key as string)}
             isRequired
             items={allOptions}

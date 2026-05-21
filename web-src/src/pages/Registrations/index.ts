@@ -15,6 +15,7 @@ export { Registrations } from './Registrations'
 // Tab components
 export { RegistrationsTab } from './RegistrationsTab'
 export { CampaignsTab } from './CampaignsTab'
+export { SessionsTab } from './SessionsTab'
 
 // Sub-components (page-specific, not shared)
 export { EventSelectorComponent } from './EventSelectorComponent'

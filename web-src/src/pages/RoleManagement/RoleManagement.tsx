@@ -22,6 +22,14 @@ interface RoleManagementProps {
 
 const SEARCH_KEYS = ['name']
 
+const ROLE_MANAGEMENT_TABLE_TEST_IDS = {
+  root: 'role-management-table',
+  emptyState: 'role-management-table-empty-state',
+  pageInput: 'role-management-table-page-input',
+  header: (columnKey: string) => `role-management-table-header-${columnKey}`,
+  row: (itemKey: string) => `role-management-table-row-${itemKey}`,
+}
+
 // Group permissions by resource for the picker UI
 function groupPermissionsByResource(permissions: RBACPermission[]): Map<string, RBACPermission[]> {
   const map = new Map<string, RBACPermission[]>()
@@ -260,6 +268,7 @@ export const RoleManagement: React.FC<RoleManagementProps> = () => {
           emptyStateIllustration={<BriefcaseIllustration aria-hidden />}
           emptyStateTitle="No Roles"
           emptyStateDescription="Create roles to define permission sets for groups"
+          dataTableTestIds={ROLE_MANAGEMENT_TABLE_TEST_IDS}
           searchPlaceholder="Search roles..."
           searchKeys={SEARCH_KEYS}
         />

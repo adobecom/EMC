@@ -262,6 +262,18 @@ export function filterSeriesData(
   }, {} as Record<string, any>)
 }
 
+/**
+ * Normalize any object intended for ESP `PUT /v1/series/:id` (update, publish, unpublish, archive).
+ * Uses {@link filterSeriesData} in `update` mode so non-updatable / read-only fields
+ * (e.g. `targetCms` in the OpenAPI request body) are omitted.
+ */
+export function prepareEspSeriesPutPayload(
+  data: Record<string, any>,
+  options: FilterOptions = {}
+): Record<string, any> {
+  return filterSeriesData(data, 'update', options)
+}
+
 // ============================================================================
 // EVENT FILTERING
 // ============================================================================

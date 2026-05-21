@@ -18,7 +18,7 @@ import NoSearchResults from '@react-spectrum/s2/illustrations/linear/NoSearchRes
 import { DataTable, TableColumn, ResourceEmptyState } from '../../components/shared'
 import { COLORS } from '../../styles/designSystem'
 import { useHasPermission } from '../../hooks/useHasPermission'
-import { generateCsv, downloadCsv, type CsvColumn } from '../../utils/csvExport'
+import { generateCsv, downloadCsv, type CsvColumn, sanitizeFilename, exportDatetime } from '../../utils/csvExport'
 
 const DEFAULT_CAMPAIGN_PAGE_SIZE = 20
 const CAMPAIGN_PAGE_SIZE_OPTIONS = [10, 20, 50, 100] as const
@@ -41,6 +41,60 @@ function formatCampaignEpochForCsv(ms: number): string {
 
 function isCampaignPageSize(n: number): n is (typeof CAMPAIGN_PAGE_SIZE_OPTIONS)[number] {
   return (CAMPAIGN_PAGE_SIZE_OPTIONS as readonly number[]).includes(n)
+}
+
+interface CampaignExportDialogProps {
+  rowCount: number
+  defaultFilename: string
+  onExport: (filename: string) => void
+  onClose: () => void
+}
+
+const CampaignExportDialog: React.FC<CampaignExportDialogProps> = ({
+  rowCount,
+  defaultFilename,
+  onExport,
+  onClose,
+}) => {
+  const [filename, setFilename] = useState(defaultFilename)
+  return (
+    <Dialog>
+      {() => (
+        <>
+          <Heading slot="title">Export Campaigns to CSV</Heading>
+          <Content>
+            <TextField
+              label="File name"
+              value={filename}
+              onChange={setFilename}
+              description=".csv will be appended automatically"
+              styles={style({ width: '[100%]' })}
+            />
+          </Content>
+          <ButtonGroup>
+            <Button variant="secondary" onPress={onClose}>
+              <Text>Cancel</Text>
+            </Button>
+            <Button
+              variant="accent"
+              onPress={() => onExport(filename.trim() || 'export')}
+              isDisabled={rowCount === 0}
+            >
+              <Text>Export ({rowCount} rows)</Text>
+            </Button>
+          </ButtonGroup>
+        </>
+      )}
+    </Dialog>
+  )
+}
+
+const CAMPAIGNS_TABLE_TEST_IDS = {
+  root: 'campaigns-table',
+  emptyState: 'campaigns-table-empty-state',
+  pageInput: 'campaigns-table-page-input',
+  header: (columnKey: string) => `campaigns-table-header-${columnKey}`,
+  row: (itemKey: string) => `campaigns-table-row-${itemKey}`,
 }
 
 interface CampaignsTabProps {
@@ -70,6 +124,7 @@ export const CampaignsTab: React.FC<CampaignsTabProps> = ({
   const [copiedId, setCopiedId] = useState<string | null>(null)
   const [searchQuery, setSearchQuery] = useState('')
   const [tablePageSize, setTablePageSize] = useState(DEFAULT_CAMPAIGN_PAGE_SIZE)
+  const [isCampaignExportOpen, setIsCampaignExportOpen] = useState(false)
 
   const [formName, setFormName] = useState('')
   const [formAttendeeLimit, setFormAttendeeLimit] = useState<number | undefined>(undefined)
@@ -209,8 +264,7 @@ export const CampaignsTab: React.FC<CampaignsTabProps> = ({
     setIsFormOpen(true)
   }, [])
 
-  const handleExportCampaignsCsv = useCallback(() => {
-    if (filteredCampaigns.length === 0) return
+  const buildCampaignCsv = useCallback(() => {
     const rows: Record<string, unknown>[] = filteredCampaigns.map((c) => ({
       campaignId: c.campaignId,
       name: c.name,
@@ -222,9 +276,7 @@ export const CampaignsTab: React.FC<CampaignsTabProps> = ({
       creationTime: formatCampaignEpochForCsv(c.creationTime),
       modificationTime: formatCampaignEpochForCsv(c.modificationTime),
     }))
-    const csv = generateCsv(rows, CAMPAIGN_CSV_COLUMNS)
-    const timestamp = new Date().toISOString().slice(0, 10)
-    downloadCsv(csv, `campaigns-export-${timestamp}.csv`)
+    return generateCsv(rows, CAMPAIGN_CSV_COLUMNS)
   }, [filteredCampaigns])
 
   const campaignsTableEmptyState = useMemo(() => {
@@ -429,12 +481,24 @@ export const CampaignsTab: React.FC<CampaignsTabProps> = ({
             })}
           >
             {filteredCampaigns.length > 0 && (
-              <ActionButton
-                aria-label="Export campaigns as CSV"
-                onPress={handleExportCampaignsCsv}
-              >
-                <Download />
-              </ActionButton>
+              <DialogTrigger isOpen={isCampaignExportOpen} onOpenChange={setIsCampaignExportOpen}>
+                <ActionButton aria-label="Export campaigns as CSV">
+                  <Download />
+                </ActionButton>
+                <CampaignExportDialog
+                  rowCount={filteredCampaigns.length}
+                  defaultFilename={
+                    sanitizeFilename(event?.title || event?.enTitle || 'event') +
+                    '_campaigns_' +
+                    exportDatetime()
+                  }
+                  onExport={(filename) => {
+                    downloadCsv(buildCampaignCsv(), `${filename}.csv`)
+                    setIsCampaignExportOpen(false)
+                  }}
+                  onClose={() => setIsCampaignExportOpen(false)}
+                />
+              </DialogTrigger>
             )}
             <Picker
               label="Rows per page"
@@ -472,6 +536,7 @@ export const CampaignsTab: React.FC<CampaignsTabProps> = ({
           data={filteredCampaigns}
           getItemKey={(item) => item.campaignId}
           pageSize={tablePageSize}
+          testIds={CAMPAIGNS_TABLE_TEST_IDS}
           emptyState={campaignsTableEmptyState}
         />
       </div>

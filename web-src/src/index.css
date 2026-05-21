@@ -377,7 +377,6 @@ select {
 }
 
 .custom-data-table th {
-  height: 80px;
   padding: 0 16px;
   text-align: left;
   font-weight: 500;
@@ -385,7 +384,33 @@ select {
   position: sticky;
   top: 0;
   z-index: 1;
-  white-space: nowrap;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  vertical-align: middle;
+}
+
+/**
+ * min-height on th/td is ignored by many table layout engines; the inner flex
+ * shell carries the 80px minimum so short headers match the old row height.
+ */
+.custom-data-table th .data-table-header-inner {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  min-height: 80px;
+  box-sizing: border-box;
+}
+
+.custom-data-table th .data-table-header-label {
+  flex: 1;
+  min-width: 0;
+}
+
+.custom-data-table th .data-table-header-sort {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
 }
 
 .custom-data-table th.sortable {

@@ -32,6 +32,14 @@ const FILTER_ALL = '__all__'
 const FILTER_EMPTY_CLOUD = '__empty__'
 const FILTER_EMPTY_CREATOR = '__empty_creator__'
 
+const SERIES_DASHBOARD_TABLE_TEST_IDS = {
+  root: 'series-dashboard-table',
+  emptyState: 'series-dashboard-table-empty-state',
+  pageInput: 'series-dashboard-table-page-input',
+  header: (columnKey: string) => `series-dashboard-table-header-${columnKey}`,
+  row: (itemKey: string) => `series-dashboard-table-row-${itemKey}`,
+}
+
 interface SeriesDashboardProps {
   ims: IMS
 }
@@ -629,6 +637,7 @@ export const SeriesDashboard: React.FC<SeriesDashboardProps> = () => {
           emptyStateIllustration={<LayersIllustration aria-hidden />}
           emptyStateTitle="No Series Found"
           emptyStateDescription="Get started by creating your first series"
+          dataTableTestIds={SERIES_DASHBOARD_TABLE_TEST_IDS}
           searchPlaceholder="Search series..."
           searchKeys={SERIES_SEARCH_KEYS}
         />

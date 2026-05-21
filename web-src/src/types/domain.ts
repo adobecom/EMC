@@ -514,6 +514,7 @@ export interface SponsorData {
   isSaved?: boolean
   isFromSeries?: boolean  // True if selected from series autocomplete
   localizations?: Record<string, SponsorLocalization>
+  ordinal?: number
   modificationTime?: number
 }
 
@@ -651,6 +652,9 @@ export interface EventFormData {
 
   // Transient fields (not submitted to API, used for cross-component validation)
   _customAttributeConfigs?: import('./configApi').CustomAttributeConfig[]
+
+  /** UI-only: user explicitly chose a catalogue option (including "No …") per metadata field key */
+  metadataFieldAcknowledged?: Record<string, boolean>
 }
 
 export interface EventCustomAttributeValue {
