@@ -264,7 +264,7 @@ export interface EventApiResponse {
   localizations?: Record<string, EventLocalization>
   venue?: Record<string, any>
   agenda?: AgendaDataItem[] // Localizable array
-  rsvpFormFields?: Record<string, any>
+  rsvpFormFields?: { fields: { field: string; required?: boolean; options?: string[] }[] }
   rsvpDescription?: string // Localizable
   video?: VideoData
   registration?: RegistrationData
@@ -557,6 +557,14 @@ export interface VenueData {
   useAlternativeVenueName?: boolean // Whether to show/use alternative name field
 }
 
+/** Per-field RSVP option UI state (scope-config select / multi-select). */
+export interface RsvpFieldOptionSelectionState {
+  /** Option `value` strings in display order */
+  order: string[]
+  /** Option values toggled off (all others are on) */
+  disabledValues: string[]
+}
+
 // Comprehensive Event Form Data
 export interface EventFormData {
   // Step 1: Basic Info
@@ -607,9 +615,14 @@ export interface EventFormData {
   registration?: RegistrationData
   marketoFormUrl?: string
   marketoIntegration?: MarketoIntegrationData
-  rsvpFormFields?: Record<string, any>
+  rsvpFormFields?: { field: string; required?: boolean; options?: string[] }[]
   visibleRsvpFields?: string[]
   requiredRsvpFields?: string[]
+  /**
+   * Client-side RSVP option order and toggles for select / multi-select fields (scope config).
+   * Not sent on event save until ESP supports granular RSVP payloads — see useEventFormSave TODO(PIM).
+   */
+  rsvpOptionSelections?: Record<string, RsvpFieldOptionSelectionState>
   
   // Step 6: Images
   images?: EventImageData[]
@@ -635,8 +648,22 @@ export interface EventFormData {
   localizations?: Record<string, EventLocalization>
   localizationOverrides?: Record<string, any>
   metadata?: Record<string, any>
+  customAttributes?: EventCustomAttributeValue[]
+
+  // Transient fields (not submitted to API, used for cross-component validation)
+  _customAttributeConfigs?: import('./configApi').CustomAttributeConfig[]
+
   /** UI-only: user explicitly chose a catalogue option (including "No …") per metadata field key */
   metadataFieldAcknowledged?: Record<string, boolean>
+}
+
+export interface EventCustomAttributeValue {
+  attributeId: string
+  attribute: string
+  valueId?: string
+  value: string
+  displayOrder?: number
+  label?: string
 }
 
 // Agenda Item

@@ -13,6 +13,7 @@ import CalendarIllustration from '@react-spectrum/s2/illustrations/gradient/gene
 import UserGroupIllustration from '@react-spectrum/s2/illustrations/gradient/generic1/UserGroup'
 import MicrophoneIllustration from '@react-spectrum/s2/illustrations/gradient/generic1/Microphone'
 import LayersIllustration from '@react-spectrum/s2/illustrations/gradient/generic1/Layers'
+import GearSettingIllustration from '@react-spectrum/s2/illustrations/gradient/generic1/GearSetting'
 import DocumentIllustration from '@react-spectrum/s2/illustrations/gradient/generic1/Document'
 import { GRADIENT_BACKGROUND, LAYOUT_DIMENSIONS, SPACING } from '../styles/designSystem'
 import { checkPermission } from '../hooks/useHasPermission'
@@ -69,6 +70,14 @@ const destinations: NavDestination[] = [
     title: 'Series',
     description: 'Create and manage event series to group related events together.',
     permission: { resource: 'series', access: 'read' }
+  },
+  {
+    id: 'configs',
+    path: '/configs',
+    icon: <GearSettingIllustration aria-hidden />,
+    title: 'Configs',
+    description: 'Manage RSVP fields, locale mappings, and custom attributes for your organization.',
+    permission: { resource: 'config', access: 'read' }
   },
   {
     id: 'about',

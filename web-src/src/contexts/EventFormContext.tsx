@@ -222,6 +222,7 @@ export const createDefaultFormData = (): EventFormData => ({
   marketoFormUrl: '',
   visibleRsvpFields: [],
   requiredRsvpFields: [],
+  rsvpOptionSelections: {},
   images: [],
   profiles: [],
   communityForumUrl: '',
