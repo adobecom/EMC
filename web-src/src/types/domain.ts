@@ -286,6 +286,8 @@ export interface EventApiResponse {
   images?: EventImage[]
   speakers?: any[]
   sponsors?: any[]
+  customAttributes?: EventCustomAttributeGroup[]
+  enabledAttributeIds?: { event: string[]; session: string[] }
   // Add any other fields as optional
   [key: string]: any
 }
@@ -647,6 +649,7 @@ export interface EventFormData {
   localizationOverrides?: Record<string, any>
   metadata?: Record<string, any>
   customAttributes?: EventCustomAttributeValue[]
+  enabledAttributeIds?: { event: string[]; session: string[] }
 
   // Transient fields (not submitted to API, used for cross-component validation)
   _customAttributeConfigs?: import('./configApi').CustomAttributeConfig[]
@@ -662,6 +665,13 @@ export interface EventCustomAttributeValue {
   value: string
   displayOrder?: number
   label?: string
+}
+
+// Shape returned by GET /events — BE resolves IDs to labels
+export interface EventCustomAttributeGroup {
+  attributeId: string
+  attribute: string
+  values: { valueId: string; value: string }[]
 }
 
 // Agenda Item

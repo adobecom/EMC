@@ -8,6 +8,7 @@ import {
   ProfileData,
   SponsorData,
   EventApiResponse,
+  EventCustomAttributeGroup,
   SeriesSpeaker,
 } from '../types/domain'
 import { getLanguageKeyFromLocale } from '../config/localeMapping'
@@ -177,6 +178,14 @@ export function mapApiResponseToFormData(event: EventApiResponse, locale: string
       }),
     marketoIntegration: event.marketoIntegration,
     video: event.video,
-    customAttributes: event.customAttributes || [],
+    customAttributes: (event.customAttributes as EventCustomAttributeGroup[] | undefined)?.flatMap(g =>
+      g.values.map((v, i) => ({
+        attributeId: g.attributeId,
+        attribute: g.attribute,
+        valueId: v.valueId,
+        value: v.value,
+        displayOrder: i,
+      }))
+    ) ?? [],
   }
 }

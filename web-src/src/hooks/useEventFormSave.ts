@@ -316,6 +316,16 @@ export function useEventFormSave() {
     if (mergedData.rsvpFormFields?.length) {
       payload.rsvpFormFields = { fields: mergedData.rsvpFormFields }
     }
+
+    // Custom attributes — send IDs only; labels are resolved by ESP at read time.
+    if (mergedData.customAttributes?.length) {
+      payload.customAttributes = mergedData.customAttributes
+        .filter((v: any) => v.valueId)
+        .map((v: any) => ({ attributeId: v.attributeId, valueId: v.valueId }))
+    }
+    // enabledAttributeIds — declare which scope config attributes are active for this event.
+    const enabledIds = mergedData._customAttributeConfigs?.map((c: any) => c.attributeId) ?? []
+    payload.enabledAttributeIds = { event: enabledIds, session: [] }
     
     // Ensure seriesId is set
     if (!payload.seriesId && seriesId) {
