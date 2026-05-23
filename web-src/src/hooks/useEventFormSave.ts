@@ -323,9 +323,15 @@ export function useEventFormSave() {
         .filter((v: any) => v.valueId)
         .map((v: any) => ({ attributeId: v.attributeId, valueId: v.valueId }))
     }
-    // enabledAttributeIds — declare which scope config attributes are active for this event.
-    const enabledIds = mergedData._customAttributeConfigs?.map((c: any) => c.attributeId) ?? []
-    payload.enabledAttributeIds = { event: enabledIds, session: [] }
+    // enabledAttributeIds — only set when the active scope has configs.
+    // An empty _customAttributeConfigs means the current scope has no configs (e.g. the user
+    // switched to a different scope than the one the event was created under). In that case
+    // we skip setting it here so the caller can preserve the existing event value instead of
+    // wiping it with { event: [], session: [] }.
+    if (mergedData._customAttributeConfigs?.length) {
+      const enabledIds = mergedData._customAttributeConfigs.map((c: any) => c.attributeId)
+      payload.enabledAttributeIds = { event: enabledIds, session: [] }
+    }
     
     // Ensure seriesId is set
     if (!payload.seriesId && seriesId) {
@@ -438,6 +444,13 @@ export function useEventFormSave() {
       // 4b. Merge caller-supplied extra fields (e.g. custom detailPagePath)
       if (extraPayload) {
         Object.assign(payload, extraPayload)
+      }
+
+      // When the active scope has no custom attribute configs (user editing under a different
+      // scope than the one that created the event), buildEventPayload leaves enabledAttributeIds
+      // unset. Fall back to the value already on the event to avoid wiping it.
+      if (!payload.enabledAttributeIds && eventDataResp?.enabledAttributeIds) {
+        payload.enabledAttributeIds = eventDataResp.enabledAttributeIds
       }
       
       // Published: only the explicit publish action sets true; dashboard unpublish sets false.
