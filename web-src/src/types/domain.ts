@@ -616,8 +616,6 @@ export interface EventFormData {
   marketoFormUrl?: string
   marketoIntegration?: MarketoIntegrationData
   rsvpFormFields?: { field: string; required?: boolean; options?: string[] }[]
-  visibleRsvpFields?: string[]
-  requiredRsvpFields?: string[]
   /**
    * Client-side RSVP option order and toggles for select / multi-select fields (scope config).
    * Not sent on event save until ESP supports granular RSVP payloads — see useEventFormSave TODO(PIM).
