@@ -813,7 +813,10 @@ export const ConfigManagement: React.FC<ConfigManagementProps> = () => {
           attributes: [newAttr],
         })
         if ('error' in result) {
-          toast.error('Failed to create custom attribute')
+          const status = (result as { status: number }).status
+          toast.error(status === 409
+            ? 'A custom attributes config already exists for this scope. Refresh and try again.'
+            : 'Failed to create custom attribute')
           return
         }
       }

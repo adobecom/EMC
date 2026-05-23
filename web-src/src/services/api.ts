@@ -2375,7 +2375,7 @@ class ApiService {
   async createConfig(scopeId: string, data: ConfigCreateBody): Promise<ScopeConfig | ErrorResponse> {
     validateString(scopeId, 'scope ID')
     validateObject(data, 'config create body')
-    return this.callExternalApi<ScopeConfig>('esp', `/v1/scopes/${encodeURIComponent(scopeId)}/configs`, 'POST', data, {
+    return this.callExternalApi<ScopeConfig>('esp', `/v1/scopes/${encodeURIComponent(scopeId)}/configs`, 'POST', { ...data, scopeId }, {
       operationName: 'createConfig',
       shouldReturnFullResponse: true
     })
