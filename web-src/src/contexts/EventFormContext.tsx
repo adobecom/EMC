@@ -220,8 +220,6 @@ export const createDefaultFormData = (): EventFormData => ({
   rsvpDescription: '',
   registrationType: 'ESP',
   marketoFormUrl: '',
-  visibleRsvpFields: [],
-  requiredRsvpFields: [],
   rsvpOptionSelections: {},
   images: [],
   profiles: [],

@@ -97,7 +97,7 @@ export function useEventFormSave() {
     
     // Process each field according to the data filter
     // Note: Some fields are handled specially below (tags, eventType, dates, etc.)
-    const speciallyHandledFields = new Set(['tags', 'eventType', 'startDateTime', 'endDateTime', 'agendaItems', 'promotionalItems', 'timezone', 'inviteOnly', 'published'])
+    const speciallyHandledFields = new Set(['tags', 'eventType', 'startDateTime', 'endDateTime', 'agendaItems', 'promotionalItems', 'timezone', 'inviteOnly', 'published', 'rsvpFormFields'])
     
     Object.entries(mergedData).forEach(([key, value]) => {
       const descriptor = EVENT_DATA_FILTER[key]
@@ -312,9 +312,27 @@ export function useEventFormSave() {
     }
     
     // RSVP form fields — array order = display order; required/options are per-field overrides.
+    // Guard with Array.isArray: form state stores this as an array; an empty array must not be
+    // sent as-is (BE rejects non-object values).
     // TODO(PIM): serialize rsvpOptionSelections when event API exposes per-option RSVP selection.
-    if (mergedData.rsvpFormFields?.length) {
+    if (Array.isArray(mergedData.rsvpFormFields) && mergedData.rsvpFormFields.length) {
       payload.rsvpFormFields = { fields: mergedData.rsvpFormFields }
+    }
+
+    // Custom attributes — send IDs only; labels are resolved by ESP at read time.
+    if (mergedData.customAttributes?.length) {
+      payload.customAttributes = mergedData.customAttributes
+        .filter((v: any) => v.valueId)
+        .map((v: any) => ({ attributeId: v.attributeId, valueId: v.valueId }))
+    }
+    // enabledAttributeIds — only set when the active scope has configs.
+    // An empty _customAttributeConfigs means the current scope has no configs (e.g. the user
+    // switched to a different scope than the one the event was created under). In that case
+    // we skip setting it here so the caller can preserve the existing event value instead of
+    // wiping it with { event: [], session: [] }.
+    if (mergedData._customAttributeConfigs?.length) {
+      const enabledIds = mergedData._customAttributeConfigs.map((c: any) => c.attributeId)
+      payload.enabledAttributeIds = { event: enabledIds, session: [] }
     }
     
     // Ensure seriesId is set
@@ -429,6 +447,13 @@ export function useEventFormSave() {
       if (extraPayload) {
         Object.assign(payload, extraPayload)
       }
+
+      // When the active scope has no custom attribute configs (user editing under a different
+      // scope than the one that created the event), buildEventPayload leaves enabledAttributeIds
+      // unset. Fall back to the value already on the event to avoid wiping it.
+      if (!payload.enabledAttributeIds && eventDataResp?.enabledAttributeIds) {
+        payload.enabledAttributeIds = eventDataResp.enabledAttributeIds
+      }
       
       // Published: only the explicit publish action sets true; dashboard unpublish sets false.
       // Draft saves on an existing event must preserve server publish state (form payload usually omits `published`).
@@ -490,7 +515,10 @@ export function useEventFormSave() {
           liveUpdate: publish // Only live update when publishing
         })
         if ('error' in result) {
-          throw new Error(result.message || 'Failed to update event')
+          const errorMsg = (result.error && typeof result.error === 'object')
+            ? ((result.error as any).message ?? '') || 'Failed to update event'
+            : 'Failed to update event'
+          throw new Error(errorMsg)
         }
         response = result as EventApiResponse
         savedEventId = eventId
@@ -498,7 +526,10 @@ export function useEventFormSave() {
         // Create new event
         const result = await apiService.createEventExternal(payload, locale)
         if ('error' in result) {
-          throw new Error(result.message || 'Failed to create event')
+          const errorMsg = (result.error && typeof result.error === 'object')
+            ? ((result.error as any).message ?? '') || 'Failed to create event'
+            : 'Failed to create event'
+          throw new Error(errorMsg)
         }
         response = result as EventApiResponse
         savedEventId = response.eventId

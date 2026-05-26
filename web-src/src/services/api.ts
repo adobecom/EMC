@@ -2353,15 +2353,14 @@ class ApiService {
 
   async getConfigsForScope(scopeId: string, type?: ConfigType): Promise<ScopeConfig[] | ErrorResponse> {
     validateString(scopeId, 'scope ID')
-    const baseParams: Record<string, string> = {}
-    if (type) baseParams.type = type
-    return this.fetchAllPages<ScopeConfig>({
+    const result = await this.fetchAllPages<ScopeConfig>({
       service: 'esp',
       baseEndpoint: `/v1/scopes/${encodeURIComponent(scopeId)}/configs`,
       listKey: 'configs',
-      baseParams,
       operationName: 'getConfigsForScope'
     })
+    if (!type || 'error' in result) return result
+    return (result as ScopeConfig[]).filter(c => c.type === type)
   }
 
   async getConfigById(scopeId: string, configId: string): Promise<ScopeConfig | ErrorResponse> {
@@ -2376,7 +2375,7 @@ class ApiService {
   async createConfig(scopeId: string, data: ConfigCreateBody): Promise<ScopeConfig | ErrorResponse> {
     validateString(scopeId, 'scope ID')
     validateObject(data, 'config create body')
-    return this.callExternalApi<ScopeConfig>('esp', `/v1/scopes/${encodeURIComponent(scopeId)}/configs`, 'POST', data, {
+    return this.callExternalApi<ScopeConfig>('esp', `/v1/scopes/${encodeURIComponent(scopeId)}/configs`, 'POST', { ...data, scopeId }, {
       operationName: 'createConfig',
       shouldReturnFullResponse: true
     })

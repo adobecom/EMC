@@ -53,8 +53,7 @@ function createBaseFormData(): EventFormData {
     rsvpDescription: 'English RSVP copy',
     registrationType: 'ESP',
     marketoFormUrl: '',
-    visibleRsvpFields: ['email'],
-    requiredRsvpFields: ['email'],
+    rsvpFormFields: [{ field: 'email', required: true }],
     images: [{ imageKind: 'event-card-image', imageUrl: 'https://example.com/card.jpg' }],
     profiles: [
       {
@@ -137,10 +136,7 @@ function createEventResponse(): EventApiResponse {
       type: 'ESP',
       formData: 'v1',
     },
-    rsvpFormFields: {
-      visible: ['email'],
-      required: ['email'],
-    },
+    rsvpFormFields: { fields: [{ field: 'email', required: true }] },
     venue: {
       venueId: 'venue-1',
       venueName: 'Madrid Creative Center',
