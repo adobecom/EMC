@@ -493,6 +493,7 @@ const EventFormInner: React.FC<EventFormInnerProps> = ({ ims: _ims }) => {
     setMaxStepReached,
     setFormatConfirmed,
     setSeriesId,
+    setSeriesCustomTagsUrl,
     loadFromStorage,
     persistToStorage,
     state,
@@ -539,6 +540,14 @@ const EventFormInner: React.FC<EventFormInnerProps> = ({ ims: _ims }) => {
   // LOAD EVENT DATA
   // ============================================================================
 
+  const loadSeriesCustomTagsUrl = useCallback(async (seriesIdToLoad: string) => {
+    if (!seriesIdToLoad) return
+    const seriesData = await cachedApi.getSeriesFull(seriesIdToLoad)
+    if (seriesData && !('error' in seriesData)) {
+      setSeriesCustomTagsUrl((seriesData as any).caasTaxonomyUrl || '')
+    }
+  }, [setSeriesCustomTagsUrl])
+
   const loadEvent = useCallback(async (eventIdToLoad: string) => {
     setLoading(true)
     try {
@@ -560,6 +569,7 @@ const EventFormInner: React.FC<EventFormInnerProps> = ({ ims: _ims }) => {
       setLocale(eventLocale)
       const mappedData = mapApiResponseToFormData(response as EventApiResponse, eventLocale)
       populateFormDataFromResponse(mappedData)
+      if (response.seriesId) loadSeriesCustomTagsUrl(response.seriesId)
     } catch (err) {
       console.error('Failed to load event:', err)
       setLoadError('Failed to load event data')
@@ -574,6 +584,7 @@ const EventFormInner: React.FC<EventFormInnerProps> = ({ ims: _ims }) => {
     setMaxStepReached,
     setLocale,
     populateFormDataFromResponse,
+    loadSeriesCustomTagsUrl,
   ])
 
   const reloadAfterGroupChange = useCallback(async () => {
@@ -668,7 +679,8 @@ const EventFormInner: React.FC<EventFormInnerProps> = ({ ims: _ims }) => {
     updateFormData({ cloudType })
     setSeriesId(seriesId)
     setFormatConfirmed(true)
-  }, [updateFormData, setSeriesId, setFormatConfirmed])
+    loadSeriesCustomTagsUrl(seriesId)
+  }, [updateFormData, setSeriesId, setFormatConfirmed, loadSeriesCustomTagsUrl])
   
   /**
    * Handle cancel from the format selection overlay — go back to dashboard

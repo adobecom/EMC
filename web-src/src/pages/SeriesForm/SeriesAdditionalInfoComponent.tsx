@@ -2,13 +2,30 @@
 * <license header>
 */
 
-import React from 'react'
+import React, { useState, useEffect } from 'react'
 import { TextField, Text } from '@react-spectrum/s2'
 import { style } from '@react-spectrum/s2/style' with { type: 'macro' }
 import { HeadingWithTooltip } from '../../components/shared'
-import { SPACING } from '../../styles/designSystem'
+import { SPACING, COLORS } from '../../styles/designSystem'
 import { useSeriesFormComponent } from '../../hooks/useSeriesFormComponent'
 import { normalizeRelatedDomain, normalizeContentRoot } from '../../utils/seriesFormAutoCorrect'
+import { cachedApi } from '../../services/api'
+import { CaasTagsResponse, CaasTag } from '../../types/domain'
+
+function extractTagNames(tagsObj: Record<string, CaasTag>, result: string[]) {
+  Object.values(tagsObj).forEach((tag) => {
+    result.push(tag.title || tag.name)
+    if (tag.tags) extractTagNames(tag.tags, result)
+  })
+}
+
+function parseTagNames(response: CaasTagsResponse): string[] {
+  const names: string[] = []
+  Object.values(response.namespaces).forEach((ns) => {
+    if (ns.tags) extractTagNames(ns.tags, names)
+  })
+  return names
+}
 
 /**
  * SeriesAdditionalInfoComponent - Manages additional series settings
@@ -34,8 +51,40 @@ export const SeriesAdditionalInfoComponent: React.FC = () => {
     relatedDomain = '',
     contentRoot = '',
     externalThemeId = '',
+    customTagsUrl = '',
   } = formData
-  
+
+  const [previewTags, setPreviewTags] = useState<string[]>([])
+  const [previewLoading, setPreviewLoading] = useState(false)
+  const [previewError, setPreviewError] = useState<string | null>(null)
+
+  useEffect(() => {
+    if (!customTagsUrl) {
+      setPreviewTags([])
+      setPreviewError(null)
+      return
+    }
+
+    const timer = setTimeout(async () => {
+      setPreviewLoading(true)
+      setPreviewError(null)
+      try {
+        const response = await cachedApi.getTagsFromUrl(customTagsUrl) as CaasTagsResponse
+        if (response?.namespaces) {
+          setPreviewTags(parseTagNames(response))
+        } else {
+          setPreviewError('No tags found at this URL')
+        }
+      } catch {
+        setPreviewError('Failed to load tags from this URL')
+      } finally {
+        setPreviewLoading(false)
+      }
+    }, 600)
+
+    return () => clearTimeout(timer)
+  }, [customTagsUrl])
+
   // ============================================================================
   // RENDER
   // ============================================================================
@@ -114,6 +163,51 @@ export const SeriesAdditionalInfoComponent: React.FC = () => {
             onChange={(value) => updateFormData({ externalThemeId: value })}
             styles={style({ width: '[100%]' })}
           />
+        </div>
+
+        <div style={{ display: 'flex', flexDirection: 'row', gap: 32, alignItems: 'flex-start' }}>
+          <Text UNSAFE_style={{ width: '150px', flexShrink: 0, fontWeight: 600 }}>
+            Custom tags URL:
+          </Text>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8, flex: 1 }}>
+            <TextField
+              aria-label="Custom tags URL"
+              placeholder="Add custom CaaS taxonomy URL"
+              value={customTagsUrl}
+              onChange={(value) => updateFormData({ customTagsUrl: value })}
+              styles={style({ width: '[100%]' })}
+            />
+            {previewLoading && (
+              <Text UNSAFE_style={{ fontSize: 12, color: COLORS.GRAY_500 }}>Loading tags…</Text>
+            )}
+            {previewError && !previewLoading && (
+              <Text UNSAFE_style={{ fontSize: 12, color: COLORS.RED_600 }}>{previewError}</Text>
+            )}
+            {!previewLoading && !previewError && previewTags.length > 0 && (
+              <div>
+                <Text UNSAFE_style={{ fontSize: 12, color: COLORS.GRAY_500, marginBottom: 6, display: 'block' }}>
+                  {previewTags.length} tags available
+                </Text>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, maxHeight: 180, overflowY: 'auto' }}>
+                  {previewTags.map((name) => (
+                    <span
+                      key={name}
+                      style={{
+                        fontSize: 11,
+                        padding: '2px 8px',
+                        borderRadius: 12,
+                        background: 'var(--spectrum-gray-200)',
+                        color: 'var(--spectrum-gray-800)',
+                        whiteSpace: 'nowrap',
+                      }}
+                    >
+                      {name}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
         </div>
       </div>
     </div>

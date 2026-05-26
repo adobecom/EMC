@@ -35,6 +35,7 @@ export interface SeriesFormData {
   susiContextId: string
   relatedDomain: string
   contentRoot: string
+  customTagsUrl: string
 }
 
 /**
@@ -156,6 +157,7 @@ export const createDefaultSeriesFormData = (): SeriesFormData => ({
   susiContextId: '',
   relatedDomain: '',
   contentRoot: '',
+  customTagsUrl: '',
 })
 
 const createInitialState = (initialData?: Partial<SeriesFormData>): SeriesFormState => ({

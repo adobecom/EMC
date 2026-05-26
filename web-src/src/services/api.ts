@@ -1937,6 +1937,36 @@ class ApiService {
     }
   })()
 
+  getTagsFromUrl = (() => {
+    const cache = new Map<string, any>()
+    const promises = new Map<string, Promise<any>>()
+
+    return (url: string): Promise<any> => {
+      if (cache.has(url)) return Promise.resolve(cache.get(url))
+
+      if (!promises.has(url)) {
+        const promise = fetch(url)
+          .then((resp) => {
+            if (resp.ok) return resp.json()
+            throw new Error(`Failed to load tags from ${url}`)
+          })
+          .then((data) => {
+            cache.set(url, data)
+            promises.delete(url)
+            return data
+          })
+          .catch((err) => {
+            promises.delete(url)
+            console.error('❌ Failed to load tags from custom URL:', err)
+            throw err
+          })
+        promises.set(url, promise)
+      }
+
+      return promises.get(url)!
+    }
+  })()
+
   // ============================================================================
   // SCHEDULE APIs (Page Schedules)
   // ============================================================================
@@ -2585,6 +2615,7 @@ export const cachedApi = {
   getPublishingProfile: (profileId: string) => apiCache.get((id: string) => apiService.getPublishingProfile(id), profileId),
   getEventPublishingProfile: (eventId: string) => apiCache.get((id: string) => apiService.getEventPublishingProfile(id), eventId),
   getCaasTags: () => apiService.getCaasTags(), // Already has internal caching
+  getTagsFromUrl: (url: string) => apiService.getTagsFromUrl(url), // Already has internal per-URL caching
 
   // === CONFIGS (GET Operations - Cached) ===
   getConfigsForScope: (scopeId: string, type?: ConfigType) =>
