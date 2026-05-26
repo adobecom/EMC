@@ -97,7 +97,7 @@ export function useEventFormSave() {
     
     // Process each field according to the data filter
     // Note: Some fields are handled specially below (tags, eventType, dates, etc.)
-    const speciallyHandledFields = new Set(['tags', 'eventType', 'startDateTime', 'endDateTime', 'agendaItems', 'promotionalItems', 'timezone', 'inviteOnly', 'published'])
+    const speciallyHandledFields = new Set(['tags', 'eventType', 'startDateTime', 'endDateTime', 'agendaItems', 'promotionalItems', 'timezone', 'inviteOnly', 'published', 'rsvpFormFields'])
     
     Object.entries(mergedData).forEach(([key, value]) => {
       const descriptor = EVENT_DATA_FILTER[key]
@@ -312,8 +312,10 @@ export function useEventFormSave() {
     }
     
     // RSVP form fields — array order = display order; required/options are per-field overrides.
+    // Guard with Array.isArray: form state stores this as an array; an empty array must not be
+    // sent as-is (BE rejects non-object values).
     // TODO(PIM): serialize rsvpOptionSelections when event API exposes per-option RSVP selection.
-    if (mergedData.rsvpFormFields?.length) {
+    if (Array.isArray(mergedData.rsvpFormFields) && mergedData.rsvpFormFields.length) {
       payload.rsvpFormFields = { fields: mergedData.rsvpFormFields }
     }
 
@@ -513,7 +515,10 @@ export function useEventFormSave() {
           liveUpdate: publish // Only live update when publishing
         })
         if ('error' in result) {
-          throw new Error(result.message || 'Failed to update event')
+          const errorMsg = (result.error && typeof result.error === 'object')
+            ? ((result.error as any).message ?? '') || 'Failed to update event'
+            : 'Failed to update event'
+          throw new Error(errorMsg)
         }
         response = result as EventApiResponse
         savedEventId = eventId
@@ -521,7 +526,10 @@ export function useEventFormSave() {
         // Create new event
         const result = await apiService.createEventExternal(payload, locale)
         if ('error' in result) {
-          throw new Error(result.message || 'Failed to create event')
+          const errorMsg = (result.error && typeof result.error === 'object')
+            ? ((result.error as any).message ?? '') || 'Failed to create event'
+            : 'Failed to create event'
+          throw new Error(errorMsg)
         }
         response = result as EventApiResponse
         savedEventId = response.eventId
