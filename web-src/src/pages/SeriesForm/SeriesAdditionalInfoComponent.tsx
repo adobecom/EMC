@@ -185,24 +185,25 @@ export const SeriesAdditionalInfoComponent: React.FC = () => {
             )}
             {!previewLoading && !previewError && previewTags.length > 0 && (
               <div>
-                <Text UNSAFE_style={{ fontSize: 12, color: COLORS.GRAY_500, marginBottom: 6, display: 'block' }}>
+                <Text UNSAFE_style={{ fontSize: 12, color: COLORS.GRAY_800, marginBottom: 6, display: 'block' }}>
                   {previewTags.length} tags available
                 </Text>
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, maxHeight: 180, overflowY: 'auto' }}>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, maxHeight: 180, overflowY: 'auto' }}>
                   {previewTags.map((name) => (
-                    <span
+                    <div
                       key={name}
                       style={{
-                        fontSize: 11,
-                        padding: '2px 8px',
-                        borderRadius: 12,
-                        background: 'var(--spectrum-gray-200)',
-                        color: 'var(--spectrum-gray-800)',
-                        whiteSpace: 'nowrap',
+                        backgroundColor: 'var(--emc-tag-chip-bg)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '8px',
+                        cursor: 'default',
+                        borderRadius: '4px',
+                        padding: '8px',
                       }}
                     >
-                      {name}
-                    </span>
+                      <Text UNSAFE_style={{ color: 'white', fontSize: '14px' }}>{name}</Text>
+                    </div>
                   ))}
                 </div>
               </div>
