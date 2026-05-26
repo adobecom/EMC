@@ -1957,7 +1957,7 @@ class ApiService {
           })
           .catch((err) => {
             promises.delete(url)
-            console.error('❌ Failed to load tags from custom URL:', err)
+            console.warn('Failed to load tags from custom URL:', err)
             throw err
           })
         promises.set(url, promise)
