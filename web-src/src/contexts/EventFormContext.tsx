@@ -179,6 +179,8 @@ export interface EventFormContextValue {
   seriesSpeakers: SeriesSpeaker[]
   setVenueLocations: (locations: any[]) => void
   setSeriesSpeakers: (speakers: SeriesSpeaker[]) => void
+  seriesCustomTagsUrl: string
+  setSeriesCustomTagsUrl: (url: string) => void
 }
 
 // ============================================================================
@@ -421,6 +423,7 @@ export const EventFormProvider: React.FC<EventFormProviderProps> = ({
   // Event-level data shared across form steps
   const [venueLocations, setVenueLocations] = useState<any[]>([])
   const [seriesSpeakers, setSeriesSpeakers] = useState<SeriesSpeaker[]>([])
+  const [seriesCustomTagsUrl, setSeriesCustomTagsUrl] = useState<string>('')
   
   // ============================================================================
   // ACTIONS
@@ -630,10 +633,13 @@ export const EventFormProvider: React.FC<EventFormProviderProps> = ({
     seriesSpeakers,
     setVenueLocations,
     setSeriesSpeakers,
+    seriesCustomTagsUrl,
+    setSeriesCustomTagsUrl,
   }), [
     state,
     venueLocations,
     seriesSpeakers,
+    seriesCustomTagsUrl,
     updateFormData,
     populateFormDataFromResponse,
     setEventResponse,

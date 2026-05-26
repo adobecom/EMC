@@ -69,6 +69,7 @@ export interface SeriesApiResponse {
   susiContextId?: string // SSO context ID
   relatedDomain?: string // Related domain for the series
   contentRoot?: string // Content root path
+  caasTaxonomyUrl?: string // Custom CaaS taxonomy URL for scoping event/session tags
   createdBy?: string
   modifiedBy?: string
   creationTime: number

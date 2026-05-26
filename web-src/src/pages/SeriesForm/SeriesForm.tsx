@@ -59,6 +59,7 @@ function mapApiResponseToFormData(series: SeriesApiResponse): SeriesFormData {
     susiContextId: series.susiContextId || '',
     relatedDomain: series.relatedDomain || '',
     contentRoot: series.contentRoot || '',
+    customTagsUrl: series.caasTaxonomyUrl || '',
   }
 }
 
@@ -77,6 +78,7 @@ function buildApiPayload(formData: SeriesFormData, modificationTime?: number, is
     susiContextId: formData.susiContextId,
     relatedDomain: formData.relatedDomain,
     contentRoot: formData.contentRoot,
+    caasTaxonomyUrl: formData.customTagsUrl,
   }
   
   if (modificationTime !== undefined) {
