@@ -88,6 +88,7 @@ export const SERIES_DATA_FILTER: DataFilter = {
   relatedDomain: { type: 'string', submittable: true, cloneable: true, updatable: true },
   contentRoot: { type: 'string', submittable: true, cloneable: true, updatable: true },
   caasTaxonomyUrl: { type: 'string', submittable: true, cloneable: true, updatable: true },
+  scopeId: { type: 'string', submittable: true, cloneable: false, updatable: true },
   modificationTime: { type: 'string', submittable: true, cloneable: false, updatable: true },
   createdBy: { type: 'string', submittable: false, cloneable: false, updatable: false },
   modifiedBy: { type: 'string', submittable: false, cloneable: false, updatable: false },
