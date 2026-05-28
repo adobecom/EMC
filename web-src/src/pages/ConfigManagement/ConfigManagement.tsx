@@ -153,7 +153,7 @@ export const ConfigManagement: React.FC<ConfigManagementProps> = () => {
 
   const [configs, setConfigs] = useState<ScopeConfig[]>([])
   const [isLoadingConfigs, setIsLoadingConfigs] = useState(false)
-  const [activeTab, setActiveTab] = useState<string>('rsvp')
+  const [activeTab, setActiveTab] = useState<string>('locales')
 
   // ============================================================================
   // RSVP DIALOG STATE
@@ -1486,9 +1486,9 @@ export const ConfigManagement: React.FC<ConfigManagementProps> = () => {
         {selectedScopeId ? (
           <Tabs aria-label="Configuration types" selectedKey={activeTab} onSelectionChange={(key) => setActiveTab(key as string)}>
             <TabList>
-              <Tab id="rsvp">RSVP Fields</Tab>
+              <Tab id="rsvp" isDisabled>RSVP Fields</Tab>
               <Tab id="locales">Locale Mapping</Tab>
-              <Tab id="attributes">Custom Attributes</Tab>
+              <Tab id="attributes" isDisabled>Custom Attributes</Tab>
             </TabList>
 
             {/* ── RSVP Fields Tab ── */}
