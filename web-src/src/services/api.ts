@@ -2384,8 +2384,8 @@ class ApiService {
   /**
    * Lists configs for a scope (0 or 1, since ESP enforces one config per scope).
    * The optional `type` arg filters by slice presence — e.g. `'locales'` returns
-   * configs that have `localeNames`/`localeUrlCodes` regardless of the legacy
-   * `type` discriminator (which may be absent on configs written by newer PUTs).
+   * configs that have a `locales` array regardless of the legacy `type`
+   * discriminator (which may be absent on configs written by newer PUTs).
    */
   async getConfigsForScope(scopeId: string, type?: ConfigType): Promise<ScopeConfig[] | ErrorResponse> {
     validateString(scopeId, 'scope ID')
@@ -2398,7 +2398,7 @@ class ApiService {
     if (!type || 'error' in result) return result
     const configs = result as ScopeConfig[]
     if (type === 'rsvp') return configs.filter(c => Array.isArray(c.rsvpFormFields))
-    if (type === 'locales') return configs.filter(c => !!c.localeNames || !!c.localeUrlCodes)
+    if (type === 'locales') return configs.filter(c => Array.isArray(c.locales))
     if (type === 'customAttributes') return configs.filter(c => Array.isArray(c.attributes))
     return configs
   }

@@ -186,7 +186,7 @@ export const ConfigManagement: React.FC<ConfigManagementProps> = () => {
 
   const [isLocalesFormOpen, setIsLocalesFormOpen] = useState(false)
   const [editingLocalesConfig, setEditingLocalesConfig] = useState<LocalesScopeConfig | null>(null)
-  const [localeEntries, setLocaleEntries] = useState<Array<{ code: string; name: string; urlCode: string }>>([])
+  const [localeEntries, setLocaleEntries] = useState<Array<{ code: string; name: string; folder: string }>>([])
   const [localesToDelete, setLocalesToDelete] = useState<ScopeConfig | null>(null)
 
   // ============================================================================
@@ -273,7 +273,7 @@ export const ConfigManagement: React.FC<ConfigManagementProps> = () => {
   // Available locales for RSVP localization (from sibling locales config or fallback)
   const availableLocales = useMemo(() => {
     if (localesConfig) {
-      return Object.entries(localesConfig.localeNames).map(([code, name]) => ({ code, name }))
+      return localesConfig.locales.map(l => ({ code: l.code, name: l.name }))
     }
     return SUPPORTED_SPEAKER_LOCALES.map(code => ({
       code,
@@ -675,8 +675,7 @@ export const ConfigManagement: React.FC<ConfigManagementProps> = () => {
         delete stripped.rsvpFormFields
         delete stripped.localizations
       } else if (sliceKind === 'locales') {
-        delete stripped.localeNames
-        delete stripped.localeUrlCodes
+        delete stripped.locales
       } else {
         delete stripped.attributes
       }
@@ -710,18 +709,18 @@ export const ConfigManagement: React.FC<ConfigManagementProps> = () => {
 
   const openLocalesCreate = useCallback(() => {
     setEditingLocalesConfig(null)
-    setLocaleEntries([{ code: 'en-US', name: 'English, United States', urlCode: '' }])
+    setLocaleEntries([{ code: 'en-US', name: 'English, United States', folder: '' }])
     setIsLocalesFormOpen(true)
   }, [])
 
   const openLocalesEdit = useCallback((config: LocalesScopeConfig) => {
     setEditingLocalesConfig(config)
-    const entries = Object.entries(config.localeNames).map(([code, name]) => ({
-      code,
-      name,
-      urlCode: config.localeUrlCodes[code] || '',
+    const entries = config.locales.map(l => ({
+      code: l.code,
+      name: l.name,
+      folder: l.folder || '',
     }))
-    setLocaleEntries(entries.length > 0 ? entries : [{ code: '', name: '', urlCode: '' }])
+    setLocaleEntries(entries.length > 0 ? entries : [{ code: '', name: '', folder: '' }])
     setIsLocalesFormOpen(true)
   }, [])
 
@@ -733,12 +732,11 @@ export const ConfigManagement: React.FC<ConfigManagementProps> = () => {
       return
     }
 
-    const localeNames: Record<string, string> = {}
-    const localeUrlCodes: Record<string, string> = {}
-    for (const entry of validEntries) {
-      localeNames[entry.code.trim()] = entry.name.trim()
-      localeUrlCodes[entry.code.trim()] = entry.urlCode.trim()
-    }
+    const locales = validEntries.map(entry => ({
+      code: entry.code.trim(),
+      name: entry.name.trim(),
+      folder: entry.folder.trim(),
+    }))
 
     setIsSaving(true)
     try {
@@ -746,7 +744,7 @@ export const ConfigManagement: React.FC<ConfigManagementProps> = () => {
       // for the user-reported bug where POSTing locales into a scope that
       // already had a customAttributes config returned 409.
       if (scopeConfig && ownsConfig) {
-        const body = buildPutBody(scopeConfig, { localeNames, localeUrlCodes })
+        const body = buildPutBody(scopeConfig, { locales })
         const result = await apiService.updateConfig(selectedScopeId, scopeConfig.configId, body)
         if ('error' in result) {
           const status = (result as { status: number }).status
@@ -757,10 +755,7 @@ export const ConfigManagement: React.FC<ConfigManagementProps> = () => {
         }
         toast.success(editingLocalesConfig ? 'Locales config updated' : 'Locales config created')
       } else {
-        const result = await apiService.createConfig(selectedScopeId, {
-          localeNames,
-          localeUrlCodes,
-        })
+        const result = await apiService.createConfig(selectedScopeId, { locales })
         if ('error' in result) {
           const status = (result as { status: number }).status
           toast.error(status === 409
@@ -1602,20 +1597,20 @@ export const ConfigManagement: React.FC<ConfigManagementProps> = () => {
                           <tr style={{ backgroundColor: 'var(--spectrum-global-color-gray-100)' }}>
                             <th style={{ padding: '12px 16px', textAlign: 'left', fontWeight: 600, fontSize: 13 }}>Locale Code</th>
                             <th style={{ padding: '12px 16px', textAlign: 'left', fontWeight: 600, fontSize: 13 }}>Display Name</th>
-                            <th style={{ padding: '12px 16px', textAlign: 'left', fontWeight: 600, fontSize: 13 }}>URL Code</th>
+                            <th style={{ padding: '12px 16px', textAlign: 'left', fontWeight: 600, fontSize: 13 }}>Folder</th>
                           </tr>
                         </thead>
                         <tbody>
-                          {Object.entries(localesConfig.localeNames).map(([code, name]) => (
-                            <tr key={code} style={{ borderTop: '1px solid var(--spectrum-global-color-gray-300)' }}>
+                          {localesConfig.locales.map((l) => (
+                            <tr key={l.code} style={{ borderTop: '1px solid var(--spectrum-global-color-gray-300)' }}>
                               <td style={{ padding: '10px 16px' }}>
-                                <Text>{code}</Text>
+                                <Text>{l.code}</Text>
                               </td>
                               <td style={{ padding: '10px 16px' }}>
-                                <Text>{name}</Text>
+                                <Text>{l.name}</Text>
                               </td>
                               <td style={{ padding: '10px 16px' }}>
-                                <Text>{localesConfig.localeUrlCodes[code] || '(default)'}</Text>
+                                <Text>{l.folder || '(default)'}</Text>
                               </td>
                             </tr>
                           ))}
@@ -2152,7 +2147,7 @@ export const ConfigManagement: React.FC<ConfigManagementProps> = () => {
                     <Button
                       variant="secondary"
                       size="S"
-                      onPress={() => setLocaleEntries(prev => [...prev, { code: '', name: '', urlCode: '' }])}
+                      onPress={() => setLocaleEntries(prev => [...prev, { code: '', name: '', folder: '' }])}
                     >
                       <Add />
                       <Text>Add Locale</Text>
@@ -2202,11 +2197,11 @@ export const ConfigManagement: React.FC<ConfigManagementProps> = () => {
                           isRequired
                         />
                         <TextField
-                          label="URL Code"
-                          value={entry.urlCode}
+                          label="Folder"
+                          value={entry.folder}
                           onChange={(v) => setLocaleEntries(prev => {
                             const copy = [...prev]
-                            copy[index] = { ...copy[index], urlCode: v }
+                            copy[index] = { ...copy[index], folder: v }
                             return copy
                           })}
                           styles={style({ width: 100 })}
