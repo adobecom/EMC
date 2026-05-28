@@ -21,7 +21,8 @@ import { useGroup } from '../../contexts/GroupContext'
 import { cachedApi } from '../../services/api'
 import { configService } from '../../services/configService'
 import { hasRsvpConfig } from '../../config/externalConfigs'
-import type { RsvpFormField, RsvpScopeConfig } from '../../types/configApi'
+import type { RsvpFormField } from '../../types/configApi'
+import { hasRsvpSlice } from '../../types/configApi'
 import type { RsvpFieldOptionSelectionState } from '../../types/domain'
 import {
   mapLegacyRsvpConfigToFormFields,
@@ -100,7 +101,7 @@ export const RegistrationFieldsComponent: React.FC<RegistrationFieldsComponentPr
         if (scopeId) {
           const result = await cachedApi.getConfigsForScope(scopeId, 'rsvp')
           if (!('error' in result)) {
-            const rsvpConfig = result.find(c => c.type === 'rsvp') as RsvpScopeConfig | undefined
+            const rsvpConfig = result.find(hasRsvpSlice)
             const scopeFields = rsvpConfig?.rsvpFormFields ?? []
             if (scopeFields.length > 0) {
               nextFields = scopeFields
