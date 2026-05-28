@@ -4,10 +4,10 @@
  * Types matching the ESP scope config endpoints.
  *
  * NOTE: ESP enforces ONE config per scope. The single config can carry any
- * combination of slice fields (rsvpFormFields, localeNames/localeUrlCodes,
- * attributes). The `type` discriminator is legacy and no longer required —
- * slices are detected by field presence. Saving from any tab should PUT to
- * the existing config (merging slices) or POST a new one if none exists.
+ * combination of slice fields (rsvpFormFields, locales, attributes). The
+ * `type` discriminator is legacy and no longer required — slices are detected
+ * by field presence. Saving from any tab should PUT to the existing config
+ * (merging slices) or POST a new one if none exists.
  */
 
 // ============================================================================
@@ -58,6 +58,14 @@ export interface RsvpFormFieldLocaleOverride {
 // Scope Config Model
 // ============================================================================
 
+/** A single locale entry on the locales slice. `folder` is the URL path
+ *  segment (empty string = default/root). */
+export interface Locale {
+  code: string
+  name: string
+  folder: string
+}
+
 /** Unified scope config — ESP stores at most one config per scope, with any
  *  combination of slice fields. Each tab in the UI edits one slice. */
 export interface ScopeConfig {
@@ -72,8 +80,7 @@ export interface ScopeConfig {
   rsvpFormFields?: RsvpFormField[]
   localizations?: Record<string, { rsvpFormFields: RsvpFormFieldLocaleOverride[] }>
   // Locales slice
-  localeNames?: Record<string, string>
-  localeUrlCodes?: Record<string, string>
+  locales?: Locale[]
   // Custom attributes slice
   attributes?: CustomAttributeConfig[]
 }
@@ -86,8 +93,7 @@ export type RsvpScopeConfig = ScopeConfig & {
 }
 
 export type LocalesScopeConfig = ScopeConfig & {
-  localeNames: Record<string, string>
-  localeUrlCodes: Record<string, string>
+  locales: Locale[]
 }
 
 export type CustomAttributesScopeConfig = ScopeConfig & {
@@ -98,7 +104,7 @@ export const hasRsvpSlice = (c: ScopeConfig | null | undefined): c is RsvpScopeC
   !!c && Array.isArray(c.rsvpFormFields)
 
 export const hasLocalesSlice = (c: ScopeConfig | null | undefined): c is LocalesScopeConfig =>
-  !!c && (!!c.localeNames || !!c.localeUrlCodes)
+  !!c && Array.isArray(c.locales)
 
 export const hasAttributesSlice = (c: ScopeConfig | null | undefined): c is CustomAttributesScopeConfig =>
   !!c && Array.isArray(c.attributes)

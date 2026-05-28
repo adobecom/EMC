@@ -193,9 +193,9 @@ export const EventInfoComponent: React.FC = () => {
         return
       }
       const localesConfig = result.find(hasLocalesSlice)
-      const names = localesConfig?.localeNames
-      if (names && typeof names === 'object' && Object.keys(names).length > 0) {
-        const options = Object.entries(names).map(([key, label]) => ({ key, label }))
+      const locales = localesConfig?.locales
+      if (locales && locales.length > 0) {
+        const options = locales.map((l) => ({ key: l.code, label: l.name }))
         setLocaleOptions(options)
       } else {
         setLocaleOptions(DEFAULT_LOCALE_PICKER_OPTIONS)
