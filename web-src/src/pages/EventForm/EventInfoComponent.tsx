@@ -29,7 +29,7 @@ import { SPACING } from '../../styles/designSystem'
 import { cachedApi } from '../../services/api'
 import { useEventFormComponent } from '../../hooks/useEventFormComponent'
 import { useGroup } from '../../contexts/GroupContext'
-import type { LocalesScopeConfig } from '../../types/configApi'
+import { hasLocalesSlice } from '../../types/configApi'
 import { SUPPORTED_SPEAKER_LOCALES, SPEAKER_LOCALE_LABELS } from '../../config/localeMapping'
 
 /**
@@ -192,7 +192,7 @@ export const EventInfoComponent: React.FC = () => {
         setLocaleOptions(DEFAULT_LOCALE_PICKER_OPTIONS)
         return
       }
-      const localesConfig = result.find((c): c is LocalesScopeConfig => c.type === 'locales')
+      const localesConfig = result.find(hasLocalesSlice)
       const names = localesConfig?.localeNames
       if (names && typeof names === 'object' && Object.keys(names).length > 0) {
         const options = Object.entries(names).map(([key, label]) => ({ key, label }))

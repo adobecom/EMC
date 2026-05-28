@@ -22,7 +22,8 @@ import { HeadingWithTooltip, FormCard } from '../../components/shared'
 import { useEventFormComponent } from '../../hooks/useEventFormComponent'
 import { useGroup } from '../../contexts/GroupContext'
 import { cachedApi } from '../../services/api'
-import type { CustomAttributeConfig, CustomAttributesScopeConfig, CustomAttributeValue } from '../../types/configApi'
+import type { CustomAttributeConfig, CustomAttributeValue } from '../../types/configApi'
+import { hasAttributesSlice } from '../../types/configApi'
 import type { EventCustomAttributeValue } from '../../types/domain'
 
 // ============================================================================
@@ -157,7 +158,7 @@ export const CustomAttributesComponent: React.FC = () => {
       try {
         const result = await cachedApi.getConfigsForScope(scopeId, 'customAttributes')
         if (!('error' in result)) {
-          const config = result.find(c => c.type === 'customAttributes') as CustomAttributesScopeConfig | undefined
+          const config = result.find(hasAttributesSlice)
           const enabled = (config?.attributes ?? []).filter(a => a.enabled !== false)
           setAttributes(enabled)
           updateFormData({ _customAttributeConfigs: enabled })

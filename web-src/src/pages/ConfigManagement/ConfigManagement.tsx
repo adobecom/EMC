@@ -58,6 +58,7 @@ import type {
   RsvpFieldType,
   RsvpDisplayAs,
 } from '../../types/configApi'
+import { hasRsvpSlice, hasLocalesSlice, hasAttributesSlice } from '../../types/configApi'
 import { ResourceDashboardLayout, BlurredLoadingOverlay } from '../../components/shared'
 import { useHasPermission } from '../../hooks/useHasPermission'
 import { generateUUID } from '../../services/requestHelpers'
@@ -102,6 +103,13 @@ const ATTRIBUTE_INPUT_TYPES: { key: CustomAttributeInputType; label: string }[] 
   { key: 'multi-select', label: 'Multi Select' },
 ]
 
+/** Build a PUT body that preserves all existing slices and merges in updates.
+ *  Drops the legacy `type` discriminator — slices are detected by field presence. */
+function buildPutBody(existing: ScopeConfig, updates: Partial<ScopeConfig>): ScopeConfig {
+  const { type: _legacyType, ...rest } = existing
+  return { ...rest, ...updates }
+}
+
 function createEmptyRsvpField(): RsvpFormField {
   return {
     field: '',
@@ -145,7 +153,7 @@ export const ConfigManagement: React.FC<ConfigManagementProps> = () => {
 
   const [configs, setConfigs] = useState<ScopeConfig[]>([])
   const [isLoadingConfigs, setIsLoadingConfigs] = useState(false)
-  const [activeTab, setActiveTab] = useState<string>('rsvp')
+  const [activeTab, setActiveTab] = useState<string>('locales')
 
   // ============================================================================
   // RSVP DIALOG STATE
@@ -234,17 +242,29 @@ export const ConfigManagement: React.FC<ConfigManagementProps> = () => {
     return items.filter(s => s.name.toLowerCase().includes(lower) || s.type.toLowerCase().includes(lower))
   }, [scopesForPicker, scopeFilterText])
 
-  const rsvpConfig = useMemo(
-    () => configs.find((c): c is RsvpScopeConfig => c.type === 'rsvp') || null,
-    [configs]
+  // ESP enforces one config per scope. All three tabs read/write slices of this
+  // single config; saves PUT to scopeConfig.configId when one exists.
+  const scopeConfig = useMemo<ScopeConfig | null>(() => configs[0] || null, [configs])
+
+  const rsvpConfig = useMemo<RsvpScopeConfig | null>(
+    () => (hasRsvpSlice(scopeConfig) ? scopeConfig : null),
+    [scopeConfig]
   )
-  const localesConfig = useMemo(
-    () => configs.find((c): c is LocalesScopeConfig => c.type === 'locales') || null,
-    [configs]
+  const localesConfig = useMemo<LocalesScopeConfig | null>(
+    () => (hasLocalesSlice(scopeConfig) ? scopeConfig : null),
+    [scopeConfig]
   )
-  const customAttrsConfig = useMemo(
-    () => configs.find((c): c is CustomAttributesScopeConfig => c.type === 'customAttributes') || null,
-    [configs]
+  const customAttrsConfig = useMemo<CustomAttributesScopeConfig | null>(
+    () => (hasAttributesSlice(scopeConfig) ? scopeConfig : null),
+    [scopeConfig]
+  )
+
+  // Distinguishes own configs from inherited (ancestor-scope) configs. The user
+  // can only PUT a config owned by the currently-selected scope; an inherited
+  // config requires POST-to-create-own to "fork" it.
+  const ownsConfig = useMemo(
+    () => !!scopeConfig && scopeConfig.scopeId === selectedScopeId,
+    [scopeConfig, selectedScopeId]
   )
   const customAttributes = useMemo(
     () => customAttrsConfig?.attributes || [],
@@ -398,12 +418,14 @@ export const ConfigManagement: React.FC<ConfigManagementProps> = () => {
 
     setIsSaving(true)
     try {
-      if (editingRsvpConfig) {
-        const result = await apiService.updateConfig(selectedScopeId, editingRsvpConfig.configId, {
-          ...editingRsvpConfig,
+      // PUT if the scope owns an existing config (any slice). Drops `type` and
+      // preserves sibling slices (locales/attributes) alongside the RSVP update.
+      if (scopeConfig && ownsConfig) {
+        const body = buildPutBody(scopeConfig, {
           rsvpFormFields: validFields,
           localizations: rsvpLocalizations,
         })
+        const result = await apiService.updateConfig(selectedScopeId, scopeConfig.configId, body)
         if ('error' in result) {
           const status = (result as { status: number }).status
           toast.error(status === 409
@@ -411,17 +433,16 @@ export const ConfigManagement: React.FC<ConfigManagementProps> = () => {
             : 'Failed to update RSVP config')
           return
         }
-        toast.success('RSVP config updated')
+        toast.success(editingRsvpConfig ? 'RSVP config updated' : 'RSVP config created')
       } else {
         const result = await apiService.createConfig(selectedScopeId, {
-          type: 'rsvp',
           rsvpFormFields: validFields,
           localizations: rsvpLocalizations,
         })
         if ('error' in result) {
           const status = (result as { status: number }).status
           toast.error(status === 409
-            ? 'An RSVP config already exists for this scope'
+            ? 'A config already exists for this scope'
             : 'Failed to create RSVP config')
           return
         }
@@ -435,7 +456,7 @@ export const ConfigManagement: React.FC<ConfigManagementProps> = () => {
     } finally {
       setIsSaving(false)
     }
-  }, [selectedScopeId, rsvpFormFields, rsvpLocalizations, editingRsvpConfig, apiService, toast, loadConfigs])
+  }, [selectedScopeId, rsvpFormFields, rsvpLocalizations, editingRsvpConfig, scopeConfig, ownsConfig, apiService, toast, loadConfigs])
 
   const openFieldEdit = useCallback((item: RsvpFormField & { _key: string }) => {
     const index = rsvpConfig?.rsvpFormFields.findIndex(f => f.field === item.field) ?? -1
@@ -514,11 +535,10 @@ export const ConfigManagement: React.FC<ConfigManagementProps> = () => {
         updatedFields[editingFieldDialog.index] = editingFieldForm
       }
 
-      const result = await apiService.updateConfig(selectedScopeId, rsvpConfig.configId, {
-        ...rsvpConfig,
+      const result = await apiService.updateConfig(selectedScopeId, rsvpConfig.configId, buildPutBody(rsvpConfig, {
         rsvpFormFields: updatedFields,
         localizations: updatedLocalizations,
-      })
+      }))
       if ('error' in result) {
         const status = (result as { status: number }).status
         toast.error(status === 409 ? 'Config modified by someone else. Refresh and try again.' : 'Failed to update field')
@@ -539,10 +559,9 @@ export const ConfigManagement: React.FC<ConfigManagementProps> = () => {
     const updatedFields = rsvpConfig.rsvpFormFields.filter((_, i) => i !== fieldToDelete.index)
     setIsSaving(true)
     try {
-      const result = await apiService.updateConfig(selectedScopeId, rsvpConfig.configId, {
-        ...rsvpConfig,
+      const result = await apiService.updateConfig(selectedScopeId, rsvpConfig.configId, buildPutBody(rsvpConfig, {
         rsvpFormFields: updatedFields,
-      })
+      }))
       if ('error' in result) {
         toast.error('Failed to delete field')
         return
@@ -575,18 +594,16 @@ export const ConfigManagement: React.FC<ConfigManagementProps> = () => {
           f => f.label || f.placeholder || (f.options && f.options.length > 0)
         )
         if (updatedLocalizations[activeLocale].rsvpFormFields.length === 0) delete updatedLocalizations[activeLocale]
-        result = await apiService.updateConfig(selectedScopeId, rsvpConfig.configId, {
-          ...rsvpConfig,
+        result = await apiService.updateConfig(selectedScopeId, rsvpConfig.configId, buildPutBody(rsvpConfig, {
           localizations: updatedLocalizations,
-        })
+        }))
       } else {
         const updatedFields = rsvpConfig.rsvpFormFields.map(f =>
           f.field === fieldName ? { ...f, options: newOptions } : f
         )
-        result = await apiService.updateConfig(selectedScopeId, rsvpConfig.configId, {
-          ...rsvpConfig,
+        result = await apiService.updateConfig(selectedScopeId, rsvpConfig.configId, buildPutBody(rsvpConfig, {
           rsvpFormFields: updatedFields,
-        })
+        }))
       }
       if ('error' in result) {
         toast.error('Failed to save options')
@@ -621,10 +638,9 @@ export const ConfigManagement: React.FC<ConfigManagementProps> = () => {
       const updatedAttributes = customAttrsConfig.attributes.map(a =>
         a.attributeId === attributeId ? { ...a, values: newValues } : a
       )
-      const result = await apiService.updateConfig(selectedScopeId, customAttrsConfig.configId, {
-        ...customAttrsConfig,
+      const result = await apiService.updateConfig(selectedScopeId, customAttrsConfig.configId, buildPutBody(customAttrsConfig, {
         attributes: updatedAttributes,
-      })
+      }))
       if ('error' in result) {
         toast.error('Failed to save values')
         return
@@ -643,22 +659,46 @@ export const ConfigManagement: React.FC<ConfigManagementProps> = () => {
     }
   }, [selectedScopeId, customAttrsConfig, pendingAttrValueEdits, apiService, toast, loadConfigs])
 
-  const handleDeleteConfig = useCallback(async (config: ScopeConfig) => {
+  /** Deletes a slice from the scope's single config. If any other slice remains,
+   *  the config is PUT with the slice's fields cleared; otherwise the whole
+   *  config is DELETEd. */
+  const deleteSlice = useCallback(async (
+    config: ScopeConfig,
+    sliceKind: 'rsvp' | 'locales' | 'customAttributes',
+    label: string,
+  ) => {
     if (!selectedScopeId) return
     setIsSaving(true)
     try {
-      const result = await apiService.deleteConfig(selectedScopeId, config.configId)
+      const stripped: ScopeConfig = { ...config }
+      if (sliceKind === 'rsvp') {
+        delete stripped.rsvpFormFields
+        delete stripped.localizations
+      } else if (sliceKind === 'locales') {
+        delete stripped.localeNames
+        delete stripped.localeUrlCodes
+      } else {
+        delete stripped.attributes
+      }
+
+      const hasOtherSlices =
+        hasRsvpSlice(stripped) || hasLocalesSlice(stripped) || hasAttributesSlice(stripped)
+
+      const result = hasOtherSlices
+        ? await apiService.updateConfig(selectedScopeId, config.configId, buildPutBody(stripped, {}))
+        : await apiService.deleteConfig(selectedScopeId, config.configId)
+
       if ('error' in result) {
-        toast.error('Failed to delete config')
+        toast.error(`Failed to delete ${label}`)
         return
       }
-      toast.success('Config deleted')
+      toast.success(`${label} deleted`)
       setRsvpConfigToDelete(null)
       setLocalesToDelete(null)
       setIsSaving(false)
       await loadConfigs()
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Failed to delete config')
+      toast.error(err instanceof Error ? err.message : `Failed to delete ${label}`)
     } finally {
       setIsSaving(false)
     }
@@ -702,12 +742,12 @@ export const ConfigManagement: React.FC<ConfigManagementProps> = () => {
 
     setIsSaving(true)
     try {
-      if (editingLocalesConfig) {
-        const result = await apiService.updateConfig(selectedScopeId, editingLocalesConfig.configId, {
-          ...editingLocalesConfig,
-          localeNames,
-          localeUrlCodes,
-        })
+      // PUT if the scope owns an existing config (any slice). This is the fix
+      // for the user-reported bug where POSTing locales into a scope that
+      // already had a customAttributes config returned 409.
+      if (scopeConfig && ownsConfig) {
+        const body = buildPutBody(scopeConfig, { localeNames, localeUrlCodes })
+        const result = await apiService.updateConfig(selectedScopeId, scopeConfig.configId, body)
         if ('error' in result) {
           const status = (result as { status: number }).status
           toast.error(status === 409
@@ -715,17 +755,16 @@ export const ConfigManagement: React.FC<ConfigManagementProps> = () => {
             : 'Failed to update locales config')
           return
         }
-        toast.success('Locales config updated')
+        toast.success(editingLocalesConfig ? 'Locales config updated' : 'Locales config created')
       } else {
         const result = await apiService.createConfig(selectedScopeId, {
-          type: 'locales',
           localeNames,
           localeUrlCodes,
         })
         if ('error' in result) {
           const status = (result as { status: number }).status
           toast.error(status === 409
-            ? 'A locales config already exists for this scope'
+            ? 'A config already exists for this scope'
             : 'Failed to create locales config')
           return
         }
@@ -739,7 +778,7 @@ export const ConfigManagement: React.FC<ConfigManagementProps> = () => {
     } finally {
       setIsSaving(false)
     }
-  }, [selectedScopeId, localeEntries, editingLocalesConfig, apiService, toast, loadConfigs])
+  }, [selectedScopeId, localeEntries, editingLocalesConfig, scopeConfig, ownsConfig, apiService, toast, loadConfigs])
 
   // ============================================================================
   // CUSTOM ATTRIBUTE CRUD
@@ -789,17 +828,18 @@ export const ConfigManagement: React.FC<ConfigManagementProps> = () => {
 
     setIsSaving(true)
     try {
-      if (customAttrsConfig) {
+      // PUT into the existing scope config (any slice) when owned by this scope.
+      if (scopeConfig && ownsConfig) {
+        const existingAttrs = customAttrsConfig?.attributes ?? []
         const updatedAttributes = editingAttr
-          ? customAttrsConfig.attributes.map(a =>
+          ? existingAttrs.map(a =>
               a.attributeId === editingAttr.attributeId ? newAttr : a
             )
-          : [...customAttrsConfig.attributes, newAttr]
+          : [...existingAttrs, newAttr]
 
-        const result = await apiService.updateConfig(selectedScopeId, customAttrsConfig.configId, {
-          ...customAttrsConfig,
+        const result = await apiService.updateConfig(selectedScopeId, scopeConfig.configId, buildPutBody(scopeConfig, {
           attributes: updatedAttributes,
-        })
+        }))
         if ('error' in result) {
           const status = (result as { status: number }).status
           toast.error(status === 409
@@ -809,13 +849,12 @@ export const ConfigManagement: React.FC<ConfigManagementProps> = () => {
         }
       } else {
         const result = await apiService.createConfig(selectedScopeId, {
-          type: 'customAttributes',
           attributes: [newAttr],
         })
         if ('error' in result) {
           const status = (result as { status: number }).status
           toast.error(status === 409
-            ? 'A custom attributes config already exists for this scope. Refresh and try again.'
+            ? 'A config already exists for this scope. Refresh and try again.'
             : 'Failed to create custom attribute')
           return
         }
@@ -829,7 +868,7 @@ export const ConfigManagement: React.FC<ConfigManagementProps> = () => {
     } finally {
       setIsSaving(false)
     }
-  }, [selectedScopeId, attrFormName, attrFormLabel, attrFormInputType, attrFormValues, attrFormEnabled, editingAttr, customAttrsConfig, apiService, toast, loadConfigs])
+  }, [selectedScopeId, attrFormName, attrFormLabel, attrFormInputType, attrFormValues, attrFormEnabled, editingAttr, customAttrsConfig, scopeConfig, ownsConfig, apiService, toast, loadConfigs])
 
   const handleDeleteAttr = useCallback(async (attr: CustomAttributeConfig) => {
     if (!selectedScopeId || !customAttrsConfig) return
@@ -838,16 +877,23 @@ export const ConfigManagement: React.FC<ConfigManagementProps> = () => {
       const remaining = customAttrsConfig.attributes.filter(a => a.attributeId !== attr.attributeId)
 
       if (remaining.length === 0) {
-        const result = await apiService.deleteConfig(selectedScopeId, customAttrsConfig.configId)
+        // Removing the last attribute clears the attributes slice. If other
+        // slices (rsvp/locales) live on the same config, PUT to drop only the
+        // attributes field; otherwise DELETE the whole config.
+        const stripped: ScopeConfig = { ...customAttrsConfig }
+        delete stripped.attributes
+        const hasOtherSlices = hasRsvpSlice(stripped) || hasLocalesSlice(stripped)
+        const result = hasOtherSlices
+          ? await apiService.updateConfig(selectedScopeId, customAttrsConfig.configId, buildPutBody(stripped, {}))
+          : await apiService.deleteConfig(selectedScopeId, customAttrsConfig.configId)
         if ('error' in result) {
           toast.error('Failed to delete custom attribute')
           return
         }
       } else {
-        const result = await apiService.updateConfig(selectedScopeId, customAttrsConfig.configId, {
-          ...customAttrsConfig,
+        const result = await apiService.updateConfig(selectedScopeId, customAttrsConfig.configId, buildPutBody(customAttrsConfig, {
           attributes: remaining,
-        })
+        }))
         if ('error' in result) {
           toast.error('Failed to delete custom attribute')
           return
@@ -1116,7 +1162,7 @@ export const ConfigManagement: React.FC<ConfigManagementProps> = () => {
             <Text UNSAFE_style={{ fontWeight: 600, fontSize: 13 }}>Localizations:</Text>
             <div className={style({ display: 'flex', flexDirection: 'column', gap: 4, marginTop: 4 })}>
               {locales.map(locale => {
-                const overrides = rsvpConfig?.localizations[locale]?.rsvpFormFields || []
+                const overrides = rsvpConfig?.localizations?.[locale]?.rsvpFormFields || []
                 const override = overrides.find(o => o.field === item.field)
                 if (!override) return null
                 return (
@@ -1440,9 +1486,9 @@ export const ConfigManagement: React.FC<ConfigManagementProps> = () => {
         {selectedScopeId ? (
           <Tabs aria-label="Configuration types" selectedKey={activeTab} onSelectionChange={(key) => setActiveTab(key as string)}>
             <TabList>
-              <Tab id="rsvp">RSVP Fields</Tab>
+              <Tab id="rsvp" isDisabled>RSVP Fields</Tab>
               <Tab id="locales">Locale Mapping</Tab>
-              <Tab id="attributes">Custom Attributes</Tab>
+              <Tab id="attributes" isDisabled>Custom Attributes</Tab>
             </TabList>
 
             {/* ── RSVP Fields Tab ── */}
@@ -2341,7 +2387,7 @@ export const ConfigManagement: React.FC<ConfigManagementProps> = () => {
           variant="destructive"
           primaryActionLabel="Delete"
           cancelLabel="Cancel"
-          onPrimaryAction={() => { if (rsvpConfigToDelete) handleDeleteConfig(rsvpConfigToDelete) }}
+          onPrimaryAction={() => { if (rsvpConfigToDelete) deleteSlice(rsvpConfigToDelete, 'rsvp', 'RSVP config') }}
           onCancel={() => setRsvpConfigToDelete(null)}
           isPrimaryActionDisabled={isSaving}
         >
@@ -2359,7 +2405,7 @@ export const ConfigManagement: React.FC<ConfigManagementProps> = () => {
           variant="destructive"
           primaryActionLabel="Delete"
           cancelLabel="Cancel"
-          onPrimaryAction={() => { if (localesToDelete) handleDeleteConfig(localesToDelete) }}
+          onPrimaryAction={() => { if (localesToDelete) deleteSlice(localesToDelete, 'locales', 'Locales config') }}
           onCancel={() => setLocalesToDelete(null)}
           isPrimaryActionDisabled={isSaving}
         >

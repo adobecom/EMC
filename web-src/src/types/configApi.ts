@@ -2,8 +2,12 @@
  * Scope Configs & Custom Attributes API type definitions
  *
  * Types matching the ESP scope config endpoints.
- * Configs are scope-inherited (org -> team) and support three types:
- * rsvp, locales, and customAttributes.
+ *
+ * NOTE: ESP enforces ONE config per scope. The single config can carry any
+ * combination of slice fields (rsvpFormFields, localeNames/localeUrlCodes,
+ * attributes). The `type` discriminator is legacy and no longer required —
+ * slices are detected by field presence. Saving from any tab should PUT to
+ * the existing config (merging slices) or POST a new one if none exists.
  */
 
 // ============================================================================
@@ -51,35 +55,53 @@ export interface RsvpFormFieldLocaleOverride {
 }
 
 // ============================================================================
-// Scope Config Models
+// Scope Config Model
 // ============================================================================
 
-interface ScopeConfigBase {
+/** Unified scope config — ESP stores at most one config per scope, with any
+ *  combination of slice fields. Each tab in the UI edits one slice. */
+export interface ScopeConfig {
   configId: string
-  type: ConfigType
   scopeId: string
-  creationTime: number
+  creationTime?: number
   modificationTime: number
+  /** Legacy discriminator — written by older versions of EMC. Newer PUTs drop it. */
+  type?: ConfigType
+  label?: string
+  // RSVP slice
+  rsvpFormFields?: RsvpFormField[]
+  localizations?: Record<string, { rsvpFormFields: RsvpFormFieldLocaleOverride[] }>
+  // Locales slice
+  localeNames?: Record<string, string>
+  localeUrlCodes?: Record<string, string>
+  // Custom attributes slice
+  attributes?: CustomAttributeConfig[]
 }
 
-export interface RsvpScopeConfig extends ScopeConfigBase {
-  type: 'rsvp'
+/** Type aliases for slice-narrowed views. These are NOT separate configs — the
+ *  same `ScopeConfig` may satisfy multiple of these at once. */
+export type RsvpScopeConfig = ScopeConfig & {
   rsvpFormFields: RsvpFormField[]
-  localizations: Record<string, { rsvpFormFields: RsvpFormFieldLocaleOverride[] }>
+  localizations?: Record<string, { rsvpFormFields: RsvpFormFieldLocaleOverride[] }>
 }
 
-export interface LocalesScopeConfig extends ScopeConfigBase {
-  type: 'locales'
+export type LocalesScopeConfig = ScopeConfig & {
   localeNames: Record<string, string>
   localeUrlCodes: Record<string, string>
 }
 
-export interface CustomAttributesScopeConfig extends ScopeConfigBase {
-  type: 'customAttributes'
+export type CustomAttributesScopeConfig = ScopeConfig & {
   attributes: CustomAttributeConfig[]
 }
 
-export type ScopeConfig = RsvpScopeConfig | LocalesScopeConfig | CustomAttributesScopeConfig
+export const hasRsvpSlice = (c: ScopeConfig | null | undefined): c is RsvpScopeConfig =>
+  !!c && Array.isArray(c.rsvpFormFields)
+
+export const hasLocalesSlice = (c: ScopeConfig | null | undefined): c is LocalesScopeConfig =>
+  !!c && (!!c.localeNames || !!c.localeUrlCodes)
+
+export const hasAttributesSlice = (c: ScopeConfig | null | undefined): c is CustomAttributesScopeConfig =>
+  !!c && Array.isArray(c.attributes)
 
 // ============================================================================
 // Custom Attribute Models
@@ -106,29 +128,11 @@ export interface CustomAttributeConfig {
 // Request Bodies
 // ============================================================================
 
-export interface RsvpConfigCreateBody {
-  type: 'rsvp'
-  rsvpFormFields: RsvpFormField[]
-  localizations?: Record<string, { rsvpFormFields: RsvpFormFieldLocaleOverride[] }>
-}
+/** POST body: at least one slice's fields. `type` is optional (legacy). */
+export type ConfigCreateBody = Partial<Omit<ScopeConfig, 'configId' | 'creationTime' | 'modificationTime' | 'scopeId'>>
 
-export interface LocalesConfigCreateBody {
-  type: 'locales'
-  localeNames: Record<string, string>
-  localeUrlCodes: Record<string, string>
-}
-
-export interface CustomAttributesConfigCreateBody {
-  type: 'customAttributes'
-  attributes: CustomAttributeConfig[]
-}
-
-export type ConfigCreateBody =
-  | RsvpConfigCreateBody
-  | LocalesConfigCreateBody
-  | CustomAttributesConfigCreateBody
-
-export type ConfigUpdateBody = ScopeConfig
+/** PUT body: full config minus identity/timestamp fields. `type` should be omitted. */
+export type ConfigUpdateBody = Omit<ScopeConfig, 'configId' | 'creationTime'> & { configId?: string; creationTime?: number }
 
 // ============================================================================
 // Response Envelopes
