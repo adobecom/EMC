@@ -34,32 +34,6 @@ export function getLocalizedValue(obj: any, fieldName: string, locale: string): 
   return obj?.[fieldName]
 }
 
-// TODO: (rsvp-shape-migration) Remove this helper once ESP BE PR #903 ships AND
-// either backfills stored events or adds a read-time adapter on the BE.
-// Until then, GET responses may return either:
-//   - new shape:    { fields: [{ field, required, options }] }
-//   - legacy shape: { required: string[], visible: string[] }
-// Without this adapter, existing events stored under the legacy shape would
-// open with an empty RSVP fields list in the form on edit.
-// Counterpart save-side migration lives in `hooks/useEventFormSave.ts` —
-// grep for `rsvp-shape-migration` to find every call site.
-function readRsvpFormFields(
-  raw: any
-): Array<{ field: string; required?: boolean; options?: string[] }> {
-  if (!raw || typeof raw !== 'object') return []
-  // New shape — preferred.
-  if (Array.isArray(raw.fields)) return raw.fields
-  // Legacy shape — `visible` defines order; `required` is a subset.
-  if (Array.isArray(raw.visible)) {
-    const requiredSet = new Set<string>(Array.isArray(raw.required) ? raw.required : [])
-    return raw.visible.map((field: string) => ({
-      field,
-      required: requiredSet.has(field),
-    }))
-  }
-  return []
-}
-
 /**
  * Map API speaker data to ProfileData format
  */
@@ -184,9 +158,7 @@ export function mapApiResponseToFormData(event: EventApiResponse, locale: string
     // Only populate marketoFormUrl from formData when type is Marketo.
     // When type is ESP, formData is "v1" (placeholder token for rsvpFormFields) — do not show in Marketo input.
     marketoFormUrl: event.registration?.type === 'Marketo' ? (event.registration.formData || '') : '',
-    // TODO: (rsvp-shape-migration) once BE #903 ships and all stored events return
-    // the new {fields} shape, simplify back to `event.rsvpFormFields?.fields ?? []`.
-    rsvpFormFields: readRsvpFormFields(event.rsvpFormFields),
+    rsvpFormFields: event.rsvpFormFields?.fields ?? [],
     images: event.images || [],
     profiles: mapSpeakersToProfiles(event.speakers || [], locale),
     communityForumUrl: cta?.url || '',

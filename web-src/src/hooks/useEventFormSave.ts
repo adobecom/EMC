@@ -12,87 +12,6 @@ import {
   isValidAttribute,
 } from '../utils/dataFilters'
 
-// ─── rsvpFormFields BE-shape transition helpers ─────────────────────────────
-// TODO: (rsvp-shape-migration) REMOVE THIS BLOCK once ESP BE PR #903 is deployed
-// to dev + stage + prod AND all stored events return the new {fields} shape
-// on GET (i.e. BE has backfilled DB or added a read-time adapter).
-//
-// Cleanup checklist — grep for `rsvp-shape-migration` to hit every site:
-//   1. THIS FILE (`useEventFormSave.ts`) — save-side dual-shape support:
-//      a. Delete `isRsvpFormFieldsRejection` and `toLegacyRsvpFormFieldsPayload`
-//         below (down to the closing divider).
-//      b. In the update branch of `saveEvent` (search "Transitional retry"):
-//         remove the `if (isRsvpFormFieldsRejection(...)) { ... }` block and
-//         change `let result` back to `const result`.
-//      c. Same cleanup in the create branch — also "Transitional retry".
-//      d. Trim the inline comment at the `Array.isArray` guard — drop the
-//         "Old-format objects loaded from event responses..." sentence; the
-//         rest of the guard and its comment are permanent.
-//   2. `utils/eventFormMappers.ts` — read-side dual-shape support:
-//      a. Delete the `readRsvpFormFields` helper.
-//      b. Simplify the call site back to `event.rsvpFormFields?.fields ?? []`.
-//
-// Context for the next session: ESP #903 changes the rsvpFormFields schema
-// from `{ required: string[], visible: string[] }` (legacy) to
-// `{ fields: [...] }` (new). Until #903 ships everywhere, EMC sends the new
-// shape first and falls back to legacy on 400. On read, the mapper adapts
-// either shape to the form's array form. After #903 ships and stored data is
-// normalized, both adapters become dead code. The structural fixes from the
-// prior `fix: rsvp form fields handling` commit (speciallyHandledFields entry,
-// Array.isArray guard, error-message extraction) are permanent and stay.
-
-/**
- * Detect a BE rejection caused by the new `rsvpFormFields: { fields }` shape.
- * Checks the HTTP status (Ajv validation errors come back as 400) and inspects
- * both the top-level `message` and any structured `errors[]` items for a path
- * pointing at `rsvpFormFields`. Substring match on `message` alone is unreliable
- * because Ajv messages like `must have required property 'required'` do not
- * contain the field name — only `instancePath`/`dataPath` does.
- */
-function isRsvpFormFieldsRejection(result: any): boolean {
-  if (!('error' in result) || result.status !== 400) return false
-  const err = result.error
-  if (!err || typeof err !== 'object') return false
-  if (typeof err.message === 'string' && err.message.includes('rsvpFormFields')) return true
-  const errors = Array.isArray(err.errors) ? err.errors : []
-  return errors.some((e: any) => {
-    const path = typeof e?.instancePath === 'string'
-      ? e.instancePath
-      : typeof e?.dataPath === 'string' ? e.dataPath : ''
-    return path.includes('rsvpFormFields')
-  })
-}
-
-/**
- * Convert the new `rsvpFormFields: { fields }` shape to the legacy
- * `{ required, visible }` shape that pre-#903 ESP expects.
- * Per-field `options` overrides are not representable in the legacy shape and
- * are dropped — we warn so QA can see the loss in the console.
- */
-function toLegacyRsvpFormFieldsPayload(payload: Record<string, any>): Record<string, any> {
-  const fields = payload.rsvpFormFields?.fields as
-    | Array<{ field: string; required?: boolean; options?: unknown }>
-    | undefined
-  if (!fields) return payload
-
-  const hasOptions = fields.some(f => f.options !== undefined)
-  if (hasOptions) {
-    console.warn(
-      '[useEventFormSave] BE rejected rsvpFormFields {fields} shape; retrying with legacy {required, visible}. Per-field `options` overrides are dropped in the legacy shape — they will be lost until ESP PR #903 ships.'
-    )
-  }
-
-  return {
-    ...payload,
-    rsvpFormFields: {
-      required: fields.filter(f => f.required).map(f => f.field),
-      visible: fields.map(f => f.field),
-    },
-  }
-}
-
-// ────────────────────────────────────────────────────────────────────────────
-
 /**
  * Options for the save operation
  */
@@ -394,8 +313,7 @@ export function useEventFormSave() {
     
     // RSVP form fields — array order = display order; required/options are per-field overrides.
     // Guard with Array.isArray: form state stores this as an array; an empty array must not be
-    // sent as-is (BE rejects non-object values). Old-format objects loaded from event responses
-    // are also excluded here — they will be preserved by the BE if we omit the field.
+    // sent as-is (BE rejects non-object values).
     // TODO(PIM): serialize rsvpOptionSelections when event API exposes per-option RSVP selection.
     if (Array.isArray(mergedData.rsvpFormFields) && mergedData.rsvpFormFields.length) {
       payload.rsvpFormFields = { fields: mergedData.rsvpFormFields }
@@ -592,21 +510,10 @@ export function useEventFormSave() {
         }
         
         // Update existing event (ApiService applies prepareEslEventPutPayload before ESL PUT)
-        let result = await apiService.updateEventExternal(eventId, payload, {
+        const result = await apiService.updateEventExternal(eventId, payload, {
           forceSpWrite: false,
           liveUpdate: publish // Only live update when publishing
         })
-
-        // TODO: (rsvp-shape-migration) Transitional retry — remove this block and
-        // revert `let result` to `const result` once ESP BE PR #903 ships everywhere.
-        // See cleanup instructions at the top of this file.
-        if (isRsvpFormFieldsRejection(result) && payload.rsvpFormFields?.fields) {
-          result = await apiService.updateEventExternal(eventId, toLegacyRsvpFormFieldsPayload(payload), {
-            forceSpWrite: false,
-            liveUpdate: publish,
-          })
-        }
-
         if ('error' in result) {
           const errorMsg = (result.error && typeof result.error === 'object')
             ? ((result.error as any).message ?? '') || 'Failed to update event'
@@ -617,17 +524,7 @@ export function useEventFormSave() {
         savedEventId = eventId
       } else {
         // Create new event
-        let result = await apiService.createEventExternal(payload, locale)
-
-        // TODO: (rsvp-shape-migration) Transitional retry — remove this block and
-        // revert `let result` to `const result` once ESP BE PR #903 ships everywhere.
-        // The clone-from-existing flow can seed rsvpFormFields on create, so the
-        // fallback isn't only an edit-path concern.
-        // See cleanup instructions at the top of this file.
-        if (isRsvpFormFieldsRejection(result) && payload.rsvpFormFields?.fields) {
-          result = await apiService.createEventExternal(toLegacyRsvpFormFieldsPayload(payload), locale)
-        }
-
+        const result = await apiService.createEventExternal(payload, locale)
         if ('error' in result) {
           const errorMsg = (result.error && typeof result.error === 'object')
             ? ((result.error as any).message ?? '') || 'Failed to create event'
