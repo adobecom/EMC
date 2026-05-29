@@ -165,7 +165,7 @@ export const SessionForm: React.FC<SessionFormProps> = ({
   allSessions,
 }) => {
   const isEditMode = session !== null;
-  const { seriesId: contextSeriesId, formData, locale } = useEventFormContext();
+  const { seriesId: contextSeriesId, formData, locale, seriesCustomTagsUrl } = useEventFormContext();
   const toast = useToast();
   const seriesId = contextSeriesId || formData.seriesId || "";
 
@@ -634,7 +634,7 @@ export const SessionForm: React.FC<SessionFormProps> = ({
 
   const renderTags = () => (
     <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
-      <TagSelector selectedTags={selectedTags} onChange={setSelectedTags} placement="top"/>
+      <TagSelector selectedTags={selectedTags} onChange={setSelectedTags} placement="top" tagsUrl={seriesCustomTagsUrl || undefined}/>
     </div>
   );
 

@@ -2,39 +2,39 @@
 
 ## Overview
 
-The EMC project uses **Jest** for both unit and end-to-end testing. Tests cover both frontend components and backend actions.
+**Jest** is configured at the repo root (`jest.config.js`, preset `ts-jest`). Tests are discovered as `web-src/src/**/*.test.ts`. There are **no committed test files yet**; add tests alongside source as needed.
 
-## Test Structure
+**CI (`.github/workflows/pr_test.yml`):** pull requests run `npm run lint` and `npm run type-check` only — not Jest.
+
+End-to-end automation is **not** wired in `package.json`; the E2E section below is optional reference material.
+
+## Test layout (expected)
 
 ```
 EMC/
-├── test/                    # Unit tests for backend actions
-│   ├── sample.test.js
-│   ├── sampleMessage.test.js
-│   └── utils.test.js
-├── e2e/                     # End-to-end tests
-│   ├── sample.e2e.test.js
-│   └── sampleMessage.e2e.test.js
-└── jest.setup.js            # Jest configuration
+├── jest.config.js           # Jest entry
+├── jest.setup.js            # Shared setup (timeouts, etc.)
+└── web-src/src/
+    └── **/*.test.ts         # Colocated tests (when added)
 ```
 
 ## Running Tests
 
 ```bash
-# Run all unit tests
-npm test
+# Run all Jest tests (once files exist)
+npm run test:unit
 
-# Run specific test file
-npm test -- sample.test.js
+# Run a specific file
+npm run test:unit -- path/to/file.test.ts
 
-# Run with coverage
-npm test -- --coverage
+# With coverage
+npm run test:unit -- --coverage
 
-# Run e2e tests
-npm run e2e
+# Watch mode
+npm run test:unit -- --watch
 
-# Run tests in watch mode
-npm test -- --watch
+# Adobe CLI (separate from Jest — use when project enables it)
+aio app test
 ```
 
 ## Backend Action Testing
@@ -489,14 +489,15 @@ describe('Organizations E2E', () => {
 
 ### Running E2E Tests
 
+There is **no** `npm run e2e` script in this repo today. If you add Puppeteer/Playwright or `aio app test --e2e`, document the exact command here. Example placeholder:
+
 ```bash
-# Set environment variables
+# Set environment variables (example)
 export E2E_BASE_URL=https://your-namespace.adobeioruntime.net/api/v1/web/EMC
 export E2E_TOKEN=your-test-token
 export E2E_ORG=your-test-org
 
-# Run e2e tests
-npm run e2e
+# Then run your chosen E2E runner (not configured by default)
 ```
 
 ## Test Coverage
@@ -505,7 +506,7 @@ npm run e2e
 
 ```bash
 # Generate coverage report
-npm test -- --coverage
+npm run test:unit -- --coverage
 
 # View coverage in browser
 open coverage/lcov-report/index.html
@@ -631,42 +632,15 @@ test('test 2', () => { use sharedData })  // Depends on test 1
 
 ## Continuous Integration
 
-### GitHub Actions Example
+### GitHub Actions (current repo)
+
+Pull requests use `.github/workflows/pr_test.yml`: **lint** and **type-check**. Add a `npm run test:unit` step when the suite exists and should gate merges.
+
+### Example — optional Jest step
 
 ```yaml
-# .github/workflows/test.yml
-name: Tests
-
-on: [push, pull_request]
-
-jobs:
-  test:
-    runs-on: ubuntu-latest
-    
-    steps:
-      - uses: actions/checkout@v2
-      
-      - name: Setup Node.js
-        uses: actions/setup-node@v2
-        with:
-          node-version: '22'
-      
-      - name: Install dependencies
-        run: npm ci
-      
-      - name: Run linter
-        run: npm run lint
-      
-      - name: Run type check
-        run: npm run type-check
-      
       - name: Run unit tests
-        run: npm test -- --coverage
-      
-      - name: Upload coverage
-        uses: codecov/codecov-action@v2
-        with:
-          files: ./coverage/lcov.info
+        run: npm run test:unit -- --coverage
 ```
 
 ## Debugging Tests
@@ -675,10 +649,10 @@ jobs:
 
 ```bash
 # Run specific test file
-npm test -- myaction.test.js
+npm run test:unit -- path/to/module.test.ts
 
 # Run specific test case
-npm test -- -t "creates organization"
+npm run test:unit -- -t "creates organization"
 ```
 
 ### Using Debugger
@@ -693,13 +667,13 @@ test('debuggable test', async () => {
 
 **Run with debugger:**
 ```bash
-node --inspect-brk node_modules/.bin/jest --runInBand myaction.test.js
+node --inspect-brk node_modules/.bin/jest --runInBand path/to/module.test.ts
 ```
 
 ### Verbose Output
 
 ```bash
-npm test -- --verbose
+npm run test:unit -- --verbose
 ```
 
 ## Common Testing Pitfalls

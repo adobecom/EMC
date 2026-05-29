@@ -59,13 +59,19 @@ function mapApiResponseToFormData(series: SeriesApiResponse): SeriesFormData {
     susiContextId: series.susiContextId || '',
     relatedDomain: series.relatedDomain || '',
     contentRoot: series.contentRoot || '',
+    customTagsUrl: series.caasTaxonomyUrl || '',
   }
 }
 
 /**
  * Build API payload from form data using data filter validation
  */
-function buildApiPayload(formData: SeriesFormData, modificationTime?: number, isUpdate: boolean = false): any {
+function buildApiPayload(
+  formData: SeriesFormData,
+  modificationTime?: number,
+  isUpdate: boolean = false,
+  scopeId?: string,
+): any {
   // Convert SeriesFormData to a plain object for filtering
   const dataObject: Record<string, any> = {
     seriesName: formData.seriesName,
@@ -77,10 +83,15 @@ function buildApiPayload(formData: SeriesFormData, modificationTime?: number, is
     susiContextId: formData.susiContextId,
     relatedDomain: formData.relatedDomain,
     contentRoot: formData.contentRoot,
+    caasTaxonomyUrl: formData.customTagsUrl,
   }
-  
+
   if (modificationTime !== undefined) {
     dataObject.modificationTime = modificationTime
+  }
+
+  if (scopeId) {
+    dataObject.scopeId = scopeId
   }
   
   // Use the data filter to ensure only submittable fields are included
@@ -212,8 +223,8 @@ const SeriesFormInner: React.FC<SeriesFormInnerProps> = ({ ims: _ims }) => {
         }
       }
 
-      const payload = buildApiPayload(corrected, modificationTime, isEditMode)
-      
+      const payload = buildApiPayload(corrected, modificationTime, isEditMode, state.seriesDataResp?.scopeId)
+
       let result
       if (isEditMode && seriesId) {
         result = await apiService.updateSeriesExternal(seriesId, payload)
@@ -320,7 +331,7 @@ const SeriesFormInner: React.FC<SeriesFormInnerProps> = ({ ims: _ims }) => {
             return
           }
         }
-        const publishPayload = buildApiPayload(corrected, publishModificationTime, true)
+        const publishPayload = buildApiPayload(corrected, publishModificationTime, true, createResult.scopeId)
         result = await apiService.publishSeries(newSeriesId, publishPayload)
       } else {
         seriesIdForCanonicalRefresh = seriesId
@@ -338,7 +349,7 @@ const SeriesFormInner: React.FC<SeriesFormInnerProps> = ({ ims: _ims }) => {
             return
           }
         }
-        const publishPayload = buildApiPayload(corrected, modificationTime, true)
+        const publishPayload = buildApiPayload(corrected, modificationTime, true, state.seriesDataResp?.scopeId)
         result = await apiService.publishSeries(seriesId, publishPayload)
       }
       

@@ -47,8 +47,7 @@ export const RegistrationConfigComponent: React.FC = () => {
   const rsvpDescription = formData.rsvpDescription || ''
   const registrationType = formData.registrationType || 'ESP'
   const marketoFormUrl = formData.marketoFormUrl || ''
-  const visibleRsvpFields = formData.visibleRsvpFields || []
-  const requiredRsvpFields = formData.requiredRsvpFields || []
+  const rsvpFormFields = formData.rsvpFormFields || []
   
   // ============================================================================
   // LOCAL STATE
@@ -100,12 +99,8 @@ export const RegistrationConfigComponent: React.FC = () => {
     updateFormData({ marketoFormUrl: url })
   }
   
-  const handleVisibleFieldsChange = (fields: string[]) => {
-    updateFormData({ visibleRsvpFields: fields })
-  }
-  
-  const handleRequiredFieldsChange = (fields: string[]) => {
-    updateFormData({ requiredRsvpFields: fields })
+  const handleRsvpFormFieldsChange = (fields: { field: string; required?: boolean; options?: string[] }[]) => {
+    updateFormData({ rsvpFormFields: fields })
   }
   
   const handleContactHostToggle = (value: boolean) => {
@@ -252,14 +247,13 @@ export const RegistrationConfigComponent: React.FC = () => {
       {/* Registration Fields Configuration */}
       <div style={{ width: '100%', marginTop: 32 }}>
         <RegistrationFieldsComponent
-          cloudType={cloudType}
+          isExperienceCloud={isExperienceCloud}
           eventType={isWebinar ? 'Virtual' : 'InPerson'}
-          visibleFields={visibleRsvpFields}
-          requiredFields={requiredRsvpFields}
+          cloudType={cloudType}
+          rsvpFormFields={rsvpFormFields}
           registrationType={registrationType}
           marketoFormUrl={marketoFormUrl}
-          onVisibleFieldsChange={handleVisibleFieldsChange}
-          onRequiredFieldsChange={handleRequiredFieldsChange}
+          onRsvpFormFieldsChange={handleRsvpFormFieldsChange}
           onRegistrationTypeChange={handleRegistrationTypeChange}
           onMarketoFormUrlChange={handleMarketoFormUrlChange}
         />

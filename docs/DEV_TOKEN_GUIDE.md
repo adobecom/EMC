@@ -167,7 +167,7 @@ const apiKey = env.API_KEY
 The system supports a non-invasive test mode that prevents write operations:
 
 ```
-http://localhost:9080?nonInvasiveTest=true
+http://localhost:3000?nonInvasiveTest=true
 ```
 
 When enabled:

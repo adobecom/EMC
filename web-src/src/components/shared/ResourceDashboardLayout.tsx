@@ -58,6 +58,7 @@ interface ResourceDashboardLayoutProps<T> {
   renderExpandedContent?: (item: T) => React.ReactNode
   expandedKeys?: Set<string>
   onToggleExpand?: (key: string) => void
+  isRowExpandable?: (item: T) => boolean
 
   /** Notified when the debounced search query changes (including cleared). */
   onDebouncedQueryChange?: (query: string) => void
@@ -92,6 +93,7 @@ export function ResourceDashboardLayout<T extends Record<string, any>>({
   renderExpandedContent,
   expandedKeys,
   onToggleExpand,
+  isRowExpandable,
   onDebouncedQueryChange,
   searchLoading = false,
 }: ResourceDashboardLayoutProps<T>): React.ReactElement {
@@ -270,6 +272,7 @@ export function ResourceDashboardLayout<T extends Record<string, any>>({
                 renderExpandedContent={renderExpandedContent}
                 expandedKeys={expandedKeys}
                 onToggleExpand={onToggleExpand}
+                isRowExpandable={isRowExpandable}
                 testIds={dataTableTestIds}
                 emptyState={
                   debouncedQuery ? (

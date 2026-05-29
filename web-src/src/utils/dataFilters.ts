@@ -87,6 +87,8 @@ export const SERIES_DATA_FILTER: DataFilter = {
   templateId: { type: 'string', submittable: true, cloneable: true, updatable: true },
   relatedDomain: { type: 'string', submittable: true, cloneable: true, updatable: true },
   contentRoot: { type: 'string', submittable: true, cloneable: true, updatable: true },
+  caasTaxonomyUrl: { type: 'string', submittable: true, cloneable: true, updatable: true },
+  scopeId: { type: 'string', submittable: true, cloneable: false, updatable: true },
   modificationTime: { type: 'string', submittable: true, cloneable: false, updatable: true },
   createdBy: { type: 'string', submittable: false, cloneable: false, updatable: false },
   modifiedBy: { type: 'string', submittable: false, cloneable: false, updatable: false },
@@ -144,6 +146,7 @@ export const EVENT_DATA_FILTER: DataFilter = {
   video: { type: 'object', localizable: false, cloneable: true, submittable: true, ref: VIDEO_DATA_REF_FILTER },
   registration: { type: 'object', localizable: false, cloneable: true, submittable: true, ref: REGISTRATION_DATA_REF_FILTER },
   marketoIntegration: { type: 'object', localizable: false, cloneable: false, submittable: true, ref: MARKETO_INTEGRATION_DATA_REF_FILTER },
+  customAttributes: { type: 'array', localizable: false, cloneable: false, submittable: true },
 }
 
 // ============================================================================

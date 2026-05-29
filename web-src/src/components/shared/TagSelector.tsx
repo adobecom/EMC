@@ -29,12 +29,14 @@ interface TagSelectorProps {
   selectedTags: EventTag[]
   onChange: (tags: EventTag[]) => void
   placement?: 'top' | 'bottom'
+  tagsUrl?: string
 }
 
 export const TagSelector: React.FC<TagSelectorProps> = ({
   selectedTags,
   onChange,
-  placement = 'bottom'
+  placement = 'bottom',
+  tagsUrl,
 }) => {
   const [availableTags, setAvailableTags] = useState<EventTag[]>([])
   const [filteredGroups, setFilteredGroups] = useState<TagGroup[]>([])
@@ -52,7 +54,7 @@ export const TagSelector: React.FC<TagSelectorProps> = ({
       setError(null)
 
       try {
-        const response = await cachedApi.getCaasTags() as CaasTagsResponse
+        const response = await (tagsUrl ? cachedApi.getTagsFromUrl(tagsUrl) : cachedApi.getCaasTags()) as CaasTagsResponse
 
         if (!isMounted) return
 
@@ -89,7 +91,7 @@ export const TagSelector: React.FC<TagSelectorProps> = ({
     return () => {
       isMounted = false
     }
-  }, [])
+  }, [tagsUrl])
 
   useEffect(() => {
     filterAndGroupTags()

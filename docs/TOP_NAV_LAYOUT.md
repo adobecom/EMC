@@ -8,7 +8,7 @@ The application has been redesigned from a **sidebar layout** to a modern **top 
 
 ```
 ┌────────────────────────────────────────────────────────────────┐
-│  EMC    Home  Organizations  Resources  Registrations  [JD] ▼  │ ← Top Nav
+│  EMC   Home  Overview  Events  …  Registrations  Speakers  [JD]▼ │ ← Top Nav
 ├────────────────────────────────────────────────────────────────┤
 │                                                                │
 │                        Main Content Area                       │
@@ -24,24 +24,22 @@ The application has been redesigned from a **sidebar layout** to a modern **top 
 
 ```
 ┌──────────────────────────────────────────────────────────────────────┐
-│                                                                      │
-│  [EMC]  Home  Organizations  Resources  Registrations  Actions     │
-│         ────                                              About     │
-│       Selected                                           [JD] John Doe ▼  │
-│                                                              │
+│  [EMC]  Home  Overview  Events  Registrations  Speakers  Series …   │
+│         ────                                                         │
+│       Selected                                    About   [JD] ▼     │
 └──────────────────────────────────────────────────────────────────────┘
 ```
 
 **Components:**
 - **Left**: Brand logo "EMC"
-- **Center**: Horizontal navigation links
+- **Center**: Horizontal navigation links (subset may be hidden until a group is selected or per RBAC)
 - **Right**: Compact user panel with dropdown
 
 ## Key Features
 
 ### 1. Top Navigation (TopNav Component)
 
-**Location:** `web-src/src/components/SideBar.tsx` (renamed functionality to TopNav)
+**Location:** `web-src/src/components/layout/TopNav.tsx`
 
 **Features:**
 - ✅ Horizontal navigation layout
@@ -50,12 +48,10 @@ The application has been redesigned from a **sidebar layout** to a modern **top 
 - ✅ Responsive spacing
 - ✅ Shadow for depth
 
-**Navigation Items:**
-- Home
-- Organizations
-- Resources
-- Registrations
-- Actions
+**Navigation items (typical; see source for permission-gated links):**
+- Home, Overview
+- Events, Registrations, Speakers (when permitted)
+- Series, Configs (when permitted)
 - About
 
 ### 2. Compact User Panel
@@ -148,12 +144,11 @@ The application has been redesigned from a **sidebar layout** to a modern **top 
 
 ## Component Changes
 
-### 1. SideBar.tsx → TopNav
-- Changed from vertical to horizontal layout
-- Renamed component to `TopNav`
-- Integrated `UserPanel` component
+### 1. Legacy sidebar → `TopNav`
+- Replaced vertical sidebar with horizontal `components/layout/TopNav.tsx`
+- Integrated `UserPanel` on the right
 - Added brand logo section
-- Removed "User Profile" link (redundant with profile widget)
+- Profile access via user panel / `/profile` (not a duplicate nav item)
 
 ### 2. UserPanel.tsx
 - Added `compact` prop for layout modes
@@ -253,7 +248,8 @@ Possible additions:
 
 ### Manual Testing
 ```bash
-aio app run
+npm run dev
+# UI: http://localhost:3000
 ```
 
 **Check:**
@@ -290,19 +286,19 @@ aio app run
 
 | File | Purpose |
 |------|---------|
-| `SideBar.tsx` | TopNav component (renamed functionality) |
-| `UserPanel.tsx` | Profile widget with compact mode |
-| `App.tsx` | Layout grid configuration |
+| `components/layout/TopNav.tsx` | Primary navigation bar |
+| `components/user/UserPanel.tsx` | Profile widget (compact in top nav) |
+| `components/App.tsx` | Layout grid and routes |
 | `index.css` | Top nav and link styling |
 
 ## Summary
 
-The application now features a **modern top navigation bar** with:
+The application uses a **top navigation bar** with:
 - Horizontal navigation links
 - Compact user profile widget on the right
 - Full-width content area
 - Clean, professional appearance
 - Better space utilization
 
-This layout is more suitable for desktop applications and provides a better user experience! 🚀
+This layout fits desktop-style admin apps and keeps primary actions easy to scan.
 
