@@ -254,7 +254,7 @@ class ImsAuthService {
           client_id: env.IMS_CLIENT_ID,
           scope: env.IMS_SCOPES,
           environment: imsEnv,
-          useLocalStorage: false,
+          useLocalStorage: true,
           logsEnabled: false,
           redirect_uri: window.location.origin + window.location.pathname,
 
