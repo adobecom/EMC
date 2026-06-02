@@ -10,7 +10,7 @@
  * to `onSubmit`, then the parent saves the speaker and uploads via `uploadSpeakerSeriesImage`.
  */
 
-import React, { useState, useCallback, useEffect, useMemo } from 'react'
+import React, { useState, useCallback, useEffect, useMemo, useRef } from 'react'
 import {
   ActionButton,
   Text,
@@ -55,6 +55,8 @@ export interface SpeakerFormSubmitData {
   socialLinks: SocialLink[]
   localizationDrafts: Record<string, SpeakerDashboardLocalizationDraft>
   removedImageId?: string
+  /** PUT replace when updating an existing profile photo (see PartnerDialog) */
+  replaceImageId?: string
 }
 
 interface SpeakerFormDialogProps {
@@ -125,6 +127,7 @@ export const SpeakerFormDialog: React.FC<SpeakerFormDialogProps> = ({
   const [pendingFile, setPendingFile] = useState<File | null>(null)
   const [removedImageId, setRemovedImageId] = useState<string | undefined>(undefined)
   const [shouldCascade, setShouldCascade] = useState(cascadeToEvents ?? false)
+  const imageIdWhenDialogOpenedRef = useRef<string | undefined>(undefined)
 
   const isEditing = !!speaker
 
@@ -147,6 +150,8 @@ export const SpeakerFormDialog: React.FC<SpeakerFormDialogProps> = ({
       setSelectedLocale(DEFAULT_LOCALE)
       setShouldCascade(cascadeToEvents ?? false)
       setRemovedImageId(undefined)
+      setPendingFile(null)
+      imageIdWhenDialogOpenedRef.current = speaker.photo?.imageId
     } else if (isOpen) {
       setFormState(initialFormState)
       setLocalizationDrafts(emptyLocalizationDrafts())
@@ -154,6 +159,7 @@ export const SpeakerFormDialog: React.FC<SpeakerFormDialogProps> = ({
       setPendingFile(null)
       setRemovedImageId(undefined)
       setShouldCascade(false)
+      imageIdWhenDialogOpenedRef.current = undefined
     }
   }, [isOpen, speaker, cascadeToEvents])
 
@@ -232,6 +238,13 @@ export const SpeakerFormDialog: React.FC<SpeakerFormDialogProps> = ({
       return
     }
 
+    const openedId = imageIdWhenDialogOpenedRef.current
+    const replaceImageId =
+      isEditing && pendingFile
+        ? formState.imageId ||
+          (openedId && removedImageId !== openedId ? openedId : undefined)
+        : undefined
+
     const data: SpeakerFormSubmitData = {
       firstName: formState.firstName.trim(),
       lastName: formState.lastName.trim(),
@@ -240,10 +253,11 @@ export const SpeakerFormDialog: React.FC<SpeakerFormDialogProps> = ({
         .map((link) => toApiSocialLink(link)),
       localizationDrafts: { ...localizationDrafts },
       removedImageId,
+      replaceImageId,
     }
 
     await onSubmit(data, pendingFile ?? undefined, { cascadeToEvents: shouldCascade })
-  }, [formState, localizationDrafts, pendingFile, shouldCascade, onSubmit])
+  }, [formState, localizationDrafts, pendingFile, removedImageId, shouldCascade, isEditing, onSubmit])
 
   const isFormValid = formState.firstName.trim() && formState.lastName.trim()
 
