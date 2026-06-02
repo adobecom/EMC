@@ -186,14 +186,13 @@ export const EventInfoComponent: React.FC = () => {
     }
 
     let cancelled = false
-    cachedApi.getConfigsForScope(scopeId, 'locales').then((result) => {
+    cachedApi.getConfig(scopeId).then((result) => {
       if (cancelled) return
-      if ('error' in result) {
+      if (result === null || 'error' in result) {
         setLocaleOptions(DEFAULT_LOCALE_PICKER_OPTIONS)
         return
       }
-      const localesConfig = result.find(hasLocalesSlice)
-      const locales = localesConfig?.locales
+      const locales = hasLocalesSlice(result) ? result.locales : undefined
       if (locales && locales.length > 0) {
         const options = locales.map((l) => ({ key: l.code, label: l.name }))
         setLocaleOptions(options)

@@ -134,11 +134,8 @@ export interface CustomAttributeConfig {
 // Request Bodies
 // ============================================================================
 
-/** POST body: at least one slice's fields. `type` is optional (legacy). */
-export type ConfigCreateBody = Partial<Omit<ScopeConfig, 'configId' | 'creationTime' | 'modificationTime' | 'scopeId'>>
-
-/** PUT body: full config minus identity/timestamp fields. `type` should be omitted. */
-export type ConfigUpdateBody = Omit<ScopeConfig, 'configId' | 'creationTime'> & { configId?: string; creationTime?: number }
+/** Upsert body for PUT /scopes/{id}/config — partial slice fields; server assigns configId. */
+export type ScopeConfigUpsertBody = Partial<Omit<ScopeConfig, 'configId' | 'creationTime' | 'modificationTime' | 'scopeId'>>
 
 // ============================================================================
 // Response Envelopes
