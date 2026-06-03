@@ -452,6 +452,15 @@ export const SessionsTab: React.FC<SessionsTabProps> = ({
               </PickerItem>
             ))}
           </Picker>
+          {isAdmin && (
+            <ActionButton
+              aria-label="Export sessions to CSV"
+              onPress={handleExport}
+              isPending={isExporting}
+            >
+              <Download />
+            </ActionButton>
+          )}
           <div className={style({ width: 240 })}>
             <SearchField
               label="Search sessions"
@@ -462,15 +471,6 @@ export const SessionsTab: React.FC<SessionsTabProps> = ({
               styles={style({ width: '[100%]' })}
             />
           </div>
-          {isAdmin && (
-            <ActionButton
-              aria-label="Export sessions to CSV"
-              onPress={handleExport}
-              isPending={isExporting}
-            >
-              <Download />
-            </ActionButton>
-          )}
         </div>
       )}
 
