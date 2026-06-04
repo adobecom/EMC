@@ -156,10 +156,9 @@ export const CustomAttributesComponent: React.FC = () => {
     const load = async () => {
       setLoading(true)
       try {
-        const result = await cachedApi.getConfigsForScope(scopeId, 'customAttributes')
-        if (!('error' in result)) {
-          const config = result.find(hasAttributesSlice)
-          const enabled = (config?.attributes ?? []).filter(a => a.enabled !== false)
+        const result = await cachedApi.getConfig(scopeId)
+        if (result !== null && !('error' in result)) {
+          const enabled = (hasAttributesSlice(result) ? result.attributes : []).filter(a => a.enabled !== false)
           setAttributes(enabled)
           updateFormData({ _customAttributeConfigs: enabled })
         }
