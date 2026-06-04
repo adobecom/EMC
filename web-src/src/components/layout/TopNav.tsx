@@ -23,6 +23,7 @@ const TopNav: React.FC<TopNavProps> = ({ ims }) => {
   const { isLoading: isGroupLoading, activeGroup } = useGroup()
   const canReadEvents = useHasPermission('event', 'read')
   const canReadSeries = useHasPermission('series', 'read')
+  const canReadConfig = useHasPermission('config', 'read')
 
   // Hide all tabs until a group is selected (loading done and activeGroup set)
   const showNav = !isGroupLoading && activeGroup !== null
@@ -129,6 +130,14 @@ const TopNav: React.FC<TopNavProps> = ({ ims }) => {
                 to="/series"
               >
                 <Text>Series</Text>
+              </NavLink>
+            )}
+            {canReadConfig && (
+              <NavLink
+                className={({ isActive }) => `nav-link ${isActive ? 'is-selected' : ''}`}
+                to="/configs"
+              >
+                <Text>Configs</Text>
               </NavLink>
             )}
             <NavLink

@@ -32,20 +32,21 @@ import { configService } from '../../services/configService'
 import { IMS } from '../../types'
 import { FormWizard, WizardStep, BlurredLoadingOverlay, FormCard, HistoryTimeline } from '../../components/shared'
 import { 
-  EventFormatComponent, 
-  EventTagsComponent, 
-  EventInfoComponent, 
-  AgendaComponent, 
-  VenueComponent, 
-  SpeakersComponent, 
-  SponsorsComponent, 
-  EventImagesComponent, 
-  RegistrationConfigComponent, 
+  EventFormatComponent,
+  EventTagsComponent,
+  EventInfoComponent,
+  AgendaComponent,
+  VenueComponent,
+  SpeakersComponent,
+  SponsorsComponent,
+  EventImagesComponent,
+  RegistrationConfigComponent,
   PageMetadataComponent,
   PromotionalContentComponent,
   MarketoIntegrationComponent,
   SessionManagementComponent,
-  VideoContentComponent
+  VideoContentComponent,
+  CustomAttributesComponent,
 } from './index'
 import { mapApiResponseToFormData } from '../../utils/eventFormMappers'
 import { useEventFeatureFlags } from '../../hooks/useEventTypeFeatures'
@@ -54,6 +55,7 @@ import { useEventFormSave } from '../../hooks/useEventFormSave'
 import { useCustomDetailPagePath } from '../../hooks/useCustomDetailPagePath'
 import { COLORS, Z_INDEX, TYPOGRAPHY, SURFACES } from '../../styles/designSystem'
 import { ENVIRONMENTS, getCurrentEnvironment, getEspEnvParam } from '../../config/constants'
+import { validateForPublish, PublishGuardResult } from '../../utils/publishGuard'
 
 // ============================================================================
 // FORMAT SELECTION OVERLAY
@@ -491,6 +493,7 @@ const EventFormInner: React.FC<EventFormInnerProps> = ({ ims: _ims }) => {
     setMaxStepReached,
     setFormatConfirmed,
     setSeriesId,
+    setSeriesCustomTagsUrl,
     loadFromStorage,
     persistToStorage,
     state,
@@ -514,8 +517,10 @@ const EventFormInner: React.FC<EventFormInnerProps> = ({ ims: _ims }) => {
   const prodPublishExtraRef = useRef<Record<string, any> | undefined>(undefined)
   const [prodPublishConfirmOpen, setProdPublishConfirmOpen] = useState(false)
   const [isCheckingUrl, setIsCheckingUrl] = useState(false)
+  const [publishGuardResult, setPublishGuardResult] = useState<PublishGuardResult | null>(null)
   const [sessionHasOpenForm, setSessionHasOpenForm] = useState(false)
-  
+
+
   // Show toast when saveError changes
   useEffect(() => {
     if (saveError && saveError !== lastErrorShownRef.current) {
@@ -534,6 +539,14 @@ const EventFormInner: React.FC<EventFormInnerProps> = ({ ims: _ims }) => {
   // ============================================================================
   // LOAD EVENT DATA
   // ============================================================================
+
+  const loadSeriesCustomTagsUrl = useCallback(async (seriesIdToLoad: string) => {
+    if (!seriesIdToLoad) return
+    const seriesData = await cachedApi.getSeriesFull(seriesIdToLoad)
+    if (seriesData && !('error' in seriesData)) {
+      setSeriesCustomTagsUrl((seriesData as any).caasTaxonomyUrl || '')
+    }
+  }, [setSeriesCustomTagsUrl])
 
   const loadEvent = useCallback(async (eventIdToLoad: string) => {
     setLoading(true)
@@ -556,6 +569,7 @@ const EventFormInner: React.FC<EventFormInnerProps> = ({ ims: _ims }) => {
       setLocale(eventLocale)
       const mappedData = mapApiResponseToFormData(response as EventApiResponse, eventLocale)
       populateFormDataFromResponse(mappedData)
+      if (response.seriesId) loadSeriesCustomTagsUrl(response.seriesId)
     } catch (err) {
       console.error('Failed to load event:', err)
       setLoadError('Failed to load event data')
@@ -570,6 +584,7 @@ const EventFormInner: React.FC<EventFormInnerProps> = ({ ims: _ims }) => {
     setMaxStepReached,
     setLocale,
     populateFormDataFromResponse,
+    loadSeriesCustomTagsUrl,
   ])
 
   const reloadAfterGroupChange = useCallback(async () => {
@@ -664,7 +679,8 @@ const EventFormInner: React.FC<EventFormInnerProps> = ({ ims: _ims }) => {
     updateFormData({ cloudType })
     setSeriesId(seriesId)
     setFormatConfirmed(true)
-  }, [updateFormData, setSeriesId, setFormatConfirmed])
+    loadSeriesCustomTagsUrl(seriesId)
+  }, [updateFormData, setSeriesId, setFormatConfirmed, loadSeriesCustomTagsUrl])
   
   /**
    * Handle cancel from the format selection overlay — go back to dashboard
@@ -723,7 +739,7 @@ const EventFormInner: React.FC<EventFormInnerProps> = ({ ims: _ims }) => {
   const runPublishEvent = useCallback(
     async (extraPayload?: Record<string, any>) => {
       persistToStorage()
-      await publishEvent({
+      const result = await publishEvent({
         extraPayload,
         onSuccess: () => {
           setPublished(true)
@@ -739,8 +755,11 @@ const EventFormInner: React.FC<EventFormInnerProps> = ({ ims: _ims }) => {
           console.error('Failed to publish event:', error)
         },
       })
+      if (result.success && result.eventId && !isEditMode) {
+        navigate(`/events/edit/${result.eventId}`, { replace: true })
+      }
     },
-    [publishEvent, persistToStorage, setPublished, navigate, toast, isPublished]
+    [publishEvent, persistToStorage, setPublished, navigate, toast, isPublished, isEditMode]
   )
 
   const requestPublishAfterUrlResolved = useCallback(
@@ -787,7 +806,7 @@ const EventFormInner: React.FC<EventFormInnerProps> = ({ ims: _ims }) => {
     }
 
     persistToStorage()
-    await saveDraft({
+    const result = await saveDraft({
       extraPayload: extra,
       onSuccess: () => {
         toast.success('Event saved successfully!')
@@ -796,7 +815,10 @@ const EventFormInner: React.FC<EventFormInnerProps> = ({ ims: _ims }) => {
         console.error('Failed to save event:', error)
       },
     })
-  }, [requestPublishAfterUrlResolved, saveDraft, persistToStorage, toast])
+    if (result.success && result.eventId && !isEditMode) {
+      navigate(`/events/edit/${result.eventId}`, { replace: true })
+    }
+  }, [requestPublishAfterUrlResolved, saveDraft, persistToStorage, toast, navigate, isEditMode])
 
   /**
    * Handle Save button click - saves to API + sessionStorage without advancing
@@ -817,19 +839,30 @@ const EventFormInner: React.FC<EventFormInnerProps> = ({ ims: _ims }) => {
         console.error('Failed to save event:', error)
       }
     })
-    
+
+    if (result.success && result.eventId && !isEditMode) {
+      navigate(`/events/edit/${result.eventId}`, { replace: true })
+    }
+
     return result.success
-  }, [checkUrlPatternBeforeSave, saveDraft, persistToStorage, toast, isEditMode])
+  }, [checkUrlPatternBeforeSave, saveDraft, persistToStorage, toast, isEditMode, navigate])
   
   /**
    * Handle Publish/Re-publish button click
    */
   const handleComplete = useCallback(async () => {
+    // Validate all required fields across steps before publishing
+    const guardResult = validateForPublish({ formData, hasVenue })
+    if (!guardResult.valid) {
+      setPublishGuardResult(guardResult)
+      return
+    }
+
     const { proceed, extraPayload } = await checkUrlPatternBeforeSave('publish')
     if (!proceed) return
 
     await requestPublishAfterUrlResolved(extraPayload)
-  }, [checkUrlPatternBeforeSave, requestPublishAfterUrlResolved])
+  }, [formData, hasVenue, checkUrlPatternBeforeSave, requestPublishAfterUrlResolved])
   
   /**
    * Handle max step change from FormWizard
@@ -955,6 +988,8 @@ const EventFormInner: React.FC<EventFormInnerProps> = ({ ims: _ims }) => {
           <VideoContentComponent />
         </FormCard>
       )}
+
+      <CustomAttributesComponent />
     </>
   )
   
@@ -1191,6 +1226,44 @@ const EventFormInner: React.FC<EventFormInnerProps> = ({ ims: _ims }) => {
                 Confirm & Save
               </Button>
             )}
+          </ButtonGroup>
+        </Dialog>
+      </DialogTrigger>
+
+      {/* Publish guard — required fields missing dialog */}
+      <DialogTrigger
+        isOpen={publishGuardResult !== null}
+        onOpenChange={(open) => { if (!open) setPublishGuardResult(null) }}
+      >
+        <div style={{ display: 'none' }} />
+        <Dialog size="M">
+          <Heading slot="title">Required Fields Missing</Heading>
+          <Divider />
+          <Content>
+            <div className={style({display: 'flex', flexDirection: 'column', gap: 16})}>
+              <Text>
+                Please complete the following required fields before publishing:
+              </Text>
+              {publishGuardResult?.missingByStep.map((group) => (
+                <div key={group.stepTitle} className={style({display: 'flex', flexDirection: 'column', gap: 4})}>
+                  <Text UNSAFE_style={{ fontWeight: 700 }}>
+                    {group.stepTitle}
+                  </Text>
+                  <ul style={{ margin: 0, paddingLeft: 20 }}>
+                    {group.fields.map((field, i) => (
+                      <li key={i}>
+                        <Text>{field.fieldLabel}</Text>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              ))}
+            </div>
+          </Content>
+          <ButtonGroup>
+            <Button variant="accent" onPress={() => setPublishGuardResult(null)}>
+              OK
+            </Button>
           </ButtonGroup>
         </Dialog>
       </DialogTrigger>

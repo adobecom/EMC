@@ -56,6 +56,7 @@ interface DataTableProps<T> {
   renderExpandedContent?: (item: T) => React.ReactNode
   expandedKeys?: Set<string>
   onToggleExpand?: (key: string) => void
+  isRowExpandable?: (item: T) => boolean
   testIds?: DataTableTestIds
 }
 
@@ -285,6 +286,7 @@ export function DataTable<T extends Record<string, any>>({
   renderExpandedContent,
   expandedKeys,
   onToggleExpand,
+  isRowExpandable,
   testIds
 }: DataTableProps<T>): React.ReactElement {
   const isExpandable = !!renderExpandedContent
@@ -564,20 +566,23 @@ export function DataTable<T extends Record<string, any>>({
           <tbody>
             {paginatedData.map((item) => {
               const itemKey = getItemKey(item)
-              const isExpanded = isExpandable && effectiveExpandedKeys.has(itemKey)
+              const rowExpandable = isExpandable && (!isRowExpandable || isRowExpandable(item))
+              const isExpanded = rowExpandable && effectiveExpandedKeys.has(itemKey)
               return (
                 <React.Fragment key={itemKey}>
                   <tr data-testid={testIds?.row?.(itemKey)} className={isExpanded ? 'expanded-parent' : ''}>
                     {isExpandable && (
                       <td className="data-table-td-nowrap" style={{ width: '40px', minWidth: '40px', padding: '0 8px', verticalAlign: 'middle' }}>
-                        <ActionButton
-                          isQuiet
-                          onPress={() => handleToggleExpand(itemKey)}
-                          aria-label={isExpanded ? 'Collapse row' : 'Expand row'}
-                          UNSAFE_style={{ padding: 0 }}
-                        >
-                          {isExpanded ? <ChevronDown /> : <ChevronRight />}
-                        </ActionButton>
+                        {rowExpandable && (
+                          <ActionButton
+                            isQuiet
+                            onPress={() => handleToggleExpand(itemKey)}
+                            aria-label={isExpanded ? 'Collapse row' : 'Expand row'}
+                            UNSAFE_style={{ padding: 0 }}
+                          >
+                            {isExpanded ? <ChevronDown /> : <ChevronRight />}
+                          </ActionButton>
+                        )}
                       </td>
                     )}
                     {allColumns.map((column) => {

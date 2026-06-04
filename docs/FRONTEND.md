@@ -2,210 +2,46 @@
 
 ## Architecture Overview
 
-The frontend is a **React + TypeScript** application built with **Adobe React Spectrum** components, organized with clear separation of concerns and reusable patterns.
+The frontend is a **React + TypeScript** SPA using **React Spectrum 2** (`@react-spectrum/s2`). Route-level features live under `pages/`; reusable UI lives under `components/shared/`; the shell uses `components/layout/TopNav.tsx`.
 
 ## Directory Structure
 
 ```
 web-src/src/
-├── components/                 # React components
-│   ├── shared/                 # Reusable UI components
-│   │   ├── DataTable.tsx       # Generic table with actions
-│   │   ├── FormWizard.tsx      # Multi-step form container
-│   │   ├── FormCard.tsx        # Styled card for form sections
-│   │   ├── StatusBadge.tsx     # Status indicators
-│   │   ├── LoadingSpinner.tsx  # Loading states
-│   │   ├── RichTextEditor.tsx  # Rich text input
-│   │   ├── ImageUploader.tsx   # Image upload with drag & drop
-│   │   ├── TagSelector.tsx     # Tag/category picker
-│   │   ├── HeadingWithTooltip.tsx  # Heading with info tooltip
-│   │   ├── AutocompleteTextField.tsx  # Autocomplete input
-│   │   └── ResourceDashboardLayout.tsx  # Dashboard layout
-│   ├── EventForm/              # Modular event form components (13 components)
-│   │   ├── EventFormatComponent.tsx     # Cloud + Series selection
-│   │   ├── EventInfoComponent.tsx       # Title, dates, description
-│   │   ├── EventTagsComponent.tsx       # Tags and categories
-│   │   ├── VenueComponent.tsx           # Venue with Google Places
-│   │   ├── SpeakersComponent.tsx        # Speaker management
-│   │   ├── SponsorsComponent.tsx        # Sponsor management
-│   │   ├── AgendaComponent.tsx          # Agenda items
-│   │   ├── EventImagesComponent.tsx     # Image management
-│   │   ├── ProfilesComponent.tsx        # Speaker/host profiles
-│   │   ├── RegistrationConfigComponent.tsx  # Registration settings
-│   │   ├── RegistrationFieldsComponent.tsx  # RSVP form fields
-│   │   ├── PageMetadataComponent.tsx    # SEO metadata
-│   │   └── index.ts                     # Barrel exports
-│   ├── App.tsx                 # Main app component & routing
-│   ├── TopNav.tsx              # Top navigation bar
-│   ├── Home.tsx                # Home page
-│   ├── EventForm.tsx           # Event form wizard (main container)
-│   ├── EventsDashboard.tsx     # Events list dashboard
-│   ├── SeriesDashboard.tsx     # Series list dashboard
-│   ├── SeriesForm.tsx          # Series create/edit
-│   ├── OrgTeamManagement.tsx   # Org & team CRUD
-│   ├── RegistrationDashboard.tsx  # Registration management
-│   ├── UserProfile.tsx         # IMS user profile
-│   ├── UserPanel.tsx           # User panel dropdown
-│   ├── DevTokenButton.tsx      # Dev token status button
-│   └── DevTokenDialog.tsx      # Dev token input dialog
-├── services/
-│   ├── api.ts                  # Centralized API service (ESP/ESL)
-│   ├── tokenStorage.ts         # Dev token storage
-│   ├── requestHelpers.ts       # HTTP request utilities
-│   ├── payloadBuilders.ts      # API payload construction
-│   ├── dataEnrichment.ts       # Data transformation utilities
-│   └── eventEnrichment.ts      # Event data enrichment
-├── types/
-│   ├── domain.ts               # Domain type definitions
-│   └── google-places.d.ts      # Google Places API types
-├── contexts/
-│   ├── ApiContext.tsx          # API context provider
-│   └── EventFormContext.tsx    # Event form state context
+├── components/           # App.tsx, layout (TopNav), shared/, user/, dev/, …
+├── pages/                # Route-level features (dashboards, EventForm, admin)
+│   └── EventForm/        # Event wizard + modular step components
+├── contexts/             # Api, Auth, Toast, EventForm, RBAC, Group, …
 ├── hooks/
-│   ├── useLoadData.ts          # Data loading hook
-│   ├── useDevToken.ts          # Dev token management hook
-│   ├── useEventFormComponent.ts  # Event form component hook
-│   ├── useEventFormSave.ts     # Event form save logic
-│   └── useEventTypeFeatures.ts # Event type feature flags
+├── services/             # api.ts, caching, payload builders, enrichment
 ├── config/
-│   ├── constants.ts            # API hosts, supported clouds
-│   ├── env.ts                  # Environment configuration
-│   └── eventTypeConfig.ts      # Event type configurations
-├── mocks/
-│   ├── list-series.ts          # Mock series data
-│   ├── list-events.ts          # Mock events data
-│   └── index.ts                # Mock exports
+├── types/
 ├── utils/
-│   ├── formPersistence.ts      # Form auto-save utilities
-│   ├── loadGooglePlaces.ts     # Google Places API loader
-│   ├── socialPlatformDetector.ts  # Social link detection
-│   └── dataFilters.ts          # Data filtering utilities
-├── styles/
-│   └── designSystem.ts         # Design system tokens
-├── index.tsx                   # Application entry point
-├── index.css                   # Global styles
-└── types.ts                    # IMS & runtime types
+├── styles/               # designSystem.ts
+├── index.tsx
+└── index.css
 ```
 
-## Core Components
+Canonical **routes** are defined in `components/App.tsx` (copy/paste from source when in doubt). Summary:
 
-### Application Shell (`App.tsx`)
+| Path | Purpose |
+|------|---------|
+| `/` | Home |
+| `/overview` | Overview dashboard |
+| `/profile` | User profile (IMS) |
+| `/series`, `/series/new`, `/series/edit/:id` | Series list and form |
+| `/events`, `/events/new/:eventType`, `/events/edit/:id` | Events list and event wizard |
+| `/registrations`, `/registrations/:eventId` | Registrations |
+| `/speakers` | Speakers |
+| `/users` | User management |
+| `/access` | Scope group management |
+| `/roles` | Role management |
+| `/configs` | Config management |
+| `/about` | About |
 
-Main component that sets up:
-- Adobe React Spectrum Provider with light theme
-- React Router (HashRouter for ExC Shell compatibility)
-- Grid layout with sidebar and content area
-- Error boundary for graceful error handling
-- Runtime event listeners (configuration, history)
+**Top navigation:** `components/layout/TopNav.tsx` — horizontal `NavLink`s (items may be hidden based on RBAC and group selection). **User menu:** `components/user/UserPanel.tsx`.
 
-**Routes:**
-```typescript
-/                          → Home page
-/profile                   → User profile (IMS)
-/organizations             → Org & team management
-/resources                 → Resources dashboard
-/series/new                → Create series
-/series/edit/:id           → Edit series
-/events/new                → Create event (wizard)
-/events/edit/:id           → Edit event (wizard)
-/registrations             → Registration dashboard
-/registrations/:eventId    → Event-specific registrations
-/actions                   → Backend action tester
-/about                     → About page
-```
-
-### Navigation (`SideBar.tsx`)
-
-Vertical navigation menu with:
-- NavLink components for route highlighting
-- Organized sections (Management, Resources, System)
-- Adobe Spectrum styling for consistency
-
-### User Profile (`UserProfile.tsx`)
-
-Displays IMS (Identity Management System) profile:
-- User ID, name, email
-- Organization ID
-- Masked authentication token
-- Additional profile fields
-
-### Organizations & Teams (`OrgTeamManagement.tsx`)
-
-Full CRUD interface with:
-- **Tabbed layout**: Organizations | Teams
-- **DataTable display** with inline actions
-- **Modal dialogs** for create/edit
-- **Confirmation dialogs** for deletion
-- **Organization-scoped team management**
-
-**Key Patterns:**
-- Separate state for organizations and teams
-- Inline editing with form modals
-- Delete confirmations to prevent accidents
-- Real-time updates after CRUD operations
-
-### Resources Dashboard (`ResourcesDashboard.tsx`)
-
-Central hub for viewing all resources:
-- **Tabbed interface**: Series | Events | Sessions
-- **Count badges** on tabs
-- **Status indicators** for each resource
-- **Quick actions**: View, edit, delete
-- **Navigation** to create/edit forms
-
-**Use Case:** Get a bird's-eye view of all resources in the system.
-
-### Series Form (`SeriesForm.tsx`)
-
-**Single-step form** for series:
-- Name, description
-- Organization selector
-- Date range picker (start/end dates)
-- Status dropdown (draft, active, completed, archived)
-- Form validation before submission
-- Success/error feedback
-
-**Key Features:**
-- Pre-fills data when editing (via route param `:id`)
-- Uses `@internationalized/date` for date handling
-- Validates date ranges (end must be after start)
-
-### Event Form (`EventForm.tsx`)
-
-**Multi-step wizard** for events:
-
-**Step 1 - Basic Info:**
-- Name, description
-- Series selection
-- Organization selection
-
-**Step 2 - Date & Location:**
-- Start/end date-time
-- Location
-
-**Step 3 - Capacity & Registration:**
-- Capacity (max attendees)
-- Registration open/closed toggle
-- Event status
-
-**Key Features:**
-- Progress bar showing current step
-- Step validation (can't proceed if invalid)
-- Back/Next navigation
-- Pre-fills data when editing
-- Uses FormWizard shared component
-
-### Registration Dashboard (`RegistrationDashboard.tsx`)
-
-Event registration management:
-- **Event selector**: Dropdown to choose event
-- **Statistics cards**: Total, confirmed, pending, attended, cancelled
-- **Registration table**: All attendees with details
-- **Status updates**: Click to cycle through statuses
-- **CSV export**: Download registrations
-- **Delete**: Remove registrations with confirmation
-
-**Use Case:** Manage attendees for events, track attendance, export data.
+For the event wizard, see [EVENT_FORM.md](./EVENT_FORM.md).
 
 ## Shared Components
 
@@ -648,15 +484,12 @@ navigate('/resources')
 
 ### Adding a New Route
 
-1. **Create component** in `components/`
-2. **Add route** in `App.tsx`:
+1. **Create a page component** under `pages/` (and export from `pages/index.ts` if using the barrel).
+2. **Add a route** in `components/App.tsx`:
    ```typescript
-   <Route path='/new-page' element={<NewPage ims={props.ims} />} />
+   <Route path='/new-page' element={<NewPage ims={ims} />} />
    ```
-3. **Add navigation** in `SideBar.tsx`:
-   ```typescript
-   <NavLink to="/new-page">New Page</NavLink>
-   ```
+3. **Add a nav link** in `components/layout/TopNav.tsx` (respect RBAC / `useGroup` patterns used by existing links).
 
 ### Adding a New Entity
 

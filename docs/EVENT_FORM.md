@@ -38,7 +38,7 @@ The Event Form is a comprehensive, production-ready multi-step wizard for creati
 | Total Lines of Code | ~2500 (distributed across components) |
 | Form Steps | 4 |
 | Form Fields | 50+ |
-| Modular Components | 13 dedicated EventForm components |
+| Modular Components | Many step/feature modules under `pages/EventForm/` |
 | Shared Components | 10+ reusable components |
 | Linter Errors | 0 |
 | Type Coverage | 100% |
@@ -47,17 +47,17 @@ The Event Form is a comprehensive, production-ready multi-step wizard for creati
 
 ### Create New Event
 ```bash
-# Navigate in browser
-http://localhost:9080/#/events/new
+# Navigate in browser (eventType: e.g. InPerson, Webinar — see event routes in App.tsx)
+http://localhost:3000/#/events/new/InPerson
 
 # Or programmatically
-navigate('/events/new')
+navigate('/events/new/InPerson')
 ```
 
 ### Edit Existing Event
 ```bash
 # Navigate in browser
-http://localhost:9080/#/events/edit/EVENT_ID
+http://localhost:3000/#/events/edit/EVENT_ID
 
 # Or programmatically
 navigate(`/events/edit/${eventId}`)
@@ -69,7 +69,7 @@ navigate(`/events/edit/${eventId}`)
 npm run dev
 
 # Navigate to
-http://localhost:9080/#/events/new
+http://localhost:3000/#/events/new/InPerson
 
 # Test workflow:
 1. Select cloud type and series
@@ -276,7 +276,7 @@ EventForm (Main Container)
 ```
 web-src/src/components/
 ├── EventForm.tsx                    # Main form container & wizard logic
-└── EventForm/                       # 13 Modular components
+└── EventForm/                       # Modular step components
     ├── index.ts                     # Barrel exports
     ├── EventFormatComponent.tsx     # Cloud + Series selection
     ├── EventInfoComponent.tsx       # Title, dates, timezone, description
@@ -538,7 +538,7 @@ const step4IsValid = true
 ### Manual Testing Checklist
 
 #### Create Flow
-- [ ] Navigate to `/events/new`
+- [ ] Navigate to `/events/new/:eventType` (e.g. `/events/new/InPerson`)
 - [ ] Verify all dropdowns populated
 - [ ] Select cloud type (watch series filter)
 - [ ] Fill required fields only
@@ -636,7 +636,7 @@ describe('EventFormatComponent', () => {
 All planned modular components have been implemented:
 
 ```
-web-src/src/components/EventForm/
+web-src/src/pages/EventForm/
 ├── EventFormatComponent.tsx        # ✅ Cloud + Series selection
 ├── EventInfoComponent.tsx          # ✅ Title, dates, description
 ├── EventTagsComponent.tsx          # ✅ Tags selection

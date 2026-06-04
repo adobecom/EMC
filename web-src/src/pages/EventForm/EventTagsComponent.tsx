@@ -7,6 +7,7 @@ import { Heading, Text } from '@react-spectrum/s2'
 import { SPACING, TYPOGRAPHY } from '../../styles/designSystem'
 import { TagSelector } from '../../components/shared'
 import { useEventFormComponent } from '../../hooks/useEventFormComponent'
+import { useEventFormContext } from '../../contexts/EventFormContext'
 
 /**
  * EventTagsComponent - Manages event tags/topics
@@ -25,7 +26,9 @@ export const EventTagsComponent: React.FC = () => {
   } = useEventFormComponent({
     componentId: 'event-tags',
   })
-  
+
+  const { seriesCustomTagsUrl } = useEventFormContext()
+
   const selectedTags = formData.tags || []
   
   // ============================================================================
@@ -53,6 +56,7 @@ export const EventTagsComponent: React.FC = () => {
         <TagSelector
           selectedTags={selectedTags}
           onChange={handleTagsChange}
+          tagsUrl={seriesCustomTagsUrl || undefined}
         />
       </div>
     </div>

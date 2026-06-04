@@ -12,6 +12,82 @@ import {
   isValidAttribute,
 } from '../utils/dataFilters'
 
+// ─── rsvpFormFields BE-shape transition helpers ─────────────────────────────
+// TODO: (rsvp-shape-migration) REMOVE THIS BLOCK once ESP BE PR #903 is deployed
+// to dev + stage + prod AND all stored events return the new {fields} shape
+// on GET (i.e. BE has backfilled DB or added a read-time adapter).
+//
+// Cleanup checklist — grep for `rsvp-shape-migration` to hit every site:
+//   1. THIS FILE (`useEventFormSave.ts`) — save-side dual-shape support:
+//      a. Delete `isRsvpFormFieldsRejection` and `toLegacyRsvpFormFieldsPayload`
+//         below (down to the closing divider).
+//      b. In the update branch of `saveEvent` (search "Transitional retry"):
+//         remove the `if (isRsvpFormFieldsRejection(...)) { ... }` block and
+//         change `let result` back to `const result`.
+//      c. Same cleanup in the create branch — also "Transitional retry".
+//      d. Trim the inline comment at the `Array.isArray` guard — drop the
+//         "Old-format objects loaded from event responses..." sentence; the
+//         rest of the guard and its comment are permanent.
+//   2. `utils/eventFormMappers.ts` — read-side dual-shape support:
+//      a. Delete the `readRsvpFormFields` helper.
+//      b. Simplify the call site back to `event.rsvpFormFields?.fields ?? []`.
+//
+// Context: ESP #903 changes rsvpFormFields from `{ required: string[], visible: string[] }`
+// (legacy) to `{ fields: [...] }` (new). Until #903 ships everywhere, EMC sends
+// the legacy shape first and falls back to the new shape on rejection. On read,
+// the mapper adapts either shape to the form's array form. After #903 ships and
+// stored data is normalized, both adapters become dead code.
+
+/**
+ * Detect a BE rejection caused by a rsvpFormFields schema mismatch.
+ * Checks the HTTP status (Ajv validation errors come back as 400) and inspects
+ * both the top-level `message` and any structured `errors[]` items for a path
+ * pointing at `rsvpFormFields`.
+ */
+function isRsvpFormFieldsRejection(result: any): boolean {
+  if (!('error' in result) || result.status !== 400) return false
+  const err = result.error
+  if (!err || typeof err !== 'object') return false
+  if (typeof err.message === 'string' && err.message.includes('rsvpFormFields')) return true
+  const errors = Array.isArray(err.errors) ? err.errors : []
+  return errors.some((e: any) => {
+    const path = typeof e?.instancePath === 'string'
+      ? e.instancePath
+      : typeof e?.dataPath === 'string' ? e.dataPath : ''
+    return path.includes('rsvpFormFields')
+  })
+}
+
+/**
+ * Convert the new `rsvpFormFields: { fields }` shape to the legacy
+ * `{ required, visible }` shape that pre-#903 ESP expects.
+ * Per-field `options` overrides are not representable in the legacy shape and
+ * are dropped — we warn so QA can see the loss in the console.
+ */
+function toLegacyRsvpFormFieldsPayload(payload: Record<string, any>): Record<string, any> {
+  const fields = payload.rsvpFormFields?.fields as
+    | Array<{ field: string; required?: boolean; options?: unknown }>
+    | undefined
+  if (!fields) return payload
+
+  const hasOptions = fields.some(f => f.options !== undefined)
+  if (hasOptions) {
+    console.warn(
+      '[useEventFormSave] Sending legacy rsvpFormFields {required, visible} shape (ESP BE PR #903 not yet deployed). Per-field `options` overrides are dropped in the legacy shape.'
+    )
+  }
+
+  return {
+    ...payload,
+    rsvpFormFields: {
+      required: fields.filter(f => f.required).map(f => f.field),
+      visible: fields.map(f => f.field),
+    },
+  }
+}
+
+// ────────────────────────────────────────────────────────────────────────────
+
 /**
  * Options for the save operation
  */
@@ -97,7 +173,7 @@ export function useEventFormSave() {
     
     // Process each field according to the data filter
     // Note: Some fields are handled specially below (tags, eventType, dates, etc.)
-    const speciallyHandledFields = new Set(['tags', 'eventType', 'startDateTime', 'endDateTime', 'agendaItems', 'promotionalItems', 'timezone', 'inviteOnly', 'published'])
+    const speciallyHandledFields = new Set(['tags', 'eventType', 'startDateTime', 'endDateTime', 'agendaItems', 'promotionalItems', 'timezone', 'inviteOnly', 'published', 'rsvpFormFields'])
     
     Object.entries(mergedData).forEach(([key, value]) => {
       const descriptor = EVENT_DATA_FILTER[key]
@@ -311,12 +387,28 @@ export function useEventFormSave() {
       }
     }
     
-    // RSVP form fields
-    if (mergedData.visibleRsvpFields || mergedData.requiredRsvpFields) {
-      payload.rsvpFormFields = {
-        visible: mergedData.visibleRsvpFields || [],
-        required: mergedData.requiredRsvpFields || []
-      }
+    // RSVP form fields — array order = display order; required/options are per-field overrides.
+    // Guard with Array.isArray: form state stores this as an array; an empty array must not be
+    // sent as-is (BE rejects non-object values).
+    // TODO(PIM): serialize rsvpOptionSelections when event API exposes per-option RSVP selection.
+    if (Array.isArray(mergedData.rsvpFormFields) && mergedData.rsvpFormFields.length) {
+      payload.rsvpFormFields = { fields: mergedData.rsvpFormFields }
+    }
+
+    // Custom attributes — send IDs only; labels are resolved by ESP at read time.
+    if (mergedData.customAttributes?.length) {
+      payload.customAttributes = mergedData.customAttributes
+        .filter((v: any) => v.valueId)
+        .map((v: any) => ({ attributeId: v.attributeId, valueId: v.valueId }))
+    }
+    // enabledAttributeIds — only set when the active scope has configs.
+    // An empty _customAttributeConfigs means the current scope has no configs (e.g. the user
+    // switched to a different scope than the one the event was created under). In that case
+    // we skip setting it here so the caller can preserve the existing event value instead of
+    // wiping it with { event: [], session: [] }.
+    if (mergedData._customAttributeConfigs?.length) {
+      const enabledIds = mergedData._customAttributeConfigs.map((c: any) => c.attributeId)
+      payload.enabledAttributeIds = { event: enabledIds, session: [] }
     }
     
     // Ensure seriesId is set
@@ -431,6 +523,13 @@ export function useEventFormSave() {
       if (extraPayload) {
         Object.assign(payload, extraPayload)
       }
+
+      // When the active scope has no custom attribute configs (user editing under a different
+      // scope than the one that created the event), buildEventPayload leaves enabledAttributeIds
+      // unset. Fall back to the value already on the event to avoid wiping it.
+      if (!payload.enabledAttributeIds && eventDataResp?.enabledAttributeIds) {
+        payload.enabledAttributeIds = eventDataResp.enabledAttributeIds
+      }
       
       // Published: only the explicit publish action sets true; dashboard unpublish sets false.
       // Draft saves on an existing event must preserve server publish state (form payload usually omits `published`).
@@ -487,24 +586,53 @@ export function useEventFormSave() {
         }
         
         // Update existing event (ApiService applies prepareEslEventPutPayload before ESL PUT)
-        const result = await apiService.updateEventExternal(eventId, payload, {
-          forceSpWrite: false,
-          liveUpdate: publish // Only live update when publishing
-        })
+        // TODO: (rsvp-shape-migration) Transitional dual-shape: send legacy shape first;
+        // retry with new {fields} shape once ESP BE PR #903 ships everywhere.
+        // Revert `let result` to `const result` and remove the retry block after cleanup.
+        let result = await apiService.updateEventExternal(
+          eventId,
+          payload.rsvpFormFields?.fields ? toLegacyRsvpFormFieldsPayload(payload) : payload,
+          { forceSpWrite: false, liveUpdate: publish }
+        )
+
+        if (isRsvpFormFieldsRejection(result) && payload.rsvpFormFields?.fields) {
+          result = await apiService.updateEventExternal(eventId, payload, {
+            forceSpWrite: false,
+            liveUpdate: publish,
+          })
+        }
+
         if ('error' in result) {
-          throw new Error(result.message || 'Failed to update event')
+          const errorMsg = (result.error && typeof result.error === 'object')
+            ? ((result.error as any).message ?? '') || 'Failed to update event'
+            : 'Failed to update event'
+          throw new Error(errorMsg)
         }
         response = result as EventApiResponse
         savedEventId = eventId
       } else {
         // Create new event
-        const result = await apiService.createEventExternal(payload, locale)
+        // TODO: (rsvp-shape-migration) Transitional dual-shape: send legacy shape first;
+        // retry with new {fields} shape once ESP BE PR #903 ships everywhere.
+        // Revert `let result` to `const result` and remove the retry block after cleanup.
+        let result = await apiService.createEventExternal(
+          payload.rsvpFormFields?.fields ? toLegacyRsvpFormFieldsPayload(payload) : payload,
+          locale
+        )
+
+        if (isRsvpFormFieldsRejection(result) && payload.rsvpFormFields?.fields) {
+          result = await apiService.createEventExternal(payload, locale)
+        }
+
         if ('error' in result) {
-          throw new Error(result.message || 'Failed to create event')
+          const errorMsg = (result.error && typeof result.error === 'object')
+            ? ((result.error as any).message ?? '') || 'Failed to create event'
+            : 'Failed to create event'
+          throw new Error(errorMsg)
         }
         response = result as EventApiResponse
         savedEventId = response.eventId
-        
+
         // Update context with new event ID and store the response for subsequent updates
         setEventId(savedEventId)
         setEventResponse(response) // Store response so modificationTime/creationTime are available
