@@ -38,7 +38,7 @@
   "scripts": {
     "dev": "PORT=3000 aio app run",
     "dev:local": "PORT=3000 aio app run --local",
-    "local": "ENVIRONMENT=local PORT=3000 aio app run",
+    "local:be": "ENVIRONMENT=local PORT=3000 aio app run",
     "lint": "eslint --ignore-pattern web-src --no-error-on-unmatched-pattern src",
     "lint:fix": "npm run lint -- --fix",
     "type-check": "tsc --noEmit",
