@@ -12,6 +12,7 @@ import { env, EnvironmentTier } from './env'
  * Simplified to 3 tiers that map to API backends
  */
 export const ENVIRONMENTS = Object.freeze({
+  LOCAL: 'local',
   DEV: 'dev',
   STAGE: 'stage',
   PROD: 'prod',
@@ -54,11 +55,13 @@ export const DOMAINS = Object.freeze({
  */
 export const API_CONFIG = {
   esl: {
+    [ENVIRONMENTS.LOCAL]: { host: 'http://localhost:8499' },
     [ENVIRONMENTS.DEV]: { host: 'https://wcms-events-service-layer-deploy-ethos102-stage-va-9c3ecd.stage.cloud.adobe.io' },
     [ENVIRONMENTS.STAGE]: { host: 'https://events-service-layer-stage.adobe.io' },
     [ENVIRONMENTS.PROD]: { host: 'https://events-service-layer.adobe.io' },
   },
   esp: {
+    [ENVIRONMENTS.LOCAL]: { host: 'http://localhost:8500' },
     [ENVIRONMENTS.DEV]: { host: 'https://wcms-events-service-platform-deploy-ethos102-stage-caff5f.stage.cloud.adobe.io' },
     [ENVIRONMENTS.STAGE]: { host: 'https://events-service-platform-stage.adobe.io' },
     [ENVIRONMENTS.PROD]: { host: 'https://events-service-platform.adobe.io' },
@@ -70,6 +73,7 @@ export const API_CONFIG = {
  * Production uses cc-collab.adobe.io; dev/stage use cc-collab-stage.adobe.io
  */
 export const PROFILE_API_CONFIG = {
+  [ENVIRONMENTS.LOCAL]: { host: 'https://cc-collab-stage.adobe.io' },
   [ENVIRONMENTS.DEV]: { host: 'https://cc-collab-stage.adobe.io' },
   [ENVIRONMENTS.STAGE]: { host: 'https://cc-collab-stage.adobe.io' },
   [ENVIRONMENTS.PROD]: { host: 'https://cc-collab.adobe.io' },

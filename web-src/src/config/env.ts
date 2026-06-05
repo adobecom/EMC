@@ -11,7 +11,7 @@
 /**
  * Valid environment values for API tier selection
  */
-export type EnvironmentTier = 'dev' | 'stage' | 'prod'
+export type EnvironmentTier = 'local' | 'dev' | 'stage' | 'prod'
 
 /**
  * Hostnames where dev token functionality is allowed (when ?devtokenmode=true is present)

@@ -25,6 +25,7 @@ export function slugify(value: string): string {
 }
 
 const ENV_SHEET_KEY_MAP: Record<EnvironmentTier, string> = {
+  local: 'data-dev',
   prod: 'data',
   stage: 'data-stage',
   dev: 'data-dev',
