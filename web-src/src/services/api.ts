@@ -618,7 +618,8 @@ class ApiService {
         return { ok: true } as any
       }
 
-      const data = await response.json()
+      const text = await response?.text()
+      const data = text ? JSON.parse(text) : null
 
       if (!response.ok) {
         console.error(`❌ ${operationName} failed. Status: ${response.status}`, data)
@@ -2386,6 +2387,7 @@ class ApiService {
       operationName: 'getConfig',
       shouldReturnFullResponse: true
     })
+    if (typeof result !== 'object' || result === null) return null
     if ('error' in result && (result as ErrorResponse).status === 404) return null
     return result
   }
