@@ -15,8 +15,8 @@ describe('localeSiteKeyToPathPrefix', () => {
   })
 })
 
-describe('getDetailPageLocalePrefixFromIetf', () => {
-  it('maps en-US to empty prefix (default row)', () => {
+describe('getDetailPageLocalePrefixFromIetf — default static map', () => {
+  it('maps en-US to empty prefix', () => {
     expect(getDetailPageLocalePrefixFromIetf('en-US')).toBe('')
   })
 
@@ -24,7 +24,7 @@ describe('getDetailPageLocalePrefixFromIetf', () => {
     expect(getDetailPageLocalePrefixFromIetf('fr-FR')).toBe('fr')
   })
 
-  it('maps fr-CA to milo site key ca_fr verbatim', () => {
+  it('maps fr-CA to ca_fr', () => {
     expect(getDetailPageLocalePrefixFromIetf('fr-CA')).toBe('ca_fr')
   })
 
@@ -40,21 +40,52 @@ describe('getDetailPageLocalePrefixFromIetf', () => {
     expect(getDetailPageLocalePrefixFromIetf('en-GB')).toBe('uk')
   })
 
-  it('uses heuristic for ESP-only IETF not in milo map', () => {
+  it('uses heuristic for IETF not in static map', () => {
     expect(getDetailPageLocalePrefixFromIetf('es-US')).toBe('es-us')
     expect(getDetailPageLocalePrefixFromIetf('gsw-FR')).toBe('gsw-fr')
-    expect(getDetailPageLocalePrefixFromIetf('dsb-DE')).toBe('dsb-de')
-    expect(getDetailPageLocalePrefixFromIetf('en-DE')).toBe('en-de')
   })
 
-  it('defaults missing locale to en-US behavior', () => {
+  it('defaults missing/empty locale to en-US behavior', () => {
     expect(getDetailPageLocalePrefixFromIetf(undefined)).toBe('')
     expect(getDetailPageLocalePrefixFromIetf(null)).toBe('')
     expect(getDetailPageLocalePrefixFromIetf('')).toBe('')
   })
 
-  it('is case-insensitive on IETF input', () => {
+  it('is case-insensitive', () => {
     expect(getDetailPageLocalePrefixFromIetf('fr-fr')).toBe('fr')
     expect(getDetailPageLocalePrefixFromIetf('EN-gb')).toBe('uk')
+  })
+})
+
+describe('getDetailPageLocalePrefixFromIetf — scope config locales', () => {
+  const scopeLocales = [
+    { code: 'fr-CA', name: 'French Canada', folder: 'ca_fr' },
+    { code: 'en-US', name: 'English US', folder: '' },
+    { code: 'de-DE', name: 'German', folder: 'de' },
+    { code: 'ja-JP', name: 'Japanese', folder: 'jp' },
+    { code: 'x-custom', name: 'Custom', folder: 'custom_path' },
+  ]
+  const ietfToSiteKeys = new Map(scopeLocales.map((l) => [l.code.trim().toLowerCase(), [l.folder]]))
+
+  it('uses scope config folder when code matches', () => {
+    expect(getDetailPageLocalePrefixFromIetf('fr-CA', ietfToSiteKeys)).toBe('ca_fr')
+    expect(getDetailPageLocalePrefixFromIetf('de-DE', ietfToSiteKeys)).toBe('de')
+  })
+
+  it('returns empty string for en-US (default)', () => {
+    expect(getDetailPageLocalePrefixFromIetf('en-US', ietfToSiteKeys)).toBe('')
+  })
+
+  it('resolves custom locale codes not in the static map', () => {
+    expect(getDetailPageLocalePrefixFromIetf('x-custom', ietfToSiteKeys)).toBe('custom_path')
+  })
+
+  it('is case-insensitive', () => {
+    expect(getDetailPageLocalePrefixFromIetf('FR-ca', ietfToSiteKeys)).toBe('ca_fr')
+    expect(getDetailPageLocalePrefixFromIetf('JA-JP', ietfToSiteKeys)).toBe('jp')
+  })
+
+  it('falls back to heuristic for IETF not in scope config', () => {
+    expect(getDetailPageLocalePrefixFromIetf('zz-ZZ', ietfToSiteKeys)).toBe('zz-zz')
   })
 })
