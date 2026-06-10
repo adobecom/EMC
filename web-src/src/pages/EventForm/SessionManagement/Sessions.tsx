@@ -456,13 +456,14 @@ export const Sessions: React.FC<SessionsProps> = ({ onOpenFormChange }) => {
     const shouldUpdateSession = hasSessionFieldChanges(existingSession, data);
     const shouldUpdateSessionTime = hasSessionTimeFieldChanges(existingSession, data);
 
+    const mergedLocalizations: Record<string, SessionLocalization> = {
+      ...(existingSession.localizations ?? {}),
+      ...(data.localizations ?? {}),
+      [locale]: { title: data.name, description: data.description },
+    }
+
     let updatedSessionApi = existingSession;
     if (shouldUpdateSession) {
-      const mergedLocalizations: Record<string, SessionLocalization> = {
-        ...(existingSession.localizations ?? {}),
-        ...(data.localizations ?? {}),
-        [locale]: { title: data.name, description: data.description },
-      }
       const payload: Record<string, unknown> = {
         name: data.name,
         description: data.description,
@@ -499,11 +500,7 @@ export const Sessions: React.FC<SessionsProps> = ({ onOpenFormChange }) => {
         s.id === sessionId
           ? {
               ...updatedSessionApi,
-              localizations: {
-                ...(existingSession.localizations ?? {}),
-                ...(data.localizations ?? {}),
-                [locale]: { title: data.name, description: data.description },
-              },
+              localizations: mergedLocalizations,
               localizationOverrides: data.localizationOverrides,
               startDateTime: data.startDateTime,
               endDateTime: data.endDateTime,
