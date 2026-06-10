@@ -16,6 +16,7 @@ import type {
   SeriesApiResponse,
   UrlPatternEntry,
 } from '../types/domain'
+import type { Locale } from '../types/configApi'
 import { getDetailPageLocalePrefixFromIetf } from '../config/detailPageLocalePrefix'
 import {
   buildTokenContext,
@@ -28,6 +29,8 @@ import {
 export interface GetDetailPagePathForSaveOptions {
   /** When set, that event is ignored for collision (avoids matching the row being edited). */
   excludeEventId?: string
+  /** Scope config locales from context. Falls back to static map when absent. */
+  scopeLocales?: Locale[] | null
 }
 
 /** First event with this detail URL other than `excludeEventId` (for unit tests and hook). */
@@ -118,9 +121,12 @@ export function useCustomDetailPagePath() {
     const relatedDomain = series.relatedDomain || ''
     const contentRoot = series.contentRoot || ''
 
+    const ietfToSiteKeys = options?.scopeLocales?.length
+      ? new Map(options.scopeLocales.map((l) => [l.code.trim().toLowerCase(), [l.folder]]))
+      : undefined
     const context = buildTokenContext(formData, series)
     const resolved = resolveUrlPattern(entry.pattern, context)
-    const localePrefix = getDetailPageLocalePrefixFromIetf(formData.defaultLocale)
+    const localePrefix = getDetailPageLocalePrefixFromIetf(formData.defaultLocale, ietfToSiteKeys)
     const url = constructDetailPagePath(
       relatedDomain,
       contentRoot,

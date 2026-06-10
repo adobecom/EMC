@@ -2393,7 +2393,7 @@ class ApiService {
   async upsertConfig(scopeId: string, data: ScopeConfigUpsertBody): Promise<ScopeConfig | ErrorResponse> {
     validateString(scopeId, 'scope ID')
     validateObject(data, 'config upsert body')
-    return this.callExternalApi<ScopeConfig>('esp', `/v1/scopes/${encodeURIComponent(scopeId)}/config`, 'PUT', data, {
+    return this.callExternalApi<ScopeConfig>('esp', `/v1/scopes/${encodeURIComponent(scopeId)}/config`, 'PUT', { ...data, scopeId }, {
       operationName: 'upsertConfig',
       shouldReturnFullResponse: true
     })

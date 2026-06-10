@@ -60,12 +60,18 @@ function heuristicPrefixFromIetf(ietf: string): string {
 /**
  * Resolve IETF locale (from Language picker / defaultLocale) to a URL path prefix.
  * Returns '' when no segment should be inserted (default US English).
+ *
+ * Pass `ietfToSiteKeys` to override the default static map
+ * for building it from scope config locales when available.
  */
-export function getDetailPageLocalePrefixFromIetf(ietf: string | undefined | null): string {
+export function getDetailPageLocalePrefixFromIetf(
+  ietf: string | undefined | null,
+  ietfToSiteKeys: Map<string, string[]> = IETF_TO_SITE_KEYS
+): string {
   const normalized = (ietf?.trim() || DEFAULT_LOCALE).trim()
   const ietfLower = normalized.toLowerCase()
 
-  const candidates = IETF_TO_SITE_KEYS.get(ietfLower)
+  const candidates = ietfToSiteKeys.get(ietfLower)
   if (!candidates?.length) {
     return heuristicPrefixFromIetf(normalized)
   }

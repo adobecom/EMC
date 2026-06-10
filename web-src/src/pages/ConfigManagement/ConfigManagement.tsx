@@ -266,14 +266,14 @@ export const ConfigManagement: React.FC<ConfigManagementProps> = () => {
     () => !!scopeConfig && scopeConfig.scopeId === selectedScopeId,
     [scopeConfig, selectedScopeId]
   )
-  const customAttributes = useMemo(
-    () => customAttrsConfig?.attributes || [],
+  const customAttributes = useMemo<CustomAttributeConfig[]>(
+    () => customAttrsConfig?.customAttributes || [],
     [customAttrsConfig]
   )
   // Available locales for RSVP localization (from sibling locales config or fallback)
   const availableLocales = useMemo(() => {
     if (localesConfig) {
-      return localesConfig.locales.map(l => ({ code: l.code, name: l.name }))
+      return (localesConfig.locales.locales ?? []).map(l => ({ code: l.code, name: l.name }))
     }
     return SUPPORTED_SPEAKER_LOCALES.map(code => ({
       code,
@@ -353,8 +353,8 @@ export const ConfigManagement: React.FC<ConfigManagementProps> = () => {
 
   const openRsvpEdit = useCallback((config: RsvpScopeConfig) => {
     setEditingRsvpConfig(config)
-    setRsvpFormFields([...config.rsvpFormFields])
-    setRsvpLocalizations(config.localizations ? JSON.parse(JSON.stringify(config.localizations)) : {})
+    setRsvpFormFields([...(config.rsvp?.rsvpFormFields ?? [])])
+    setRsvpLocalizations(config.rsvp?.localizations ? JSON.parse(JSON.stringify(config.rsvp.localizations)) : {})
     setExpandedRsvpDialogFields(new Set([0]))
     setIsRsvpFormOpen(true)
   }, [])
@@ -420,8 +420,8 @@ export const ConfigManagement: React.FC<ConfigManagementProps> = () => {
     setIsSaving(true)
     try {
       const body = scopeConfig && ownsConfig
-        ? buildPutBody(scopeConfig, { rsvpFormFields: validFields, localizations: rsvpLocalizations })
-        : { rsvpFormFields: validFields, localizations: rsvpLocalizations }
+        ? buildPutBody(scopeConfig, { rsvp: { rsvpFormFields: validFields, localizations: rsvpLocalizations } })
+        : { rsvp: { rsvpFormFields: validFields, localizations: rsvpLocalizations } }
       const result = await apiService.upsertConfig(selectedScopeId, body)
       if ('error' in result) {
         toast.error('Failed to save RSVP config')
@@ -439,19 +439,19 @@ export const ConfigManagement: React.FC<ConfigManagementProps> = () => {
   }, [selectedScopeId, rsvpFormFields, rsvpLocalizations, editingRsvpConfig, scopeConfig, ownsConfig, apiService, toast, loadConfigs])
 
   const openFieldEdit = useCallback((item: RsvpFormField & { _key: string }) => {
-    const index = rsvpConfig?.rsvpFormFields.findIndex(f => f.field === item.field) ?? -1
+    const index = rsvpConfig?.rsvp.rsvpFormFields.findIndex(f => f.field === item.field) ?? -1
     if (index === -1) return
     setEditingFieldDialog({ field: item, index })
     if (activeLocale) {
-      const override = rsvpConfig?.localizations?.[activeLocale]?.rsvpFormFields?.find(f => f.field === item.field)
+      const override = rsvpConfig?.rsvp?.localizations?.[activeLocale]?.rsvpFormFields?.find((f: RsvpFormFieldLocaleOverride) => f.field === item.field)
       // Non-translatable fields from base; translatable fields from locale override (blank if no override)
       setEditingFieldForm({
         ...item,
         label: override?.label ?? '',
         placeholder: override?.placeholder ?? '',
-        options: item.options.map(o => ({
+        options: item.options.map((o: RsvpOption) => ({
           value: o.value,
-          label: override?.options?.find(oo => oo.value === o.value)?.label ?? '',
+          label: override?.options?.find((oo: RsvpOption) => oo.value === o.value)?.label ?? '',
         })),
       })
     } else {
@@ -464,7 +464,7 @@ export const ConfigManagement: React.FC<ConfigManagementProps> = () => {
   const editingFieldBaseRef = React.useRef<RsvpFormField | null>(null)
   React.useEffect(() => {
     if (editingFieldDialog) {
-      editingFieldBaseRef.current = rsvpConfig?.rsvpFormFields[editingFieldDialog.index] ?? null
+      editingFieldBaseRef.current = rsvpConfig?.rsvp.rsvpFormFields[editingFieldDialog.index] ?? null
     } else {
       editingFieldBaseRef.current = null
     }
@@ -475,14 +475,14 @@ export const ConfigManagement: React.FC<ConfigManagementProps> = () => {
     if (!selectedScopeId || !rsvpConfig || editingFieldDialog == null) return
     setIsSaving(true)
     try {
-      let updatedFields = [...rsvpConfig.rsvpFormFields]
-      let updatedLocalizations = rsvpConfig.localizations
-        ? JSON.parse(JSON.stringify(rsvpConfig.localizations)) as Record<string, { rsvpFormFields: RsvpFormFieldLocaleOverride[] }>
+      let updatedFields = [...rsvpConfig.rsvp.rsvpFormFields]
+      let updatedLocalizations = rsvpConfig.rsvp?.localizations
+        ? JSON.parse(JSON.stringify(rsvpConfig.rsvp.localizations)) as Record<string, { rsvpFormFields: RsvpFormFieldLocaleOverride[] }>
         : {}
 
       if (activeLocale) {
         // Save non-translatable fields to the base field
-        const baseField = editingFieldBaseRef.current ?? rsvpConfig.rsvpFormFields[editingFieldDialog.index]
+        const baseField = editingFieldBaseRef.current ?? rsvpConfig.rsvp.rsvpFormFields[editingFieldDialog.index]
         updatedFields[editingFieldDialog.index] = {
           ...baseField,
           field: editingFieldForm.field,
@@ -516,8 +516,7 @@ export const ConfigManagement: React.FC<ConfigManagementProps> = () => {
       }
 
       const result = await apiService.upsertConfig(selectedScopeId, buildPutBody(rsvpConfig, {
-        rsvpFormFields: updatedFields,
-        localizations: updatedLocalizations,
+        rsvp: { rsvpFormFields: updatedFields, localizations: updatedLocalizations },
       }))
       if ('error' in result) {
         toast.error('Failed to update field')
@@ -535,11 +534,11 @@ export const ConfigManagement: React.FC<ConfigManagementProps> = () => {
 
   const handleDeleteField = useCallback(async () => {
     if (!selectedScopeId || !rsvpConfig || fieldToDelete == null) return
-    const updatedFields = rsvpConfig.rsvpFormFields.filter((_, i) => i !== fieldToDelete.index)
+    const updatedFields = rsvpConfig.rsvp.rsvpFormFields.filter((_, i) => i !== fieldToDelete.index)
     setIsSaving(true)
     try {
       const result = await apiService.upsertConfig(selectedScopeId, buildPutBody(rsvpConfig, {
-        rsvpFormFields: updatedFields,
+        rsvp: { rsvpFormFields: updatedFields },
       }))
       if ('error' in result) {
         toast.error('Failed to delete field')
@@ -563,7 +562,7 @@ export const ConfigManagement: React.FC<ConfigManagementProps> = () => {
       let result
       if (activeLocale) {
         const updatedLocalizations: Record<string, { rsvpFormFields: RsvpFormFieldLocaleOverride[] }> =
-          rsvpConfig.localizations ? JSON.parse(JSON.stringify(rsvpConfig.localizations)) : {}
+          rsvpConfig.rsvp?.localizations ? JSON.parse(JSON.stringify(rsvpConfig.rsvp.localizations)) : {}
         if (!updatedLocalizations[activeLocale]) updatedLocalizations[activeLocale] = { rsvpFormFields: [] }
         const fields = updatedLocalizations[activeLocale].rsvpFormFields
         const existing = fields.find(f => f.field === fieldName)
@@ -574,14 +573,14 @@ export const ConfigManagement: React.FC<ConfigManagementProps> = () => {
         )
         if (updatedLocalizations[activeLocale].rsvpFormFields.length === 0) delete updatedLocalizations[activeLocale]
         result = await apiService.upsertConfig(selectedScopeId, buildPutBody(rsvpConfig, {
-          localizations: updatedLocalizations,
+          rsvp: { ...rsvpConfig.rsvp, localizations: updatedLocalizations },
         }))
       } else {
-        const updatedFields = rsvpConfig.rsvpFormFields.map(f =>
+        const updatedFields = rsvpConfig.rsvp.rsvpFormFields.map(f =>
           f.field === fieldName ? { ...f, options: newOptions } : f
         )
         result = await apiService.upsertConfig(selectedScopeId, buildPutBody(rsvpConfig, {
-          rsvpFormFields: updatedFields,
+          rsvp: { ...rsvpConfig.rsvp, rsvpFormFields: updatedFields },
         }))
       }
       if ('error' in result) {
@@ -610,15 +609,15 @@ export const ConfigManagement: React.FC<ConfigManagementProps> = () => {
         valueId: v.valueId || generateUUID(),
         value: v.value.trim(),
         label: (v.label ?? '').trim() || v.value.trim(),
-        displayOrder: i,
+        ordinal: i,
       }))
     setSavingAttrValueKey(attributeId)
     try {
-      const updatedAttributes = customAttrsConfig.attributes.map(a =>
+      const updatedAttributes = customAttrsConfig.customAttributes.map(a =>
         a.attributeId === attributeId ? { ...a, values: newValues } : a
       )
       const result = await apiService.upsertConfig(selectedScopeId, buildPutBody(customAttrsConfig, {
-        attributes: updatedAttributes,
+        customAttributes: updatedAttributes,
       }))
       if ('error' in result) {
         toast.error('Failed to save values')
@@ -651,12 +650,11 @@ export const ConfigManagement: React.FC<ConfigManagementProps> = () => {
     try {
       const stripped: ScopeConfig = { ...config }
       if (sliceKind === 'rsvp') {
-        delete stripped.rsvpFormFields
-        delete stripped.localizations
+        delete stripped.rsvp
       } else if (sliceKind === 'locales') {
         delete stripped.locales
       } else {
-        delete stripped.attributes
+        delete stripped.customAttributes
       }
 
       const result = await apiService.upsertConfig(selectedScopeId, buildPutBody(stripped, {}))
@@ -689,7 +687,7 @@ export const ConfigManagement: React.FC<ConfigManagementProps> = () => {
 
   const openLocalesEdit = useCallback((config: LocalesScopeConfig) => {
     setEditingLocalesConfig(config)
-    const entries = config.locales.map(l => ({
+    const entries = (config.locales.locales ?? []).map(l => ({
       code: l.code,
       name: l.name,
       folder: l.folder || '',
@@ -715,8 +713,8 @@ export const ConfigManagement: React.FC<ConfigManagementProps> = () => {
     setIsSaving(true)
     try {
       const body = scopeConfig && ownsConfig
-        ? buildPutBody(scopeConfig, { locales })
-        : { locales }
+        ? buildPutBody(scopeConfig, { locales: { locales } })
+        : { locales: { locales } }
       const result = await apiService.upsertConfig(selectedScopeId, body)
       if ('error' in result) {
         toast.error('Failed to save locales config')
@@ -775,7 +773,7 @@ export const ConfigManagement: React.FC<ConfigManagementProps> = () => {
           valueId: v.valueId || generateUUID(),
           value: v.value.trim(),
           label: (v.label ?? '').trim() || v.value.trim(),
-          displayOrder: i,
+          ordinal: i,
         })),
     }
 
@@ -783,13 +781,13 @@ export const ConfigManagement: React.FC<ConfigManagementProps> = () => {
     try {
       let body
       if (scopeConfig && ownsConfig) {
-        const existingAttrs = customAttrsConfig?.attributes ?? []
+        const existingAttrs = customAttrsConfig?.customAttributes ?? []
         const updatedAttributes = editingAttr
           ? existingAttrs.map(a => a.attributeId === editingAttr.attributeId ? newAttr : a)
           : [...existingAttrs, newAttr]
-        body = buildPutBody(scopeConfig, { attributes: updatedAttributes })
+        body = buildPutBody(scopeConfig, { customAttributes: updatedAttributes })
       } else {
-        body = { attributes: [newAttr] }
+        body = { customAttributes: [newAttr] }
       }
       const result = await apiService.upsertConfig(selectedScopeId, body)
       if ('error' in result) {
@@ -811,29 +809,21 @@ export const ConfigManagement: React.FC<ConfigManagementProps> = () => {
     if (!selectedScopeId || !customAttrsConfig) return
     setIsSaving(true)
     try {
-      const remaining = customAttrsConfig.attributes.filter(a => a.attributeId !== attr.attributeId)
-
+      const remaining = customAttrsConfig.customAttributes.filter(a => a.attributeId !== attr.attributeId)
+      let result
       if (remaining.length === 0) {
-        // Removing the last attribute clears the attributes slice. If other
-        // slices (rsvp/locales) live on the same config, PUT to drop only the
-        // attributes field; otherwise DELETE the whole config.
         const stripped: ScopeConfig = { ...customAttrsConfig }
-        delete stripped.attributes
-        const result = await apiService.upsertConfig(selectedScopeId, buildPutBody(stripped, {}))
-        if ('error' in result) {
-          toast.error('Failed to delete custom attribute')
-          return
-        }
+        delete stripped.customAttributes
+        result = await apiService.upsertConfig(selectedScopeId, buildPutBody(stripped, {}))
       } else {
-        const result = await apiService.upsertConfig(selectedScopeId, buildPutBody(customAttrsConfig, {
-          attributes: remaining,
+        result = await apiService.upsertConfig(selectedScopeId, buildPutBody(customAttrsConfig, {
+          customAttributes: remaining,
         }))
-        if ('error' in result) {
-          toast.error('Failed to delete custom attribute')
-          return
-        }
       }
-
+      if ('error' in result) {
+        toast.error('Failed to delete custom attribute')
+        return
+      }
       toast.success('Custom attribute deleted')
       setAttrToDelete(null)
       setIsSaving(false)
@@ -874,7 +864,7 @@ export const ConfigManagement: React.FC<ConfigManagementProps> = () => {
 
   const rsvpFieldsForTable = useMemo(() => {
     if (!rsvpConfig) return []
-    return rsvpConfig.rsvpFormFields.map((f, i) => ({
+    return rsvpConfig.rsvp.rsvpFormFields.map((f, i) => ({
       ...f,
       _key: `${f.field}-${i}`,
     }))
@@ -894,7 +884,7 @@ export const ConfigManagement: React.FC<ConfigManagementProps> = () => {
         icon: 'delete' as const,
         label: 'Delete field',
         onAction: (item: RsvpFormField & { _key: string }) => {
-          const index = rsvpConfig?.rsvpFormFields.findIndex(f => f.field === item.field) ?? -1
+          const index = rsvpConfig?.rsvp.rsvpFormFields.findIndex(f => f.field === item.field) ?? -1
           if (index !== -1) setFieldToDelete({ field: item, index })
         },
       },
@@ -910,7 +900,7 @@ export const ConfigManagement: React.FC<ConfigManagementProps> = () => {
       sortable: true,
       render: (item: RsvpFormField & { _key: string }) => {
         const override = activeLocale
-          ? rsvpConfig?.localizations?.[activeLocale]?.rsvpFormFields?.find(f => f.field === item.field)
+          ? rsvpConfig?.rsvp?.localizations?.[activeLocale]?.rsvpFormFields?.find(f => f.field === item.field)
           : null
         const localeLabel = override?.label
         return localeLabel
@@ -963,7 +953,7 @@ export const ConfigManagement: React.FC<ConfigManagementProps> = () => {
   ], [activeLocale, rsvpConfig])
 
   const renderRsvpExpandedContent = useCallback((item: RsvpFormField & { _key: string }) => {
-    const locales = Object.keys(rsvpConfig?.localizations || {})
+    const locales = Object.keys(rsvpConfig?.rsvp?.localizations || {})
     const isSelectType = item.type === 'select' || item.type === 'multi-select'
     const pendingOpts = pendingOptionEdits[item.field]
     const isEditing = pendingOpts !== undefined
@@ -1096,15 +1086,15 @@ export const ConfigManagement: React.FC<ConfigManagementProps> = () => {
             <Text UNSAFE_style={{ fontWeight: 600, fontSize: 13 }}>Localizations:</Text>
             <div className={style({ display: 'flex', flexDirection: 'column', gap: 4, marginTop: 4 })}>
               {locales.map(locale => {
-                const overrides = rsvpConfig?.localizations?.[locale]?.rsvpFormFields || []
-                const override = overrides.find(o => o.field === item.field)
+                const overrides = rsvpConfig?.rsvp?.localizations?.[locale]?.rsvpFormFields || []
+                const override = overrides.find((o: RsvpFormFieldLocaleOverride) => o.field === item.field)
                 if (!override) return null
                 return (
                   <div key={locale} className={style({ display: 'flex', gap: 8, alignItems: 'center' })}>
                     <div className={style({ display: 'flex', alignItems: 'start' })}><Badge variant="neutral">{locale}</Badge></div>
                     {override.label && <Text>Label: {override.label}</Text>}
                     {override.placeholder && <Text>Placeholder: {override.placeholder}</Text>}
-                    {override.options && <Text>Options: {override.options.map(o => o.label || o.value).join(', ')}</Text>}
+                    {override.options && <Text>Options: {override.options.map((o: RsvpOption) => o.label || o.value).join(', ')}</Text>}
                   </div>
                 )
               })}
@@ -1125,7 +1115,7 @@ export const ConfigManagement: React.FC<ConfigManagementProps> = () => {
     if (isSelectType) return true
     if (item.rules) return true
     if (item.default) return true
-    const hasLocaleOverride = Object.values(rsvpConfig?.localizations || {}).some(
+    const hasLocaleOverride = Object.values(rsvpConfig?.rsvp?.localizations || {}).some(
       loc => loc.rsvpFormFields.some(f => f.field === item.field)
     )
     return hasLocaleOverride
@@ -1225,7 +1215,7 @@ export const ConfigManagement: React.FC<ConfigManagementProps> = () => {
   const renderAttrExpandedContent = useCallback((item: CustomAttributeConfig) => {
     const pendingVals = pendingAttrValueEdits[item.attributeId]
     const isEditing = pendingVals !== undefined
-    const displayVals = isEditing ? pendingVals : [...item.values].sort((a, b) => a.displayOrder - b.displayOrder)
+    const displayVals = isEditing ? pendingVals : [...item.values].sort((a, b) => (a.ordinal ?? 0) - (b.ordinal ?? 0))
     const canEdit = canWriteConfig && isOwnAttrsConfig
 
     return (
@@ -1266,7 +1256,7 @@ export const ConfigManagement: React.FC<ConfigManagementProps> = () => {
                   size="S"
                   onPress={() => setPendingAttrValueEdits(prev => ({
                     ...prev,
-                    [item.attributeId]: [...item.values].sort((a, b) => a.displayOrder - b.displayOrder).map(v => ({ ...v, label: v.label ?? '' })),
+                    [item.attributeId]: [...item.values].sort((a, b) => (a.ordinal ?? 0) - (b.ordinal ?? 0)).map(v => ({ ...v, label: v.label ?? '' })),
                   }))}
                 >
                   <EditIcon />
@@ -1322,7 +1312,7 @@ export const ConfigManagement: React.FC<ConfigManagementProps> = () => {
                   size="S"
                   onPress={() => setPendingAttrValueEdits(prev => ({
                     ...prev,
-                    [item.attributeId]: [...(prev[item.attributeId] ?? []), { value: '', label: '', displayOrder: (prev[item.attributeId] ?? []).length }],
+                    [item.attributeId]: [...(prev[item.attributeId] ?? []), { valueId: '', value: '', label: '', ordinal: (prev[item.attributeId] ?? []).length }],
                   }))}
                 >
                   <Add />
@@ -1540,7 +1530,7 @@ export const ConfigManagement: React.FC<ConfigManagementProps> = () => {
                           </tr>
                         </thead>
                         <tbody>
-                          {localesConfig.locales.map((l) => (
+                          {(localesConfig.locales.locales ?? []).map((l) => (
                             <tr key={l.code} style={{ borderTop: '1px solid var(--spectrum-global-color-gray-300)' }}>
                               <td style={{ padding: '10px 16px' }}>
                                 <Text>{l.code}</Text>
@@ -2219,9 +2209,10 @@ export const ConfigManagement: React.FC<ConfigManagementProps> = () => {
                           isQuiet
                           size="S"
                           onPress={() => setAttrFormValues(prev => [...prev, {
+                            valueId: '',
                             value: '',
                             label: '',
-                            displayOrder: prev.length,
+                            ordinal: prev.length,
                           }])}
                         >
                           <Add />
@@ -2261,7 +2252,7 @@ export const ConfigManagement: React.FC<ConfigManagementProps> = () => {
                               isQuiet
                               aria-label="Remove value"
                               onPress={() => setAttrFormValues(prev =>
-                                prev.filter((_, i) => i !== index).map((v, i) => ({ ...v, displayOrder: i }))
+                                prev.filter((_, i) => i !== index).map((v, i) => ({ ...v, ordinal: i }))
                               )}
                             >
                               <RemoveCircle />

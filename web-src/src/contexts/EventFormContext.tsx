@@ -13,6 +13,7 @@ import React, {
   useState,
 } from 'react'
 import { EventFormData, EventApiResponse, SeriesSpeaker } from '../types/domain'
+import type { Locale } from '../types/configApi'
 import { saveFormDraft, loadFormDraft, clearFormDraft } from '../utils/formPersistence'
 import {
   applyLocaleMetadataToFormData,
@@ -181,6 +182,8 @@ export interface EventFormContextValue {
   setSeriesSpeakers: (speakers: SeriesSpeaker[]) => void
   seriesCustomTagsUrl: string
   setSeriesCustomTagsUrl: (url: string) => void
+  scopeLocales: Locale[] | null
+  setScopeLocales: (locales: Locale[] | null) => void
 }
 
 // ============================================================================
@@ -424,6 +427,7 @@ export const EventFormProvider: React.FC<EventFormProviderProps> = ({
   const [venueLocations, setVenueLocations] = useState<any[]>([])
   const [seriesSpeakers, setSeriesSpeakers] = useState<SeriesSpeaker[]>([])
   const [seriesCustomTagsUrl, setSeriesCustomTagsUrl] = useState<string>('')
+  const [scopeLocales, setScopeLocales] = useState<Locale[] | null>(null)
   
   // ============================================================================
   // ACTIONS
@@ -635,11 +639,14 @@ export const EventFormProvider: React.FC<EventFormProviderProps> = ({
     setSeriesSpeakers,
     seriesCustomTagsUrl,
     setSeriesCustomTagsUrl,
+    scopeLocales,
+    setScopeLocales,
   }), [
     state,
     venueLocations,
     seriesSpeakers,
     seriesCustomTagsUrl,
+    scopeLocales,
     updateFormData,
     populateFormDataFromResponse,
     setEventResponse,

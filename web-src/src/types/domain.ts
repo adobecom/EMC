@@ -663,9 +663,9 @@ export interface EventFormData {
 export interface EventCustomAttributeValue {
   attributeId: string
   attribute: string
-  valueId?: string
+  valueId: string
   value: string
-  displayOrder?: number
+  ordinal?: number
   label?: string
 }
 
