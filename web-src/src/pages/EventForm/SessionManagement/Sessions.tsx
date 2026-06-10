@@ -388,6 +388,7 @@ export const Sessions: React.FC<SessionsProps> = ({ onOpenFormChange }) => {
     if (!eventId) throw new Error("Event ID is required to create a session");
     const payload = {
       name: data.name,
+      description: data.description,
       tags: serializeTagsForApi(data.tags),
       localizations: {
         ...(data.localizations ?? {}),
@@ -464,6 +465,7 @@ export const Sessions: React.FC<SessionsProps> = ({ onOpenFormChange }) => {
       }
       const payload: Record<string, unknown> = {
         name: data.name,
+        description: data.description,
         tags: serializeTagsForApi(data.tags),
         localizations: mergedLocalizations,
         creationTime: data.creationTime,

@@ -344,6 +344,8 @@ class ApiService {
     const body: Record<string, unknown> = {
       eventId,
       enTitle,
+      title: enTitle,
+      description: String(data.description ?? ''),
       sessionCode,
       sessionType: 'Session',
       published: false,
@@ -375,6 +377,8 @@ class ApiService {
       sessionId: id,
       eventId,
       enTitle,
+      title: enTitle,
+      description: String(data.description ?? ''),
       sessionCode,
       sessionType: 'Session',
       published: false,
