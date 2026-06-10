@@ -344,7 +344,7 @@ export const Sessions: React.FC<SessionsProps> = ({ onOpenFormChange }) => {
     } finally {
       setIsLoading(false);
     }
-  }, [eventId, toast]);
+  }, [eventId, toast, locale]);
 
   const refreshEventConcurrencyMetadata = useCallback(
     async (id: string) => {
