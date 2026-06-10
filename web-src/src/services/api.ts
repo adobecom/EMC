@@ -338,16 +338,21 @@ class ApiService {
   async createSession(eventId: string, data: Record<string, unknown>): Promise<any | ErrorResponse> {
     validateString(eventId, 'event ID')
     validateObject(data, 'session data')
-    const sessionCode = (String(data.name ?? '').replace(/\s+/g, '-').toLowerCase()).substring(0, 50) || 'session'
+    const enTitle = String(data.name ?? '')
+    const sessionCode = (enTitle.replace(/\s+/g, '-').toLowerCase()).substring(0, 50) || 'session'
     const tagsStr = typeof data.tags === 'string' ? data.tags.trim() : ''
     const body: Record<string, unknown> = {
       eventId,
-      enTitle: data.name ?? '',
-      title: data.name ?? '',
-      description: data.description ?? '',
+      enTitle,
       sessionCode,
       sessionType: 'Session',
       published: false,
+    }
+    if (data.localizations != null) {
+      body.localizations = data.localizations
+    }
+    if (data.localizationOverrides != null) {
+      body.localizationOverrides = data.localizationOverrides
     }
     if (tagsStr.length > 0) {
       body.tags = tagsStr
@@ -362,20 +367,25 @@ class ApiService {
     validateString(id, 'session ID')
     validateString(eventId, 'event ID')
     validateObject(data, 'session data')
-    const sessionCode = (String(data.name ?? '').replace(/\s+/g, '-').toLowerCase()).substring(0, 50) || 'session'
+    const enTitle = String(data.name ?? '')
+    const sessionCode = (enTitle.replace(/\s+/g, '-').toLowerCase()).substring(0, 50) || 'session'
     const now = Date.now()
     const tagsStr = typeof data.tags === 'string' ? data.tags.trim() : ''
     const body: Record<string, unknown> = {
       sessionId: id,
       eventId,
-      enTitle: data.name ?? '',
-      title: data.name ?? '',
-      description: data.description ?? '',
+      enTitle,
       sessionCode,
       sessionType: 'Session',
       published: false,
       creationTime: (data.creationTime as number) ?? now,
       modificationTime: (data.modificationTime as number) ?? now,
+    }
+    if (data.localizations != null) {
+      body.localizations = data.localizations
+    }
+    if (data.localizationOverrides != null) {
+      body.localizationOverrides = data.localizationOverrides
     }
     if (tagsStr.length > 0) {
       body.tags = tagsStr
