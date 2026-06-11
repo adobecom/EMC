@@ -2130,7 +2130,7 @@ export const ConfigManagement: React.FC<ConfigManagementProps> = () => {
                           value={entry.folder}
                           onChange={(v) => setLocaleEntries(prev => {
                             const copy = [...prev]
-                            copy[index] = { ...copy[index], folder: v }
+                            copy[index] = { ...copy[index], folder: v.toLowerCase() }
                             return copy
                           })}
                           styles={style({ width: 100 })}

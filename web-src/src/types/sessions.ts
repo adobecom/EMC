@@ -1,3 +1,8 @@
+export interface SessionLocalization {
+  title?: string
+  description?: string
+}
+
 export interface SessionTimeInfo {
   sessionTimeId?: string
   startTimeMillis?: number
@@ -43,4 +48,8 @@ export interface Session {
   locationId?: string
   /** Cached session-time data from list hydration — avoids refetch on expand */
   sessionTime?: SessionTimeInfo
+  /** All locale slices from the API — preserved and merged on update */
+  localizations?: Record<string, SessionLocalization>
+  /** Human-authored overrides, parallel to localizations — round-tripped as-is */
+  localizationOverrides?: Record<string, SessionLocalization>
 }
