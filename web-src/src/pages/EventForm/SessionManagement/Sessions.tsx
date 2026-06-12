@@ -134,7 +134,7 @@ async function hydrateSessionWithTime(session: Session): Promise<Session> {
     ? ((timesRes as any).sessionTimes as SessionTimeInfo[])
     : [];
 
-  // Current UI supports exactly one session-time per session, so we use the first item.
+  // Current UI supports exactly one session-time per session - so we use the first item.
   const sessionTime = times[0];
   if (!sessionTime) return session;
 
