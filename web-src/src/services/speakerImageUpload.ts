@@ -9,12 +9,14 @@ import { extractImageFromUploadResponse, uploadImage, UploadTracker } from './re
 /**
  * Upload a speaker profile image to ESP after the speaker record exists.
  * POST .../v1/series/{seriesId}/speakers/{speakerId}/images
+ * PUT .../v1/series/{seriesId}/speakers/{speakerId}/images/{imageId} when replacing
  */
 export async function uploadSpeakerSeriesImage(
   file: File,
   seriesId: string,
   speakerId: string,
-  altText: string
+  altText: string,
+  existingImageId?: string
 ): Promise<{ imageUrl: string; imageId: string } | null> {
   try {
     const token = apiService.getAuthTokenForExternalUse()
@@ -31,7 +33,7 @@ export async function uploadSpeakerSeriesImage(
       type: 'speaker-photo',
     }
 
-    const result = await uploadImage(file, config, token, tracker)
+    const result = await uploadImage(file, config, token, tracker, existingImageId)
     return extractImageFromUploadResponse(result)
   } catch (err) {
     console.error('Failed to upload speaker image:', err)

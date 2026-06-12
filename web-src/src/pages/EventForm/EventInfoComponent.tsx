@@ -28,6 +28,7 @@ import { HeadingWithTooltip, RichTextEditor } from '../../components/shared'
 import { SPACING } from '../../styles/designSystem'
 import { cachedApi } from '../../services/api'
 import { useEventFormComponent } from '../../hooks/useEventFormComponent'
+import { useEventFormContext } from '../../contexts/EventFormContext'
 import { useGroup } from '../../contexts/GroupContext'
 import { hasLocalesSlice } from '../../types/configApi'
 import { SUPPORTED_SPEAKER_LOCALES, SPEAKER_LOCALE_LABELS } from '../../config/localeMapping'
@@ -131,11 +132,12 @@ const EVENT_TITLE_MAX_LENGTH = 150
  */
 export const EventInfoComponent: React.FC = () => {
   const { activeGroup } = useGroup()
+  const { setScopeLocales } = useEventFormContext()
 
   // ============================================================================
   // CONTEXT INTEGRATION
   // ============================================================================
-  
+
   const {
     formData,
     updateFormData,
@@ -186,30 +188,33 @@ export const EventInfoComponent: React.FC = () => {
     }
 
     let cancelled = false
-    cachedApi.getConfigsForScope(scopeId, 'locales').then((result) => {
+    cachedApi.getConfig(scopeId).then((result) => {
       if (cancelled) return
-      if ('error' in result) {
+      if (result === null || 'error' in result) {
         setLocaleOptions(DEFAULT_LOCALE_PICKER_OPTIONS)
+        setScopeLocales(null)
         return
       }
-      const localesConfig = result.find(hasLocalesSlice)
-      const locales = localesConfig?.locales
+      const locales = hasLocalesSlice(result) ? result.locales.locales : undefined
       if (locales && locales.length > 0) {
         const options = locales.map((l) => ({ key: l.code, label: l.name }))
         setLocaleOptions(options)
+        setScopeLocales(locales)
       } else {
         setLocaleOptions(DEFAULT_LOCALE_PICKER_OPTIONS)
+        setScopeLocales(null)
       }
     }).catch(() => {
       if (!cancelled) {
         setLocaleOptions(DEFAULT_LOCALE_PICKER_OPTIONS)
+        setScopeLocales(null)
       }
     })
 
     return () => {
       cancelled = true
     }
-  }, [activeGroup?.scopeId])
+  }, [activeGroup?.scopeId, setScopeLocales])
 
   const pickerLocaleOptions = useMemo(() => {
     if (!locale) return localeOptions

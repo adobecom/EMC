@@ -208,7 +208,7 @@ export function mapApiResponseToFormData(event: EventApiResponse, locale: string
         attribute: g.attribute,
         valueId: v.valueId,
         value: v.value,
-        displayOrder: i,
+        ordinal: i,
       }))
     ) ?? [],
   }

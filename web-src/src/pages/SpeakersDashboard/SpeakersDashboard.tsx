@@ -43,6 +43,7 @@ import MicrophoneIllustration from '@react-spectrum/s2/illustrations/linear/Micr
 import LayersIllustration from '@react-spectrum/s2/illustrations/linear/Layers'
 import { SeriesSpeaker, SeriesApiResponse, EventApiResponse } from '../../types/domain'
 import { apiService, cachedApi } from '../../services/api'
+import { apiCache } from '../../services/cacheUtils'
 import { uploadSpeakerSeriesImage } from '../../services/speakerImageUpload'
 import { IMS } from '../../types'
 import { useToast, useGroup } from '../../contexts'
@@ -98,6 +99,98 @@ function speakerTitleSearchText(item: SpeakerDashboardItem): string {
     ...SUPPORTED_SPEAKER_LOCALES.map((loc) => item.localizations?.[loc]?.title),
   ]
   return chunks.filter(Boolean).join(' ').toLowerCase()
+}
+
+function invalidateSpeakerListCache(seriesId: string, speakerId?: string) {
+  apiCache.invalidate(seriesId)
+  apiCache.invalidate('getSpeakers')
+  if (speakerId) {
+    apiCache.invalidate(speakerId)
+  }
+}
+
+type EventSpeakerAssignment = {
+  speakerId?: string
+  speakerType?: string
+  ordinal?: number
+}
+
+async function cascadeSpeakerUpdateToEvents(
+  seriesSpeakerId: string,
+  events: EventApiResponse[]
+): Promise<string[]> {
+  const failedEventIds: string[] = []
+
+  await Promise.all(
+    events.map(async (event) => {
+      const eventId = event.eventId
+      if (!eventId) return
+
+      const listResp = await cachedApi.getEventSpeakers(eventId)
+      if ('error' in listResp) {
+        failedEventIds.push(eventId)
+        return
+      }
+
+      const roster = listResp.speakers || listResp || []
+      const speakers: EventSpeakerAssignment[] = Array.isArray(roster) ? roster : []
+      const assignments = speakers.filter((s) => s.speakerId === seriesSpeakerId)
+      if (assignments.length === 0) {
+        return
+      }
+
+      for (const assignment of assignments) {
+        const result = await apiService.updateSpeakerInEvent(
+          {
+            speakerId: seriesSpeakerId,
+            speakerType: assignment.speakerType,
+            ordinal: assignment.ordinal,
+          },
+          seriesSpeakerId,
+          eventId
+        )
+        if (result && 'error' in result) {
+          failedEventIds.push(eventId)
+        }
+      }
+    })
+  )
+
+  return [...new Set(failedEventIds)]
+}
+
+async function cascadeSpeakerRemoveFromEvents(
+  seriesSpeakerId: string,
+  events: EventApiResponse[]
+): Promise<string[]> {
+  const failedEventIds: string[] = []
+
+  await Promise.all(
+    events.map(async (event) => {
+      const eventId = event.eventId
+      if (!eventId) return
+
+      const listResp = await cachedApi.getEventSpeakers(eventId)
+      if ('error' in listResp) {
+        failedEventIds.push(eventId)
+        return
+      }
+
+      const roster = listResp.speakers || listResp || []
+      const speakers: EventSpeakerAssignment[] = Array.isArray(roster) ? roster : []
+      const onRoster = speakers.some((s) => s.speakerId === seriesSpeakerId)
+      if (!onRoster) {
+        return
+      }
+
+      const result = await apiService.removeSpeakerFromEvent(seriesSpeakerId, eventId)
+      if (result && 'error' in result) {
+        failedEventIds.push(eventId)
+      }
+    })
+  )
+
+  return [...new Set(failedEventIds)]
 }
 
 interface SpeakersDashboardProps {
@@ -359,41 +452,57 @@ export const SpeakersDashboard: React.FC<SpeakersDashboardProps> = () => {
           throw new Error(result.error)
         }
 
+        let imageMutation = false
         if (data.removedImageId) {
-          await apiService.deleteSpeakerImage(editingSpeaker.speakerId, selectedSeriesId, data.removedImageId)
+          imageMutation = true
+          await apiService.deleteSpeakerImage(
+            editingSpeaker.speakerId,
+            selectedSeriesId,
+            data.removedImageId
+          )
         }
 
+        let imageUploadFailed = false
         if (pendingFile) {
+          imageMutation = true
           const uploaded = await uploadSpeakerSeriesImage(
             pendingFile,
             selectedSeriesId,
             editingSpeaker.speakerId,
-            altText
+            altText,
+            data.replaceImageId
           )
           if (!uploaded) {
-            toast.error('Speaker saved, but profile image upload failed.')
+            imageUploadFailed = true
           }
         }
-        
-        // If cascade is enabled, update speaker in all linked events
+
+        if (imageMutation) {
+          invalidateSpeakerListCache(selectedSeriesId, editingSpeaker.speakerId)
+        }
+
+        let cascadeFailedEventIds: string[] = []
         if (cascadeToEvents) {
           const events = eventConnections.get(editingSpeaker.speakerId) || []
-          await Promise.all(
-            events.map(async (event) => {
-              try {
-                await apiService.updateSpeakerInEvent(
-                  { speakerId: editingSpeaker.speakerId },
-                  editingSpeaker.speakerId,
-                  event.eventId
-                )
-              } catch (_err) {
-                // Update failed - continue
-              }
-            })
+          cascadeFailedEventIds = await cascadeSpeakerUpdateToEvents(
+            editingSpeaker.speakerId,
+            events
           )
         }
-        
-        toast.success('Speaker updated successfully!')
+
+        if (imageUploadFailed && cascadeFailedEventIds.length > 0) {
+          toast.error(
+            'Speaker saved, but the profile image upload failed and some linked events could not be updated.'
+          )
+        } else if (imageUploadFailed) {
+          toast.error('Speaker saved, but profile image upload failed.')
+        } else if (cascadeFailedEventIds.length > 0) {
+          toast.info(
+            'Speaker saved, but some linked events could not be updated. Check event speaker assignments.'
+          )
+        } else {
+          toast.success('Speaker updated successfully!')
+        }
       } else {
         // Create new speaker
         result = await cachedApi.createSpeaker(
@@ -405,6 +514,7 @@ export const SpeakersDashboard: React.FC<SpeakersDashboardProps> = () => {
           throw new Error(result.error)
         }
 
+        let createImageUploadFailed = false
         if (pendingFile) {
           const saved = result.speaker ?? result
           const speakerId = saved.speakerId as string | undefined
@@ -415,15 +525,20 @@ export const SpeakersDashboard: React.FC<SpeakersDashboardProps> = () => {
               speakerId,
               altText
             )
+            invalidateSpeakerListCache(selectedSeriesId, speakerId)
             if (!uploaded) {
-              toast.error('Speaker created, but profile image upload failed.')
+              createImageUploadFailed = true
             }
           } else {
-            toast.error('Speaker created, but profile image could not be uploaded.')
+            createImageUploadFailed = true
           }
         }
-        
-        toast.success('Speaker created successfully!')
+
+        if (createImageUploadFailed) {
+          toast.error('Speaker created, but profile image upload failed.')
+        } else {
+          toast.success('Speaker created successfully!')
+        }
       }
       
       setIsFormDialogOpen(false)
@@ -444,28 +559,29 @@ export const SpeakersDashboard: React.FC<SpeakersDashboardProps> = () => {
     setActionInProgress(speakerToDelete.speakerId)
     
     try {
-      // If cascade is enabled, first remove speaker from all linked events
+      let cascadeRemoveFailedEventIds: string[] = []
       if (cascadeToEvents) {
         const events = eventConnections.get(speakerToDelete.speakerId) || []
-        await Promise.all(
-          events.map(async (event) => {
-            try {
-              await apiService.removeSpeakerFromEvent(speakerToDelete.speakerId, event.eventId)
-            } catch (_err) {
-              // Remove failed - continue
-            }
-          })
+        cascadeRemoveFailedEventIds = await cascadeSpeakerRemoveFromEvents(
+          speakerToDelete.speakerId,
+          events
         )
       }
-      
+
       // Delete the speaker from the series
       const result = await apiService.deleteSpeaker(speakerToDelete.speakerId, selectedSeriesId)
       
       if (result && 'error' in result) {
         throw new Error(result.error)
       }
-      
-      toast.success('Speaker deleted successfully!')
+
+      if (cascadeRemoveFailedEventIds.length > 0) {
+        toast.info(
+          'Speaker deleted from the series, but could not be removed from some linked events.'
+        )
+      } else {
+        toast.success('Speaker deleted successfully!')
+      }
       setSpeakerToDelete(null)
       await loadSpeakers()
       
