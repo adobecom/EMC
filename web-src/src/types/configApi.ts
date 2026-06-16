@@ -16,11 +16,9 @@
 
 export type ConfigType = 'rsvp' | 'locales' | 'customAttributes'
 
-export type RsvpFieldType = 'text' | 'email' | 'phone' | 'select' | 'multi-select'
+export type RsvpFieldType = 'text' | 'email' | 'phone' | 'select' | 'checkbox'
 
-export type RsvpDisplayAs = 'dropdown' | 'radio' | 'checkbox' | ''
-
-export type CustomAttributeInputType = 'text' | 'boolean' | 'single-select' | 'multi-select'
+export type CustomAttributeInputType = 'text' | 'single-select' | 'multi-select'
 
 // ============================================================================
 // RSVP Form Field Models
@@ -40,9 +38,7 @@ export interface RsvpFormField {
   type: RsvpFieldType
   required: boolean
   options: RsvpOption[]
-  rules: string
   default: string
-  displayAs: RsvpDisplayAs
 }
 
 /** Partial RSVP field for localization overrides (only translatable properties).
@@ -87,7 +83,7 @@ export interface ScopeConfig {
   label?: string
   rsvp?: RsvpSlice
   locales?: LocalesSlice
-  customAttributes?: CustomAttributeConfig[]
+  customAttributes?: CustomAttributeConfig
 }
 
 /** Type aliases for slice-narrowed views. These are NOT separate configs — the
@@ -101,7 +97,7 @@ export type LocalesScopeConfig = ScopeConfig & {
 }
 
 export type CustomAttributesScopeConfig = ScopeConfig & {
-  customAttributes: CustomAttributeConfig[]
+  customAttributes: CustomAttributeConfig
 }
 
 export const hasRsvpSlice = (c: ScopeConfig | null | undefined): c is RsvpScopeConfig =>
@@ -111,7 +107,7 @@ export const hasLocalesSlice = (c: ScopeConfig | null | undefined): c is Locales
   !!c && c.locales != null && Array.isArray(c.locales.locales)
 
 export const hasAttributesSlice = (c: ScopeConfig | null | undefined): c is CustomAttributesScopeConfig =>
-  !!c && Array.isArray(c.customAttributes)
+  !!c && c.customAttributes != null && typeof c.customAttributes === 'object' && !Array.isArray(c.customAttributes)
 
 // ============================================================================
 // Custom Attribute Models

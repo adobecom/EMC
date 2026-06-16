@@ -8,7 +8,6 @@ import {
   Heading,
   Divider,
   TextField,
-  Switch,
   Picker,
   PickerItem,
   Button,
@@ -158,8 +157,8 @@ export const CustomAttributesComponent: React.FC = () => {
       try {
         const result = await cachedApi.getConfig(scopeId)
         if (result !== null && !('error' in result)) {
-          const enabled = (hasAttributesSlice(result) ? result.customAttributes : [])
-            .filter(a => a.enabled !== false)
+          const attr = hasAttributesSlice(result) ? result.customAttributes : null
+          const enabled = (attr && attr.enabled !== false) ? [attr] : []
           setAttributes(enabled)
           updateFormData({ _customAttributeConfigs: enabled })
         }
@@ -180,9 +179,6 @@ export const CustomAttributesComponent: React.FC = () => {
   const getTextValue = (attr: CustomAttributeConfig): string =>
     currentValues.find(v => v.attributeId === attr.attributeId)?.value ?? ''
 
-  const getBoolValue = (attr: CustomAttributeConfig): boolean =>
-    currentValues.find(v => v.attributeId === attr.attributeId)?.value === 'true'
-
   const getSingleSelectValue = (attr: CustomAttributeConfig): string =>
     currentValues.find(v => v.attributeId === attr.attributeId)?.value ?? ''
 
@@ -199,16 +195,6 @@ export const CustomAttributesComponent: React.FC = () => {
       ? [{ attributeId: attr.attributeId, attribute: attr.name, valueId: '', value }]
       : []
     updateFormData({ customAttributes: [...others, ...entry] })
-  }
-
-  const updateBoolValue = (attr: CustomAttributeConfig, value: boolean) => {
-    const others = currentValues.filter(v => v.attributeId !== attr.attributeId)
-    updateFormData({
-      customAttributes: [
-        ...others,
-        { attributeId: attr.attributeId, attribute: attr.name, valueId: '', value: String(value) },
-      ],
-    })
   }
 
   const updateSingleSelectValue = (attr: CustomAttributeConfig, selectedValue: string) => {
@@ -262,16 +248,6 @@ export const CustomAttributesComponent: React.FC = () => {
             value={getTextValue(attr)}
             onChange={(v) => updateTextValue(attr, v)}
           />
-        )
-
-      case 'boolean':
-        return (
-          <Switch
-            isSelected={getBoolValue(attr)}
-            onChange={(v) => updateBoolValue(attr, v)}
-          >
-            {attr.name}
-          </Switch>
         )
 
       case 'single-select':

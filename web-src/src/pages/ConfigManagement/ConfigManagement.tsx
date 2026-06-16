@@ -56,7 +56,6 @@ import type {
   CustomAttributeValue,
   CustomAttributeInputType,
   RsvpFieldType,
-  RsvpDisplayAs,
 } from '../../types/configApi'
 import { hasRsvpSlice, hasLocalesSlice, hasAttributesSlice } from '../../types/configApi'
 import { ResourceDashboardLayout, BlurredLoadingOverlay } from '../../components/shared'
@@ -79,26 +78,12 @@ const RSVP_FIELD_TYPES: { key: RsvpFieldType; label: string }[] = [
   { key: 'email', label: 'Email' },
   { key: 'phone', label: 'Phone' },
   { key: 'select', label: 'Select' },
-  { key: 'multi-select', label: 'Multi-Select' },
+  { key: 'checkbox', label: 'Checkbox' },
 ]
 
-function getDisplayAsOptions(type: RsvpFieldType): { key: RsvpDisplayAs; label: string }[] {
-  if (type === 'select') return [
-    { key: '' as RsvpDisplayAs, label: 'Default' },
-    { key: 'dropdown', label: 'Dropdown' },
-    { key: 'radio', label: 'Radio' },
-  ]
-  if (type === 'multi-select') return [
-    { key: '' as RsvpDisplayAs, label: 'Default' },
-    { key: 'dropdown', label: 'Dropdown' },
-    { key: 'checkbox', label: 'Checkbox' },
-  ]
-  return []
-}
 
-const ATTRIBUTE_INPUT_TYPES: { key: CustomAttributeInputType; label: string }[] = [
+export const ATTRIBUTE_INPUT_TYPES: { key: CustomAttributeInputType; label: string }[] = [
   { key: 'text', label: 'Text' },
-  { key: 'boolean', label: 'Boolean' },
   { key: 'single-select', label: 'Single Select' },
   { key: 'multi-select', label: 'Multi Select' },
 ]
@@ -118,9 +103,7 @@ function createEmptyRsvpField(): RsvpFormField {
     type: 'text',
     required: false,
     options: [],
-    rules: '',
     default: '',
-    displayAs: '',
   }
 }
 
@@ -200,13 +183,7 @@ export const ConfigManagement: React.FC<ConfigManagementProps> = () => {
   const [attrFormInputType, setAttrFormInputType] = useState<CustomAttributeInputType>('text')
   const [attrFormValues, setAttrFormValues] = useState<CustomAttributeValue[]>([])
   const [attrFormEnabled, setAttrFormEnabled] = useState(true)
-  const [attrToDelete, setAttrToDelete] = useState<CustomAttributeConfig | null>(null)
-
-  // Expandable state for attributes table
-  const [expandedAttrKeys, setExpandedAttrKeys] = useState<Set<string>>(new Set())
-  // Per-value inline editing for attributes table (keyed by attributeId)
-  const [pendingAttrValueEdits, setPendingAttrValueEdits] = useState<Record<string, CustomAttributeValue[]>>({})
-  const [savingAttrValueKey, setSavingAttrValueKey] = useState<string | null>(null)
+  const [attrToDelete, setAttrToDelete] = useState<string | null>(null)
 
   // Action state
   const [isSaving, setIsSaving] = useState(false)
@@ -266,10 +243,6 @@ export const ConfigManagement: React.FC<ConfigManagementProps> = () => {
     () => !!scopeConfig && scopeConfig.scopeId === selectedScopeId,
     [scopeConfig, selectedScopeId]
   )
-  const customAttributes = useMemo<CustomAttributeConfig[]>(
-    () => customAttrsConfig?.customAttributes || [],
-    [customAttrsConfig]
-  )
   // Available locales for RSVP localization (from sibling locales config or fallback)
   const availableLocales = useMemo(() => {
     if (localesConfig) {
@@ -320,9 +293,7 @@ export const ConfigManagement: React.FC<ConfigManagementProps> = () => {
   // Clear state on scope change
   useEffect(() => {
     setExpandedFieldKeys(new Set())
-    setExpandedAttrKeys(new Set())
     setPendingOptionEdits({})
-    setPendingAttrValueEdits({})
     setActiveLocale(null)
   }, [selectedScopeId])
 
@@ -488,8 +459,6 @@ export const ConfigManagement: React.FC<ConfigManagementProps> = () => {
           field: editingFieldForm.field,
           type: editingFieldForm.type,
           required: editingFieldForm.required,
-          displayAs: editingFieldForm.displayAs,
-          rules: editingFieldForm.rules,
           default: editingFieldForm.default,
           // base-level label/placeholder/options stay from baseField (not locale values)
         }
@@ -601,41 +570,6 @@ export const ConfigManagement: React.FC<ConfigManagementProps> = () => {
     }
   }, [selectedScopeId, rsvpConfig, pendingOptionEdits, activeLocale, apiService, toast, loadConfigs])
 
-  const handleSaveAttrValues = useCallback(async (attributeId: string) => {
-    if (!selectedScopeId || !customAttrsConfig) return
-    const newValues = (pendingAttrValueEdits[attributeId] ?? [])
-      .filter(v => v.value.trim())
-      .map((v, i) => ({
-        valueId: v.valueId || generateUUID(),
-        value: v.value.trim(),
-        label: (v.label ?? '').trim() || v.value.trim(),
-        ordinal: i,
-      }))
-    setSavingAttrValueKey(attributeId)
-    try {
-      const updatedAttributes = customAttrsConfig.customAttributes.map(a =>
-        a.attributeId === attributeId ? { ...a, values: newValues } : a
-      )
-      const result = await apiService.upsertConfig(selectedScopeId, buildPutBody(customAttrsConfig, {
-        customAttributes: updatedAttributes,
-      }))
-      if ('error' in result) {
-        toast.error('Failed to save values')
-        return
-      }
-      toast.success('Values saved')
-      setPendingAttrValueEdits(prev => {
-        const next = { ...prev }
-        delete next[attributeId]
-        return next
-      })
-      await loadConfigs()
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Failed to save values')
-    } finally {
-      setSavingAttrValueKey(null)
-    }
-  }, [selectedScopeId, customAttrsConfig, pendingAttrValueEdits, apiService, toast, loadConfigs])
 
   /** Deletes a slice from the scope's single config. If any other slice remains,
    *  the config is PUT with the slice's fields cleared; otherwise the whole
@@ -666,6 +600,7 @@ export const ConfigManagement: React.FC<ConfigManagementProps> = () => {
       toast.success(`${label} deleted`)
       setRsvpConfigToDelete(null)
       setLocalesToDelete(null)
+      setAttrToDelete(null)
       setIsSaving(false)
       await loadConfigs()
     } catch (err) {
@@ -761,34 +696,23 @@ export const ConfigManagement: React.FC<ConfigManagementProps> = () => {
       return
     }
 
-    const newAttr: CustomAttributeConfig = {
-      attributeId: editingAttr?.attributeId || generateUUID(),
+    const isSelectType = attrFormInputType === 'single-select' || attrFormInputType === 'multi-select'
+    const attrConfig: CustomAttributeConfig = {
+      attributeId: editingAttr?.attributeId ?? generateUUID(),
       name: attrFormName.trim(),
-      label: attrFormLabel.trim() || undefined,
+      label: attrFormLabel.trim() || attrFormName.trim(),
       inputType: attrFormInputType,
       enabled: attrFormEnabled,
-      values: attrFormValues
-        .filter(v => v.value.trim())
-        .map((v, i) => ({
-          valueId: v.valueId || generateUUID(),
-          value: v.value.trim(),
-          label: (v.label ?? '').trim() || v.value.trim(),
-          ordinal: i,
-        })),
+      values: isSelectType
+        ? attrFormValues.filter(v => v.value.trim()).map((v, i) => ({ ...v, ordinal: i }))
+        : [],
     }
 
     setIsSaving(true)
     try {
-      let body
-      if (scopeConfig && ownsConfig) {
-        const existingAttrs = customAttrsConfig?.customAttributes ?? []
-        const updatedAttributes = editingAttr
-          ? existingAttrs.map(a => a.attributeId === editingAttr.attributeId ? newAttr : a)
-          : [...existingAttrs, newAttr]
-        body = buildPutBody(scopeConfig, { customAttributes: updatedAttributes })
-      } else {
-        body = { customAttributes: [newAttr] }
-      }
+      const body = scopeConfig && ownsConfig
+        ? buildPutBody(scopeConfig, { customAttributes: attrConfig })
+        : { customAttributes: attrConfig }
       const result = await apiService.upsertConfig(selectedScopeId, body)
       if ('error' in result) {
         toast.error(`Failed to ${editingAttr ? 'update' : 'create'} custom attribute`)
@@ -796,44 +720,13 @@ export const ConfigManagement: React.FC<ConfigManagementProps> = () => {
       }
       toast.success(`Custom attribute ${editingAttr ? 'updated' : 'created'}`)
       setIsAttrFormOpen(false)
-      setIsSaving(false)
       await loadConfigs()
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Failed to save custom attribute')
     } finally {
       setIsSaving(false)
     }
-  }, [selectedScopeId, attrFormName, attrFormLabel, attrFormInputType, attrFormValues, attrFormEnabled, editingAttr, customAttrsConfig, scopeConfig, ownsConfig, apiService, toast, loadConfigs])
-
-  const handleDeleteAttr = useCallback(async (attr: CustomAttributeConfig) => {
-    if (!selectedScopeId || !customAttrsConfig) return
-    setIsSaving(true)
-    try {
-      const remaining = customAttrsConfig.customAttributes.filter(a => a.attributeId !== attr.attributeId)
-      let result
-      if (remaining.length === 0) {
-        const stripped: ScopeConfig = { ...customAttrsConfig }
-        delete stripped.customAttributes
-        result = await apiService.upsertConfig(selectedScopeId, buildPutBody(stripped, {}))
-      } else {
-        result = await apiService.upsertConfig(selectedScopeId, buildPutBody(customAttrsConfig, {
-          customAttributes: remaining,
-        }))
-      }
-      if ('error' in result) {
-        toast.error('Failed to delete custom attribute')
-        return
-      }
-      toast.success('Custom attribute deleted')
-      setAttrToDelete(null)
-      setIsSaving(false)
-      await loadConfigs()
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Failed to delete custom attribute')
-    } finally {
-      setIsSaving(false)
-    }
-  }, [apiService, selectedScopeId, customAttrsConfig, toast, loadConfigs])
+  }, [selectedScopeId, attrFormName, attrFormLabel, attrFormInputType, attrFormEnabled, attrFormValues, editingAttr, scopeConfig, ownsConfig, apiService, toast, loadConfigs])
 
   // ============================================================================
   // RSVP FIELD HELPERS
@@ -847,16 +740,6 @@ export const ConfigManagement: React.FC<ConfigManagementProps> = () => {
       return next
     })
   }, [])
-
-  const handleToggleAttrExpand = useCallback((key: string) => {
-    setExpandedAttrKeys(prev => {
-      const next = new Set(prev)
-      if (next.has(key)) next.delete(key)
-      else next.add(key)
-      return next
-    })
-  }, [])
-
 
   // ============================================================================
   // RSVP TABLE COLUMNS (for display)
@@ -938,23 +821,19 @@ export const ConfigManagement: React.FC<ConfigManagementProps> = () => {
       ),
     },
     {
-      key: 'displayAs',
-      name: 'DISPLAY AS',
+      key: 'default',
+      name: 'DEFAULT',
       width: 120,
       sortable: false,
       render: (item: RsvpFormField & { _key: string }) => (
-        <Text>
-          {(item.type === 'select' || item.type === 'multi-select') && item.displayAs
-            ? item.displayAs
-            : '-'}
-        </Text>
+        <Text>{item.default || '-'}</Text>
       ),
     },
   ], [activeLocale, rsvpConfig])
 
   const renderRsvpExpandedContent = useCallback((item: RsvpFormField & { _key: string }) => {
     const locales = Object.keys(rsvpConfig?.rsvp?.localizations || {})
-    const isSelectType = item.type === 'select' || item.type === 'multi-select'
+    const isSelectType = item.type === 'select' || item.type === 'checkbox'
     const pendingOpts = pendingOptionEdits[item.field]
     const isEditing = pendingOpts !== undefined
     const displayOpts = isEditing ? pendingOpts : item.options
@@ -1069,12 +948,6 @@ export const ConfigManagement: React.FC<ConfigManagementProps> = () => {
             )}
           </div>
         )}
-        {item.rules && (
-          <div>
-            <Text UNSAFE_style={{ fontWeight: 600, fontSize: 13 }}>Rules: </Text>
-            <Text>{item.rules}</Text>
-          </div>
-        )}
         {item.default && (
           <div>
             <Text UNSAFE_style={{ fontWeight: 600, fontSize: 13 }}>Default: </Text>
@@ -1101,7 +974,7 @@ export const ConfigManagement: React.FC<ConfigManagementProps> = () => {
             </div>
           </div>
         )}
-        {!isSelectType && !item.rules && !item.default && locales.length === 0 && (
+        {!isSelectType && !item.default && locales.length === 0 && (
           <Text UNSAFE_style={{ color: 'var(--spectrum-global-color-gray-700)', fontSize: 13 }}>
             No additional details
           </Text>
@@ -1111,9 +984,8 @@ export const ConfigManagement: React.FC<ConfigManagementProps> = () => {
   }, [rsvpConfig, pendingOptionEdits, savingOptionKey, canWriteConfig, isOwnRsvpConfig, setPendingOptionEdits, handleSaveFieldOptions])
 
   const isRsvpFieldExpandable = useCallback((item: RsvpFormField & { _key: string }) => {
-    const isSelectType = item.type === 'select' || item.type === 'multi-select'
+    const isSelectType = item.type === 'select' || item.type === 'checkbox'
     if (isSelectType) return true
-    if (item.rules) return true
     if (item.default) return true
     const hasLocaleOverride = Object.values(rsvpConfig?.rsvp?.localizations || {}).some(
       loc => loc.rsvpFormFields.some(f => f.field === item.field)
@@ -1126,205 +998,6 @@ export const ConfigManagement: React.FC<ConfigManagementProps> = () => {
   // ============================================================================
 
   const isOwnAttrsConfig = customAttrsConfig?.scopeId === selectedScopeId
-
-  const attrColumns = useMemo(() => [
-    { key: 'name', name: 'NAME', width: 200, sortable: true },
-    {
-      key: 'label',
-      name: 'LABEL',
-      width: 200,
-      sortable: true,
-      render: (item: CustomAttributeConfig) => (
-        <Text>{item.label || '-'}</Text>
-      ),
-    },
-    {
-      key: 'enabled',
-      name: 'ENABLED',
-      width: 100,
-      sortable: true,
-      render: (item: CustomAttributeConfig) => (
-        <div className={style({ display: 'flex', alignItems: 'start' })}>
-          <Badge variant={item.enabled ? 'positive' : 'neutral'}>
-            {item.enabled ? 'Yes' : 'No'}
-          </Badge>
-        </div>
-      ),
-    },
-    {
-      key: 'inputType',
-      name: 'INPUT TYPE',
-      width: 140,
-      sortable: true,
-      render: (item: CustomAttributeConfig) => (
-        <div className={style({ display: 'flex', alignItems: 'start' })}>
-          <Badge variant="neutral">{item.inputType}</Badge>
-        </div>
-      ),
-    },
-    {
-      key: 'values',
-      name: 'VALUES',
-      width: 100,
-      sortable: false,
-      render: (item: CustomAttributeConfig) => (
-        <Text>{item.values.length > 0 ? `${item.values.length} values` : '-'}</Text>
-      ),
-    },
-    {
-      key: 'scopeId',
-      name: 'SCOPE',
-      width: 120,
-      sortable: false,
-      render: () => {
-        const configScopeId = customAttrsConfig?.scopeId
-        const scope = configScopeId ? scopes.find(s => s.scopeId === configScopeId) : null
-        return scope ? (
-          <Badge variant={SCOPE_TYPE_VARIANTS[scope.type] || 'neutral'}>{scope.name}</Badge>
-        ) : configScopeId ? (
-          <Text UNSAFE_style={{ fontSize: 12, color: 'var(--spectrum-global-color-gray-700)' }}>
-            {configScopeId.substring(0, 8)}...
-          </Text>
-        ) : (
-          <Text>-</Text>
-        )
-      },
-    },
-    {
-      key: 'actions',
-      name: 'ACTIONS',
-      width: 100,
-      sortable: false,
-      render: (item: CustomAttributeConfig) => (
-        <div className={style({ display: 'flex', gap: 8, justifyContent: 'end' })}>
-          {canWriteConfig && isOwnAttrsConfig && (
-            <ActionButton isQuiet aria-label="Edit attribute" onPress={() => openAttrEdit(item)}>
-              <EditIcon />
-            </ActionButton>
-          )}
-          {canDeleteConfig && isOwnAttrsConfig && (
-            <ActionButton isQuiet aria-label="Delete attribute" onPress={() => setAttrToDelete(item)}>
-              <RemoveCircle />
-            </ActionButton>
-          )}
-        </div>
-      ),
-    },
-  ], [scopes, customAttrsConfig, isOwnAttrsConfig, canWriteConfig, canDeleteConfig, openAttrEdit])
-
-  const renderAttrExpandedContent = useCallback((item: CustomAttributeConfig) => {
-    const pendingVals = pendingAttrValueEdits[item.attributeId]
-    const isEditing = pendingVals !== undefined
-    const displayVals = isEditing ? pendingVals : [...item.values].sort((a, b) => (a.ordinal ?? 0) - (b.ordinal ?? 0))
-    const canEdit = canWriteConfig && isOwnAttrsConfig
-
-    return (
-      <div className={style({ display: 'flex', flexDirection: 'column', gap: 12 })}>
-        <div>
-          {/* Values section header */}
-          <div className={style({ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 })}>
-            <Text UNSAFE_style={{ fontWeight: 600, fontSize: 13 }}>
-              Values ({displayVals.length}):
-            </Text>
-            <div className={style({ display: 'flex', gap: 8, alignItems: 'center' })}>
-              {isEditing ? (
-                <>
-                  <ActionButton
-                    isQuiet
-                    size="S"
-                    onPress={() => setPendingAttrValueEdits(prev => {
-                      const next = { ...prev }
-                      delete next[item.attributeId]
-                      return next
-                    })}
-                  >
-                    <RotateCCW />
-                    <Text>Discard</Text>
-                  </ActionButton>
-                  <Button
-                    variant="accent"
-                    size="S"
-                    isDisabled={savingAttrValueKey === item.attributeId}
-                    onPress={() => handleSaveAttrValues(item.attributeId)}
-                  >
-                    <Text>Save Values</Text>
-                  </Button>
-                </>
-              ) : canEdit && (
-                <ActionButton
-                  isQuiet
-                  size="S"
-                  onPress={() => setPendingAttrValueEdits(prev => ({
-                    ...prev,
-                    [item.attributeId]: [...item.values].sort((a, b) => (a.ordinal ?? 0) - (b.ordinal ?? 0)).map(v => ({ ...v, label: v.label ?? '' })),
-                  }))}
-                >
-                  <EditIcon />
-                  <Text>Edit Values</Text>
-                </ActionButton>
-              )}
-            </div>
-          </div>
-          {/* Values list */}
-          <div className={style({ display: 'flex', flexDirection: 'column', gap: 8, paddingX: 12, paddingY: 8, backgroundColor: 'gray-75', borderWidth: 1, borderColor: 'gray-300', borderRadius: 'sm' })}>
-            {displayVals.map((v, i) => (
-              <div key={v.valueId || i} className={style({ display: 'flex', gap: 8, alignItems: 'end' })}>
-                <TextField
-                  label="Value"
-                  value={v.value}
-                  isReadOnly={!isEditing}
-                  onChange={(val) => setPendingAttrValueEdits(prev => {
-                    const vals = [...(prev[item.attributeId] ?? [])]
-                    vals[i] = { ...vals[i], value: val }
-                    return { ...prev, [item.attributeId]: vals }
-                  })}
-                  styles={style({ flexGrow: 1 })}
-                />
-                <TextField
-                  label="Label"
-                  value={v.label ?? ''}
-                  isReadOnly={!isEditing}
-                  onChange={(val) => setPendingAttrValueEdits(prev => {
-                    const vals = [...(prev[item.attributeId] ?? [])]
-                    vals[i] = { ...vals[i], label: val }
-                    return { ...prev, [item.attributeId]: vals }
-                  })}
-                  styles={style({ flexGrow: 1 })}
-                />
-                {isEditing && (
-                  <ActionButton
-                    isQuiet
-                    aria-label="Delete value"
-                    onPress={() => setPendingAttrValueEdits(prev => ({
-                      ...prev,
-                      [item.attributeId]: (prev[item.attributeId] ?? []).filter((_, vi) => vi !== i),
-                    }))}
-                  >
-                    <RemoveCircle />
-                  </ActionButton>
-                )}
-              </div>
-            ))}
-            {isEditing && (
-              <div className={style({ display: 'flex', justifyContent: 'end', marginTop: 4 })}>
-                <ActionButton
-                  isQuiet
-                  size="S"
-                  onPress={() => setPendingAttrValueEdits(prev => ({
-                    ...prev,
-                    [item.attributeId]: [...(prev[item.attributeId] ?? []), { valueId: '', value: '', label: '', ordinal: (prev[item.attributeId] ?? []).length }],
-                  }))}
-                >
-                  <Add />
-                  <Text>Add Value</Text>
-                </ActionButton>
-              </div>
-            )}
-          </div>
-        </div>
-      </div>
-    )
-  }, [pendingAttrValueEdits, savingAttrValueKey, canWriteConfig, isOwnAttrsConfig, setPendingAttrValueEdits, handleSaveAttrValues])
 
   // ============================================================================
   // LOADING OVERLAY
@@ -1410,9 +1083,9 @@ export const ConfigManagement: React.FC<ConfigManagementProps> = () => {
         {selectedScopeId ? (
           <Tabs aria-label="Configuration types" selectedKey={activeTab} onSelectionChange={(key) => setActiveTab(key as string)}>
             <TabList>
-              <Tab id="rsvp" isDisabled>RSVP Fields</Tab>
+              <Tab id="rsvp">RSVP Fields</Tab>
               <Tab id="locales">Locale Mapping</Tab>
-              <Tab id="attributes" isDisabled>Custom Attributes</Tab>
+              <Tab id="attributes">Custom Attributes</Tab>
             </TabList>
 
             {/* ── RSVP Fields Tab ── */}
@@ -1575,31 +1248,77 @@ export const ConfigManagement: React.FC<ConfigManagementProps> = () => {
 
             {/* ── Custom Attributes Tab ── */}
             <TabPanel id="attributes">
-              <div className={style({ display: 'flex', flexDirection: 'column', gap: 24, marginTop: 24 })}>
-                <ResourceDashboardLayout
-                  title="Custom Attributes"
-                  totalCount={customAttributes.length}
-                  error={null}
-                  data={customAttributes}
-                  columns={attrColumns}
-                  getItemKey={(item) => item.attributeId}
-                  createButton={canWriteConfig ? (
-                    <Button variant="accent" onPress={openAttrCreate}>
-                      <Add />
-                      <Text>Create Attribute</Text>
-                    </Button>
-                  ) : undefined}
-                  onRefresh={loadConfigs}
-                  emptyStateIllustration={<GearSettingIllustration aria-hidden />}
-                  emptyStateTitle="No Custom Attributes"
-                  emptyStateDescription="Create custom attributes to add additional fields to events"
-                  searchPlaceholder="Search attributes..."
-                  searchKeys={['name', 'inputType']}
-                  renderExpandedContent={renderAttrExpandedContent}
-                  expandedKeys={expandedAttrKeys}
-                  onToggleExpand={handleToggleAttrExpand}
-                  isRowExpandable={(item: CustomAttributeConfig) => item.values.length > 0}
-                />
+              <div className={style({ display: 'flex', flexDirection: 'column', gap: 16, marginTop: 24 })}>
+                {/* Header */}
+                <div className={style({ display: 'flex', justifyContent: 'space-between', alignItems: 'center' })}>
+                  <Text UNSAFE_style={{ fontWeight: 700, fontSize: 16 }}>Custom Attribute</Text>
+                  <div className={style({ display: 'flex', gap: 8, alignItems: 'center' })}>
+                    <ActionButton isQuiet aria-label="Refresh" onPress={loadConfigs}>
+                      <RotateCCW />
+                    </ActionButton>
+                    {canWriteConfig && !customAttrsConfig && (
+                      <Button variant="accent" onPress={openAttrCreate}>
+                        <Add />
+                        <Text>Create Attribute</Text>
+                      </Button>
+                    )}
+                  </div>
+                </div>
+
+                {!customAttrsConfig ? (
+                  <div style={{ padding: '40px 0', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8 }}>
+                    <GearSettingIllustration aria-hidden />
+                    <Text UNSAFE_style={{ fontWeight: 600 }}>No Custom Attribute</Text>
+                    <Text UNSAFE_style={{ color: 'var(--spectrum-global-color-gray-600)', fontSize: 13 }}>
+                      No custom attribute is configured for this scope
+                    </Text>
+                  </div>
+                ) : (
+                  <div style={{ border: '1px solid var(--spectrum-global-color-gray-300)', borderRadius: 8, overflow: 'hidden' }}>
+                    {/* Column headers */}
+                    <div style={{ display: 'flex', alignItems: 'center', padding: '8px 12px', backgroundColor: 'var(--spectrum-global-color-gray-100)', borderBottom: '1px solid var(--spectrum-global-color-gray-300)', gap: 12 }}>
+                      <Text UNSAFE_style={{ flex: 1, fontWeight: 700, fontSize: 12, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Name</Text>
+                      <Text UNSAFE_style={{ flex: 1, fontWeight: 700, fontSize: 12, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Label</Text>
+                      <Text UNSAFE_style={{ width: 140, flexShrink: 0, fontWeight: 700, fontSize: 12, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Input Type</Text>
+                      <Text UNSAFE_style={{ width: 80, flexShrink: 0, fontWeight: 700, fontSize: 12, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Enabled</Text>
+                      <Text UNSAFE_style={{ width: 80, flexShrink: 0, fontWeight: 700, fontSize: 12, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Values</Text>
+                      <span style={{ width: 72, flexShrink: 0 }} />
+                    </div>
+
+                    {/* Single attribute row */}
+                    <div style={{ display: 'flex', alignItems: 'center', padding: '10px 12px', gap: 12, backgroundColor: 'var(--spectrum-global-color-gray-50)' }}>
+                      <Text UNSAFE_style={{ flex: 1, fontSize: 14 }}>{customAttrsConfig.customAttributes.name}</Text>
+                      <Text UNSAFE_style={{ flex: 1, fontSize: 14, color: 'var(--spectrum-global-color-gray-700)' }}>
+                        {customAttrsConfig.customAttributes.label || '—'}
+                      </Text>
+                      <div style={{ width: 140, flexShrink: 0, display: 'flex', alignItems: 'center' }}>
+                        <Badge variant="neutral">{customAttrsConfig.customAttributes.inputType}</Badge>
+                      </div>
+                      <div style={{ width: 80, flexShrink: 0, display: 'flex', alignItems: 'center' }}>
+                        <Badge variant={customAttrsConfig.customAttributes.enabled ? 'positive' : 'negative'}>
+                          {customAttrsConfig.customAttributes.enabled ? 'Yes' : 'No'}
+                        </Badge>
+                      </div>
+                      <Text UNSAFE_style={{ width: 80, flexShrink: 0, fontSize: 14, color: 'var(--spectrum-global-color-gray-700)' }}>
+                        {(customAttrsConfig.customAttributes.values?.length ?? 0) > 0
+                          ? `${customAttrsConfig.customAttributes.values.length} values`
+                          : '—'}
+                      </Text>
+                      <div style={{ width: 72, flexShrink: 0, display: 'flex', gap: 4, justifyContent: 'flex-end' }}>
+                        {canWriteConfig && isOwnAttrsConfig && (
+                          <ActionButton isQuiet aria-label="Edit attribute" onPress={() => openAttrEdit(customAttrsConfig.customAttributes)}>
+                            <EditIcon />
+                          </ActionButton>
+                        )}
+                        {canDeleteConfig && isOwnAttrsConfig && (
+                          <ActionButton isQuiet aria-label="Delete attribute" onPress={() => setAttrToDelete(customAttrsConfig.customAttributes.name)}>
+                            <RemoveCircle />
+                          </ActionButton>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
             </TabPanel>
           </Tabs>
@@ -1660,37 +1379,27 @@ export const ConfigManagement: React.FC<ConfigManagementProps> = () => {
                       value={editingFieldForm.placeholder}
                       onChange={(v) => setEditingFieldForm(prev => ({ ...prev, placeholder: v }))}
                     />
+                    {!activeLocale && (
+                      <TextField
+                        label="Default Value"
+                        description="Pre-filled value shown to the user."
+                        value={editingFieldForm.default}
+                        onChange={(v) => setEditingFieldForm(prev => ({ ...prev, default: v }))}
+                      />
+                    )}
                     <Picker
                       label="Type"
                       selectedKey={editingFieldForm.type}
-                      onSelectionChange={(key) => setEditingFieldForm(prev => {
-                        const newType = key as RsvpFieldType
-                        const needsReset =
-                          (newType === 'multi-select' && prev.displayAs === 'radio') ||
-                          (newType === 'select' && prev.displayAs === 'checkbox')
-                        return {
-                          ...prev,
-                          type: newType,
-                          displayAs: needsReset ? '' : prev.displayAs,
-                          options: (newType === 'text' || newType === 'email' || newType === 'phone') ? [] : prev.options,
-                        }
-                      })}
+                      onSelectionChange={(key) => setEditingFieldForm(prev => ({
+                        ...prev,
+                        type: key as RsvpFieldType,
+                        options: (key === 'text' || key === 'email' || key === 'phone') ? [] : prev.options,
+                      }))}
                     >
                       {RSVP_FIELD_TYPES.map(t => (
                         <PickerItem key={t.key} id={t.key}>{t.label}</PickerItem>
                       ))}
                     </Picker>
-                    {(editingFieldForm.type === 'select' || editingFieldForm.type === 'multi-select') && (
-                      <Picker
-                        label="Display As"
-                        selectedKey={editingFieldForm.displayAs || ''}
-                        onSelectionChange={(key) => setEditingFieldForm(prev => ({ ...prev, displayAs: key as RsvpDisplayAs }))}
-                      >
-                        {getDisplayAsOptions(editingFieldForm.type).map(o => (
-                          <PickerItem key={o.key || '__default'} id={o.key}>{o.label}</PickerItem>
-                        ))}
-                      </Picker>
-                    )}
                   </div>
                   <Checkbox
                     isSelected={editingFieldForm.required}
@@ -1698,7 +1407,7 @@ export const ConfigManagement: React.FC<ConfigManagementProps> = () => {
                   >
                     Required
                   </Checkbox>
-                  {(editingFieldForm.type === 'select' || editingFieldForm.type === 'multi-select') && (
+                  {(editingFieldForm.type === 'select' || editingFieldForm.type === 'checkbox') && (
                     <div>
                       <div className={style({ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 })}>
                         <Text UNSAFE_style={{ fontWeight: 600, fontSize: 13 }}>
@@ -1820,7 +1529,7 @@ export const ConfigManagement: React.FC<ConfigManagementProps> = () => {
                     )}
                     <div className={style({ display: 'flex', flexDirection: 'column', gap: 8 })}>
                       {rsvpFormFields.map((field, index) => {
-                        const hasOptions = field.type === 'select' || field.type === 'multi-select'
+                        const hasOptions = field.type === 'select' || field.type === 'checkbox'
                         const isCollapsible = hasOptions
                         const isExpanded = !isCollapsible || expandedRsvpDialogFields.has(index)
                         const toggleExpand = isCollapsible
@@ -1904,20 +1613,27 @@ export const ConfigManagement: React.FC<ConfigManagementProps> = () => {
                                         })
                                     }
                                   />
+                                  {!(activeLocale && editingRsvpConfig) && (
+                                    <TextField
+                                      label="Default Value"
+                                      description="Pre-filled value shown to the user."
+                                      value={field.default}
+                                      onChange={(v) => setRsvpFormFields(prev => {
+                                        const copy = [...prev]
+                                        copy[index] = { ...copy[index], default: v }
+                                        return copy
+                                      })}
+                                    />
+                                  )}
                                   <Picker
                                     label="Type"
                                     selectedKey={field.type}
                                     onSelectionChange={(key) => setRsvpFormFields(prev => {
                                       const copy = [...prev]
-                                      const newType = key as RsvpFieldType
-                                      const needsReset =
-                                        (newType === 'multi-select' && copy[index].displayAs === 'radio') ||
-                                        (newType === 'select' && copy[index].displayAs === 'checkbox')
                                       copy[index] = {
                                         ...copy[index],
-                                        type: newType,
-                                        displayAs: needsReset ? '' : copy[index].displayAs,
-                                        options: (newType === 'text' || newType === 'email' || newType === 'phone') ? [] : copy[index].options,
+                                        type: key as RsvpFieldType,
+                                        options: (key === 'text' || key === 'email' || key === 'phone') ? [] : copy[index].options,
                                       }
                                       return copy
                                     })}
@@ -1926,21 +1642,6 @@ export const ConfigManagement: React.FC<ConfigManagementProps> = () => {
                                       <PickerItem key={t.key} id={t.key}>{t.label}</PickerItem>
                                     ))}
                                   </Picker>
-                                  {(field.type === 'select' || field.type === 'multi-select') && (
-                                    <Picker
-                                      label="Display As"
-                                      selectedKey={field.displayAs || ''}
-                                      onSelectionChange={(key) => setRsvpFormFields(prev => {
-                                        const copy = [...prev]
-                                        copy[index] = { ...copy[index], displayAs: key as RsvpDisplayAs }
-                                        return copy
-                                      })}
-                                    >
-                                      {getDisplayAsOptions(field.type).map(o => (
-                                        <PickerItem key={o.key || '__default'} id={o.key}>{o.label}</PickerItem>
-                                      ))}
-                                    </Picker>
-                                  )}
                                 </div>
                                 <div className={style({ display: 'flex', gap: 16, marginTop: 12, alignItems: 'center' })}>
                                   <Checkbox
@@ -1954,7 +1655,7 @@ export const ConfigManagement: React.FC<ConfigManagementProps> = () => {
                                     Required
                                   </Checkbox>
                                 </div>
-                                {(field.type === 'select' || field.type === 'multi-select') && (
+                                {(field.type === 'select' || field.type === 'checkbox') && (
                                   <div className={style({ marginTop: 12 })}>
                                     <div className={style({ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 })}>
                                       <Text UNSAFE_style={{ fontWeight: 600, fontSize: 13 }}>
@@ -2174,7 +1875,7 @@ export const ConfigManagement: React.FC<ConfigManagementProps> = () => {
                   />
                   <TextField
                     label="Label"
-                    description="Display label shown to users. Falls back to Name if empty."
+                    description="Display label shown to users. Defaults to Name if empty."
                     value={attrFormLabel}
                     onChange={setAttrFormLabel}
                     styles={style({ width: '[100%]' })}
@@ -2187,8 +1888,7 @@ export const ConfigManagement: React.FC<ConfigManagementProps> = () => {
                     selectedKey={attrFormInputType}
                     onSelectionChange={(key) => {
                       setAttrFormInputType(key as CustomAttributeInputType)
-                      // Clear values when switching to non-select types
-                      if (key === 'text' || key === 'boolean') {
+                      if (key === 'text') {
                         setAttrFormValues([])
                       }
                     }}
@@ -2348,11 +2048,11 @@ export const ConfigManagement: React.FC<ConfigManagementProps> = () => {
           variant="destructive"
           primaryActionLabel="Delete"
           cancelLabel="Cancel"
-          onPrimaryAction={() => { if (attrToDelete) handleDeleteAttr(attrToDelete) }}
+          onPrimaryAction={() => { if (customAttrsConfig) deleteSlice(customAttrsConfig, 'customAttributes', 'Custom Attribute') }}
           onCancel={() => setAttrToDelete(null)}
           isPrimaryActionDisabled={isSaving}
         >
-          Delete attribute <strong>{attrToDelete?.name}</strong>? This action cannot be undone.
+          Delete attribute <strong>{attrToDelete}</strong>? This action cannot be undone.
         </AlertDialog>
       </DialogTrigger>
 
