@@ -19,4 +19,5 @@ export { useHasPermission, useHasAnyPermission, useHasAllPermissions, checkPermi
 export { useCustomDetailPagePath } from './useCustomDetailPagePath'
 export type { DetailPagePathResult, GetDetailPagePathForSaveOptions } from './useCustomDetailPagePath'
 export { usePreferredColorScheme } from './usePreferredColorScheme'
+export { usePersistentState } from './usePersistentState'
 
