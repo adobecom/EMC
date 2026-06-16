@@ -41,6 +41,9 @@ jobs:
           PROD_CLIENT_IDENTITY: ${{ secrets.PROD_CLIENT_IDENTITY }}
           IMS_CLIENT_ID: ${{ secrets.IMS_CLIENT_ID }}
           IMS_SCOPES: ${{ secrets.IMS_SCOPES }}
+          DEV_GOOGLE_PLACES_API: ${{ secrets.DEV_GOOGLE_PLACES_API }}
+          STAGE_GOOGLE_PLACES_API: ${{ secrets.STAGE_GOOGLE_PLACES_API }}
+          PROD_GOOGLE_PLACES_API: ${{ secrets.PROD_GOOGLE_PLACES_API }}
         run: npm run deploy:dev
 
       - name: Deployment Summary
