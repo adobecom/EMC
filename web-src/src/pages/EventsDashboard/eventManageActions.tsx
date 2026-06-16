@@ -35,11 +35,15 @@ export function buildEventManageActions({
   const actions: EventManageAction[] = []
 
   if (canWriteEvent) {
-    actions.push({
-      key: item.published ? 'unpublish' : 'publish',
-      label: item.published ? 'Unpublish' : 'Publish',
-      icon: item.published ? <PublishNo /> : <Publish />,
-    })
+    actions.push(
+      { key: 'edit', label: 'Edit', icon: <Edit /> },
+      {
+        key: item.published ? 'unpublish' : 'publish',
+        label: item.published ? 'Unpublish' : 'Publish',
+        icon: item.published ? <PublishNo /> : <Publish />,
+      },
+      { key: 'clone', label: 'Clone', icon: <Duplicate /> }
+    )
   }
 
   actions.push(
@@ -47,13 +51,6 @@ export function buildEventManageActions({
     { key: 'preview-post', label: 'Preview post-event', icon: <Preview /> },
     { key: 'copy-url', label: 'Copy URL', icon: <Copy /> }
   )
-
-  if (canWriteEvent) {
-    actions.push(
-      { key: 'edit', label: 'Edit', icon: <Edit /> },
-      { key: 'clone', label: 'Clone', icon: <Duplicate /> }
-    )
-  }
 
   if (canDeleteEvent) {
     actions.push({ key: 'delete', label: 'Delete', icon: <RemoveCircle /> })

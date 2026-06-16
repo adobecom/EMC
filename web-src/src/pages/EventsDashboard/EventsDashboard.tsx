@@ -88,6 +88,7 @@ export const EventsDashboard: React.FC<EventsDashboardProps> = () => {
   const [loadingSeries, setLoadingSeries] = useSafeState<Set<string>>(new Set())
   const [loadingHistory, setLoadingHistory] = useSafeState<Set<string>>(new Set())
   const [itemToDelete, setItemToDelete] = useSafeState<EventDashboardItem | null>(null)
+  const [itemToPublish, setItemToPublish] = useSafeState<EventDashboardItem | null>(null)
   const [actionInProgress, setActionInProgress] = useSafeState<string | null>(null)
 
   const [listFilters, setListFilters] = usePersistentState('emc-events-dashboard-filters', {
@@ -380,39 +381,10 @@ export const EventsDashboard: React.FC<EventsDashboardProps> = () => {
 
     switch (action) {
       case 'publish':
-      case 'unpublish': {
-        const isPublish = !item.published
-        setActionInProgress(item.eventId)
-        
-        try {
-          // Fetch full event data (needed for complete payload with all localizations)
-          const eventResponse = await cachedApi.getEventFull(item.eventId)
-          
-          if ('error' in eventResponse) {
-            toast.error(`Failed to load event data: ${eventResponse.error}`)
-            break
-          }
-
-          // ApiService.publishEvent / unpublishEvent run prepareEslEventPutPayload (submission filter + ESL excludes)
-          const result = isPublish
-            ? await apiService.publishEvent(item.eventId, eventResponse)
-            : await apiService.unpublishEvent(item.eventId, eventResponse)
-
-          if ('error' in result) {
-            toast.error(`Failed to ${isPublish ? 'publish' : 'unpublish'} event: ${result.error}`)
-          } else {
-            toast.success(`Event ${isPublish ? 'published' : 'unpublished'} successfully!`)
-            // Refresh events list
-            await loadEventsData()
-          }
-        } catch (err) {
-          console.error(`Error ${isPublish ? 'publishing' : 'unpublishing'} event:`, err)
-          toast.error(`Failed to ${isPublish ? 'publish' : 'unpublish'} event`)
-        } finally {
-          setActionInProgress(null)
-        }
+      case 'unpublish':
+        // Show publish/unpublish confirmation dialog
+        setItemToPublish(item)
         break
-      }
 
       case 'preview-pre':
       case 'preview-post': {
@@ -873,10 +845,10 @@ export const EventsDashboard: React.FC<EventsDashboardProps> = () => {
 
   const handleDeleteEvent = useCallback(async (event: EventDashboardItem) => {
     setActionInProgress(event.eventId)
-    
+
     try {
       const result = await apiService.deleteEventExternal(event.eventId)
-      
+
       if ('error' in result) {
         toast.error(`Failed to delete event: ${result.error}`)
       } else {
@@ -889,6 +861,40 @@ export const EventsDashboard: React.FC<EventsDashboardProps> = () => {
       toast.error('Failed to delete event')
     } finally {
       setItemToDelete(null)
+      setActionInProgress(null)
+    }
+  }, [toast])
+
+  const handlePublishEvent = useCallback(async (event: EventDashboardItem) => {
+    const isPublish = !event.published
+    setActionInProgress(event.eventId)
+
+    try {
+      // Fetch full event data (needed for complete payload with all localizations)
+      const eventResponse = await cachedApi.getEventFull(event.eventId)
+
+      if ('error' in eventResponse) {
+        toast.error(`Failed to load event data: ${eventResponse.error}`)
+        return
+      }
+
+      // ApiService.publishEvent / unpublishEvent run prepareEslEventPutPayload (submission filter + ESL excludes)
+      const result = isPublish
+        ? await apiService.publishEvent(event.eventId, eventResponse)
+        : await apiService.unpublishEvent(event.eventId, eventResponse)
+
+      if ('error' in result) {
+        toast.error(`Failed to ${isPublish ? 'publish' : 'unpublish'} event: ${result.error}`)
+      } else {
+        toast.success(`Event ${isPublish ? 'published' : 'unpublished'} successfully!`)
+        // Refresh events list
+        await loadEventsData()
+      }
+    } catch (err) {
+      console.error(`Error ${isPublish ? 'publishing' : 'unpublishing'} event:`, err)
+      toast.error(`Failed to ${isPublish ? 'publish' : 'unpublish'} event`)
+    } finally {
+      setItemToPublish(null)
       setActionInProgress(null)
     }
   }, [toast])
@@ -1274,6 +1280,30 @@ export const EventsDashboard: React.FC<EventsDashboardProps> = () => {
         ariaLabel="Processing action"
         zIndex={9999}
       />
+
+      {/* Publish / Unpublish Confirmation Dialog */}
+      <DialogTrigger
+        isOpen={!!itemToPublish}
+        onOpenChange={(isOpen) => !isOpen && setItemToPublish(null)}
+      >
+        <div style={{ display: 'none' }} />
+        <AlertDialog
+          title={itemToPublish?.published ? 'Unpublish Event' : 'Publish Event'}
+          primaryActionLabel={itemToPublish?.published ? 'Unpublish' : 'Publish'}
+          cancelLabel="Cancel"
+          onPrimaryAction={() => {
+            if (itemToPublish) {
+              handlePublishEvent(itemToPublish)
+            }
+          }}
+          onCancel={() => setItemToPublish(null)}
+          isPrimaryActionDisabled={!!actionInProgress}
+        >
+          {itemToPublish?.published
+            ? <>Are you sure you want to unpublish <strong>{itemToPublish?.eventName}</strong>? The event will be removed from public view.</>
+            : <>Are you sure you want to publish <strong>{itemToPublish?.eventName}</strong>? The event will become publicly visible.</>}
+        </AlertDialog>
+      </DialogTrigger>
 
       {/* Delete Confirmation Dialog */}
       <DialogTrigger

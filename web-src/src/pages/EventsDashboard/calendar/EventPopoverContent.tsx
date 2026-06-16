@@ -125,8 +125,8 @@ export const EventPopoverContent: React.FC<EventPopoverContentProps> = ({
               aria-label={action.label}
               onPress={() => {
                 onAction(action.key, item)
-                // Delete opens a confirm dialog managed by parent; don't close yet
-                if (action.key !== 'delete') {
+                // Delete, publish, and unpublish open confirm dialogs managed by parent; don't close yet
+                if (action.key !== 'delete' && action.key !== 'publish' && action.key !== 'unpublish') {
                   onClose()
                 }
               }}
