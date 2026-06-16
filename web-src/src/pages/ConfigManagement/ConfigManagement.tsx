@@ -58,7 +58,7 @@ import type {
   RsvpFieldType,
 } from '../../types/configApi'
 import { hasRsvpSlice, hasLocalesSlice, hasAttributesSlice } from '../../types/configApi'
-import { ResourceDashboardLayout, BlurredLoadingOverlay } from '../../components/shared'
+import { BlurredLoadingOverlay } from '../../components/shared'
 import { useHasPermission } from '../../hooks/useHasPermission'
 import { generateUUID } from '../../services/requestHelpers'
 import { SUPPORTED_SPEAKER_LOCALES, SPEAKER_LOCALE_LABELS } from '../../config/localeMapping'
@@ -156,12 +156,6 @@ export const ConfigManagement: React.FC<ConfigManagementProps> = () => {
   const [editingFieldDialog, setEditingFieldDialog] = useState<{ field: RsvpFormField; index: number } | null>(null)
   const [editingFieldForm, setEditingFieldForm] = useState<RsvpFormField>(createEmptyRsvpField())
   const [fieldToDelete, setFieldToDelete] = useState<{ field: RsvpFormField; index: number } | null>(null)
-  // Per-option inline editing (keyed by field.field name)
-  const [pendingOptionEdits, setPendingOptionEdits] = useState<Record<string, RsvpOption[]>>({})
-  const [savingOptionKey, setSavingOptionKey] = useState<string | null>(null)
-
-  // Expandable state for RSVP fields table
-  const [expandedFieldKeys, setExpandedFieldKeys] = useState<Set<string>>(new Set())
 
   // ============================================================================
   // LOCALES DIALOG STATE
@@ -292,15 +286,8 @@ export const ConfigManagement: React.FC<ConfigManagementProps> = () => {
 
   // Clear state on scope change
   useEffect(() => {
-    setExpandedFieldKeys(new Set())
-    setPendingOptionEdits({})
     setActiveLocale(null)
   }, [selectedScopeId])
-
-  // Discard any pending option edits when the config reloads (save or refresh)
-  useEffect(() => {
-    setPendingOptionEdits({})
-  }, [rsvpConfig])
 
   // Drop scope selection if it falls outside the picker pool
   useEffect(() => {
@@ -523,54 +510,6 @@ export const ConfigManagement: React.FC<ConfigManagementProps> = () => {
     }
   }, [selectedScopeId, rsvpConfig, fieldToDelete, apiService, toast, loadConfigs])
 
-  const handleSaveFieldOptions = useCallback(async (fieldName: string) => {
-    if (!selectedScopeId || !rsvpConfig) return
-    const newOptions = (pendingOptionEdits[fieldName] ?? []).filter(o => o.value.trim())
-    setSavingOptionKey(fieldName)
-    try {
-      let result
-      if (activeLocale) {
-        const updatedLocalizations: Record<string, { rsvpFormFields: RsvpFormFieldLocaleOverride[] }> =
-          rsvpConfig.rsvp?.localizations ? JSON.parse(JSON.stringify(rsvpConfig.rsvp.localizations)) : {}
-        if (!updatedLocalizations[activeLocale]) updatedLocalizations[activeLocale] = { rsvpFormFields: [] }
-        const fields = updatedLocalizations[activeLocale].rsvpFormFields
-        const existing = fields.find(f => f.field === fieldName)
-        if (existing) existing.options = newOptions.length ? newOptions : undefined
-        else fields.push({ field: fieldName, options: newOptions.length ? newOptions : undefined })
-        updatedLocalizations[activeLocale].rsvpFormFields = fields.filter(
-          f => f.label || f.placeholder || (f.options && f.options.length > 0)
-        )
-        if (updatedLocalizations[activeLocale].rsvpFormFields.length === 0) delete updatedLocalizations[activeLocale]
-        result = await apiService.upsertConfig(selectedScopeId, buildPutBody(rsvpConfig, {
-          rsvp: { ...rsvpConfig.rsvp, localizations: updatedLocalizations },
-        }))
-      } else {
-        const updatedFields = rsvpConfig.rsvp.rsvpFormFields.map(f =>
-          f.field === fieldName ? { ...f, options: newOptions } : f
-        )
-        result = await apiService.upsertConfig(selectedScopeId, buildPutBody(rsvpConfig, {
-          rsvp: { ...rsvpConfig.rsvp, rsvpFormFields: updatedFields },
-        }))
-      }
-      if ('error' in result) {
-        toast.error('Failed to save options')
-        return
-      }
-      toast.success('Options saved')
-      setPendingOptionEdits(prev => {
-        const next = { ...prev }
-        delete next[fieldName]
-        return next
-      })
-      await loadConfigs()
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Failed to save options')
-    } finally {
-      setSavingOptionKey(null)
-    }
-  }, [selectedScopeId, rsvpConfig, pendingOptionEdits, activeLocale, apiService, toast, loadConfigs])
-
-
   /** Deletes a slice from the scope's single config. If any other slice remains,
    *  the config is PUT with the slice's fields cleared; otherwise the whole
    *  config is DELETEd. */
@@ -729,20 +668,7 @@ export const ConfigManagement: React.FC<ConfigManagementProps> = () => {
   }, [selectedScopeId, attrFormName, attrFormLabel, attrFormInputType, attrFormEnabled, attrFormValues, editingAttr, scopeConfig, ownsConfig, apiService, toast, loadConfigs])
 
   // ============================================================================
-  // RSVP FIELD HELPERS
-  // ============================================================================
-
-  const handleToggleFieldExpand = useCallback((key: string) => {
-    setExpandedFieldKeys(prev => {
-      const next = new Set(prev)
-      if (next.has(key)) next.delete(key)
-      else next.add(key)
-      return next
-    })
-  }, [])
-
-  // ============================================================================
-  // RSVP TABLE COLUMNS (for display)
+  // RSVP TABLE DATA
   // ============================================================================
 
   const rsvpFieldsForTable = useMemo(() => {
@@ -754,244 +680,6 @@ export const ConfigManagement: React.FC<ConfigManagementProps> = () => {
   }, [rsvpConfig])
 
   const isOwnRsvpConfig = rsvpConfig?.scopeId === selectedScopeId
-
-  const rsvpFieldActions = useMemo(() => {
-    if (!canWriteConfig || !isOwnRsvpConfig) return []
-    return [
-      {
-        icon: 'edit' as const,
-        label: 'Edit field',
-        onAction: (item: RsvpFormField & { _key: string }) => openFieldEdit(item),
-      },
-      {
-        icon: 'delete' as const,
-        label: 'Delete field',
-        onAction: (item: RsvpFormField & { _key: string }) => {
-          const index = rsvpConfig?.rsvp.rsvpFormFields.findIndex(f => f.field === item.field) ?? -1
-          if (index !== -1) setFieldToDelete({ field: item, index })
-        },
-      },
-    ]
-  }, [canWriteConfig, isOwnRsvpConfig, openFieldEdit, rsvpConfig])
-
-  const rsvpFieldColumns = useMemo(() => [
-    { key: 'field', name: 'FIELD NAME', width: 160, sortable: true },
-    {
-      key: 'label',
-      name: 'LABEL',
-      width: 160,
-      sortable: true,
-      render: (item: RsvpFormField & { _key: string }) => {
-        const override = activeLocale
-          ? rsvpConfig?.rsvp?.localizations?.[activeLocale]?.rsvpFormFields?.find(f => f.field === item.field)
-          : null
-        const localeLabel = override?.label
-        return localeLabel
-          ? <Text>{localeLabel}</Text>
-          : <Text UNSAFE_style={{ color: activeLocale ? 'var(--spectrum-global-color-gray-600)' : undefined, fontStyle: activeLocale ? 'italic' : undefined }}>{item.label}</Text>
-      },
-    },
-    {
-      key: 'type',
-      name: 'TYPE',
-      width: 120,
-      sortable: true,
-      render: (item: RsvpFormField & { _key: string }) => (
-        <div className={style({ display: 'flex', alignItems: 'start' })}>
-          <Badge variant="neutral">{item.type}</Badge>
-        </div>
-      ),
-    },
-    {
-      key: 'required',
-      name: 'REQUIRED',
-      width: 100,
-      sortable: false,
-      render: (item: RsvpFormField & { _key: string }) => (
-        <Text>{item.required ? 'Yes' : 'No'}</Text>
-      ),
-    },
-    {
-      key: 'options',
-      name: 'OPTIONS',
-      width: 100,
-      sortable: false,
-      render: (item: RsvpFormField & { _key: string }) => (
-        <Text>{item.options.length > 0 ? `${item.options.length} options` : '-'}</Text>
-      ),
-    },
-    {
-      key: 'default',
-      name: 'DEFAULT',
-      width: 120,
-      sortable: false,
-      render: (item: RsvpFormField & { _key: string }) => (
-        <Text>{item.default || '-'}</Text>
-      ),
-    },
-  ], [activeLocale, rsvpConfig])
-
-  const renderRsvpExpandedContent = useCallback((item: RsvpFormField & { _key: string }) => {
-    const locales = Object.keys(rsvpConfig?.rsvp?.localizations || {})
-    const isSelectType = item.type === 'select' || item.type === 'checkbox'
-    const pendingOpts = pendingOptionEdits[item.field]
-    const isEditing = pendingOpts !== undefined
-    const displayOpts = isEditing ? pendingOpts : item.options
-    const canEdit = canWriteConfig && isOwnRsvpConfig
-
-    return (
-      <div className={style({ display: 'flex', flexDirection: 'column', gap: 12 })}>
-        {isSelectType && (
-          <div>
-            {/* Options section header */}
-            <div className={style({ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 })}>
-              <Text UNSAFE_style={{ fontWeight: 600, fontSize: 13 }}>
-                Options ({displayOpts.length}):
-              </Text>
-              <div className={style({ display: 'flex', gap: 8, alignItems: 'center' })}>
-                {isEditing ? (
-                  <>
-                    <ActionButton
-                      isQuiet
-                      size="S"
-                      onPress={() => setPendingOptionEdits(prev => {
-                        const next = { ...prev }
-                        delete next[item.field]
-                        return next
-                      })}
-                    >
-                      <RotateCCW />
-                      <Text>Discard</Text>
-                    </ActionButton>
-                    <Button
-                      variant="accent"
-                      size="S"
-                      isDisabled={savingOptionKey === item.field}
-                      onPress={() => handleSaveFieldOptions(item.field)}
-                    >
-                      <Text>Save Options</Text>
-                    </Button>
-                  </>
-                ) : canEdit && (
-                  <ActionButton
-                    isQuiet
-                    size="S"
-                    onPress={() => setPendingOptionEdits(prev => ({ ...prev, [item.field]: [...item.options] }))}
-                  >
-                    <EditIcon />
-                    <Text>Edit Options</Text>
-                  </ActionButton>
-                )}
-              </div>
-            </div>
-            {/* Options list */}
-            {displayOpts.length > 0 ? (
-              <div className={style({ display: 'flex', flexDirection: 'column', gap: 8, paddingX: 12, paddingY: 8, backgroundColor: 'gray-75', borderWidth: 1, borderColor: 'gray-300', borderRadius: 'sm' })}>
-                {displayOpts.map((opt, i) => (
-                  <div key={i} className={style({ display: 'flex', gap: 8, alignItems: 'end' })}>
-                    <TextField
-                      label="Value"
-                      value={opt.value}
-                      isReadOnly={!isEditing}
-                      onChange={(v) => setPendingOptionEdits(prev => {
-                        const opts = [...(prev[item.field] ?? [])]
-                        opts[i] = { ...opts[i], value: v }
-                        return { ...prev, [item.field]: opts }
-                      })}
-                      styles={style({ flexGrow: 1 })}
-                    />
-                    <TextField
-                      label="Label"
-                      value={opt.label}
-                      isReadOnly={!isEditing}
-                      onChange={(v) => setPendingOptionEdits(prev => {
-                        const opts = [...(prev[item.field] ?? [])]
-                        opts[i] = { ...opts[i], label: v }
-                        return { ...prev, [item.field]: opts }
-                      })}
-                      styles={style({ flexGrow: 1 })}
-                    />
-                    {isEditing && (
-                      <ActionButton
-                        isQuiet
-                        aria-label="Delete option"
-                        onPress={() => setPendingOptionEdits(prev => ({
-                          ...prev,
-                          [item.field]: (prev[item.field] ?? []).filter((_, oi) => oi !== i),
-                        }))}
-                      >
-                        <RemoveCircle />
-                      </ActionButton>
-                    )}
-                  </div>
-                ))}
-                {isEditing && (
-                  <div className={style({ display: 'flex', justifyContent: 'end', marginTop: 4 })}>
-                    <ActionButton
-                      isQuiet
-                      size="S"
-                      onPress={() => setPendingOptionEdits(prev => ({
-                        ...prev,
-                        [item.field]: [...(prev[item.field] ?? []), { value: '', label: '' }],
-                      }))}
-                    >
-                      <Add />
-                      <Text>Add Option</Text>
-                    </ActionButton>
-                  </div>
-                )}
-              </div>
-            ) : (
-              <Text UNSAFE_style={{ fontSize: 13, color: 'var(--spectrum-global-color-gray-700)', fontStyle: 'italic' }}>
-                {isEditing ? 'No options — add one above.' : 'No options defined.'}
-              </Text>
-            )}
-          </div>
-        )}
-        {item.default && (
-          <div>
-            <Text UNSAFE_style={{ fontWeight: 600, fontSize: 13 }}>Default: </Text>
-            <Text>{item.default}</Text>
-          </div>
-        )}
-        {locales.length > 0 && (
-          <div>
-            <Text UNSAFE_style={{ fontWeight: 600, fontSize: 13 }}>Localizations:</Text>
-            <div className={style({ display: 'flex', flexDirection: 'column', gap: 4, marginTop: 4 })}>
-              {locales.map(locale => {
-                const overrides = rsvpConfig?.rsvp?.localizations?.[locale]?.rsvpFormFields || []
-                const override = overrides.find((o: RsvpFormFieldLocaleOverride) => o.field === item.field)
-                if (!override) return null
-                return (
-                  <div key={locale} className={style({ display: 'flex', gap: 8, alignItems: 'center' })}>
-                    <div className={style({ display: 'flex', alignItems: 'start' })}><Badge variant="neutral">{locale}</Badge></div>
-                    {override.label && <Text>Label: {override.label}</Text>}
-                    {override.placeholder && <Text>Placeholder: {override.placeholder}</Text>}
-                    {override.options && <Text>Options: {override.options.map((o: RsvpOption) => o.label || o.value).join(', ')}</Text>}
-                  </div>
-                )
-              })}
-            </div>
-          </div>
-        )}
-        {!isSelectType && !item.default && locales.length === 0 && (
-          <Text UNSAFE_style={{ color: 'var(--spectrum-global-color-gray-700)', fontSize: 13 }}>
-            No additional details
-          </Text>
-        )}
-      </div>
-    )
-  }, [rsvpConfig, pendingOptionEdits, savingOptionKey, canWriteConfig, isOwnRsvpConfig, setPendingOptionEdits, handleSaveFieldOptions])
-
-  const isRsvpFieldExpandable = useCallback((item: RsvpFormField & { _key: string }) => {
-    const isSelectType = item.type === 'select' || item.type === 'checkbox'
-    if (isSelectType) return true
-    if (item.default) return true
-    const hasLocaleOverride = Object.values(rsvpConfig?.rsvp?.localizations || {}).some(
-      loc => loc.rsvpFormFields.some(f => f.field === item.field)
-    )
-    return hasLocaleOverride
-  }, [rsvpConfig])
 
   // ============================================================================
   // CUSTOM ATTRIBUTES TABLE
@@ -1092,55 +780,104 @@ export const ConfigManagement: React.FC<ConfigManagementProps> = () => {
             <TabPanel id="rsvp">
               <div className={style({ display: 'flex', flexDirection: 'column', gap: 24, marginTop: 24 })}>
                 {rsvpConfig ? (
-                  <ResourceDashboardLayout
-                    title="RSVP Form Fields"
-                    totalCount={rsvpFieldsForTable.length}
-                    error={null}
-                    data={rsvpFieldsForTable}
-                    columns={rsvpFieldColumns}
-                    actions={rsvpFieldActions}
-                    getItemKey={(item) => item._key}
-                    createButton={canWriteConfig ? (
-                      <ButtonGroup>
-                        <Button variant="secondary" onPress={() => openRsvpEdit(rsvpConfig)}>
-                          <EditIcon />
-                          <Text>Edit Config</Text>
-                        </Button>
-                        {canDeleteConfig && (
-                          <Button variant="secondary" onPress={() => setRsvpConfigToDelete(rsvpConfig)}>
-                            <RemoveCircle />
-                            <Text>Delete</Text>
-                          </Button>
-                        )}
-                      </ButtonGroup>
-                    ) : undefined}
-                    onRefresh={loadConfigs}
-                    emptyStateTitle="No Fields"
-                    emptyStateDescription="This RSVP config has no form fields"
-                    searchPlaceholder="Search fields..."
-                    searchKeys={['field', 'label', 'type']}
-                    renderExpandedContent={renderRsvpExpandedContent}
-                    expandedKeys={expandedFieldKeys}
-                    onToggleExpand={handleToggleFieldExpand}
-                    isRowExpandable={isRsvpFieldExpandable}
-                    toolbarEnd={
-                      <Picker
-                        aria-label="Locale"
-                        selectedKey={activeLocale ?? ''}
-                        onSelectionChange={(key) => setActiveLocale(key === '' ? null : key as string)}
-                        styles={style({ width: 220 })}
-                      >
-                        <PickerItem key="" id="" textValue="Base (default)">
-                          <Text slot="label">Base (default)</Text>
-                        </PickerItem>
-                        {availableLocales.map(l => (
-                          <PickerItem key={l.code} id={l.code} textValue={`${l.name} (${l.code})`}>
-                            <Text slot="label">{l.name} ({l.code})</Text>
+                  <div>
+                    <div className={style({ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 })}>
+                      <Heading level={3}>RSVP Form Fields ({rsvpFieldsForTable.length})</Heading>
+                      <div className={style({ display: 'flex', gap: 8, alignItems: 'center' })}>
+                        <Picker
+                          aria-label="Locale"
+                          selectedKey={activeLocale ?? ''}
+                          onSelectionChange={(key) => setActiveLocale(key === '' ? null : key as string)}
+                          styles={style({ width: 220 })}
+                        >
+                          <PickerItem key="" id="" textValue="Base (default)">
+                            <Text slot="label">Base (default)</Text>
                           </PickerItem>
-                        ))}
-                      </Picker>
-                    }
-                  />
+                          {availableLocales.map(l => (
+                            <PickerItem key={l.code} id={l.code} textValue={`${l.name} (${l.code})`}>
+                              <Text slot="label">{l.name} ({l.code})</Text>
+                            </PickerItem>
+                          ))}
+                        </Picker>
+                        {canWriteConfig && (
+                          <ButtonGroup>
+                            <Button variant="secondary" onPress={() => openRsvpEdit(rsvpConfig)}>
+                              <EditIcon />
+                              <Text>Edit Config</Text>
+                            </Button>
+                            {canDeleteConfig && (
+                              <Button variant="secondary" onPress={() => setRsvpConfigToDelete(rsvpConfig)}>
+                                <RemoveCircle />
+                                <Text>Delete</Text>
+                              </Button>
+                            )}
+                          </ButtonGroup>
+                        )}
+                      </div>
+                    </div>
+                    <div style={{ border: '1px solid var(--spectrum-global-color-gray-300)', borderRadius: 8, overflow: 'hidden' }}>
+                      <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                        <thead>
+                          <tr style={{ backgroundColor: 'var(--spectrum-global-color-gray-100)' }}>
+                            <th style={{ padding: '12px 16px', textAlign: 'left', fontWeight: 600, fontSize: 13 }}>Field Name</th>
+                            <th style={{ padding: '12px 16px', textAlign: 'left', fontWeight: 600, fontSize: 13 }}>Label</th>
+                            <th style={{ padding: '12px 16px', textAlign: 'left', fontWeight: 600, fontSize: 13 }}>Type</th>
+                            <th style={{ padding: '12px 16px', textAlign: 'left', fontWeight: 600, fontSize: 13 }}>Required</th>
+                            <th style={{ padding: '12px 16px', textAlign: 'left', fontWeight: 600, fontSize: 13 }}>Options</th>
+                            <th style={{ padding: '12px 16px', textAlign: 'left', fontWeight: 600, fontSize: 13 }}>Default</th>
+                            {isOwnRsvpConfig && (canWriteConfig || canDeleteConfig) && (
+                              <th style={{ padding: '12px 16px', textAlign: 'left', fontWeight: 600, fontSize: 13 }} />
+                            )}
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {rsvpFieldsForTable.map((item) => {
+                            const localeOverride = activeLocale
+                              ? rsvpConfig.rsvp?.localizations?.[activeLocale]?.rsvpFormFields?.find(f => f.field === item.field)
+                              : null
+                            return (
+                              <tr key={item._key} style={{ borderTop: '1px solid var(--spectrum-global-color-gray-300)' }}>
+                                <td style={{ padding: '10px 16px' }}><Text>{item.field}</Text></td>
+                                <td style={{ padding: '10px 16px' }}>
+                                  {localeOverride?.label
+                                    ? <Text>{localeOverride.label}</Text>
+                                    : <Text UNSAFE_style={{ color: activeLocale ? 'var(--spectrum-global-color-gray-600)' : undefined, fontStyle: activeLocale ? 'italic' : undefined }}>{item.label}</Text>
+                                  }
+                                </td>
+                                <td style={{ padding: '10px 16px' }}>
+                                  <Badge variant="neutral">{item.type}</Badge>
+                                </td>
+                                <td style={{ padding: '10px 16px' }}><Text>{item.required ? 'Yes' : 'No'}</Text></td>
+                                <td style={{ padding: '10px 16px' }}>
+                                  <Text>{item.options.length > 0 ? `${item.options.length} options` : '—'}</Text>
+                                </td>
+                                <td style={{ padding: '10px 16px' }}><Text>{item.default || '—'}</Text></td>
+                                {isOwnRsvpConfig && (canWriteConfig || canDeleteConfig) && (
+                                  <td style={{ padding: '10px 16px' }}>
+                                    <div style={{ display: 'flex', gap: 4, justifyContent: 'flex-end' }}>
+                                      {canWriteConfig && (
+                                        <ActionButton isQuiet aria-label="Edit field" onPress={() => openFieldEdit(item)}>
+                                          <EditIcon />
+                                        </ActionButton>
+                                      )}
+                                      {canDeleteConfig && (
+                                        <ActionButton isQuiet aria-label="Delete field" onPress={() => {
+                                          const index = rsvpConfig.rsvp.rsvpFormFields.findIndex(f => f.field === item.field)
+                                          if (index !== -1) setFieldToDelete({ field: item, index })
+                                        }}>
+                                          <RemoveCircle />
+                                        </ActionButton>
+                                      )}
+                                    </div>
+                                  </td>
+                                )}
+                              </tr>
+                            )
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
                 ) : (
                   <div
                     style={{
@@ -1275,48 +1012,56 @@ export const ConfigManagement: React.FC<ConfigManagementProps> = () => {
                   </div>
                 ) : (
                   <div style={{ border: '1px solid var(--spectrum-global-color-gray-300)', borderRadius: 8, overflow: 'hidden' }}>
-                    {/* Column headers */}
-                    <div style={{ display: 'flex', alignItems: 'center', padding: '8px 12px', backgroundColor: 'var(--spectrum-global-color-gray-100)', borderBottom: '1px solid var(--spectrum-global-color-gray-300)', gap: 12 }}>
-                      <Text UNSAFE_style={{ flex: 1, fontWeight: 700, fontSize: 12, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Name</Text>
-                      <Text UNSAFE_style={{ flex: 1, fontWeight: 700, fontSize: 12, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Label</Text>
-                      <Text UNSAFE_style={{ width: 140, flexShrink: 0, fontWeight: 700, fontSize: 12, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Input Type</Text>
-                      <Text UNSAFE_style={{ width: 80, flexShrink: 0, fontWeight: 700, fontSize: 12, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Enabled</Text>
-                      <Text UNSAFE_style={{ width: 80, flexShrink: 0, fontWeight: 700, fontSize: 12, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Values</Text>
-                      <span style={{ width: 72, flexShrink: 0 }} />
-                    </div>
-
-                    {/* Single attribute row */}
-                    <div style={{ display: 'flex', alignItems: 'center', padding: '10px 12px', gap: 12, backgroundColor: 'var(--spectrum-global-color-gray-50)' }}>
-                      <Text UNSAFE_style={{ flex: 1, fontSize: 14 }}>{customAttrsConfig.customAttributes.name}</Text>
-                      <Text UNSAFE_style={{ flex: 1, fontSize: 14, color: 'var(--spectrum-global-color-gray-700)' }}>
-                        {customAttrsConfig.customAttributes.label || '—'}
-                      </Text>
-                      <div style={{ width: 140, flexShrink: 0, display: 'flex', alignItems: 'center' }}>
-                        <Badge variant="neutral">{customAttrsConfig.customAttributes.inputType}</Badge>
-                      </div>
-                      <div style={{ width: 80, flexShrink: 0, display: 'flex', alignItems: 'center' }}>
-                        <Badge variant={customAttrsConfig.customAttributes.enabled ? 'positive' : 'negative'}>
-                          {customAttrsConfig.customAttributes.enabled ? 'Yes' : 'No'}
-                        </Badge>
-                      </div>
-                      <Text UNSAFE_style={{ width: 80, flexShrink: 0, fontSize: 14, color: 'var(--spectrum-global-color-gray-700)' }}>
-                        {(customAttrsConfig.customAttributes.values?.length ?? 0) > 0
-                          ? `${customAttrsConfig.customAttributes.values.length} values`
-                          : '—'}
-                      </Text>
-                      <div style={{ width: 72, flexShrink: 0, display: 'flex', gap: 4, justifyContent: 'flex-end' }}>
-                        {canWriteConfig && isOwnAttrsConfig && (
-                          <ActionButton isQuiet aria-label="Edit attribute" onPress={() => openAttrEdit(customAttrsConfig.customAttributes)}>
-                            <EditIcon />
-                          </ActionButton>
-                        )}
-                        {canDeleteConfig && isOwnAttrsConfig && (
-                          <ActionButton isQuiet aria-label="Delete attribute" onPress={() => setAttrToDelete(customAttrsConfig.customAttributes.name)}>
-                            <RemoveCircle />
-                          </ActionButton>
-                        )}
-                      </div>
-                    </div>
+                    <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                      <thead>
+                        <tr style={{ backgroundColor: 'var(--spectrum-global-color-gray-100)' }}>
+                          <th style={{ padding: '12px 16px', textAlign: 'left', fontWeight: 600, fontSize: 13 }}>Name</th>
+                          <th style={{ padding: '12px 16px', textAlign: 'left', fontWeight: 600, fontSize: 13 }}>Label</th>
+                          <th style={{ padding: '12px 16px', textAlign: 'left', fontWeight: 600, fontSize: 13 }}>Input Type</th>
+                          <th style={{ padding: '12px 16px', textAlign: 'left', fontWeight: 600, fontSize: 13 }}>Enabled</th>
+                          <th style={{ padding: '12px 16px', textAlign: 'left', fontWeight: 600, fontSize: 13 }}>Values</th>
+                          {isOwnAttrsConfig && (canWriteConfig || canDeleteConfig) && (
+                            <th style={{ padding: '12px 16px', textAlign: 'left', fontWeight: 600, fontSize: 13 }} />
+                          )}
+                        </tr>
+                      </thead>
+                      <tbody>
+                        <tr style={{ borderTop: '1px solid var(--spectrum-global-color-gray-300)' }}>
+                          <td style={{ padding: '10px 16px' }}><Text>{customAttrsConfig.customAttributes.name}</Text></td>
+                          <td style={{ padding: '10px 16px' }}><Text>{customAttrsConfig.customAttributes.label || '—'}</Text></td>
+                          <td style={{ padding: '10px 16px' }}>
+                            <Badge variant="neutral">{customAttrsConfig.customAttributes.inputType}</Badge>
+                          </td>
+                          <td style={{ padding: '10px 16px' }}>
+                            <Badge variant={customAttrsConfig.customAttributes.enabled ? 'positive' : 'negative'}>
+                              {customAttrsConfig.customAttributes.enabled ? 'Yes' : 'No'}
+                            </Badge>
+                          </td>
+                          <td style={{ padding: '10px 16px' }}>
+                            <Text>{(customAttrsConfig.customAttributes.values?.length ?? 0) > 0
+                              ? `${customAttrsConfig.customAttributes.values.length} values`
+                              : '—'}
+                            </Text>
+                          </td>
+                          {isOwnAttrsConfig && (canWriteConfig || canDeleteConfig) && (
+                            <td style={{ padding: '10px 16px' }}>
+                              <div style={{ display: 'flex', gap: 4, justifyContent: 'flex-end' }}>
+                                {canWriteConfig && (
+                                  <ActionButton isQuiet aria-label="Edit attribute" onPress={() => openAttrEdit(customAttrsConfig.customAttributes)}>
+                                    <EditIcon />
+                                  </ActionButton>
+                                )}
+                                {canDeleteConfig && (
+                                  <ActionButton isQuiet aria-label="Delete attribute" onPress={() => setAttrToDelete(customAttrsConfig.customAttributes.name)}>
+                                    <RemoveCircle />
+                                  </ActionButton>
+                                )}
+                              </div>
+                            </td>
+                          )}
+                        </tr>
+                      </tbody>
+                    </table>
                   </div>
                 )}
               </div>
