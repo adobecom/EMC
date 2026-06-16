@@ -497,6 +497,7 @@ const EventFormInner: React.FC<EventFormInnerProps> = ({ ims: _ims }) => {
     loadFromStorage,
     persistToStorage,
     state,
+    scopeLocales,
   } = useEventFormContext()
 
   isDirtyRef.current = isDirty
@@ -714,6 +715,7 @@ const EventFormInner: React.FC<EventFormInnerProps> = ({ ims: _ims }) => {
     try {
       const result = await getDetailPagePathForSave(formData.seriesId, formData, {
         excludeEventId: eventId || undefined,
+        scopeLocales,
       })
       if (!result) return { proceed: true }
 

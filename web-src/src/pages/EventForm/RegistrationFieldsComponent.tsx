@@ -101,7 +101,7 @@ export const RegistrationFieldsComponent: React.FC<RegistrationFieldsComponentPr
         if (scopeId) {
           const result = await cachedApi.getConfig(scopeId)
           if (result !== null && !('error' in result)) {
-            const scopeFields = hasRsvpSlice(result) ? result.rsvpFormFields : []
+            const scopeFields = hasRsvpSlice(result) ? result.rsvp.rsvpFormFields : []
             if (scopeFields.length > 0) {
               nextFields = scopeFields
               mode = 'scope'

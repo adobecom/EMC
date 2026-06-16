@@ -3,8 +3,9 @@
 */
 
 import React, { useState, useCallback, useMemo, useEffect } from 'react'
-import { Text, SearchField, Picker, PickerItem, Badge } from '@react-spectrum/s2'
+import { Text, SearchField, Picker, PickerItem, Badge, ActionButton } from '@react-spectrum/s2'
 import { style } from "@react-spectrum/s2/style" with { type: "macro" }
+import Download from '@react-spectrum/s2/icons/Download'
 import CalendarIllustration from '@react-spectrum/s2/illustrations/linear/Calendar'
 import NoSearchResults from '@react-spectrum/s2/illustrations/linear/NoSearchResults'
 import type { Attendee } from '../../types/attendee'
@@ -12,6 +13,8 @@ import type { SessionRow, SessionTimeAttendee, SessionTimeInfo } from '../../typ
 import { apiService } from '../../services/api'
 import { DataTable, TableColumn, ResourceEmptyState } from '../../components/shared'
 import { COLORS } from '../../styles/designSystem'
+import { useHasPermission } from '../../hooks/useHasPermission'
+import { generateCsv, downloadCsv, sanitizeFilename, exportDatetime, CsvColumn } from '../../utils/csvExport'
 
 const DEFAULT_PAGE_SIZE = 20
 const PAGE_SIZE_OPTIONS = [10, 20, 50, 100] as const
@@ -28,17 +31,28 @@ interface EnrichedSessionAttendee {
   email?: string
 }
 
+const SESSION_CSV_COLUMNS: CsvColumn[] = [
+  { key: 'sessionName', label: 'Session Name' },
+  { key: 'attendeeName', label: 'Attendee Name' },
+  { key: 'email', label: 'Email' },
+  { key: 'registrationStatus', label: 'Registration Status' },
+]
+
 interface SessionsTabProps {
   eventId: string
+  eventTitle: string
   attendees: Attendee[]
 }
 
 export const SessionsTab: React.FC<SessionsTabProps> = ({
   eventId,
+  eventTitle,
   attendees,
 }) => {
+  const isAdmin = useHasPermission('user', 'read')
   const [sessions, setSessions] = useState<SessionRow[]>([])
   const [isLoadingSessions, setIsLoadingSessions] = useState(false)
+  const [isExporting, setIsExporting] = useState(false)
   const [expandedSessionIds, setExpandedSessionIds] = useState<Set<string>>(new Set())
   const [sessionAttendeeMap, setSessionAttendeeMap] = useState<Record<string, EnrichedSessionAttendee[]>>({})
   const [loadingSessionIds, setLoadingSessionIds] = useState<Set<string>>(new Set())
@@ -135,6 +149,55 @@ export const SessionsTab: React.FC<SessionsTabProps> = ({
     setSearchQuery('')
     setTablePageSize(DEFAULT_PAGE_SIZE)
   }, [eventId])
+
+  // ---- Export ----
+
+  const handleExport = useCallback(async () => {
+    setIsExporting(true)
+    try {
+      const allRows = await Promise.all(
+        sessions.map(async (session) => {
+          let attendeeList = sessionAttendeeMap[session.sessionId]
+
+          if (!attendeeList && session.sessionTimeId) {
+            try {
+              const result = await apiService.getSessionTimeAttendees(session.sessionTimeId)
+              if (result && !('error' in result)) {
+                const raw: SessionTimeAttendee[] = Array.isArray(result?.attendees) ? result.attendees : []
+                attendeeList = raw.map(sta => {
+                  const match = attendeeMap.get(sta.attendeeId)
+                  return {
+                    attendeeId: sta.attendeeId,
+                    registrationStatus: sta.registrationStatus,
+                    firstName: match?.firstName,
+                    lastName: match?.lastName,
+                    email: match?.email,
+                  }
+                })
+              }
+            } catch {
+              // Skip sessions whose attendees fail to load
+            }
+          }
+
+          if (!attendeeList) return []
+
+          return attendeeList.map(attendee => ({
+            sessionName: session.name,
+            attendeeName: [attendee.firstName, attendee.lastName].filter(Boolean).join(' ') || attendee.email || attendee.attendeeId,
+            email: attendee.email ?? '',
+            registrationStatus: attendee.registrationStatus === 'registered' ? 'Registered' : 'Waitlisted',
+          }))
+        })
+      )
+
+      const rows = allRows.flat()
+      const csv = generateCsv(rows, SESSION_CSV_COLUMNS)
+      downloadCsv(csv, `${sanitizeFilename(eventTitle || 'event')}_sessions_registrations_${exportDatetime()}.csv`)
+    } finally {
+      setIsExporting(false)
+    }
+  }, [sessions, sessionAttendeeMap, attendeeMap, eventTitle])
 
   // ---- Expand / collapse ----
 
@@ -389,6 +452,15 @@ export const SessionsTab: React.FC<SessionsTabProps> = ({
               </PickerItem>
             ))}
           </Picker>
+          {isAdmin && (
+            <ActionButton
+              aria-label="Export sessions to CSV"
+              onPress={handleExport}
+              isPending={isExporting}
+            >
+              <Download />
+            </ActionButton>
+          )}
           <div className={style({ width: 240 })}>
             <SearchField
               label="Search sessions"
