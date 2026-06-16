@@ -156,6 +156,7 @@ export const ConfigManagement: React.FC<ConfigManagementProps> = () => {
   const [editingFieldDialog, setEditingFieldDialog] = useState<{ field: RsvpFormField; index: number } | null>(null)
   const [editingFieldForm, setEditingFieldForm] = useState<RsvpFormField>(createEmptyRsvpField())
   const [fieldToDelete, setFieldToDelete] = useState<{ field: RsvpFormField; index: number } | null>(null)
+  const [expandedFieldKeys, setExpandedFieldKeys] = useState<Set<string>>(new Set())
 
   // ============================================================================
   // LOCALES DIALOG STATE
@@ -286,6 +287,7 @@ export const ConfigManagement: React.FC<ConfigManagementProps> = () => {
 
   // Clear state on scope change
   useEffect(() => {
+    setExpandedFieldKeys(new Set())
     setActiveLocale(null)
   }, [selectedScopeId])
 
@@ -832,46 +834,92 @@ export const ConfigManagement: React.FC<ConfigManagementProps> = () => {
                         </thead>
                         <tbody>
                           {rsvpFieldsForTable.map((item) => {
+                            const isExpandable = item.type === 'select' || item.type === 'checkbox'
+                            const isExpanded = expandedFieldKeys.has(item._key)
                             const localeOverride = activeLocale
                               ? rsvpConfig.rsvp?.localizations?.[activeLocale]?.rsvpFormFields?.find(f => f.field === item.field)
                               : null
+                            const colSpan = 6 + (isOwnRsvpConfig && (canWriteConfig || canDeleteConfig) ? 1 : 0)
                             return (
-                              <tr key={item._key} style={{ borderTop: '1px solid var(--spectrum-global-color-gray-300)' }}>
-                                <td style={{ padding: '10px 16px' }}><Text>{item.field}</Text></td>
-                                <td style={{ padding: '10px 16px' }}>
-                                  {localeOverride?.label
-                                    ? <Text>{localeOverride.label}</Text>
-                                    : <Text UNSAFE_style={{ color: activeLocale ? 'var(--spectrum-global-color-gray-600)' : undefined, fontStyle: activeLocale ? 'italic' : undefined }}>{item.label}</Text>
-                                  }
-                                </td>
-                                <td style={{ padding: '10px 16px' }}>
-                                  <Badge variant="neutral">{item.type}</Badge>
-                                </td>
-                                <td style={{ padding: '10px 16px' }}><Text>{item.required ? 'Yes' : 'No'}</Text></td>
-                                <td style={{ padding: '10px 16px' }}>
-                                  <Text>{item.options.length > 0 ? `${item.options.length} options` : '—'}</Text>
-                                </td>
-                                <td style={{ padding: '10px 16px' }}><Text>{item.default || '—'}</Text></td>
-                                {isOwnRsvpConfig && (canWriteConfig || canDeleteConfig) && (
+                              <React.Fragment key={item._key}>
+                                <tr style={{ borderTop: '1px solid var(--spectrum-global-color-gray-300)' }}>
                                   <td style={{ padding: '10px 16px' }}>
-                                    <div style={{ display: 'flex', gap: 4, justifyContent: 'flex-end' }}>
-                                      {canWriteConfig && (
-                                        <ActionButton isQuiet aria-label="Edit field" onPress={() => openFieldEdit(item)}>
-                                          <EditIcon />
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                                      {isExpandable && (
+                                        <ActionButton
+                                          isQuiet
+                                          aria-label={isExpanded ? 'Collapse' : 'Expand'}
+                                          onPress={() => setExpandedFieldKeys(prev => {
+                                            const next = new Set(prev)
+                                            next.has(item._key) ? next.delete(item._key) : next.add(item._key)
+                                            return next
+                                          })}
+                                        >
+                                          <ChevronRight UNSAFE_style={{ transform: isExpanded ? 'rotate(90deg)' : 'none', transition: 'transform 0.15s' }} />
                                         </ActionButton>
                                       )}
-                                      {canDeleteConfig && (
-                                        <ActionButton isQuiet aria-label="Delete field" onPress={() => {
-                                          const index = rsvpConfig.rsvp.rsvpFormFields.findIndex(f => f.field === item.field)
-                                          if (index !== -1) setFieldToDelete({ field: item, index })
-                                        }}>
-                                          <RemoveCircle />
-                                        </ActionButton>
-                                      )}
+                                      <Text>{item.field}</Text>
                                     </div>
                                   </td>
+                                  <td style={{ padding: '10px 16px' }}>
+                                    {localeOverride?.label
+                                      ? <Text>{localeOverride.label}</Text>
+                                      : <Text UNSAFE_style={{ color: activeLocale ? 'var(--spectrum-global-color-gray-600)' : undefined, fontStyle: activeLocale ? 'italic' : undefined }}>{item.label}</Text>
+                                    }
+                                  </td>
+                                  <td style={{ padding: '10px 16px' }}>
+                                    <Badge variant="neutral">{item.type}</Badge>
+                                  </td>
+                                  <td style={{ padding: '10px 16px' }}><Text>{item.required ? 'Yes' : 'No'}</Text></td>
+                                  <td style={{ padding: '10px 16px' }}>
+                                    <Text>{item.options.length > 0 ? `${item.options.length} options` : '—'}</Text>
+                                  </td>
+                                  <td style={{ padding: '10px 16px' }}><Text>{item.default || '—'}</Text></td>
+                                  {isOwnRsvpConfig && (canWriteConfig || canDeleteConfig) && (
+                                    <td style={{ padding: '10px 16px' }}>
+                                      <div style={{ display: 'flex', gap: 4, justifyContent: 'flex-end' }}>
+                                        {canWriteConfig && (
+                                          <ActionButton isQuiet aria-label="Edit field" onPress={() => openFieldEdit(item)}>
+                                            <EditIcon />
+                                          </ActionButton>
+                                        )}
+                                        {canDeleteConfig && (
+                                          <ActionButton isQuiet aria-label="Delete field" onPress={() => {
+                                            const index = rsvpConfig.rsvp.rsvpFormFields.findIndex(f => f.field === item.field)
+                                            if (index !== -1) setFieldToDelete({ field: item, index })
+                                          }}>
+                                            <RemoveCircle />
+                                          </ActionButton>
+                                        )}
+                                      </div>
+                                    </td>
+                                  )}
+                                </tr>
+                                {isExpandable && isExpanded && (
+                                  <tr style={{ borderTop: '1px solid var(--spectrum-global-color-gray-200)' }}>
+                                    <td colSpan={colSpan} style={{ padding: '12px 24px 16px 40px', backgroundColor: 'var(--spectrum-global-color-gray-75)' }}>
+                                      {item.options.length > 0 ? (
+                                        <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                                          <Text UNSAFE_style={{ fontWeight: 600, fontSize: 13 }}>
+                                            Options ({item.options.length})
+                                          </Text>
+                                          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                                            {item.options.map(opt => (
+                                              <Badge key={opt.value} variant="neutral">
+                                                {localeOverride?.options?.find(o => o.value === opt.value)?.label || opt.label || opt.value}
+                                              </Badge>
+                                            ))}
+                                          </div>
+                                        </div>
+                                      ) : (
+                                        <Text UNSAFE_style={{ fontSize: 13, color: 'var(--spectrum-global-color-gray-700)', fontStyle: 'italic' }}>
+                                          No options defined.
+                                        </Text>
+                                      )}
+                                    </td>
+                                  </tr>
                                 )}
-                              </tr>
+                              </React.Fragment>
                             )
                           })}
                         </tbody>
