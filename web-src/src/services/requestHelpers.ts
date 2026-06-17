@@ -227,7 +227,7 @@ export async function uploadImage(
     const xhr = new XMLHttpRequest()
 
     xhr.open(method, url)
-    xhr.setRequestHeader('x-image-alt-text', encodeURIComponent(config.altText || ''))
+    xhr.setRequestHeader('x-image-alt-text', `UTF-8''${encodeURIComponent(config.altText || '')}`)
     xhr.setRequestHeader('x-image-kind', config.type)
     xhr.setRequestHeader('x-api-key', 'acom_event_service')
     xhr.setRequestHeader('Authorization', `Bearer ${authToken}`)
