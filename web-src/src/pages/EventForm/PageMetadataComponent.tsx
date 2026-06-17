@@ -398,7 +398,7 @@ export const PageMetadataComponent: React.FC = () => {
           to ensure accurate analytics tracking and reporting for your webinar event page.
         </Text>
         <Text UNSAFE_style={TYPOGRAPHY.HELPER_TEXT}>
-          Please note, if a page does NOT have a primary product please use the Adobe for Business tag (CXO &amp; C&amp;P products), All DX (CXO products), and All CC (C&amp;P products).
+          Please note, if a page does NOT have a primary product please use the Adobe for Business tag (CXO &amp; C&amp;P products), <strong>All DX</strong> (CXO products), and <strong>All CC</strong> (C&amp;P products).
         </Text>
       </div>
 
