@@ -2,7 +2,7 @@
 * <license header>
 */
 
-import React, { useEffect, useMemo } from 'react'
+import React, { useEffect, useMemo, useState } from 'react'
 import { Text, Button, Heading, Picker, PickerItem } from '@react-spectrum/s2'
 import { style } from '@react-spectrum/s2/style' with { type: 'macro' }
 import Refresh from '@react-spectrum/s2/icons/Refresh'
@@ -20,6 +20,7 @@ import { IMS } from '../../types'
 import { useSafeState, useRBACFilter, useHasPermission, usePersistentState } from '../../hooks'
 import { useGroup } from '../../contexts/GroupContext'
 import { SUPPORTED_SPEAKER_LOCALES, SPEAKER_LOCALE_LABELS } from '../../config/localeMapping'
+import { hasLocalesSlice } from '../../types/configApi'
 
 const FILTER_ALL = '__all__'
 
@@ -267,13 +268,19 @@ const TemplateBreakdown: React.FC<TemplateBreakdownProps> = ({ templateCounts })
   )
 }
 
+/** Default locale picker entries when no scope config is available */
+const DEFAULT_LOCALE_PICKER_OPTIONS = SUPPORTED_SPEAKER_LOCALES.map((key) => ({
+  key,
+  label: SPEAKER_LOCALE_LABELS[key] || key,
+}))
+
 /**
  * Overview Dashboard - Main component
  * Displays comprehensive statistics and metrics for events and series
  */
 export const OverviewDashboard: React.FC<OverviewDashboardProps> = () => {
   const { filterEvents, filterSeries } = useRBACFilter()
-  const { groupVersion } = useGroup()
+  const { groupVersion, activeGroup } = useGroup()
   const canReadEvents = useHasPermission('event', 'read')
   const canReadSeries = useHasPermission('series', 'read')
   const [events, setEvents] = useSafeState<EventApiResponse[]>([])
@@ -307,6 +314,33 @@ export const OverviewDashboard: React.FC<OverviewDashboardProps> = () => {
   useEffect(() => {
     loadData()
   }, [groupVersion]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Locale options fetched from scope config; falls back to the static default list
+  const [localeOptions, setLocaleOptions] = useState(DEFAULT_LOCALE_PICKER_OPTIONS)
+  useEffect(() => {
+    const scopeId = activeGroup?.scopeId
+    if (!scopeId) {
+      setLocaleOptions(DEFAULT_LOCALE_PICKER_OPTIONS)
+      return
+    }
+    let cancelled = false
+    cachedApi.getConfig(scopeId).then((result) => {
+      if (cancelled) return
+      if (result === null || 'error' in result) {
+        setLocaleOptions(DEFAULT_LOCALE_PICKER_OPTIONS)
+        return
+      }
+      const locales = hasLocalesSlice(result) ? result.locales.locales : undefined
+      if (locales && locales.length > 0) {
+        setLocaleOptions(locales.map((l) => ({ key: l.code, label: l.name })))
+      } else {
+        setLocaleOptions(DEFAULT_LOCALE_PICKER_OPTIONS)
+      }
+    }).catch(() => {
+      if (!cancelled) setLocaleOptions(DEFAULT_LOCALE_PICKER_OPTIONS)
+    })
+    return () => { cancelled = true }
+  }, [activeGroup?.scopeId])
 
   // Calculate statistics
   const stats = useMemo(() => {
@@ -450,9 +484,9 @@ export const OverviewDashboard: React.FC<OverviewDashboardProps> = () => {
               }}
             >
               <PickerItem id={FILTER_ALL} textValue="All languages">All languages</PickerItem>
-              {SUPPORTED_SPEAKER_LOCALES.map(loc => (
-                <PickerItem key={loc} id={loc} textValue={SPEAKER_LOCALE_LABELS[loc] || loc}>
-                  {SPEAKER_LOCALE_LABELS[loc] || loc}
+              {localeOptions.map(o => (
+                <PickerItem key={o.key} id={o.key} textValue={o.label}>
+                  {o.label}
                 </PickerItem>
               ))}
             </Picker>

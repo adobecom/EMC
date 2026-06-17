@@ -2,7 +2,7 @@
 * <license header>
 */
 
-import React, { useEffect, useMemo, useCallback, useRef } from 'react'
+import React, { useEffect, useMemo, useCallback, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { ActionButton, Button, ButtonGroup, MenuTrigger, Menu, MenuItem, Text, DialogTrigger, Dialog, Content, Heading, AlertDialog, Link, Picker, PickerItem, Popover, ToggleButtonGroup, ToggleButton } from "@react-spectrum/s2"
 import { style } from "@react-spectrum/s2/style" with { type: "macro" }
@@ -28,6 +28,7 @@ import { useSafeState, useRBACFilter, usePersistentState } from '../../hooks'
 import { useHasPermission } from '../../hooks/useHasPermission'
 import { getEspEnvParam } from '../../config/constants'
 import { SUPPORTED_SPEAKER_LOCALES, SPEAKER_LOCALE_LABELS } from '../../config/localeMapping'
+import { hasLocalesSlice } from '../../types/configApi'
 import { buildEventManageActions } from './eventManageActions'
 import { EventCalendar } from './calendar/EventCalendar'
 import { EventPopoverContent } from './calendar/EventPopoverContent'
@@ -64,6 +65,12 @@ function getEventCreatorForFilter(
     ''
   )
 }
+
+/** Default locale picker entries when no scope config is available */
+const DEFAULT_LOCALE_PICKER_OPTIONS = SUPPORTED_SPEAKER_LOCALES.map((key) => ({
+  key,
+  label: SPEAKER_LOCALE_LABELS[key] || key,
+}))
 
 interface EventsDashboardProps {
   ims: IMS
@@ -151,10 +158,37 @@ export const EventsDashboard: React.FC<EventsDashboardProps> = () => {
     }
   }
 
-  const { groupVersion } = useGroup()
+  const { groupVersion, activeGroup } = useGroup()
   useEffect(() => {
     loadEventsData()
   }, [groupVersion]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Locale options fetched from scope config; falls back to the static default list
+  const [localeOptions, setLocaleOptions] = useState(DEFAULT_LOCALE_PICKER_OPTIONS)
+  useEffect(() => {
+    const scopeId = activeGroup?.scopeId
+    if (!scopeId) {
+      setLocaleOptions(DEFAULT_LOCALE_PICKER_OPTIONS)
+      return
+    }
+    let cancelled = false
+    cachedApi.getConfig(scopeId).then((result) => {
+      if (cancelled) return
+      if (result === null || 'error' in result) {
+        setLocaleOptions(DEFAULT_LOCALE_PICKER_OPTIONS)
+        return
+      }
+      const locales = hasLocalesSlice(result) ? result.locales.locales : undefined
+      if (locales && locales.length > 0) {
+        setLocaleOptions(locales.map((l) => ({ key: l.code, label: l.name })))
+      } else {
+        setLocaleOptions(DEFAULT_LOCALE_PICKER_OPTIONS)
+      }
+    }).catch(() => {
+      if (!cancelled) setLocaleOptions(DEFAULT_LOCALE_PICKER_OPTIONS)
+    })
+    return () => { cancelled = true }
+  }, [activeGroup?.scopeId])
 
   // Fetch thumbnails only for visible event IDs (triggered by pagination)
   useEffect(() => {
@@ -321,37 +355,23 @@ export const EventsDashboard: React.FC<EventsDashboardProps> = () => {
     fetchHistory()
   }, [visibleEventIds])
 
-  // Callback to track which events are currently visible
-  const handleVisibleEventsChange = useCallback((visibleEvents: EventDashboardItem[]) => {
-    const ids = visibleEvents.map(e => e.eventId)
-
-    // Only update if the SET of IDs actually changed (not order) to prevent infinite loops
+  // Shared core: update visibleEventIds only when the SET of IDs actually changes
+  const updateVisibleEventIds = useCallback((ids: string[]) => {
     setVisibleEventIds(prevIds => {
       if (prevIds.length !== ids.length) return ids
-
-      // Check if the same set of IDs (order doesn't matter for caching)
-      const prevSet = new Set(prevIds)
-      const newSet = new Set(ids)
-
-      if (prevSet.size === newSet.size && [...prevSet].every(id => newSet.has(id))) {
-        return prevIds // Same set of IDs, don't trigger re-fetch
-      }
-
-      return ids
-    })
-  }, [])
-
-  // Calendar view: load enrichments for events in the visible month
-  const handleCalendarMonthEventIds = useCallback((ids: string[]) => {
-    setVisibleEventIds(prevIds => {
       const prevSet = new Set(prevIds)
       const newSet = new Set(ids)
       if (prevSet.size === newSet.size && [...prevSet].every(id => newSet.has(id))) {
-        return prevIds
+        return prevIds // Same set — don't trigger re-fetch
       }
       return ids
     })
   }, [])
+
+  // Callback to track which events are currently visible (table view)
+  const handleVisibleEventsChange = useCallback((visibleEvents: EventDashboardItem[]) => {
+    updateVisibleEventIds(visibleEvents.map(e => e.eventId))
+  }, [updateVisibleEventIds])
 
   const formatDate = useCallback((timestamp?: number): string => {
     if (!timestamp) return 'N/A'
@@ -1035,7 +1055,7 @@ export const EventsDashboard: React.FC<EventsDashboardProps> = () => {
           >
             <Filter />
           </ActionButton>
-        <Dialog size="L">
+          <Dialog size="L">
           {({ close }) => (
             <>
               <Heading slot="title">Filter events</Heading>
@@ -1123,9 +1143,9 @@ export const EventsDashboard: React.FC<EventsDashboardProps> = () => {
                     {hasEventsWithoutLocale && (
                       <PickerItem id={FILTER_NO_LOCALE} textValue="(no language)">(no language)</PickerItem>
                     )}
-                    {SUPPORTED_SPEAKER_LOCALES.map(loc => (
-                      <PickerItem key={loc} id={loc} textValue={SPEAKER_LOCALE_LABELS[loc] || loc}>
-                        {SPEAKER_LOCALE_LABELS[loc] || loc}
+                    {localeOptions.map(o => (
+                      <PickerItem key={o.key} id={o.key} textValue={o.label}>
+                        {o.label}
                       </PickerItem>
                     ))}
                   </Picker>
@@ -1137,7 +1157,7 @@ export const EventsDashboard: React.FC<EventsDashboardProps> = () => {
               </ButtonGroup>
             </>
           )}
-        </Dialog>
+          </Dialog>
         </DialogTrigger>
         {hasActiveFilters && (
           <span
@@ -1260,7 +1280,7 @@ export const EventsDashboard: React.FC<EventsDashboardProps> = () => {
                   events={data}
                   thumbnails={thumbnails}
                   loadingThumbnails={loadingThumbnails}
-                  onMonthEventIds={handleCalendarMonthEventIds}
+                  onMonthEventIds={updateVisibleEventIds}
                   renderEventPopover={renderEventPopover}
                 />
               )

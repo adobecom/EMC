@@ -10,6 +10,7 @@ import { EventDashboardItem } from '../../../types/domain'
 import { StatusBadge } from '../../../components/shared'
 import { buildEventManageActions } from '../eventManageActions'
 import { SPACING } from '../../../styles/designSystem'
+import { SPEAKER_LOCALE_LABELS } from '../../../config/localeMapping'
 
 export interface EventPopoverContentProps {
   item: EventDashboardItem
@@ -55,7 +56,7 @@ export const EventPopoverContent: React.FC<EventPopoverContentProps> = ({
         : formattedDate,
     },
     { label: 'Venue', value: venueName || item.venueName || '—' },
-    { label: 'Language', value: item.language || '—' },
+    { label: 'Language', value: item.defaultLocale ? (SPEAKER_LOCALE_LABELS[item.defaultLocale] || item.defaultLocale) : '—' },
     {
       label: 'RSVP',
       value: (
