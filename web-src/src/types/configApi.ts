@@ -83,7 +83,7 @@ export interface ScopeConfig {
   label?: string
   rsvp?: RsvpSlice
   locales?: LocalesSlice
-  customAttributes?: CustomAttributeConfig
+  customAttributes?: CustomAttributeConfig[]
 }
 
 /** Type aliases for slice-narrowed views. These are NOT separate configs — the
@@ -97,7 +97,7 @@ export type LocalesScopeConfig = ScopeConfig & {
 }
 
 export type CustomAttributesScopeConfig = ScopeConfig & {
-  customAttributes: CustomAttributeConfig
+  customAttributes: CustomAttributeConfig[]
 }
 
 export const hasRsvpSlice = (c: ScopeConfig | null | undefined): c is RsvpScopeConfig =>
@@ -107,7 +107,7 @@ export const hasLocalesSlice = (c: ScopeConfig | null | undefined): c is Locales
   !!c && c.locales != null && Array.isArray(c.locales.locales)
 
 export const hasAttributesSlice = (c: ScopeConfig | null | undefined): c is CustomAttributesScopeConfig =>
-  !!c && c.customAttributes != null && typeof c.customAttributes === 'object' && !Array.isArray(c.customAttributes)
+  !!c && Array.isArray(c.customAttributes)
 
 // ============================================================================
 // Custom Attribute Models

@@ -157,6 +157,7 @@ export const ConfigManagement: React.FC<ConfigManagementProps> = () => {
   const [editingFieldForm, setEditingFieldForm] = useState<RsvpFormField>(createEmptyRsvpField())
   const [fieldToDelete, setFieldToDelete] = useState<{ field: RsvpFormField; index: number } | null>(null)
   const [expandedFieldKeys, setExpandedFieldKeys] = useState<Set<string>>(new Set())
+  const [expandedAttrKeys, setExpandedAttrKeys] = useState<Set<string>>(new Set())
 
   // ============================================================================
   // LOCALES DIALOG STATE
@@ -645,15 +646,19 @@ export const ConfigManagement: React.FC<ConfigManagementProps> = () => {
       inputType: attrFormInputType,
       enabled: attrFormEnabled,
       values: isSelectType
-        ? attrFormValues.filter(v => v.value.trim()).map((v, i) => ({ ...v, ordinal: i }))
+        ? attrFormValues.filter(v => v.value.trim()).map((v, i) => ({ ...v, valueId: v.valueId || generateUUID(), ordinal: i }))
         : [],
     }
 
     setIsSaving(true)
     try {
+      const existing = scopeConfig?.customAttributes ?? []
+      const updatedAttrs = editingAttr
+        ? existing.map(a => a.attributeId === attrConfig.attributeId ? attrConfig : a)
+        : [...existing, attrConfig]
       const body = scopeConfig && ownsConfig
-        ? buildPutBody(scopeConfig, { customAttributes: attrConfig })
-        : { customAttributes: attrConfig }
+        ? buildPutBody(scopeConfig, { customAttributes: updatedAttrs })
+        : { customAttributes: updatedAttrs }
       const result = await apiService.upsertConfig(selectedScopeId, body)
       if ('error' in result) {
         toast.error(`Failed to ${editingAttr ? 'update' : 'create'} custom attribute`)
@@ -1041,7 +1046,7 @@ export const ConfigManagement: React.FC<ConfigManagementProps> = () => {
                     <ActionButton isQuiet aria-label="Refresh" onPress={loadConfigs}>
                       <RotateCCW />
                     </ActionButton>
-                    {canWriteConfig && !customAttrsConfig && (
+                    {canWriteConfig && (
                       <Button variant="accent" onPress={openAttrCreate}>
                         <Add />
                         <Text>Create Attribute</Text>
@@ -1050,7 +1055,7 @@ export const ConfigManagement: React.FC<ConfigManagementProps> = () => {
                   </div>
                 </div>
 
-                {!customAttrsConfig ? (
+                {!customAttrsConfig || customAttrsConfig.customAttributes.length === 0 ? (
                   <div style={{ padding: '40px 0', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8 }}>
                     <GearSettingIllustration aria-hidden />
                     <Text UNSAFE_style={{ fontWeight: 600 }}>No Custom Attribute</Text>
@@ -1074,40 +1079,90 @@ export const ConfigManagement: React.FC<ConfigManagementProps> = () => {
                         </tr>
                       </thead>
                       <tbody>
-                        <tr style={{ borderTop: '1px solid var(--spectrum-global-color-gray-300)' }}>
-                          <td style={{ padding: '10px 16px' }}><Text>{customAttrsConfig.customAttributes.name}</Text></td>
-                          <td style={{ padding: '10px 16px' }}><Text>{customAttrsConfig.customAttributes.label || '—'}</Text></td>
-                          <td style={{ padding: '10px 16px' }}>
-                            <Badge variant="neutral">{customAttrsConfig.customAttributes.inputType}</Badge>
-                          </td>
-                          <td style={{ padding: '10px 16px' }}>
-                            <Badge variant={customAttrsConfig.customAttributes.enabled ? 'positive' : 'negative'}>
-                              {customAttrsConfig.customAttributes.enabled ? 'Yes' : 'No'}
-                            </Badge>
-                          </td>
-                          <td style={{ padding: '10px 16px' }}>
-                            <Text>{(customAttrsConfig.customAttributes.values?.length ?? 0) > 0
-                              ? `${customAttrsConfig.customAttributes.values.length} values`
-                              : '—'}
-                            </Text>
-                          </td>
-                          {isOwnAttrsConfig && (canWriteConfig || canDeleteConfig) && (
-                            <td style={{ padding: '10px 16px' }}>
-                              <div style={{ display: 'flex', gap: 4, justifyContent: 'flex-end' }}>
-                                {canWriteConfig && (
-                                  <ActionButton isQuiet aria-label="Edit attribute" onPress={() => openAttrEdit(customAttrsConfig.customAttributes)}>
-                                    <EditIcon />
-                                  </ActionButton>
+                        {customAttrsConfig.customAttributes.map(attr => {
+                          const isExpandable = attr.inputType === 'single-select' || attr.inputType === 'multi-select'
+                          const isExpanded = expandedAttrKeys.has(attr.attributeId)
+                          const colSpan = 5 + (isOwnAttrsConfig && (canWriteConfig || canDeleteConfig) ? 1 : 0)
+                          return (
+                            <React.Fragment key={attr.attributeId}>
+                              <tr style={{ borderTop: '1px solid var(--spectrum-global-color-gray-300)' }}>
+                                <td style={{ padding: '10px 16px' }}>
+                                  <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                                    {isExpandable && (
+                                      <ActionButton
+                                        isQuiet
+                                        aria-label={isExpanded ? 'Collapse' : 'Expand'}
+                                        onPress={() => setExpandedAttrKeys(prev => {
+                                          const next = new Set(prev)
+                                          next.has(attr.attributeId) ? next.delete(attr.attributeId) : next.add(attr.attributeId)
+                                          return next
+                                        })}
+                                      >
+                                        <ChevronRight UNSAFE_style={{ transform: isExpanded ? 'rotate(90deg)' : 'none', transition: 'transform 0.15s' }} />
+                                      </ActionButton>
+                                    )}
+                                    <Text>{attr.name}</Text>
+                                  </div>
+                                </td>
+                                <td style={{ padding: '10px 16px' }}><Text>{attr.label || '—'}</Text></td>
+                                <td style={{ padding: '10px 16px' }}>
+                                  <Badge variant="neutral">{attr.inputType}</Badge>
+                                </td>
+                                <td style={{ padding: '10px 16px' }}>
+                                  <Badge variant={attr.enabled ? 'positive' : 'negative'}>
+                                    {attr.enabled ? 'Yes' : 'No'}
+                                  </Badge>
+                                </td>
+                                <td style={{ padding: '10px 16px' }}>
+                                  <Text>{(attr.values?.length ?? 0) > 0
+                                    ? `${attr.values.length} values`
+                                    : '—'}
+                                  </Text>
+                                </td>
+                                {isOwnAttrsConfig && (canWriteConfig || canDeleteConfig) && (
+                                  <td style={{ padding: '10px 16px' }}>
+                                    <div style={{ display: 'flex', gap: 4, justifyContent: 'flex-end' }}>
+                                      {canWriteConfig && (
+                                        <ActionButton isQuiet aria-label="Edit attribute" onPress={() => openAttrEdit(attr)}>
+                                          <EditIcon />
+                                        </ActionButton>
+                                      )}
+                                      {canDeleteConfig && (
+                                        <ActionButton isQuiet aria-label="Delete attribute" onPress={() => setAttrToDelete(attr.attributeId)}>
+                                          <RemoveCircle />
+                                        </ActionButton>
+                                      )}
+                                    </div>
+                                  </td>
                                 )}
-                                {canDeleteConfig && (
-                                  <ActionButton isQuiet aria-label="Delete attribute" onPress={() => setAttrToDelete(customAttrsConfig.customAttributes.name)}>
-                                    <RemoveCircle />
-                                  </ActionButton>
-                                )}
-                              </div>
-                            </td>
-                          )}
-                        </tr>
+                              </tr>
+                              {isExpandable && isExpanded && (
+                                <tr style={{ borderTop: '1px solid var(--spectrum-global-color-gray-200)' }}>
+                                  <td colSpan={colSpan} style={{ padding: '12px 24px 16px 40px', backgroundColor: 'var(--spectrum-global-color-gray-75)' }}>
+                                    {(attr.values?.length ?? 0) > 0 ? (
+                                      <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                                        <Text UNSAFE_style={{ fontWeight: 600, fontSize: 13 }}>
+                                          Values ({attr.values.length})
+                                        </Text>
+                                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                                          {attr.values.map((v, i) => (
+                                            <Badge key={v.valueId || v.value || i} variant="neutral">
+                                              {v.label || v.value}
+                                            </Badge>
+                                          ))}
+                                        </div>
+                                      </div>
+                                    ) : (
+                                      <Text UNSAFE_style={{ fontSize: 13, color: 'var(--spectrum-global-color-gray-700)', fontStyle: 'italic' }}>
+                                        No values defined.
+                                      </Text>
+                                    )}
+                                  </td>
+                                </tr>
+                              )}
+                            </React.Fragment>
+                          )
+                        })}
                       </tbody>
                     </table>
                   </div>
@@ -1841,11 +1896,29 @@ export const ConfigManagement: React.FC<ConfigManagementProps> = () => {
           variant="destructive"
           primaryActionLabel="Delete"
           cancelLabel="Cancel"
-          onPrimaryAction={() => { if (customAttrsConfig) deleteSlice(customAttrsConfig, 'customAttributes', 'Custom Attribute') }}
+          onPrimaryAction={async () => {
+            if (!customAttrsConfig || !attrToDelete || !selectedScopeId) return
+            setIsSaving(true)
+            try {
+              const updatedAttrs = customAttrsConfig.customAttributes.filter(a => a.attributeId !== attrToDelete)
+              const body = updatedAttrs.length > 0
+                ? buildPutBody(customAttrsConfig, { customAttributes: updatedAttrs })
+                : buildPutBody({ ...customAttrsConfig, customAttributes: undefined }, {})
+              const result = await apiService.upsertConfig(selectedScopeId, body)
+              if ('error' in result) { toast.error('Failed to delete Custom Attribute'); return }
+              toast.success('Custom Attribute deleted')
+              setAttrToDelete(null)
+              await loadConfigs()
+            } catch (err) {
+              toast.error(err instanceof Error ? err.message : 'Failed to delete Custom Attribute')
+            } finally {
+              setIsSaving(false)
+            }
+          }}
           onCancel={() => setAttrToDelete(null)}
           isPrimaryActionDisabled={isSaving}
         >
-          Delete attribute <strong>{attrToDelete}</strong>? This action cannot be undone.
+          Delete attribute <strong>{customAttrsConfig?.customAttributes.find(a => a.attributeId === attrToDelete)?.name ?? attrToDelete}</strong>? This action cannot be undone.
         </AlertDialog>
       </DialogTrigger>
 
