@@ -52,6 +52,8 @@ import { useSafeState, useRBACFilter } from '../../hooks'
 import { useHasPermission } from '../../hooks/useHasPermission'
 import { getProfileAttr } from '../../utils/dataFilters'
 import { DEFAULT_LOCALE, SUPPORTED_SPEAKER_LOCALES } from '../../config/localeMapping'
+import { hasLocalesSlice } from '../../types/configApi'
+import type { Locale } from '../../types/configApi'
 import { buildSpeakerPayloadForDashboard } from '../../services/payloadBuilders'
 import {
   SpeakerFormDialog,
@@ -228,6 +230,9 @@ export const SpeakersDashboard: React.FC<SpeakersDashboardProps> = () => {
   // Action states
   const [actionInProgress, setActionInProgress] = useSafeState<string | null>(null)
   
+  // Scope locales for the selected series
+  const [scopeLocales, setScopeLocales] = useSafeState<Locale[] | null>(null)
+
   // Dialog states
   const [isFormDialogOpen, setIsFormDialogOpen] = useSafeState(false)
   const [editingSpeaker, setEditingSpeaker] = useSafeState<SpeakerDashboardItem | null>(null)
@@ -370,7 +375,23 @@ export const SpeakersDashboard: React.FC<SpeakersDashboardProps> = () => {
   const selectedSeries = useMemo(() => {
     return seriesList.find(s => s.seriesId === selectedSeriesId)
   }, [seriesList, selectedSeriesId])
-  
+
+  useEffect(() => {
+    const scopeId = selectedSeries?.scopeId
+    if (!scopeId) {
+      setScopeLocales(null)
+      return
+    }
+    let cancelled = false
+    cachedApi.getConfig(scopeId).then((result) => {
+      if (cancelled) return
+      if (!result || 'error' in result) { setScopeLocales(null); return }
+      const locales = hasLocalesSlice(result) ? result.locales.locales : undefined
+      setScopeLocales(locales && locales.length > 0 ? locales : null)
+    }).catch(() => { if (!cancelled) setScopeLocales(null) })
+    return () => { cancelled = true }
+  }, [selectedSeries?.scopeId, setScopeLocales])
+
   // ============================================================================
   // HANDLERS
   // ============================================================================
@@ -1078,6 +1099,7 @@ export const SpeakersDashboard: React.FC<SpeakersDashboardProps> = () => {
         seriesId={selectedSeriesId || ''}
         isSubmitting={!!actionInProgress}
         cascadeToEvents={(editingSpeaker as any)?._cascadeToEvents}
+        scopeLocales={scopeLocales}
       />
       
       {/* Cascade Confirmation Dialog */}
