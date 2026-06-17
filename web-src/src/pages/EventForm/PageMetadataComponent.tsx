@@ -394,8 +394,11 @@ export const PageMetadataComponent: React.FC = () => {
           Page metadata management
         </Heading>
         <Text UNSAFE_style={TYPOGRAPHY.SECTION_DESCRIPTION}>
-          Configure tracking and metadata settings for your event. Set your primary product name 
+          Configure tracking and metadata settings for your event. Set your primary product name
           to ensure accurate analytics tracking and reporting for your webinar event page.
+        </Text>
+        <Text UNSAFE_style={TYPOGRAPHY.HELPER_TEXT}>
+          Please note, if a page does NOT have a primary product please use the Adobe for Business tag (CXO &amp; C&amp;P products), All DX (CXO products), and All CC (C&amp;P products).
         </Text>
       </div>
 
