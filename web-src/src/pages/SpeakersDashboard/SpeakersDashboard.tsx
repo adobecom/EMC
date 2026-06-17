@@ -80,13 +80,13 @@ const SPEAKERS_DASHBOARD_TABLE_TEST_IDS = {
   row: (itemKey: string) => `speakers-dashboard-table-row-${itemKey}`,
 }
 
-function getSpeakerDisplayTitle(item: SpeakerDashboardItem): string {
+function getSpeakerDisplayTitle(item: SpeakerDashboardItem, locales: readonly string[]): string {
   const row = item as unknown as Record<string, unknown>
   const primary = getProfileAttr(row, 'title', DEFAULT_LOCALE)
   if (typeof primary === 'string' && primary.trim()) {
     return primary.trim()
   }
-  for (const loc of SUPPORTED_SPEAKER_LOCALES) {
+  for (const loc of locales) {
     const t = item.localizations?.[loc]?.title
     if (typeof t === 'string' && t.trim()) {
       return t.trim()
@@ -95,10 +95,10 @@ function getSpeakerDisplayTitle(item: SpeakerDashboardItem): string {
   return (item.title || '').trim()
 }
 
-function speakerTitleSearchText(item: SpeakerDashboardItem): string {
+function speakerTitleSearchText(item: SpeakerDashboardItem, locales: readonly string[]): string {
   const chunks = [
     item.title,
-    ...SUPPORTED_SPEAKER_LOCALES.map((loc) => item.localizations?.[loc]?.title),
+    ...locales.map((loc) => item.localizations?.[loc]?.title),
   ]
   return chunks.filter(Boolean).join(' ').toLowerCase()
 }
@@ -391,6 +391,11 @@ export const SpeakersDashboard: React.FC<SpeakersDashboardProps> = () => {
     }).catch(() => { if (!cancelled) setScopeLocales(null) })
     return () => { cancelled = true }
   }, [selectedSeries?.scopeId, setScopeLocales])
+
+  const effectiveLocales: readonly string[] = useMemo(
+    () => (scopeLocales && scopeLocales.length > 0 ? scopeLocales.map((l) => l.code) : SUPPORTED_SPEAKER_LOCALES),
+    [scopeLocales]
+  )
 
   // ============================================================================
   // HANDLERS
@@ -712,7 +717,7 @@ export const SpeakersDashboard: React.FC<SpeakersDashboardProps> = () => {
         return aName.localeCompare(bName)
       },
       render: (item) => {
-        const displayTitle = getSpeakerDisplayTitle(item)
+        const displayTitle = getSpeakerDisplayTitle(item, effectiveLocales)
         return (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
             <Text UNSAFE_style={{ fontWeight: 'bold' }}>
@@ -856,7 +861,7 @@ export const SpeakersDashboard: React.FC<SpeakersDashboardProps> = () => {
         )
       }
     }
-  ], [loadingEventCounts, handleMenuAction, handleViewConnections, canWriteEvent, canDeleteEvent])
+  ], [loadingEventCounts, handleMenuAction, handleViewConnections, canWriteEvent, canDeleteEvent, effectiveLocales])
   
   // ============================================================================
   // RENDER
@@ -1080,7 +1085,7 @@ export const SpeakersDashboard: React.FC<SpeakersDashboardProps> = () => {
             searchFilter={(speaker, query) => {
               const fullName = `${speaker.firstName || ''} ${speaker.lastName || ''}`.toLowerCase()
               return (
-                fullName.includes(query) || speakerTitleSearchText(speaker).includes(query)
+                fullName.includes(query) || speakerTitleSearchText(speaker, effectiveLocales).includes(query)
               )
             }}
           />
