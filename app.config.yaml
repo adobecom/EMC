@@ -13,6 +13,9 @@ application:
     # IMS_CLIENT_ID and IMS_SCOPES are used when the app runs outside the shell
     IMS_CLIENT_ID: $IMS_CLIENT_ID
     IMS_SCOPES: $IMS_SCOPES
+    DEV_GOOGLE_PLACES_API: $DEV_GOOGLE_PLACES_API
+    STAGE_GOOGLE_PLACES_API: $STAGE_GOOGLE_PLACES_API
+    PROD_GOOGLE_PLACES_API: $PROD_GOOGLE_PLACES_API
   extensions:
     dx/excshell/1:
       # Uses the default ExC Shell client (exc_app) — no custom IMS config required
