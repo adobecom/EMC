@@ -17,6 +17,7 @@
     "react-icons": "^5.5.0",
     "react-router-dom": "^6.26.2",
     "regenerator-runtime": "^0.13.5",
+    "rfc5987-value-chars": "^1.0.0",
     "uuid": "^8.0.0"
   },
   "devDependencies": {
