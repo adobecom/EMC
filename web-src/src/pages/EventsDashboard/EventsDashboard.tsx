@@ -4,7 +4,7 @@
 
 import React, { useEffect, useMemo, useCallback, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { ActionButton, Button, ButtonGroup, MenuTrigger, Menu, MenuItem, Text, DialogTrigger, Dialog, Content, Heading, AlertDialog, Link, Picker, PickerItem, TextField } from "@react-spectrum/s2"
+import { ActionButton, Button, ButtonGroup, MenuTrigger, Menu, MenuItem, Text, DialogTrigger, Dialog, Content, Heading, AlertDialog, Link, Picker, PickerItem } from "@react-spectrum/s2"
 import { style } from "@react-spectrum/s2/style" with { type: "macro" }
 import More from "@react-spectrum/s2/icons/More"
 import Publish from "@react-spectrum/s2/icons/Publish"
@@ -18,6 +18,7 @@ import Filter from "@react-spectrum/s2/icons/Filter"
 import GlobeGrid from "@react-spectrum/s2/icons/GlobeGrid"
 import Location from "@react-spectrum/s2/icons/Location"
 import { getEventTypeOptions, EventType } from '../../config/eventTypeConfig'
+import { CloneEvent } from './CloneEvent'
 import { TableColumn } from '../../components/shared/DataTable'
 import { StatusBadge, ResourceDashboardLayout, BlurredLoadingOverlay } from '../../components/shared'
 import CalendarIllustration from '@react-spectrum/s2/illustrations/linear/Calendar'
@@ -28,7 +29,6 @@ import { SPACING, SHIMMER_BASE, SURFACES } from '../../styles/designSystem'
 import { seriesEnrichmentManager, SeriesInfo } from '../../services/seriesEnrichment'
 import { IMS } from '../../types'
 import { useToast, useGroup } from '../../contexts'
-import { filterEventData } from '../../utils/dataFilters'
 import { useSafeState, useRBACFilter } from '../../hooks'
 import { useHasPermission } from '../../hooks/useHasPermission'
 import { getEspEnvParam } from '../../config/constants'
@@ -89,8 +89,7 @@ export const EventsDashboard: React.FC<EventsDashboardProps> = () => {
   const [loadingHistory, setLoadingHistory] = useSafeState<Set<string>>(new Set())
   const [itemToDelete, setItemToDelete] = useSafeState<EventDashboardItem | null>(null)
   const [actionInProgress, setActionInProgress] = useSafeState<string | null>(null)
-  const [cloneModal, setCloneModal] = useSafeState<EventDashboardItem | null>(null)
-  const [cloneTitle, setCloneTitle] = useSafeState<string>('')
+  const [cloneItem, setCloneItem] = useSafeState<EventDashboardItem | null>(null)
 
   const [listFilters, setListFilters] = useSafeState<{
     seriesId: string
@@ -456,8 +455,7 @@ export const EventsDashboard: React.FC<EventsDashboardProps> = () => {
         break
 
       case 'clone': {
-        setCloneTitle(`${item.eventName} - copy`)
-        setCloneModal(item)
+        setCloneItem(item)
         break
       }
 
@@ -856,61 +854,6 @@ export const EventsDashboard: React.FC<EventsDashboardProps> = () => {
     }
   }, [toast])
 
-  const handleConfirmClone = useCallback(async () => {
-    if (!cloneModal) return
-
-    const trimmedTitle = cloneTitle.trim()
-    if (!trimmedTitle) return
-
-    setActionInProgress('clone')
-
-    try {
-      const eventResponse = await cachedApi.getEventFull(cloneModal.eventId)
-
-      if ('error' in eventResponse) {
-        toast.error('Failed to load event data for cloning')
-        return
-      }
-
-      const cloneableData = filterEventData(eventResponse, 'clone')
-      const locale = eventResponse.defaultLocale || 'en-US'
-
-      const clonedEventData: Record<string, any> = {
-        ...cloneableData,
-        enTitle: trimmedTitle,
-        published: false,
-        liveUpdate: false,
-      }
-
-      if (clonedEventData.localizations && clonedEventData.localizations[locale]) {
-        clonedEventData.localizations[locale].title = trimmedTitle
-      }
-
-      const result = await apiService.createEventExternal(clonedEventData, locale)
-
-      if ('error' in result) {
-        toast.error(`Failed to clone event: ${result.error}`)
-      } else {
-        const newEventId = result.event?.eventId || result.eventId
-        setCloneModal(null)
-        toast.success('Event cloned successfully!', {
-          duration: 5000,
-          action: {
-            label: 'View',
-            onPress: () => {
-              window.location.hash = `#/events/edit/${newEventId}`
-            }
-          }
-        })
-        await loadEventsData()
-      }
-    } catch (err) {
-      console.error('Error cloning event:', err)
-      toast.error('Failed to clone event')
-    } finally {
-      setActionInProgress(null)
-    }
-  }, [cloneModal, cloneTitle, cachedApi, apiService, toast, loadEventsData])
 
   const handleCreateEvent = useCallback((eventType: EventType) => {
     // Navigate to create event form with event type
@@ -1156,38 +1099,12 @@ export const EventsDashboard: React.FC<EventsDashboardProps> = () => {
         zIndex={9999}
       />
 
-      {/* Clone Event Dialog */}
-      <DialogTrigger
-        isOpen={!!cloneModal}
-        onOpenChange={(isOpen) => !isOpen && setCloneModal(null)}
-      >
-        <div style={{ display: 'none' }} />
-        <Dialog size="M">
-          <Heading slot="title">Clone event</Heading>
-          <Content>
-            <Text>Give your event a unique name.</Text>
-            <TextField
-              label=""
-              value={cloneTitle}
-              onChange={setCloneTitle}
-              UNSAFE_style={{ width: '100%' }}
-              autoFocus
-              onKeyDown={(e: React.KeyboardEvent) => {
-                if (e.key === 'Enter' && cloneTitle.trim()) handleConfirmClone()
-              }}
-            />
-          </Content>
-          <ButtonGroup>
-            <Button variant="secondary" onPress={() => setCloneModal(null)}>Cancel</Button>
-            <Button
-              variant="accent"
-              onPress={handleConfirmClone}
-              isDisabled={!cloneTitle.trim() || !!actionInProgress}
-              isPending={actionInProgress === 'clone'}
-            >Continue</Button>
-          </ButtonGroup>
-        </Dialog>
-      </DialogTrigger>
+      {/* Clone Event */}
+      <CloneEvent
+        item={cloneItem}
+        onClose={() => setCloneItem(null)}
+        onCloned={loadEventsData}
+      />
 
       {/* Delete Confirmation Dialog */}
       <DialogTrigger
