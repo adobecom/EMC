@@ -5,6 +5,7 @@
 import React, { useState, useCallback } from 'react'
 import { Button, ButtonGroup, Content, Dialog, DialogTrigger, Heading, Picker, PickerItem, Text, TextField } from '@react-spectrum/s2'
 import { EventDashboardItem, MarketoIntegrationData } from '../../types/domain'
+import { EVENT_TYPE_OPTIONS, EVENT_POI_OPTIONS } from '../EventForm/MarketoIntegrationComponent'
 import { apiService, cachedApi } from '../../services/api'
 import { filterEventData } from '../../utils/dataFilters'
 import { useToast } from '../../contexts'
@@ -13,35 +14,6 @@ import { useToast } from '../../contexts'
 // CONSTANTS
 // ============================================================================
 
-const MARKETO_EVENT_TYPE_OPTIONS = [
-  { key: 'DX NA/ROW', label: 'DX NA/ROW' },
-  { key: 'DX APAC', label: 'DX APAC' },
-  { key: 'DX EMEA', label: 'DX EMEA' },
-  { key: 'DX Japan', label: 'DX Japan' },
-  { key: 'DX LATAM', label: 'DX LATAM' },
-]
-
-const MARKETO_POI_OPTIONS = [
-  { key: 'Adobe Analytics', label: 'Adobe Analytics' },
-  { key: 'Adobe Audience Manager', label: 'Adobe Audience Manager' },
-  { key: 'Adobe Campaign', label: 'Adobe Campaign' },
-  { key: 'Adobe Commerce', label: 'Adobe Commerce' },
-  { key: 'Adobe Creative Cloud®', label: 'Adobe Creative Cloud®' },
-  { key: 'Adobe Experience Manager', label: 'Adobe Experience Manager' },
-  { key: 'Adobe Experience Manager Assets', label: 'Adobe Experience Manager Assets' },
-  { key: 'Adobe Experience Manager Forms', label: 'Adobe Experience Manager Forms' },
-  { key: 'Adobe Experience Manager Sites', label: 'Adobe Experience Manager Sites' },
-  { key: 'Adobe Experience Platform', label: 'Adobe Experience Platform' },
-  { key: 'Adobe Journey Optimizer', label: 'Adobe Journey Optimizer' },
-  { key: 'Adobe Sign', label: 'Adobe Sign' },
-  { key: 'Adobe Target', label: 'Adobe Target' },
-  { key: 'Customer Journey Analytics', label: 'Customer Journey Analytics' },
-  { key: 'Experience Platform Launch', label: 'Experience Platform Launch' },
-  { key: 'Intelligent Services', label: 'Intelligent Services' },
-  { key: 'Marketo® Engage', label: 'Marketo® Engage' },
-  { key: 'Real-Time CDP', label: 'Real-Time CDP' },
-  { key: 'Workfront', label: 'Workfront' },
-]
 
 // ============================================================================
 // TYPES
@@ -217,7 +189,7 @@ export const CloneEvent: React.FC<CloneEventProps> = ({ item, onClose, onCloned 
             onSelectionChange={(key) => setMarketoData(prev => ({ ...prev, eventType: String(key) }))}
             UNSAFE_style={{ width: '100%' }}
           >
-            {MARKETO_EVENT_TYPE_OPTIONS.map(o => <PickerItem key={o.key} id={o.key}>{o.label}</PickerItem>)}
+            {EVENT_TYPE_OPTIONS.filter(o => o.key !== 'no-integration').map(o => <PickerItem key={o.key} id={o.key}>{o.label}</PickerItem>)}
           </Picker>
           <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap' }}>
             <TextField
@@ -245,7 +217,7 @@ export const CloneEvent: React.FC<CloneEventProps> = ({ item, onClose, onCloned 
               selectedKey={marketoData.eventPoi || ''}
               onSelectionChange={(key) => setMarketoData(prev => ({ ...prev, eventPoi: String(key) }))}
             >
-              {MARKETO_POI_OPTIONS.map(o => <PickerItem key={o.key} id={o.key}>{o.label}</PickerItem>)}
+              {EVENT_POI_OPTIONS.filter(o => o.key !== 'no-poi').map(o => <PickerItem key={o.key} id={o.key}>{o.label}</PickerItem>)}
             </Picker>
           </div>
         </div>
