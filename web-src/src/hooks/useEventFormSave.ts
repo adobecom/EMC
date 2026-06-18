@@ -395,14 +395,11 @@ export function useEventFormSave() {
       payload.rsvpFormFields = { fields: mergedData.rsvpFormFields }
     }
 
-    // Custom attributes — select/multi-select send { attributeId, valueId };
-    // text types have no valueId and send { attributeId, value } instead.
+    // Custom attributes — send IDs only; labels are resolved by ESP at read time.
     if (mergedData.customAttributes?.length) {
       payload.customAttributes = mergedData.customAttributes
-        .filter((v: any) => v.valueId || v.value?.trim())
-        .map((v: any) => v.valueId
-          ? { attributeId: v.attributeId, valueId: v.valueId }
-          : { attributeId: v.attributeId, value: v.value })
+        .filter((v: any) => v.valueId)
+        .map((v: any) => ({ attributeId: v.attributeId, valueId: v.valueId }))
     }
     // enabledAttributeIds — only set when the active scope has configs.
     // An empty _customAttributeConfigs means the current scope has no configs (e.g. the user
