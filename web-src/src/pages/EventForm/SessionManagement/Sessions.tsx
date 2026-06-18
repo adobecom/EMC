@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { ProgressCircle, Button, Heading, Text } from "@react-spectrum/s2";
 import AddCircle from "@react-spectrum/s2/icons/AddCircle";
-import { Session, SessionTimeInfo } from "../../../types/sessions";
+import { Session, SessionLocalization, SessionTimeInfo } from "../../../types/sessions";
 import { SessionsList } from "./SessionList";
 import type { SessionFormData } from "./SessionForm";
 import { useEventFormContext, useToast } from "../../../contexts";
@@ -103,17 +103,21 @@ function hasSessionSpeakersChanges(data: SessionFormData): boolean {
   return current.some((id, index) => id !== next[index]);
 }
 
-function mapApiSessionToSession(item: Record<string, unknown>): Session {
+function mapApiSessionToSession(item: Record<string, unknown>, locale: string): Session {
+  const allLocalizations = item.localizations as Record<string, SessionLocalization> | undefined
+  const allLocalizationOverrides = item.localizationOverrides as Record<string, SessionLocalization> | undefined
+  const loc = allLocalizations?.[locale] ?? {}
   return {
     id: String(item.id ?? item.sessionId ?? ""),
-    name: String(item.name ?? item.enTitle ?? item.title ?? ""),
-    description:
-      item.description != null ? String(item.description) : undefined,
+    name: String(loc.title ?? item.enTitle ?? item.title ?? ""),
+    description: loc.description != null ? String(loc.description) : item.description != null ? String(item.description) : undefined,
     startDateTime: String(item.startDateTime ?? ""),
     endDateTime: String(item.endDateTime ?? ""),
     capacity: item.capacity != null ? Number(item.capacity) : undefined,
     tags: parseTagsFromApi(item.tags),
-  };
+    localizations: allLocalizations,
+    localizationOverrides: allLocalizationOverrides,
+  }
 }
 
 function sortSessionsByDate(sessions: Session[]): Session[] {
@@ -130,7 +134,7 @@ async function hydrateSessionWithTime(session: Session): Promise<Session> {
     ? ((timesRes as any).sessionTimes as SessionTimeInfo[])
     : [];
 
-  // Current UI supports exactly one session-time per session, so we use the first item.
+  // Current UI supports exactly one session-time per session - so we use the first item.
   const sessionTime = times[0];
   if (!sessionTime) return session;
 
@@ -262,6 +266,7 @@ export const Sessions: React.FC<SessionsProps> = ({ onOpenFormChange }) => {
     setSeriesSpeakers,
     seriesId: contextSeriesId,
     formData,
+    locale,
   } = useEventFormContext();
   const toast = useToast();
   const [sessions, setSessions] = useState<Session[]>([]);
@@ -326,7 +331,7 @@ export const Sessions: React.FC<SessionsProps> = ({ onOpenFormChange }) => {
       }
       const raw = response?.sessions ?? response?.data ?? [];
       const list = Array.isArray(raw) ? raw : [];
-      const mapped = list.map((item: any) => mapApiSessionToSession(item));
+      const mapped = list.map((item: any) => mapApiSessionToSession(item, locale));
       // Session list UI reads date/time/capacity from Session objects, so hydrate
       // each session with its single session-time data before storing state.
       const withTimes = await Promise.all(mapped.map(hydrateSessionWithTime));
@@ -339,7 +344,7 @@ export const Sessions: React.FC<SessionsProps> = ({ onOpenFormChange }) => {
     } finally {
       setIsLoading(false);
     }
-  }, [eventId, toast]);
+  }, [eventId, toast, locale]);
 
   const refreshEventConcurrencyMetadata = useCallback(
     async (id: string) => {
@@ -385,13 +390,18 @@ export const Sessions: React.FC<SessionsProps> = ({ onOpenFormChange }) => {
       name: data.name,
       description: data.description,
       tags: serializeTagsForApi(data.tags),
+      localizations: {
+        ...(data.localizations ?? {}),
+        [locale]: { title: data.name, description: data.description },
+      },
+      ...(data.localizationOverrides != null ? { localizationOverrides: data.localizationOverrides } : {}),
     };
     const res = await apiService.createSession(eventId, payload);
     if ("error" in res) {
       const msg = res.error?.message || String(res.error);
       throw new Error(msg);
     }
-    const newSession = mapApiSessionToSession(res as any);
+    const newSession = mapApiSessionToSession(res as any, locale);
 
     if (data.speakerIds && data.speakerIds.length > 0 && newSession.id) {
       const speakerPromises = data.speakerIds.map((speakerId, index) =>
@@ -410,6 +420,8 @@ export const Sessions: React.FC<SessionsProps> = ({ onOpenFormChange }) => {
 
     const sessionWithTime: Session = {
       ...newSession,
+      localizations: payload.localizations,
+      localizationOverrides: data.localizationOverrides,
       startDateTime: data.startDateTime,
       endDateTime: data.endDateTime,
       ...(data.isAutoRegistrationEnabled === false && data.attendeeLimit != null
@@ -444,21 +456,29 @@ export const Sessions: React.FC<SessionsProps> = ({ onOpenFormChange }) => {
     const shouldUpdateSession = hasSessionFieldChanges(existingSession, data);
     const shouldUpdateSessionTime = hasSessionTimeFieldChanges(existingSession, data);
 
+    const mergedLocalizations: Record<string, SessionLocalization> = {
+      ...(existingSession.localizations ?? {}),
+      ...(data.localizations ?? {}),
+      [locale]: { title: data.name, description: data.description },
+    }
+
     let updatedSessionApi = existingSession;
     if (shouldUpdateSession) {
       const payload: Record<string, unknown> = {
         name: data.name,
         description: data.description,
         tags: serializeTagsForApi(data.tags),
+        localizations: mergedLocalizations,
         creationTime: data.creationTime,
         modificationTime: data.modificationTime,
+        ...(data.localizationOverrides != null ? { localizationOverrides: data.localizationOverrides } : {}),
       };
       const res = await apiService.updateSession(sessionId, eventId, payload);
       if ("error" in res) {
         const msg = res.error?.message || String(res.error);
         throw new Error(msg);
       }
-      updatedSessionApi = mapApiSessionToSession(res as any);
+      updatedSessionApi = mapApiSessionToSession(res as any, locale);
     }
 
     let updatedSessionTime: SessionTimeInfo | undefined
@@ -480,6 +500,8 @@ export const Sessions: React.FC<SessionsProps> = ({ onOpenFormChange }) => {
         s.id === sessionId
           ? {
               ...updatedSessionApi,
+              localizations: mergedLocalizations,
+              localizationOverrides: data.localizationOverrides,
               startDateTime: data.startDateTime,
               endDateTime: data.endDateTime,
               capacity:

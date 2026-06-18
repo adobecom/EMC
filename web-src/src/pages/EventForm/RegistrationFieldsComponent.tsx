@@ -99,10 +99,9 @@ export const RegistrationFieldsComponent: React.FC<RegistrationFieldsComponentPr
         let mode: RsvpFieldSourceMode = 'legacy'
 
         if (scopeId) {
-          const result = await cachedApi.getConfigsForScope(scopeId, 'rsvp')
-          if (!('error' in result)) {
-            const rsvpConfig = result.find(hasRsvpSlice)
-            const scopeFields = rsvpConfig?.rsvpFormFields ?? []
+          const result = await cachedApi.getConfig(scopeId)
+          if (result !== null && !('error' in result)) {
+            const scopeFields = hasRsvpSlice(result) ? result.rsvp.rsvpFormFields : []
             if (scopeFields.length > 0) {
               nextFields = scopeFields
               mode = 'scope'

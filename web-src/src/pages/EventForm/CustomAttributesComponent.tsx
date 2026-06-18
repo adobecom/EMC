@@ -22,8 +22,8 @@ import { HeadingWithTooltip, FormCard } from '../../components/shared'
 import { useEventFormComponent } from '../../hooks/useEventFormComponent'
 import { useGroup } from '../../contexts/GroupContext'
 import { cachedApi } from '../../services/api'
-import type { CustomAttributeConfig, CustomAttributeValue } from '../../types/configApi'
 import { hasAttributesSlice } from '../../types/configApi'
+import type { CustomAttributeConfig, CustomAttributeValue } from '../../types/configApi'
 import type { EventCustomAttributeValue } from '../../types/domain'
 
 // ============================================================================
@@ -42,7 +42,7 @@ interface MultiSelectRepeaterProps {
 }
 
 const MultiSelectRepeater: React.FC<MultiSelectRepeaterProps> = ({ attr, values, onChange }) => {
-  const sortedOptions = attr.values.slice().sort((a, b) => a.displayOrder - b.displayOrder)
+  const sortedOptions = attr.values.slice().sort((a, b) => (a.ordinal ?? 0) - (b.ordinal ?? 0))
 
   const rowsFromValues = (vals: EventCustomAttributeValue[]): RepeaterRow[] =>
     vals.map((v, i) => ({ id: `row-${attr.attributeId}-${i}-${v.value}`, value: v.value }))
@@ -156,10 +156,10 @@ export const CustomAttributesComponent: React.FC = () => {
     const load = async () => {
       setLoading(true)
       try {
-        const result = await cachedApi.getConfigsForScope(scopeId, 'customAttributes')
-        if (!('error' in result)) {
-          const config = result.find(hasAttributesSlice)
-          const enabled = (config?.attributes ?? []).filter(a => a.enabled !== false)
+        const result = await cachedApi.getConfig(scopeId)
+        if (result !== null && !('error' in result)) {
+          const enabled = (hasAttributesSlice(result) ? result.customAttributes : [])
+            .filter(a => a.enabled !== false)
           setAttributes(enabled)
           updateFormData({ _customAttributeConfigs: enabled })
         }
@@ -196,7 +196,7 @@ export const CustomAttributesComponent: React.FC = () => {
   const updateTextValue = (attr: CustomAttributeConfig, value: string) => {
     const others = currentValues.filter(v => v.attributeId !== attr.attributeId)
     const entry: EventCustomAttributeValue[] = value
-      ? [{ attributeId: attr.attributeId, attribute: attr.name, value }]
+      ? [{ attributeId: attr.attributeId, attribute: attr.name, valueId: '', value }]
       : []
     updateFormData({ customAttributes: [...others, ...entry] })
   }
@@ -206,7 +206,7 @@ export const CustomAttributesComponent: React.FC = () => {
     updateFormData({
       customAttributes: [
         ...others,
-        { attributeId: attr.attributeId, attribute: attr.name, value: String(value) },
+        { attributeId: attr.attributeId, attribute: attr.name, valueId: '', value: String(value) },
       ],
     })
   }
@@ -227,7 +227,7 @@ export const CustomAttributesComponent: React.FC = () => {
           attribute: attr.name,
           valueId: opt.valueId,
           value: opt.value,
-          displayOrder: opt.displayOrder,
+          ordinal: opt.ordinal,
         },
       ],
     })
@@ -240,9 +240,9 @@ export const CustomAttributesComponent: React.FC = () => {
       return {
         attributeId: attr.attributeId,
         attribute: attr.name,
-        valueId: opt?.valueId,
+        valueId: opt?.valueId ?? '',
         value: sv,
-        displayOrder: i, // user-defined order
+        ordinal: i,
       }
     })
     updateFormData({ customAttributes: [...others, ...newEntries] })
@@ -285,7 +285,7 @@ export const CustomAttributesComponent: React.FC = () => {
           >
             {attr.values
               .slice()
-              .sort((a, b) => a.displayOrder - b.displayOrder)
+              .sort((a, b) => (a.ordinal ?? 0) - (b.ordinal ?? 0))
               .map(v => (
                 <PickerItem key={v.value} id={v.value}>{v.label || v.value}</PickerItem>
               ))

@@ -348,6 +348,7 @@ export const Registrations: React.FC<RegistrationsProps> = ({ ims: _ims }) => {
           {selectedTab === 'sessions' && (
             <SessionsTab
               eventId={selectedEventId}
+              eventTitle={selectedEvent?.title || selectedEvent?.enTitle || ''}
               attendees={attendees}
             />
           )}

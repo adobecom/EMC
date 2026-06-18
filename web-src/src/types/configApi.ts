@@ -66,6 +66,15 @@ export interface Locale {
   folder: string
 }
 
+export interface LocalesSlice {
+  locales?: Locale[]
+}
+
+export interface RsvpSlice {
+  rsvpFormFields?: RsvpFormField[]
+  localizations?: Record<string, { rsvpFormFields: RsvpFormFieldLocaleOverride[] }>
+}
+
 /** Unified scope config — ESP stores at most one config per scope, with any
  *  combination of slice fields. Each tab in the UI edits one slice. */
 export interface ScopeConfig {
@@ -76,48 +85,43 @@ export interface ScopeConfig {
   /** Legacy discriminator — written by older versions of EMC. Newer PUTs drop it. */
   type?: ConfigType
   label?: string
-  // RSVP slice
-  rsvpFormFields?: RsvpFormField[]
-  localizations?: Record<string, { rsvpFormFields: RsvpFormFieldLocaleOverride[] }>
-  // Locales slice
-  locales?: Locale[]
-  // Custom attributes slice
-  attributes?: CustomAttributeConfig[]
+  rsvp?: RsvpSlice
+  locales?: LocalesSlice
+  customAttributes?: CustomAttributeConfig[]
 }
 
 /** Type aliases for slice-narrowed views. These are NOT separate configs — the
  *  same `ScopeConfig` may satisfy multiple of these at once. */
 export type RsvpScopeConfig = ScopeConfig & {
-  rsvpFormFields: RsvpFormField[]
-  localizations?: Record<string, { rsvpFormFields: RsvpFormFieldLocaleOverride[] }>
+  rsvp: RsvpSlice & { rsvpFormFields: RsvpFormField[] }
 }
 
 export type LocalesScopeConfig = ScopeConfig & {
-  locales: Locale[]
+  locales: LocalesSlice
 }
 
 export type CustomAttributesScopeConfig = ScopeConfig & {
-  attributes: CustomAttributeConfig[]
+  customAttributes: CustomAttributeConfig[]
 }
 
 export const hasRsvpSlice = (c: ScopeConfig | null | undefined): c is RsvpScopeConfig =>
-  !!c && Array.isArray(c.rsvpFormFields)
+  !!c && Array.isArray(c.rsvp?.rsvpFormFields)
 
 export const hasLocalesSlice = (c: ScopeConfig | null | undefined): c is LocalesScopeConfig =>
-  !!c && Array.isArray(c.locales)
+  !!c && c.locales != null && Array.isArray(c.locales.locales)
 
 export const hasAttributesSlice = (c: ScopeConfig | null | undefined): c is CustomAttributesScopeConfig =>
-  !!c && Array.isArray(c.attributes)
+  !!c && Array.isArray(c.customAttributes)
 
 // ============================================================================
 // Custom Attribute Models
 // ============================================================================
 
 export interface CustomAttributeValue {
-  valueId?: string
+  valueId: string
   value: string
   label: string
-  displayOrder: number
+  ordinal?: number
 }
 
 export interface CustomAttributeConfig {
@@ -134,11 +138,8 @@ export interface CustomAttributeConfig {
 // Request Bodies
 // ============================================================================
 
-/** POST body: at least one slice's fields. `type` is optional (legacy). */
-export type ConfigCreateBody = Partial<Omit<ScopeConfig, 'configId' | 'creationTime' | 'modificationTime' | 'scopeId'>>
-
-/** PUT body: full config minus identity/timestamp fields. `type` should be omitted. */
-export type ConfigUpdateBody = Omit<ScopeConfig, 'configId' | 'creationTime'> & { configId?: string; creationTime?: number }
+/** Upsert body for PUT /scopes/{id}/config — partial slice fields; server assigns configId. */
+export type ScopeConfigUpsertBody = Partial<Omit<ScopeConfig, 'configId' | 'creationTime' | 'modificationTime' | 'scopeId'>>
 
 // ============================================================================
 // Response Envelopes

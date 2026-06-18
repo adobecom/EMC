@@ -22,7 +22,7 @@ import {
   CalendarDate,
   Time,
 } from "@internationalized/date";
-import { Session } from "../../../types/sessions";
+import { Session, SessionLocalization } from "../../../types/sessions";
 import { EventTag, SeriesSpeaker } from "../../../types/domain";
 import { apiService } from "../../../services/api";
 import { useEventFormContext, useToast } from "../../../contexts";
@@ -67,6 +67,10 @@ export interface SessionFormData {
   timezone?: string;
   /** Selected venue location ID for this session */
   locationId?: string;
+  /** All locale slices from the API response — carried through to preserve non-active locales on save */
+  localizations?: Record<string, SessionLocalization>;
+  /** Round-tripped as-is from the API response — never modified by EMC */
+  localizationOverrides?: Record<string, SessionLocalization>;
 }
 
 type SessionTimeRegistrationFields = {
@@ -97,27 +101,21 @@ function parseTagsFromApi(tags: unknown): string[] {
   return [];
 }
 
-export function mapApiToSession(item: Record<string, unknown>): Session {
-  const loc = (
-    item.localizations as Record<
-      string,
-      { title?: string; description?: string }
-    >
-  )?.["en-US"];
+export function mapApiToSession(item: Record<string, unknown>, locale = "en-US"): Session {
+  const allLocalizations = item.localizations as Record<string, SessionLocalization> | undefined
+  const allLocalizationOverrides = item.localizationOverrides as Record<string, SessionLocalization> | undefined
+  const loc = allLocalizations?.[locale] ?? {}
   return {
     id: String(item.sessionId ?? item.id ?? ""),
-    name: String(item.enTitle ?? item.title ?? loc?.title ?? ""),
-    description:
-      item.description != null
-        ? String(item.description)
-        : loc?.description != null
-          ? String(loc.description)
-          : undefined,
+    name: String(loc.title ?? item.enTitle ?? item.title ?? ""),
+    description: loc.description != null ? String(loc.description) : item.description != null ? String(item.description) : undefined,
     startDateTime: String(item.startDateTime ?? ""),
     endDateTime: String(item.endDateTime ?? ""),
     capacity: item.capacity != null ? Number(item.capacity) : undefined,
     tags: parseTagsFromApi(item.tags),
-  };
+    localizations: allLocalizations,
+    localizationOverrides: allLocalizationOverrides,
+  }
 }
 
 // ============================================================================
@@ -166,6 +164,12 @@ export const SessionForm: React.FC<SessionFormProps> = ({
 }) => {
   const isEditMode = session !== null;
   const { seriesId: contextSeriesId, formData, locale, seriesCustomTagsUrl } = useEventFormContext();
+  const localizationsRef = React.useRef<Record<string, SessionLocalization> | undefined>(
+    session?.localizations,
+  );
+  const localizationOverridesRef = React.useRef<Record<string, SessionLocalization> | undefined>(
+    session?.localizationOverrides,
+  );
   const toast = useToast();
   const seriesId = contextSeriesId || formData.seriesId || "";
 
@@ -316,7 +320,9 @@ export const SessionForm: React.FC<SessionFormProps> = ({
         return;
       }
       const raw = res as Record<string, unknown>;
-      const mapped = mapApiToSession(raw);
+      const mapped = mapApiToSession(raw, locale);
+      localizationsRef.current = mapped.localizations;
+      localizationOverridesRef.current = mapped.localizationOverrides;
       const sessionTime = session.sessionTime ?? null;
 
       setName(mapped.name);
@@ -425,6 +431,8 @@ export const SessionForm: React.FC<SessionFormProps> = ({
         ...(isEditMode ? { originalSpeakerIds } : {}),
         timezone: formData.timezone || undefined,
         locationId: selectedLocationId ?? undefined,
+        localizations: localizationsRef.current,
+        localizationOverrides: localizationOverridesRef.current,
       });
       toast.success(isEditMode ? "Session updated successfully" : "Session created successfully");
       onCancel(); // unmounts this component — no state updates after this
