@@ -52,6 +52,8 @@ import { useSafeState, useRBACFilter } from '../../hooks'
 import { useHasPermission } from '../../hooks/useHasPermission'
 import { getProfileAttr } from '../../utils/dataFilters'
 import { DEFAULT_LOCALE, SUPPORTED_SPEAKER_LOCALES } from '../../config/localeMapping'
+import { hasLocalesSlice } from '../../types/configApi'
+import type { Locale } from '../../types/configApi'
 import { buildSpeakerPayloadForDashboard } from '../../services/payloadBuilders'
 import {
   SpeakerFormDialog,
@@ -78,13 +80,13 @@ const SPEAKERS_DASHBOARD_TABLE_TEST_IDS = {
   row: (itemKey: string) => `speakers-dashboard-table-row-${itemKey}`,
 }
 
-function getSpeakerDisplayTitle(item: SpeakerDashboardItem): string {
+function getSpeakerDisplayTitle(item: SpeakerDashboardItem, locales: readonly string[]): string {
   const row = item as unknown as Record<string, unknown>
   const primary = getProfileAttr(row, 'title', DEFAULT_LOCALE)
   if (typeof primary === 'string' && primary.trim()) {
     return primary.trim()
   }
-  for (const loc of SUPPORTED_SPEAKER_LOCALES) {
+  for (const loc of locales) {
     const t = item.localizations?.[loc]?.title
     if (typeof t === 'string' && t.trim()) {
       return t.trim()
@@ -93,10 +95,10 @@ function getSpeakerDisplayTitle(item: SpeakerDashboardItem): string {
   return (item.title || '').trim()
 }
 
-function speakerTitleSearchText(item: SpeakerDashboardItem): string {
+function speakerTitleSearchText(item: SpeakerDashboardItem, locales: readonly string[]): string {
   const chunks = [
     item.title,
-    ...SUPPORTED_SPEAKER_LOCALES.map((loc) => item.localizations?.[loc]?.title),
+    ...locales.map((loc) => item.localizations?.[loc]?.title),
   ]
   return chunks.filter(Boolean).join(' ').toLowerCase()
 }
@@ -228,6 +230,9 @@ export const SpeakersDashboard: React.FC<SpeakersDashboardProps> = () => {
   // Action states
   const [actionInProgress, setActionInProgress] = useSafeState<string | null>(null)
   
+  // Scope locales for the selected series
+  const [scopeLocales, setScopeLocales] = useSafeState<Locale[] | null>(null)
+
   // Dialog states
   const [isFormDialogOpen, setIsFormDialogOpen] = useSafeState(false)
   const [editingSpeaker, setEditingSpeaker] = useSafeState<SpeakerDashboardItem | null>(null)
@@ -370,7 +375,27 @@ export const SpeakersDashboard: React.FC<SpeakersDashboardProps> = () => {
   const selectedSeries = useMemo(() => {
     return seriesList.find(s => s.seriesId === selectedSeriesId)
   }, [seriesList, selectedSeriesId])
-  
+
+  useEffect(() => {
+    const scopeId = selectedSeries?.scopeId
+    if (!scopeId) return
+    let cancelled = false
+    // Retain previous scopeLocales during the fetch so the dialog never
+    // initializes with stale/fallback keys during a series switch.
+    cachedApi.getConfig(scopeId).then((result) => {
+      if (cancelled) return
+      if (!result || 'error' in result) { setScopeLocales(null); return }
+      const locales = hasLocalesSlice(result) ? result.locales.locales : undefined
+      setScopeLocales(locales && locales.length > 0 ? locales : null)
+    }).catch(() => { if (!cancelled) setScopeLocales(null) })
+    return () => { cancelled = true }
+  }, [selectedSeries?.scopeId, setScopeLocales])
+
+  const effectiveLocales: readonly string[] = useMemo(
+    () => (scopeLocales && scopeLocales.length > 0 ? scopeLocales.map((l) => l.code) : SUPPORTED_SPEAKER_LOCALES),
+    [scopeLocales]
+  )
+
   // ============================================================================
   // HANDLERS
   // ============================================================================
@@ -691,7 +716,7 @@ export const SpeakersDashboard: React.FC<SpeakersDashboardProps> = () => {
         return aName.localeCompare(bName)
       },
       render: (item) => {
-        const displayTitle = getSpeakerDisplayTitle(item)
+        const displayTitle = getSpeakerDisplayTitle(item, effectiveLocales)
         return (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
             <Text UNSAFE_style={{ fontWeight: 'bold' }}>
@@ -835,7 +860,7 @@ export const SpeakersDashboard: React.FC<SpeakersDashboardProps> = () => {
         )
       }
     }
-  ], [loadingEventCounts, handleMenuAction, handleViewConnections, canWriteEvent, canDeleteEvent])
+  ], [loadingEventCounts, handleMenuAction, handleViewConnections, canWriteEvent, canDeleteEvent, effectiveLocales])
   
   // ============================================================================
   // RENDER
@@ -1059,7 +1084,7 @@ export const SpeakersDashboard: React.FC<SpeakersDashboardProps> = () => {
             searchFilter={(speaker, query) => {
               const fullName = `${speaker.firstName || ''} ${speaker.lastName || ''}`.toLowerCase()
               return (
-                fullName.includes(query) || speakerTitleSearchText(speaker).includes(query)
+                fullName.includes(query) || speakerTitleSearchText(speaker, effectiveLocales).includes(query)
               )
             }}
           />
@@ -1078,6 +1103,7 @@ export const SpeakersDashboard: React.FC<SpeakersDashboardProps> = () => {
         seriesId={selectedSeriesId || ''}
         isSubmitting={!!actionInProgress}
         cascadeToEvents={(editingSpeaker as any)?._cascadeToEvents}
+        scopeLocales={scopeLocales}
       />
       
       {/* Cascade Confirmation Dialog */}
