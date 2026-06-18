@@ -260,13 +260,19 @@ if (!item || !title.trim()) return
   const renderWebinarMarketoStep = () => (
     <>
       <Content>
-        <p className={style({ font: 'heading-xl', marginTop: 0, marginBottom: 16 })}>Enter your Marketo ID</p>
+        <p className={style({ font: 'heading-xl', marginTop: 0, marginBottom: 16 })}>Marketo form URL</p>
+        <p style={{ margin: '0 0 12px' }}>
+          Configure the Marketo RSVP Form here:{' '}
+          <a href="https://milo.adobe.com/tools/marketo" target="_blank" rel="noopener noreferrer">
+            https://milo.adobe.com/tools/marketo
+          </a>
+        </p>
         <TextField
           label=""
           value={webinarMarketoId}
           onChange={setWebinarMarketoId}
-          placeholder="ex. 12345678"
-          UNSAFE_style={{ width: '100%', marginTop: 16 }}
+          placeholder="Enter Marketo form URL"
+          UNSAFE_style={{ width: '100%' }}
           autoFocus
           onKeyDown={(e: React.KeyboardEvent) => {
             if (e.key === 'Enter' && webinarMarketoId.trim()) executeClone({}, webinarMarketoId.trim())
