@@ -2,7 +2,6 @@
 * <license header>
 */
 
-import { encode as encodeRFC5987 } from 'rfc5987-value-chars'
 import actionWebInvoke from '../utils'
 import {
   Organization,
@@ -1825,7 +1824,7 @@ class ApiService {
       const xhr = new XMLHttpRequest()
       
       xhr.open(method, url)
-      xhr.setRequestHeader('x-image-alt-text', encodeRFC5987(config.altText || ''))
+      xhr.setRequestHeader('x-image-alt-text', encodeURIComponent(config.altText || ''))
       xhr.setRequestHeader('x-image-kind', config.type)
       xhr.setRequestHeader('x-api-key', 'acom_event_service')
       xhr.setRequestHeader('Authorization', `Bearer ${token}`)
