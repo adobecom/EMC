@@ -1102,6 +1102,7 @@ export const EventsDashboard: React.FC<EventsDashboardProps> = () => {
       {/* Clone Event */}
       <CloneEvent
         item={cloneItem}
+        existingNames={events.map(e => e.eventName)}
         onClose={() => setCloneItem(null)}
         onCloned={loadEventsData}
       />

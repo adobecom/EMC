@@ -2,11 +2,13 @@
 * <license header>
 */
 
-import React, { useState, useCallback } from 'react'
-import { Button, ButtonGroup, Content, Dialog, DialogTrigger, Heading, Picker, PickerItem, Text, TextField } from '@react-spectrum/s2'
+import React, { useState, useCallback, useEffect } from 'react'
+import { Button, ButtonGroup, Content, Dialog, DialogTrigger, Heading, Picker, PickerItem, TextField } from '@react-spectrum/s2'
+import { style } from '@react-spectrum/s2/style' with { type: 'macro' }
 import { EventDashboardItem, MarketoIntegrationData } from '../../types/domain'
 import { EVENT_TYPE_OPTIONS, EVENT_POI_OPTIONS } from '../EventForm/MarketoIntegrationComponent'
 import { apiService, cachedApi } from '../../services/api'
+import { EVENT_TYPES } from '../../config/constants'
 import { filterEventData } from '../../utils/dataFilters'
 import { useToast } from '../../contexts'
 
@@ -23,6 +25,7 @@ type CloneStep = 'name' | 'marketo-prompt' | 'marketo-config' | 'webinar-marketo
 
 interface CloneEventProps {
   item: EventDashboardItem | null
+  existingNames: string[]
   onClose: () => void
   onCloned: () => void
 }
@@ -32,16 +35,16 @@ interface CloneEventProps {
 // ============================================================================
 
 const isDXInPerson = (item: EventDashboardItem) =>
-  item.cloudType === 'ExperienceCloud' && item.eventType?.toLowerCase() === 'in-person'
+  item.cloudType === 'ExperienceCloud' && item.eventType === EVENT_TYPES.IN_PERSON
 
 const isExperienceCloudWebinar = (item: EventDashboardItem) =>
-  item.cloudType === 'ExperienceCloud' && item.eventType?.toLowerCase() === 'webinar'
+  item.cloudType === 'ExperienceCloud' && item.eventType === EVENT_TYPES.WEBINAR
 
 // ============================================================================
 // COMPONENT
 // ============================================================================
 
-export const CloneEvent: React.FC<CloneEventProps> = ({ item, onClose, onCloned }) => {
+export const CloneEvent: React.FC<CloneEventProps> = ({ item, existingNames, onClose, onCloned }) => {
   const toast = useToast()
 
   const [step, setStep] = useState<CloneStep>('name')
@@ -50,6 +53,15 @@ export const CloneEvent: React.FC<CloneEventProps> = ({ item, onClose, onCloned 
   const [webinarMarketoId, setWebinarMarketoId] = useState('')
   const [isPending, setIsPending] = useState(false)
 
+  useEffect(() => {
+    if (item) {
+      setStep('name')
+      setTitle(`${item.eventName} - copy`)
+      setMarketoData({})
+      setWebinarMarketoId('')
+    }
+  }, [item?.eventId])
+
   const handleClose = useCallback(() => {
     setStep('name')
     setTitle('')
@@ -57,18 +69,6 @@ export const CloneEvent: React.FC<CloneEventProps> = ({ item, onClose, onCloned 
     setWebinarMarketoId('')
     onClose()
   }, [onClose])
-
-  const handleNameContinue = useCallback(() => {
-    if (!item || !title.trim()) return
-
-    if (isDXInPerson(item)) {
-      setStep('marketo-prompt')
-    } else if (isExperienceCloudWebinar(item)) {
-      setStep('webinar-marketo')
-    } else {
-      executeClone({})
-    }
-  }, [item, title])
 
   const executeClone = useCallback(async (
     marketoIntegration: MarketoIntegrationData,
@@ -134,46 +134,65 @@ export const CloneEvent: React.FC<CloneEventProps> = ({ item, onClose, onCloned 
     }
   }, [item, title, handleClose, onCloned, toast])
 
+  const handleNameContinue = useCallback(() => {
+if (!item || !title.trim()) return
+
+    if (isDXInPerson(item)) {
+      setStep('marketo-prompt')
+    } else if (isExperienceCloudWebinar(item)) {
+      setStep('webinar-marketo')
+    } else {
+      executeClone({})
+    }
+  }, [item, title, executeClone])
+
   // ============================================================================
   // STEP RENDERS
   // ============================================================================
 
-  const renderNameStep = () => (
-    <>
-      <Content>
-        <Text>Give your event a unique name.</Text>
-        <TextField
-          label=""
-          value={title}
-          onChange={setTitle}
-          UNSAFE_style={{ width: '100%' }}
-          autoFocus
-          onKeyDown={(e: React.KeyboardEvent) => {
-            if (e.key === 'Enter' && title.trim()) handleNameContinue()
-          }}
-        />
-      </Content>
-      <ButtonGroup>
-        <Button variant="secondary" onPress={handleClose}>Cancel</Button>
-        <Button
-          variant="accent"
-          onPress={handleNameContinue}
-          isDisabled={!title.trim() || isPending}
-          isPending={isPending}
-        >Continue</Button>
-      </ButtonGroup>
-    </>
-  )
+  const renderNameStep = () => {
+    const isDuplicate = !!title.trim() && existingNames.some(
+      n => n.trim().toLowerCase() === title.trim().toLowerCase()
+    )
+    return (
+      <>
+        <Content>
+          <p className={style({ font: 'heading-xl', marginTop: 0, marginBottom: 16 })}>Give your event a unique name.</p>
+          <TextField
+            label=""
+            value={title}
+            onChange={setTitle}
+            UNSAFE_style={{ width: '100%' }}
+            autoFocus
+            isInvalid={isDuplicate}
+            errorMessage={isDuplicate ? 'This name is already taken.' : undefined}
+            onKeyDown={(e: React.KeyboardEvent) => {
+              if (e.key === 'Enter' && title.trim() && !isDuplicate) handleNameContinue()
+            }}
+          />
+        </Content>
+        <ButtonGroup>
+          <Button variant="secondary" onPress={handleClose}>Cancel</Button>
+          <Button
+            variant="accent"
+            onPress={handleNameContinue}
+            isDisabled={!title.trim() || isDuplicate || isPending}
+            isPending={isPending}
+          >Continue</Button>
+        </ButtonGroup>
+      </>
+    )
+  }
 
   const renderMarketoPromptStep = () => (
     <>
       <Content>
-        <Text>Do you need Marketo integration?</Text>
+        <p className={style({ font: 'heading-xl', marginTop: 0, marginBottom: 16 })}>Do you need Marketo integration?</p>
       </Content>
       <ButtonGroup>
-        <Button variant="secondary" onPress={handleClose}>Cancel</Button>
-        <Button variant="secondary" onPress={() => executeClone({})}>No</Button>
-        <Button variant="accent" onPress={() => { setMarketoData({}); setStep('marketo-config') }}>Yes</Button>
+        <Button variant="secondary" onPress={handleClose} isDisabled={isPending}>Cancel</Button>
+        <Button variant="secondary" onPress={() => executeClone({})} isDisabled={isPending} isPending={isPending}>No</Button>
+        <Button variant="accent" onPress={() => { setMarketoData({}); setStep('marketo-config') }} isDisabled={isPending}>Yes</Button>
       </ButtonGroup>
     </>
   )
@@ -181,7 +200,7 @@ export const CloneEvent: React.FC<CloneEventProps> = ({ item, onClose, onCloned 
   const renderMarketoConfigStep = () => (
     <>
       <Content>
-        <Text>Enter Marketo configurations</Text>
+        <p className={style({ font: 'heading-xl', marginTop: 0, marginBottom: 16 })}>Enter Marketo configurations</p>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 16, marginTop: 16 }}>
           <Picker
             label="Event type"
@@ -197,12 +216,14 @@ export const CloneEvent: React.FC<CloneEventProps> = ({ item, onClose, onCloned 
               value={marketoData.salesforceCampaignId || ''}
               onChange={(v) => setMarketoData(prev => ({ ...prev, salesforceCampaignId: v }))}
               placeholder="Placeholder"
+              UNSAFE_style={{ flex: 1 }}
             />
             <TextField
               label="MCZ program name"
               value={marketoData.mczProgramName || ''}
               onChange={(v) => setMarketoData(prev => ({ ...prev, mczProgramName: v }))}
               placeholder="Placeholder"
+              UNSAFE_style={{ flex: 1 }}
             />
           </div>
           <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap' }}>
@@ -211,11 +232,13 @@ export const CloneEvent: React.FC<CloneEventProps> = ({ item, onClose, onCloned 
               value={marketoData.coMarketingPartner || ''}
               onChange={(v) => setMarketoData(prev => ({ ...prev, coMarketingPartner: v }))}
               placeholder="Placeholder"
+              UNSAFE_style={{ flex: 1 }}
             />
             <Picker
               label="Event POI"
               selectedKey={marketoData.eventPoi || ''}
               onSelectionChange={(key) => setMarketoData(prev => ({ ...prev, eventPoi: String(key) }))}
+              UNSAFE_style={{ flex: 1 }}
             >
               {EVENT_POI_OPTIONS.filter(o => o.key !== 'no-poi').map(o => <PickerItem key={o.key} id={o.key}>{o.label}</PickerItem>)}
             </Picker>
@@ -237,7 +260,7 @@ export const CloneEvent: React.FC<CloneEventProps> = ({ item, onClose, onCloned 
   const renderWebinarMarketoStep = () => (
     <>
       <Content>
-        <Text>Enter your Marketo ID</Text>
+        <p className={style({ font: 'heading-xl', marginTop: 0, marginBottom: 16 })}>Enter your Marketo ID</p>
         <TextField
           label=""
           value={webinarMarketoId}
@@ -271,7 +294,7 @@ export const CloneEvent: React.FC<CloneEventProps> = ({ item, onClose, onCloned 
     >
       <div style={{ display: 'none' }} />
       <Dialog size={dialogSize}>
-        <Heading slot="title">Clone event</Heading>
+        <Heading slot="title" UNSAFE_style={{ fontSize: 14, fontWeight: 'normal', color: 'var(--spectrum-gray-600)' }}>Clone event</Heading>
         {step === 'name' && renderNameStep()}
         {step === 'marketo-prompt' && renderMarketoPromptStep()}
         {step === 'marketo-config' && renderMarketoConfigStep()}
