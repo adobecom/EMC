@@ -378,11 +378,10 @@ export const SpeakersDashboard: React.FC<SpeakersDashboardProps> = () => {
 
   useEffect(() => {
     const scopeId = selectedSeries?.scopeId
-    if (!scopeId) {
-      setScopeLocales(null)
-      return
-    }
+    if (!scopeId) return
     let cancelled = false
+    // Retain previous scopeLocales during the fetch so the dialog never
+    // initializes with stale/fallback keys during a series switch.
     cachedApi.getConfig(scopeId).then((result) => {
       if (cancelled) return
       if (!result || 'error' in result) { setScopeLocales(null); return }
