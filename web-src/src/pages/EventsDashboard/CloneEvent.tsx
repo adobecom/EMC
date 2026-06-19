@@ -21,7 +21,7 @@ import { useToast } from '../../contexts'
 // TYPES
 // ============================================================================
 
-type CloneStep = 'name' | 'marketo-prompt' | 'marketo-config' | 'webinar-marketo'
+type CloneStep = 'name' | 'marketo-prompt' | 'marketo-config'
 
 interface CloneEventProps {
   item: EventDashboardItem | null
@@ -37,9 +37,6 @@ interface CloneEventProps {
 const isDXInPerson = (item: EventDashboardItem) =>
   item.cloudType === 'ExperienceCloud' && item.eventType === EVENT_TYPES.IN_PERSON
 
-const isExperienceCloudWebinar = (item: EventDashboardItem) =>
-  item.cloudType === 'ExperienceCloud' && item.eventType === EVENT_TYPES.WEBINAR
-
 // ============================================================================
 // COMPONENT
 // ============================================================================
@@ -50,7 +47,6 @@ export const CloneEvent: React.FC<CloneEventProps> = ({ item, existingNames, onC
   const [step, setStep] = useState<CloneStep>('name')
   const [title, setTitle] = useState('')
   const [marketoData, setMarketoData] = useState<MarketoIntegrationData>({})
-  const [webinarMarketoId, setWebinarMarketoId] = useState('')
   const [isPending, setIsPending] = useState(false)
 
   useEffect(() => {
@@ -58,7 +54,6 @@ export const CloneEvent: React.FC<CloneEventProps> = ({ item, existingNames, onC
       setStep('name')
       setTitle(`${item.eventName} - copy`)
       setMarketoData({})
-      setWebinarMarketoId('')
     }
   }, [item?.eventId])
 
@@ -66,14 +61,10 @@ export const CloneEvent: React.FC<CloneEventProps> = ({ item, existingNames, onC
     setStep('name')
     setTitle('')
     setMarketoData({})
-    setWebinarMarketoId('')
     onClose()
   }, [onClose])
 
-  const executeClone = useCallback(async (
-    marketoIntegration: MarketoIntegrationData,
-    marketoFormUrl?: string,
-  ) => {
+  const executeClone = useCallback(async (marketoIntegration: MarketoIntegrationData) => {
     if (!item || !title.trim()) return
 
     setIsPending(true)
@@ -106,10 +97,6 @@ export const CloneEvent: React.FC<CloneEventProps> = ({ item, existingNames, onC
         delete clonedEventData.marketoIntegration
       }
 
-      if (marketoFormUrl) {
-        clonedEventData.registration = { type: 'Marketo', formData: marketoFormUrl }
-      }
-
       const result = await apiService.createEventExternal(clonedEventData, locale)
 
       if ('error' in result) {
@@ -139,8 +126,6 @@ if (!item || !title.trim()) return
 
     if (isDXInPerson(item)) {
       setStep('marketo-prompt')
-    } else if (isExperienceCloudWebinar(item)) {
-      setStep('webinar-marketo')
     } else {
       executeClone({})
     }
@@ -257,40 +242,6 @@ if (!item || !title.trim()) return
     </>
   )
 
-  const renderWebinarMarketoStep = () => (
-    <>
-      <Content>
-        <p className={style({ font: 'heading-xl', marginTop: 0, marginBottom: 16 })}>Marketo form URL</p>
-        <p style={{ margin: '0 0 12px' }}>
-          Configure the Marketo RSVP Form here:{' '}
-          <a href="https://milo.adobe.com/tools/marketo" target="_blank" rel="noopener noreferrer">
-            https://milo.adobe.com/tools/marketo
-          </a>
-        </p>
-        <TextField
-          label=""
-          value={webinarMarketoId}
-          onChange={setWebinarMarketoId}
-          placeholder="Enter Marketo form URL"
-          UNSAFE_style={{ width: '100%' }}
-          autoFocus
-          onKeyDown={(e: React.KeyboardEvent) => {
-            if (e.key === 'Enter' && webinarMarketoId.trim()) executeClone({}, webinarMarketoId.trim())
-          }}
-        />
-      </Content>
-      <ButtonGroup>
-        <Button variant="secondary" onPress={handleClose}>Cancel</Button>
-        <Button
-          variant="accent"
-          onPress={() => executeClone({}, webinarMarketoId.trim())}
-          isDisabled={!webinarMarketoId.trim() || isPending}
-          isPending={isPending}
-        >Connect</Button>
-      </ButtonGroup>
-    </>
-  )
-
   const dialogSize = step === 'marketo-config' ? 'L' : 'M'
 
   return (
@@ -304,7 +255,7 @@ if (!item || !title.trim()) return
         {step === 'name' && renderNameStep()}
         {step === 'marketo-prompt' && renderMarketoPromptStep()}
         {step === 'marketo-config' && renderMarketoConfigStep()}
-        {step === 'webinar-marketo' && renderWebinarMarketoStep()}
+
       </Dialog>
     </DialogTrigger>
   )
