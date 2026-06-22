@@ -43,6 +43,7 @@ import {
   SPEAKER_LOCALE_LABELS,
 } from '../../config/localeMapping'
 import type { SpeakerDashboardLocalizationDraft } from '../../services/payloadBuilders'
+import type { Locale } from '../../types/configApi'
 
 /** Mirrors `PartnerDialogSaveOptions` shape: serializable payload first, `File` second, options last */
 export interface SpeakerFormSaveOptions {
@@ -71,6 +72,8 @@ interface SpeakerFormDialogProps {
   seriesId: string
   isSubmitting: boolean
   cascadeToEvents?: boolean
+  /** Locales from scope config; when provided, replaces the hardcoded SUPPORTED_SPEAKER_LOCALES */
+  scopeLocales?: Locale[] | null
 }
 
 interface FormState {
@@ -87,18 +90,19 @@ const initialFormState: FormState = {
   socialLinks: [],
 }
 
-function emptyLocalizationDrafts(): Record<string, SpeakerDashboardLocalizationDraft> {
+function emptyLocalizationDrafts(locales: readonly string[]): Record<string, SpeakerDashboardLocalizationDraft> {
   return Object.fromEntries(
-    SUPPORTED_SPEAKER_LOCALES.map((loc) => [loc, { title: '', bio: '' }])
+    locales.map((loc) => [loc, { title: '', bio: '' }])
   ) as Record<string, SpeakerDashboardLocalizationDraft>
 }
 
 function localizationDraftsFromSpeaker(
-  speaker: SpeakerDashboardItem
+  speaker: SpeakerDashboardItem,
+  locales: readonly string[]
 ): Record<string, SpeakerDashboardLocalizationDraft> {
   const row = speaker as unknown as Record<string, unknown>
-  const base = emptyLocalizationDrafts()
-  for (const loc of SUPPORTED_SPEAKER_LOCALES) {
+  const base = emptyLocalizationDrafts(locales)
+  for (const loc of locales) {
     const title = getProfileAttr(row, 'title', loc)
     const bio = getProfileAttr(row, 'bio', loc)
     base[loc] = {
@@ -117,12 +121,19 @@ export const SpeakerFormDialog: React.FC<SpeakerFormDialogProps> = ({
   seriesId: _seriesId,
   isSubmitting,
   cascadeToEvents,
+  scopeLocales,
 }) => {
   void _seriesId
+
+  const effectiveLocales: readonly string[] = useMemo(
+    () => (scopeLocales && scopeLocales.length > 0 ? scopeLocales.map((l) => l.code) : SUPPORTED_SPEAKER_LOCALES),
+    [scopeLocales]
+  )
+
   const [formState, setFormState] = useState<FormState>(initialFormState)
   const [localizationDrafts, setLocalizationDrafts] = useState<
     Record<string, SpeakerDashboardLocalizationDraft>
-  >(emptyLocalizationDrafts)
+  >(() => emptyLocalizationDrafts(effectiveLocales))
   const [selectedLocale, setSelectedLocale] = useState<string>(DEFAULT_LOCALE)
   const [pendingFile, setPendingFile] = useState<File | null>(null)
   const [removedImageId, setRemovedImageId] = useState<string | undefined>(undefined)
@@ -146,7 +157,7 @@ export const SpeakerFormDialog: React.FC<SpeakerFormDialogProps> = ({
         imageUrl: speaker.photo?.imageUrl,
         imageId: speaker.photo?.imageId,
       })
-      setLocalizationDrafts(localizationDraftsFromSpeaker(speaker))
+      setLocalizationDrafts(localizationDraftsFromSpeaker(speaker, effectiveLocales))
       setSelectedLocale(DEFAULT_LOCALE)
       setShouldCascade(cascadeToEvents ?? false)
       setRemovedImageId(undefined)
@@ -154,7 +165,7 @@ export const SpeakerFormDialog: React.FC<SpeakerFormDialogProps> = ({
       imageIdWhenDialogOpenedRef.current = speaker.photo?.imageId
     } else if (isOpen) {
       setFormState(initialFormState)
-      setLocalizationDrafts(emptyLocalizationDrafts())
+      setLocalizationDrafts(emptyLocalizationDrafts(effectiveLocales))
       setSelectedLocale(DEFAULT_LOCALE)
       setPendingFile(null)
       setRemovedImageId(undefined)
@@ -318,11 +329,14 @@ export const SpeakerFormDialog: React.FC<SpeakerFormDialogProps> = ({
                       onSelectionChange={handleLocaleChange}
                       styles={style({ width: '[100%]', maxWidth: 400 })}
                     >
-                      {SUPPORTED_SPEAKER_LOCALES.map((loc) => (
-                        <PickerItem key={loc} id={loc}>
-                          {SPEAKER_LOCALE_LABELS[loc] ?? loc}
-                        </PickerItem>
-                      ))}
+                      {effectiveLocales.map((loc) => {
+                        const label = scopeLocales?.find((l) => l.code === loc)?.name ?? SPEAKER_LOCALE_LABELS[loc] ?? loc
+                        return (
+                          <PickerItem key={loc} id={loc}>
+                            {label}
+                          </PickerItem>
+                        )
+                      })}
                     </Picker>
                     <Text UNSAFE_style={TYPOGRAPHY.HELPER_TEXT}>
                       Editing content for <strong style={{ fontWeight: 600 }}>{selectedLocale}</strong>.

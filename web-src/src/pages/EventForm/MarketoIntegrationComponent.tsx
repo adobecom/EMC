@@ -14,7 +14,7 @@ import { MarketoIntegrationData } from '../../types/domain'
 // CONSTANTS
 // ============================================================================
 
-const EVENT_TYPE_OPTIONS = [
+export const EVENT_TYPE_OPTIONS = [
   { key: 'no-integration', label: 'No Marketo integration' },
   { key: 'DX NA/ROW', label: 'DX NA/ROW' },
   { key: 'DX APAC', label: 'DX APAC' },
@@ -23,7 +23,7 @@ const EVENT_TYPE_OPTIONS = [
   { key: 'DX LATAM', label: 'DX LATAM' },
 ]
 
-const EVENT_POI_OPTIONS = [
+export const EVENT_POI_OPTIONS = [
   { key: 'no-poi', label: 'No Event POI' },
   { key: 'Adobe Analytics', label: 'Adobe Analytics' },
   { key: 'Adobe Audience Manager', label: 'Adobe Audience Manager' },
