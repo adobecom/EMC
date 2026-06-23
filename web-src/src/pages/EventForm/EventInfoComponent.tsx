@@ -29,7 +29,6 @@ import { SPACING } from '../../styles/designSystem'
 import { cachedApi } from '../../services/api'
 import { useEventFormComponent } from '../../hooks/useEventFormComponent'
 import { useEventFormContext } from '../../contexts/EventFormContext'
-import { useGroup } from '../../contexts/GroupContext'
 import { hasLocalesSlice } from '../../types/configApi'
 import { SUPPORTED_SPEAKER_LOCALES, SPEAKER_LOCALE_LABELS } from '../../config/localeMapping'
 
@@ -131,7 +130,6 @@ const EVENT_TITLE_MAX_LENGTH = 150
  * startDateTime, endDateTime, timezone, communityForumUrl, secondaryLinkTitle, isPrivate
  */
 export const EventInfoComponent: React.FC = () => {
-  const { activeGroup } = useGroup()
   const { setScopeLocales } = useEventFormContext()
 
   // ============================================================================
@@ -181,21 +179,21 @@ export const EventInfoComponent: React.FC = () => {
   const [localeOptions, setLocaleOptions] = useState<{ key: string; label: string }[]>(DEFAULT_LOCALE_PICKER_OPTIONS)
 
   useEffect(() => {
-    const scopeId = activeGroup?.scopeId
-    if (!scopeId) {
+    if (!eventId) {
       setLocaleOptions(DEFAULT_LOCALE_PICKER_OPTIONS)
       return
     }
 
     let cancelled = false
-    cachedApi.getConfig(scopeId).then((result) => {
+    cachedApi.getEventConfigs(eventId).then((result) => {
       if (cancelled) return
-      if (result === null || 'error' in result) {
+      if ('error' in result) {
         setLocaleOptions(DEFAULT_LOCALE_PICKER_OPTIONS)
         setScopeLocales(null)
         return
       }
-      const locales = hasLocalesSlice(result) ? result.locales.locales : undefined
+      const config = result[0] ?? null
+      const locales = config && hasLocalesSlice(config) ? config.locales.locales : undefined
       if (locales && locales.length > 0) {
         const options = locales.map((l) => ({ key: l.code, label: l.name }))
         setLocaleOptions(options)
@@ -214,7 +212,7 @@ export const EventInfoComponent: React.FC = () => {
     return () => {
       cancelled = true
     }
-  }, [activeGroup?.scopeId, setScopeLocales])
+  }, [eventId, setScopeLocales])
 
   const pickerLocaleOptions = useMemo(() => {
     if (!locale) return localeOptions

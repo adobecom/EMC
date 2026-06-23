@@ -19,7 +19,6 @@ import Add from '@react-spectrum/s2/icons/Add'
 import RemoveCircle from '@react-spectrum/s2/icons/RemoveCircle'
 import { HeadingWithTooltip, FormCard } from '../../components/shared'
 import { useEventFormComponent } from '../../hooks/useEventFormComponent'
-import { useGroup } from '../../contexts/GroupContext'
 import { cachedApi } from '../../services/api'
 import { hasAttributesSlice } from '../../types/configApi'
 import type { CustomAttributeConfig, CustomAttributeValue } from '../../types/configApi'
@@ -137,17 +136,15 @@ const MultiSelectRepeater: React.FC<MultiSelectRepeaterProps> = ({ attr, values,
 // ============================================================================
 
 export const CustomAttributesComponent: React.FC = () => {
-  const { formData, updateFormData } = useEventFormComponent({
+  const { formData, updateFormData, eventId } = useEventFormComponent({
     componentId: 'customAttributes',
   })
 
-  const { activeGroup } = useGroup()
   const [attributes, setAttributes] = useState<CustomAttributeConfig[]>([])
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    const scopeId = activeGroup?.scopeId
-    if (!scopeId) {
+    if (!eventId) {
       setLoading(false)
       return
     }
@@ -155,9 +152,10 @@ export const CustomAttributesComponent: React.FC = () => {
     const load = async () => {
       setLoading(true)
       try {
-        const result = await cachedApi.getConfig(scopeId)
-        if (result !== null && !('error' in result)) {
-          const attrs = hasAttributesSlice(result) ? result.customAttributes : []
+        const result = await cachedApi.getEventConfigs(eventId)
+        if (!('error' in result)) {
+          const config = result[0] ?? null
+          const attrs = config && hasAttributesSlice(config) ? config.customAttributes : []
           const enabled = attrs.filter(a => a.enabled !== false)
           setAttributes(enabled)
           updateFormData({ _customAttributeConfigs: enabled })
@@ -168,7 +166,7 @@ export const CustomAttributesComponent: React.FC = () => {
     }
 
     load()
-  }, [activeGroup?.scopeId])
+  }, [eventId])
 
   // ============================================================================
   // VALUE HELPERS
