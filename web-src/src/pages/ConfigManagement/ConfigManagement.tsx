@@ -1077,7 +1077,7 @@ export const ConfigManagement: React.FC<ConfigManagementProps> = () => {
                           <th style={{ padding: '12px 16px', textAlign: 'left', fontWeight: 600, fontSize: 13 }}>Input Type</th>
                           <th style={{ padding: '12px 16px', textAlign: 'left', fontWeight: 600, fontSize: 13 }}>Enabled</th>
                           <th style={{ padding: '12px 16px', textAlign: 'left', fontWeight: 600, fontSize: 13 }}>Values</th>
-                          {isOwnAttrsConfig && (canWriteConfig || canDeleteConfig) && (
+                          {isOwnAttrsConfig && canWriteConfig && (
                             <th style={{ padding: '12px 16px', textAlign: 'left', fontWeight: 600, fontSize: 13 }} />
                           )}
                         </tr>
@@ -1087,7 +1087,7 @@ export const ConfigManagement: React.FC<ConfigManagementProps> = () => {
                           const isExpandable = attr.inputType === 'single-select' || attr.inputType === 'multi-select'
                           const attrId = attr.attributeId!
                           const isExpanded = expandedAttrKeys.has(attrId)
-                          const colSpan = 5 + (isOwnAttrsConfig && (canWriteConfig || canDeleteConfig) ? 1 : 0)
+                          const colSpan = 5 + (isOwnAttrsConfig && canWriteConfig ? 1 : 0)
                           return (
                             <React.Fragment key={attrId}>
                               <tr style={{ borderTop: '1px solid var(--spectrum-global-color-gray-300)' }}>
@@ -1124,19 +1124,12 @@ export const ConfigManagement: React.FC<ConfigManagementProps> = () => {
                                     : '—'}
                                   </Text>
                                 </td>
-                                {isOwnAttrsConfig && (canWriteConfig || canDeleteConfig) && (
+                                {isOwnAttrsConfig && canWriteConfig && (
                                   <td style={{ padding: '10px 16px' }}>
                                     <div style={{ display: 'flex', gap: 4, justifyContent: 'flex-end' }}>
-                                      {canWriteConfig && (
-                                        <ActionButton isQuiet aria-label="Edit attribute" onPress={() => openAttrEdit(attr)}>
-                                          <EditIcon />
-                                        </ActionButton>
-                                      )}
-                                      {canDeleteConfig && (
-                                        <ActionButton isQuiet aria-label="Delete attribute" isDisabled={!!attr.attributeId} onPress={() => setAttrToDelete(attrId)}>
-                                          <RemoveCircle />
-                                        </ActionButton>
-                                      )}
+                                      <ActionButton isQuiet aria-label="Edit attribute" onPress={() => openAttrEdit(attr)}>
+                                        <EditIcon />
+                                      </ActionButton>
                                     </div>
                                   </td>
                                 )}
