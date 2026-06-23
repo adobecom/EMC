@@ -1083,7 +1083,7 @@ export const ConfigManagement: React.FC<ConfigManagementProps> = () => {
                         </tr>
                       </thead>
                       <tbody>
-                        {customAttrsConfig.customAttributes.filter(a => a.enabled !== false).map(attr => {
+                        {customAttrsConfig.customAttributes.map(attr => {
                           const isExpandable = attr.inputType === 'single-select' || attr.inputType === 'multi-select'
                           const attrId = attr.attributeId!
                           const isExpanded = expandedAttrKeys.has(attrId)
