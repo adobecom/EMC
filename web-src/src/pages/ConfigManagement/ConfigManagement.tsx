@@ -1733,6 +1733,9 @@ export const ConfigManagement: React.FC<ConfigManagementProps> = () => {
                     onChange={setAttrFormLabel}
                     styles={style({ width: '[100%]' })}
                   />
+                  <SpectrumSwitch isSelected={attrFormEnabled} onChange={setAttrFormEnabled}>
+                    Enabled
+                  </SpectrumSwitch>
                   <Picker
                     label="Input Type"
                     selectedKey={attrFormInputType}
