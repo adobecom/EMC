@@ -1920,7 +1920,7 @@ export const ConfigManagement: React.FC<ConfigManagementProps> = () => {
           onCancel={() => setAttrToDelete(null)}
           isPrimaryActionDisabled={isSaving}
         >
-          Delete attribute <strong>{customAttrsConfig?.customAttributes.find(a => a.attributeId === attrToDelete)?.name ?? attrToDelete}</strong>? It will be hidden from all event forms.
+          Delete attribute <strong>{customAttrsConfig?.customAttributes.find(a => a.attributeId === attrToDelete)?.name ?? attrToDelete}</strong>? It will be hidden from all event forms. This action cannot be undone.
         </AlertDialog>
       </DialogTrigger>
 
