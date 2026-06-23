@@ -121,9 +121,8 @@ export function mapApiResponseToFormData(event: EventApiResponse, locale: string
 
   const venueLocalized = event.venue?.localizations?.[locale] || {}
   const imgs = event.images || []
-  const venueStepImageRow =
-    imgs.find((i: { imageKind?: string }) => i.imageKind === 'venue-additional-image')
-    ?? imgs.find((i: { imageKind?: string }) => i.imageKind === 'venue-map-image')
+  const venueAdditionalImageRow = imgs.find((i: { imageKind?: string }) => i.imageKind === 'venue-additional-image')
+  const venueMapImageRow = imgs.find((i: { imageKind?: string }) => i.imageKind === 'venue-map-image')
 
   const venueData = event.venue ? {
     venueName: event.venue.venueName || '',
@@ -136,8 +135,9 @@ export function mapApiResponseToFormData(event: EventApiResponse, locale: string
       ?? event.venue.additionalInformation
       ?? event.venue.additionalInfo
       ?? '',
-    venueAdditionalImageUrl: (venueStepImageRow as { imageUrl?: string } | undefined)?.imageUrl,
-    venueAdditionalImageId: (venueStepImageRow as { imageId?: string } | undefined)?.imageId,
+    venueAdditionalImageUrl: (venueAdditionalImageRow as { imageUrl?: string } | undefined)?.imageUrl,
+    venueAdditionalImageId: (venueAdditionalImageRow as { imageId?: string } | undefined)?.imageId,
+    venueMapImageUrl: (venueMapImageRow as { imageUrl?: string } | undefined)?.imageUrl,
     showVenuePostEvent: event.showVenuePostEvent ?? true,
     showAdditionalInfoPostEvent: event.showVenueAdditionalInfoPostEvent ?? true,
     googlePlaceName: event.venue.venueName || ''

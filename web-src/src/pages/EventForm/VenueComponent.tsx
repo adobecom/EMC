@@ -768,9 +768,7 @@ export const VenueComponent: React.FC = () => {
 
       {/* Venue Image Section */}
       <div className={style({display: 'flex', flexDirection: 'column', gap: 16})}>
-        <Heading level={4} UNSAFE_style={TYPOGRAPHY.SUBSECTION_HEADING}>
-          Venue image or map
-        </Heading>
+        
 
         <Switch
           data-testid="venue-instructions-visible-switch"
@@ -779,7 +777,23 @@ export const VenueComponent: React.FC = () => {
         >
           Display image and instructions post-event.
         </Switch>
-        
+
+        {venue.venueMapImageUrl && (
+          <div className={style({display: 'flex', flexDirection: 'column', gap: 8})}>
+            <Heading level={4} UNSAFE_style={TYPOGRAPHY.SUBSECTION_HEADING}>
+              Venue map (auto-generated)
+            </Heading>
+            <img
+              src={venue.venueMapImageUrl}
+              alt="Venue map"
+              style={{ width: '100%', height: 'auto', borderRadius: '4px' }}
+            />
+          </div>
+        )}
+
+        <Heading level={4} UNSAFE_style={TYPOGRAPHY.SUBSECTION_HEADING}>
+          Venue additional image
+        </Heading>
         <ImageUploader
           label=""
           imageUrl={venue.venueAdditionalImageUrl}
