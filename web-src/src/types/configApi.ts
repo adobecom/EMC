@@ -114,14 +114,14 @@ export const hasAttributesSlice = (c: ScopeConfig | null | undefined): c is Cust
 // ============================================================================
 
 export interface CustomAttributeValue {
-  valueId: string
+  valueId?: string
   value: string
   label: string
   ordinal?: number
 }
 
 export interface CustomAttributeConfig {
-  attributeId: string
+  attributeId?: string
   label?: string
   name: string
   inputType: CustomAttributeInputType

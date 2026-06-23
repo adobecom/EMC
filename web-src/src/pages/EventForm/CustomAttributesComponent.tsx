@@ -188,15 +188,15 @@ export const CustomAttributesComponent: React.FC = () => {
   // ============================================================================
 
   const updateTextValue = (attr: CustomAttributeConfig, value: string) => {
-    const others = currentValues.filter(v => v.attributeId !== attr.attributeId)
+    const others = currentValues.filter(v => v.attributeId !== attr.attributeId!)
     const entry: EventCustomAttributeValue[] = value
-      ? [{ attributeId: attr.attributeId, attribute: attr.name, valueId: '', value }]
+      ? [{ attributeId: attr.attributeId!, attribute: attr.name, valueId: '', value }]
       : []
     updateFormData({ customAttributes: [...others, ...entry] })
   }
 
   const updateSingleSelectValue = (attr: CustomAttributeConfig, selectedValue: string) => {
-    const others = currentValues.filter(v => v.attributeId !== attr.attributeId)
+    const others = currentValues.filter(v => v.attributeId !== attr.attributeId!)
     if (!selectedValue) {
       updateFormData({ customAttributes: others })
       return
@@ -207,9 +207,9 @@ export const CustomAttributesComponent: React.FC = () => {
       customAttributes: [
         ...others,
         {
-          attributeId: attr.attributeId,
+          attributeId: attr.attributeId!,
           attribute: attr.name,
-          valueId: opt.valueId,
+          valueId: opt.valueId!,
           value: opt.value,
           ordinal: opt.ordinal,
         },
@@ -218,11 +218,11 @@ export const CustomAttributesComponent: React.FC = () => {
   }
 
   const updateMultiSelectValue = useCallback((attr: CustomAttributeConfig, selectedValues: string[]) => {
-    const others = currentValues.filter(v => v.attributeId !== attr.attributeId)
+    const others = currentValues.filter(v => v.attributeId !== attr.attributeId!)
     const newEntries: EventCustomAttributeValue[] = selectedValues.map((sv, i) => {
       const opt = attr.values.find(v => v.value === sv)
       return {
-        attributeId: attr.attributeId,
+        attributeId: attr.attributeId!,
         attribute: attr.name,
         valueId: opt?.valueId ?? '',
         value: sv,

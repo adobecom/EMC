@@ -60,7 +60,6 @@ import type {
 import { hasRsvpSlice, hasLocalesSlice, hasAttributesSlice } from '../../types/configApi'
 import { BlurredLoadingOverlay } from '../../components/shared'
 import { useHasPermission } from '../../hooks/useHasPermission'
-import { generateUUID } from '../../services/requestHelpers'
 import { SUPPORTED_SPEAKER_LOCALES, SPEAKER_LOCALE_LABELS } from '../../config/localeMapping'
 
 interface ConfigManagementProps {
@@ -640,13 +639,18 @@ export const ConfigManagement: React.FC<ConfigManagementProps> = () => {
 
     const isSelectType = attrFormInputType === 'single-select' || attrFormInputType === 'multi-select'
     const attrConfig: CustomAttributeConfig = {
-      attributeId: editingAttr?.attributeId ?? generateUUID(),
+      ...(editingAttr?.attributeId ? { attributeId: editingAttr.attributeId } : {}),
       name: attrFormName.trim(),
       label: attrFormLabel.trim() || attrFormName.trim(),
       inputType: attrFormInputType,
       enabled: attrFormEnabled,
       values: isSelectType
-        ? attrFormValues.filter(v => v.value.trim()).map((v, i) => ({ ...v, valueId: v.valueId || generateUUID(), ordinal: i }))
+        ? attrFormValues.filter(v => v.value.trim()).map((v, i) => ({
+            ...(v.valueId ? { valueId: v.valueId } : {}),
+            label: v.label,
+            value: v.value,
+            ordinal: i,
+          }))
         : [],
     }
 
@@ -1081,10 +1085,11 @@ export const ConfigManagement: React.FC<ConfigManagementProps> = () => {
                       <tbody>
                         {customAttrsConfig.customAttributes.map(attr => {
                           const isExpandable = attr.inputType === 'single-select' || attr.inputType === 'multi-select'
-                          const isExpanded = expandedAttrKeys.has(attr.attributeId)
+                          const attrId = attr.attributeId!
+                          const isExpanded = expandedAttrKeys.has(attrId)
                           const colSpan = 5 + (isOwnAttrsConfig && (canWriteConfig || canDeleteConfig) ? 1 : 0)
                           return (
-                            <React.Fragment key={attr.attributeId}>
+                            <React.Fragment key={attrId}>
                               <tr style={{ borderTop: '1px solid var(--spectrum-global-color-gray-300)' }}>
                                 <td style={{ padding: '10px 16px' }}>
                                   <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
@@ -1094,7 +1099,7 @@ export const ConfigManagement: React.FC<ConfigManagementProps> = () => {
                                         aria-label={isExpanded ? 'Collapse' : 'Expand'}
                                         onPress={() => setExpandedAttrKeys(prev => {
                                           const next = new Set(prev)
-                                          next.has(attr.attributeId) ? next.delete(attr.attributeId) : next.add(attr.attributeId)
+                                          next.has(attrId) ? next.delete(attrId) : next.add(attrId)
                                           return next
                                         })}
                                       >
@@ -1128,7 +1133,7 @@ export const ConfigManagement: React.FC<ConfigManagementProps> = () => {
                                         </ActionButton>
                                       )}
                                       {canDeleteConfig && (
-                                        <ActionButton isQuiet aria-label="Delete attribute" onPress={() => setAttrToDelete(attr.attributeId)}>
+                                        <ActionButton isQuiet aria-label="Delete attribute" onPress={() => setAttrToDelete(attrId)}>
                                           <RemoveCircle />
                                         </ActionButton>
                                       )}
