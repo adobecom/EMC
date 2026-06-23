@@ -1083,7 +1083,7 @@ export const ConfigManagement: React.FC<ConfigManagementProps> = () => {
                         </tr>
                       </thead>
                       <tbody>
-                        {customAttrsConfig.customAttributes.map(attr => {
+                        {customAttrsConfig.customAttributes.filter(a => a.enabled !== false).map(attr => {
                           const isExpandable = attr.inputType === 'single-select' || attr.inputType === 'multi-select'
                           const attrId = attr.attributeId!
                           const isExpanded = expandedAttrKeys.has(attrId)
@@ -1902,10 +1902,10 @@ export const ConfigManagement: React.FC<ConfigManagementProps> = () => {
             if (!customAttrsConfig || !attrToDelete || !selectedScopeId) return
             setIsSaving(true)
             try {
-              const updatedAttrs = customAttrsConfig.customAttributes.filter(a => a.attributeId !== attrToDelete)
-              const body = updatedAttrs.length > 0
-                ? buildPutBody(customAttrsConfig, { customAttributes: updatedAttrs })
-                : buildPutBody({ ...customAttrsConfig, customAttributes: undefined }, {})
+              const updatedAttrs = customAttrsConfig.customAttributes.map(a =>
+                a.attributeId === attrToDelete ? { ...a, enabled: false } : a
+              )
+              const body = buildPutBody(customAttrsConfig, { customAttributes: updatedAttrs })
               const result = await apiService.upsertConfig(selectedScopeId, body)
               if ('error' in result) { toast.error('Failed to delete Custom Attribute'); return }
               toast.success('Custom Attribute deleted')
@@ -1920,7 +1920,7 @@ export const ConfigManagement: React.FC<ConfigManagementProps> = () => {
           onCancel={() => setAttrToDelete(null)}
           isPrimaryActionDisabled={isSaving}
         >
-          Delete attribute <strong>{customAttrsConfig?.customAttributes.find(a => a.attributeId === attrToDelete)?.name ?? attrToDelete}</strong>? This action cannot be undone.
+          Delete attribute <strong>{customAttrsConfig?.customAttributes.find(a => a.attributeId === attrToDelete)?.name ?? attrToDelete}</strong>? It will be hidden from all event forms.
         </AlertDialog>
       </DialogTrigger>
 
