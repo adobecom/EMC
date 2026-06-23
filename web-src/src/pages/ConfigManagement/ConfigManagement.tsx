@@ -1133,7 +1133,7 @@ export const ConfigManagement: React.FC<ConfigManagementProps> = () => {
                                         </ActionButton>
                                       )}
                                       {canDeleteConfig && (
-                                        <ActionButton isQuiet aria-label="Delete attribute" onPress={() => setAttrToDelete(attrId)}>
+                                        <ActionButton isQuiet aria-label="Delete attribute" isDisabled={!!attr.attributeId} onPress={() => setAttrToDelete(attrId)}>
                                           <RemoveCircle />
                                         </ActionButton>
                                       )}
