@@ -2,7 +2,7 @@
 * <license header>
 */
 
-import React, { useEffect, useMemo, useCallback, useRef, useState } from 'react'
+import React, { useEffect, useMemo, useCallback, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { ActionButton, Button, ButtonGroup, MenuTrigger, Menu, MenuItem, Text, DialogTrigger, Dialog, Content, Heading, AlertDialog, Link, Picker, PickerItem, Popover, ToggleButtonGroup, ToggleButton } from "@react-spectrum/s2"
 import { style } from "@react-spectrum/s2/style" with { type: "macro" }
@@ -13,6 +13,7 @@ import Location from "@react-spectrum/s2/icons/Location"
 import Calendar from "@react-spectrum/s2/icons/Calendar"
 import Table from "@react-spectrum/s2/icons/Table"
 import { getEventTypeOptions, EventType } from '../../config/eventTypeConfig'
+import { CloneEvent } from './CloneEvent'
 import { TableColumn } from '../../components/shared/DataTable'
 import { StatusBadge, ResourceDashboardLayout, BlurredLoadingOverlay } from '../../components/shared'
 import CalendarIllustration from '@react-spectrum/s2/illustrations/linear/Calendar'
@@ -23,12 +24,10 @@ import { SPACING, SHIMMER_BASE, SURFACES } from '../../styles/designSystem'
 import { seriesEnrichmentManager, SeriesInfo } from '../../services/seriesEnrichment'
 import { IMS } from '../../types'
 import { useToast, useGroup } from '../../contexts'
-import { filterEventData } from '../../utils/dataFilters'
 import { useSafeState, useRBACFilter, usePersistentState } from '../../hooks'
 import { useHasPermission } from '../../hooks/useHasPermission'
 import { getEspEnvParam } from '../../config/constants'
-import { SUPPORTED_SPEAKER_LOCALES, SPEAKER_LOCALE_LABELS } from '../../config/localeMapping'
-import { hasLocalesSlice } from '../../types/configApi'
+import { SPEAKER_LOCALE_LABELS } from '../../config/localeMapping'
 import { buildEventManageActions } from './eventManageActions'
 import { EventCalendar } from './calendar/EventCalendar'
 import { EventPopoverContent } from './calendar/EventPopoverContent'
@@ -66,12 +65,6 @@ function getEventCreatorForFilter(
   )
 }
 
-/** Default locale picker entries when no scope config is available */
-const DEFAULT_LOCALE_PICKER_OPTIONS = SUPPORTED_SPEAKER_LOCALES.map((key) => ({
-  key,
-  label: SPEAKER_LOCALE_LABELS[key] || key,
-}))
-
 interface EventsDashboardProps {
   ims: IMS
 }
@@ -97,6 +90,7 @@ export const EventsDashboard: React.FC<EventsDashboardProps> = () => {
   const [itemToDelete, setItemToDelete] = useSafeState<EventDashboardItem | null>(null)
   const [itemToPublish, setItemToPublish] = useSafeState<EventDashboardItem | null>(null)
   const [actionInProgress, setActionInProgress] = useSafeState<string | null>(null)
+  const [cloneItem, setCloneItem] = useSafeState<EventDashboardItem | null>(null)
 
   const [listFilters, setListFilters] = usePersistentState('emc-events-dashboard-filters', {
     seriesId: FILTER_ALL,
@@ -158,37 +152,22 @@ export const EventsDashboard: React.FC<EventsDashboardProps> = () => {
     }
   }
 
-  const { groupVersion, activeGroup } = useGroup()
+  const { groupVersion } = useGroup()
   useEffect(() => {
     loadEventsData()
   }, [groupVersion]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Locale options fetched from scope config; falls back to the static default list
-  const [localeOptions, setLocaleOptions] = useState(DEFAULT_LOCALE_PICKER_OPTIONS)
-  useEffect(() => {
-    const scopeId = activeGroup?.scopeId
-    if (!scopeId) {
-      setLocaleOptions(DEFAULT_LOCALE_PICKER_OPTIONS)
-      return
-    }
-    let cancelled = false
-    cachedApi.getConfig(scopeId).then((result) => {
-      if (cancelled) return
-      if (result === null || 'error' in result) {
-        setLocaleOptions(DEFAULT_LOCALE_PICKER_OPTIONS)
-        return
-      }
-      const locales = hasLocalesSlice(result) ? result.locales.locales : undefined
-      if (locales && locales.length > 0) {
-        setLocaleOptions(locales.map((l) => ({ key: l.code, label: l.name })))
-      } else {
-        setLocaleOptions(DEFAULT_LOCALE_PICKER_OPTIONS)
-      }
-    }).catch(() => {
-      if (!cancelled) setLocaleOptions(DEFAULT_LOCALE_PICKER_OPTIONS)
-    })
-    return () => { cancelled = true }
-  }, [activeGroup?.scopeId])
+  // Derive locale filter options directly from loaded events so the list
+  // always reflects actual data — no static fallback list, no extra API call.
+  const localeOptions = useMemo(() => {
+    const codes = [...new Set(
+      events.map(e => e.defaultLocale).filter((c): c is string => !!c)
+    )]
+    codes.sort((a, b) =>
+      (SPEAKER_LOCALE_LABELS[a] || a).localeCompare(SPEAKER_LOCALE_LABELS[b] || b)
+    )
+    return codes.map(key => ({ key, label: SPEAKER_LOCALE_LABELS[key] || key }))
+  }, [events])
 
   // Fetch thumbnails only for visible event IDs (triggered by pagination)
   useEffect(() => {
@@ -456,67 +435,7 @@ export const EventsDashboard: React.FC<EventsDashboardProps> = () => {
         break
 
       case 'clone': {
-        setActionInProgress(item.eventId)
-        
-        try {
-          // Fetch full event data to get all fields for cloning
-          const eventResponse = await cachedApi.getEventFull(item.eventId)
-          
-          if ('error' in eventResponse) {
-            toast.error('Failed to load event data for cloning')
-            break
-          }
-
-          // Filter the event data for cloning (excludes eventId, published, timestamps, etc.)
-          const cloneableData = filterEventData(eventResponse, 'clone')
-          
-          // Get the locale for proper localization handling
-          const locale = eventResponse.defaultLocale || 'en-US'
-          
-          // Get the localized title from the response (support legacy top-level title)
-          const originalTitle = eventResponse.localizations?.[locale]?.title ||
-                               eventResponse.enTitle ||
-                               eventResponse.title ||
-                               'Untitled Event'
-          
-          // Prepare the cloned event data with "- copy" suffix
-          const clonedEventData: Record<string, any> = {
-            ...cloneableData,
-            enTitle: `${originalTitle} - copy`,
-            published: false,
-            liveUpdate: false,
-          }
-          
-          // Update the localized title
-          if (clonedEventData.localizations && clonedEventData.localizations[locale]) {
-            clonedEventData.localizations[locale].title = `${originalTitle} - copy`
-          }
-          
-          // Create the event directly via API
-          const result = await apiService.createEventExternal(clonedEventData, locale)
-          
-          if ('error' in result) {
-            toast.error(`Failed to clone event: ${result.error}`)
-          } else {
-            const newEventId = result.event?.eventId || result.eventId
-            toast.success('Event cloned successfully!', {
-              duration: 5000,
-              action: {
-                label: 'View',
-                onPress: () => {
-                  window.location.hash = `#/events/edit/${newEventId}`
-                }
-              }
-            })
-            // Refresh events list
-            await loadEventsData()
-          }
-        } catch (err) {
-          console.error('Error cloning event:', err)
-          toast.error('Failed to clone event')
-        } finally {
-          setActionInProgress(null)
-        }
+        setCloneItem(item)
         break
       }
 
@@ -1299,6 +1218,14 @@ export const EventsDashboard: React.FC<EventsDashboardProps> = () => {
         message="Processing..."
         ariaLabel="Processing action"
         zIndex={9999}
+      />
+
+      {/* Clone Event */}
+      <CloneEvent
+        item={cloneItem}
+        existingNames={events.map(e => e.eventName)}
+        onClose={() => setCloneItem(null)}
+        onCloned={loadEventsData}
       />
 
       {/* Publish / Unpublish Confirmation Dialog */}
