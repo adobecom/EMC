@@ -415,7 +415,8 @@ export const CampaignsTab: React.FC<CampaignsTabProps> = ({
               <Edit />
             </ActionButton>
           )}
-          {canDeleteEvent && (
+          {/* TODO MWPW-199465: temporary fix — delete button hidden until delete flow is finalized */}
+          {false && canDeleteEvent && (
             <ActionButton
               isQuiet
               isDisabled={campaign.attendeeCount > 0}
