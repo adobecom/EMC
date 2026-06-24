@@ -1,16 +1,17 @@
-name: Deploy to Production
+name: Deploy to Dev
 
 on:
-  release:
-    types: [released]
+  push:
+    branches:
+      - dev
 
 concurrency:
-  group: deploy-prod
+  group: deploy-dev
   cancel-in-progress: false
 
 jobs:
   deploy:
-    name: Deploy to Prod
+    name: Deploy to Dev
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -33,18 +34,20 @@ jobs:
 
       - name: Deploy
         env:
-          AIO_RUNTIME_NAMESPACE: ${{ vars.AIO_RUNTIME_NAMESPACE_PROD }}
-          AIO_RUNTIME_AUTH: ${{ secrets.AIO_RUNTIME_AUTH_PROD }}
+          AIO_RUNTIME_NAMESPACE: ${{ vars.AIO_RUNTIME_NAMESPACE_DEV }}
+          AIO_RUNTIME_AUTH: ${{ secrets.AIO_RUNTIME_AUTH_DEV }}
+          DEV_CLIENT_IDENTITY: ${{ secrets.DEV_CLIENT_IDENTITY }}
+          STAGE_CLIENT_IDENTITY: ${{ secrets.STAGE_CLIENT_IDENTITY }}
           PROD_CLIENT_IDENTITY: ${{ secrets.PROD_CLIENT_IDENTITY }}
           IMS_CLIENT_ID: ${{ secrets.IMS_CLIENT_ID }}
           IMS_SCOPES: ${{ secrets.IMS_SCOPES }}
-          PROD_GOOGLE_PLACES_API: ${{ secrets.PROD_GOOGLE_PLACES_API }}
-        run: npm run deploy:prod
+          DEV_GOOGLE_PLACES_API: ${{ secrets.DEV_GOOGLE_PLACES_API }}
+        run: npm run deploy:dev
 
       - name: Deployment Summary
         run: |
-          echo "### 🚀 Production Deployment Successful" >> $GITHUB_STEP_SUMMARY
+          echo "### ✅ Dev Deployment Successful" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "**Environment:** Production" >> $GITHUB_STEP_SUMMARY
-          echo "**Release:** ${{ github.event.release.tag_name }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Environment:** Dev" >> $GITHUB_STEP_SUMMARY
           echo "**Commit:** ${{ github.sha }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Branch:** ${{ github.ref_name }}" >> $GITHUB_STEP_SUMMARY
