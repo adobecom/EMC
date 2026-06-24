@@ -1252,6 +1252,7 @@ export const EventsDashboard: React.FC<EventsDashboardProps> = () => {
         </AlertDialog>
       </DialogTrigger>
 
+
       {/* Delete Confirmation Dialog */}
       <DialogTrigger
         isOpen={!!itemToDelete}
