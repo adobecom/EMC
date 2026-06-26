@@ -382,7 +382,7 @@ export const TemplatePicker: React.FC<TemplatePickerProps> = ({
             <div
               style={{
                 flex: 1,
-                overflow: 'hidden'
+                overflow: 'auto hidden'
               }}
             >
               <div
