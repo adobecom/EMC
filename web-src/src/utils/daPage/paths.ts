@@ -6,11 +6,11 @@
 import { DEFAULT_LOCALE } from '../../config/daConfig'
 
 /**
- * Joins path parts and deduplicates consecutive slashes (except after protocol colon).
- * Equivalent to node:path.join(...parts) for URL-style paths.
+ * Joins path parts, filtering out nullish values, and deduplicates consecutive slashes
+ * (except after a protocol colon). Equivalent to node:path.join(...parts) for URL-style paths.
  */
-function joinPath(...parts: string[]): string {
-  return parts.join('/').replace(/([^:]\/)\/+/g, '$1')
+export function joinPath(...parts: (string | undefined | null)[]): string {
+  return (parts.filter(Boolean) as string[]).join('/').replace(/([^:]\/)\/+/g, '$1')
 }
 
 export function handleExtension(filePath: string): string {

@@ -658,6 +658,19 @@ export function useEventFormSave() {
         setEventResponse(hydratedEvent)
       }
 
+      // 7a. Inject series data — getEventFull fetches event+speakers+sponsors+venue+images
+      //     but not the series record. DA orchestrator needs series.targetCms and series.templateId.
+      //     The series is already cached from the form load so this is a fast cache hit.
+      if (hydratedEvent && !hydratedEvent.series) {
+        const sid = hydratedEvent.seriesId || seriesId
+        if (sid) {
+          const seriesResp = await cachedApi.getSeriesFull(sid)
+          if (seriesResp && !('error' in seriesResp)) {
+            hydratedEvent.series = seriesResp
+          }
+        }
+      }
+
       // 7b. DA page creation — runs after getEventFull so the event is fully hydrated
       //     (image URLs, speakers, sessions, series.templateId are all present).
       //     Only runs when the series is Document Authoring-targeted.

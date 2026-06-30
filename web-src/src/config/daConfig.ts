@@ -46,8 +46,6 @@ export const HELIX_OPERATIONS = {
   PREVIEW: 'preview',
   PUBLISH: 'publish',
   UNPUBLISH: 'unpublish',
-  CACHEPURGE: 'Purge',
-  DELETE_PREVIEW: 'deletePreview',
 } as const
 
 export type HelixOperation = typeof HELIX_OPERATIONS[keyof typeof HELIX_OPERATIONS]

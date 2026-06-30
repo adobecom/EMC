@@ -15,7 +15,7 @@ import { DA_CONFIG, DEFAULT_LOCALE, DEFAULT_SP_LOCALES, EMC_MARKER, getDaSiteFor
 import { readFromDA, writeToDA, listDaPath } from './daClient'
 import { bulkHelixOperation, resolveHelixOperation } from './helixClient'
 import { replacePlaceholders, resolveArrayPlaceholders, updateFragmentPaths, replaceToImageTag } from '../../utils/daPage/placeholders'
-import { getRelativeEventPagePath, getLocalizedTemplatePath, constructFragmentsFolderPath } from '../../utils/daPage/paths'
+import { getRelativeEventPagePath, getLocalizedTemplatePath, constructFragmentsFolderPath, joinPath } from '../../utils/daPage/paths'
 import { mergeLocalization, getDisplayDateTime, extractCustomAttributes, fillMissingFields } from '../../utils/daPage/localization'
 import {
   parseHtmlDocument,
@@ -62,14 +62,7 @@ export interface DaPageCreationResult {
   allPages: string[]
 }
 
-// ─── Helpers ─────────────────────────────────────────────────────────────────
 
-function joinPath(...parts: (string | undefined | null)[]): string {
-  return parts
-    .filter(Boolean)
-    .join('/')
-    .replace(/([^:]\/)\/+/g, '$1')
-}
 
 /**
  * Returns true when the series is configured for Document Authoring.
@@ -420,7 +413,7 @@ async function performEventDetailPageOperation(
     eventTemplatePath,
     eventObj,
     relativeDestinationPagePath,
-    { ...sessionHubFragmentMap },
+    { ...sessionHubFragmentMap, ...speakerHubFragmentMap },
     site,
     token,
     dryRun

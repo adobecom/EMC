@@ -5,14 +5,7 @@
  */
 
 import { camelToKebab, isPrimitive } from './placeholders'
-import { constructFragmentsFolderPath } from './paths'
-
-/**
- * Joins path parts and deduplicates consecutive slashes (except after protocol colon).
- */
-function joinPath(...parts: string[]): string {
-  return parts.join('/').replace(/([^:]\/)\/+/g, '$1')
-}
+import { joinPath } from './paths'
 
 export function parseHtmlDocument(html: string): Document {
   return new DOMParser().parseFromString(html, 'text/html')
@@ -179,5 +172,3 @@ export function performDomOperations(
   return new Blob([serialized], { type: 'text/html' })
 }
 
-// Re-export constructFragmentsFolderPath so callers can import it from this module if needed
-export { constructFragmentsFolderPath }

@@ -1,12 +1,6 @@
 import { daFetch } from './daFetch'
 import { DA_CONFIG } from '../../config/daConfig'
-
-function joinPath(...parts: (string | undefined)[]): string {
-  return parts
-    .filter(Boolean)
-    .join('/')
-    .replace(/([^:]\/)\/+/g, '$1')
-}
+import { joinPath } from '../../utils/daPage/paths'
 
 export function getDaSourceUrl(path: string): string {
   return joinPath(DA_CONFIG.url, 'source', DA_CONFIG.org, path)

@@ -105,7 +105,7 @@ export function getDisplayDateTime(
   locale: string,
   gmtOffset: number,
 ): string | undefined {
-  if (startDateMillis && endDateMillis && locale && gmtOffset) {
+  if (startDateMillis && endDateMillis && locale && gmtOffset !== undefined && gmtOffset !== null) {
     const offSetMilliseconds = gmtOffset * 60 * 60 * 1000
     const startDate = new Date(startDateMillis + offSetMilliseconds)
     const endDate = new Date(endDateMillis + offSetMilliseconds)

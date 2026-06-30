@@ -23,17 +23,11 @@ async function helixPost(url: string, token: string): Promise<void> {
 }
 
 async function helixDelete(url: string, token: string): Promise<void> {
-  // Helix delete returns 204 — daFetch throws on non-ok, so handle separately.
-  const response = await fetch(url, {
+  // HTTP 204 has response.ok === true, so daFetch handles it correctly.
+  await daFetch(url, {
     method: 'DELETE',
     headers: { Authorization: `Bearer ${token}` },
-    mode: 'cors',
-    credentials: 'omit',
   })
-  if (!response.ok && response.status !== 204) {
-    const errorText = response.headers.get('x-error') || response.statusText
-    throw new Error(`Helix DELETE ${url} failed (${response.status}): ${errorText}`)
-  }
 }
 
 export async function helixPreview(config: HelixClientConfig, filePath: string, token: string): Promise<void> {
