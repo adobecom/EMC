@@ -234,6 +234,83 @@ Once `SUPPRESS_DA_WEBHOOK_FOR_EMC=true` has been running cleanly in prod for one
 
 ---
 
+## Full retirement (when backward compatibility is no longer required)
+
+The "Retirement" section above removes the old pipeline infrastructure but leaves suppression
+machinery in EMC (the `pageCreatedBy` flag, the fire-and-forget follow-up PUT, the
+`modified-by: EMC` ownership marker). These exist only to coordinate with the now-deleted
+webhook during the transition. Once every DA series has been operating through EMC for long
+enough that no event page could have been last written by the old webhook, all of this can be
+removed.
+
+**Prerequisite for this phase:** All DA events in all environments have been saved at least
+once through EMC (i.e., every live DA page carries `modified-by: EMC` in its metadata block,
+not `modified-by: DA_WEBHOOK`). Verify via a Splunk query or a DA content audit before
+proceeding.
+
+### EMC — `web-src/src/`
+
+| What | File | How |
+|---|---|---|
+| Remove fire-and-forget follow-up PUT | `hooks/useEventFormSave.ts` | Delete the `apiService.updateEventExternal(savedEventId, { ...hydratedEvent, pageCreatedBy: 'emc' }, ...)` call and its `.catch` handler (the block after `if (daResult.success)` in step 7b). |
+| Remove `pageCreatedBy` from data filter | `utils/dataFilters.ts` | Delete the `pageCreatedBy` entry from `EVENT_DATA_FILTER`. |
+| Remove `pageCreatedBy` from the domain type | `types/domain.ts` | Delete `pageCreatedBy?: string` from `EventApiResponse`. |
+| Remove `modified-by: EMC` marker | `services/da/daPageService.ts` | Delete the `addPageMarker(document, EMC_MARKER)` call in `performDomOperations` (in `dom.ts`) and remove the `EMC_MARKER` import. |
+| Remove `EMC_MARKER` constant | `config/daConfig.ts` | Delete `export const EMC_MARKER = 'EMC'`. |
+| Remove `DA_MARKER` constant | `config/daConfig.ts` | Delete `export const DA_MARKER = 'DA_WEBHOOK'` — no longer needed now the webhook is gone. |
+| Remove series data injection step | `hooks/useEventFormSave.ts` | Delete step 7a (the `cachedApi.getSeriesFull` call and `hydratedEvent.series = seriesResp`). `getEventFull` should be updated to embed series inline instead (see below), or `isDocumentAuthoringEvent` can be called against the form context's already-loaded series before the save rather than against the post-save hydrated event. |
+
+> **Simplification opportunity:** Once the suppression flag is gone, the `isDocumentAuthoringEvent`
+> check in step 7b can move to the top of `saveEvent` (before any API calls), using the series
+> data already loaded in the EventFormContext. This eliminates the need for step 7a entirely and
+> lets DA page creation start earlier in the save flow.
+
+### events-service-layer
+
+| What | How |
+|---|---|
+| Remove `pageCreatedBy` from schema | Delete the field from the event PUT/POST schema and the DynamoDB model. It will no longer be sent by EMC and has no downstream consumer. |
+| Remove `targetCmsProvider` from kinesis payload | The field was only used to route to the DA webhook. Confirm no other consumers (Splunk dashboards, other lambdas) read it before removing. |
+
+### events-service-platform
+
+| What | How |
+|---|---|
+| Remove DA-provider forwarding block | In `ServiceProcessor.js callHydratedEvent`, delete the `if (seriesObject?.targetCms?.provider === TARGET_CMS_PROVIDERS.DA)` block entirely (including the suppression gate introduced during transition). |
+| Remove `TARGET_CMS_PROVIDERS.DA` constant | If this constant is only referenced in the now-deleted DA block, remove it from `Constants.js`. |
+| Remove `SUPPRESS_DA_WEBHOOK_FOR_EMC` env var | Remove from all deployment manifests, parameter stores, and CI environment configs. |
+
+### events-platform-hh-webhooks
+
+The entire `hoolihan-da-webhook` action should already be deleted by the "Retirement" phase.
+If any references remain:
+
+| What | How |
+|---|---|
+| Delete action directory | `actions/hoolihan-da-webhook/` — entire directory |
+| Remove invocation route | Remove the route that maps kinesis `targetCmsProvider=documentAuthoring` events to this action |
+| Remove DA service-token secrets | `DA_CLIENT_ID`, `DA_CLIENT_SECRET`, `DA_SCOPES` from `appConfig.js` and all environment secret stores |
+| Remove `DA_WEBHOOK` constant | `actions/constants.js` — `DA_WEBHOOK: 'DA_WEBHOOK'` if no other action references it |
+
+### `getEventFull` cleanup (optional, recommended)
+
+Now that `isDocumentAuthoringEvent` no longer needs to be called on the post-save hydrated
+event, the series injection (step 7a) added to `useEventFormSave.ts` can be removed. The
+cleaner long-term approach is to move the DA check to before the save and pass the series from
+the EventFormContext:
+
+```ts
+// In saveEvent(), before any API calls:
+const { seriesResponse } = useEventFormContext()
+if (isDocumentAuthoringEvent({ series: seriesResponse })) {
+  // run DA page creation here, against form context data + a separate getEventFull after save
+}
+```
+
+This also avoids the extra `cachedApi.getSeriesFull` round-trip that was needed as a workaround.
+
+---
+
 ## Questions / contacts
 
 | Concern | Who to ask |
