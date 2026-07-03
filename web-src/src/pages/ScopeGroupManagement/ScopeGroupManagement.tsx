@@ -555,6 +555,7 @@ export const ScopeGroupManagement: React.FC<ScopeGroupManagementProps> = () => {
     try {
       if (editingGroup) {
         const result = await apiService.updateGroup(selectedScopeId, editingGroup.groupId, {
+          groupId: editingGroup.groupId,
           name: groupFormName.trim(),
           description: groupFormDescription.trim() || undefined,
           roleId: groupFormRoleId,
