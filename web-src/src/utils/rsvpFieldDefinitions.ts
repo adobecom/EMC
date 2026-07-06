@@ -15,7 +15,7 @@ const LEGACY_EXCLUDED_TYPES = new Set(['submit', 'button', 'hidden'])
 function inferFieldType(raw: string | undefined): RsvpFieldType {
   const t = (raw || 'text').toLowerCase().replace(/\s+/g, '')
   if (t === 'select') return 'select'
-  if (t === 'multi-select' || t === 'multiselect') return 'multi-select'
+  if (t === 'checkbox') return 'checkbox'
   if (t === 'email') return 'email'
   if (t === 'phone' || t === 'tel') return 'phone'
   return 'text'
@@ -46,7 +46,7 @@ export function mapLegacyRsvpConfigToFormFields(rows: RsvpConfigField[]): RsvpFo
     })
     .map(r => {
       const type = inferFieldType(r.Type)
-      const options = type === 'select' || type === 'multi-select'
+      const options = type === 'select' || type === 'checkbox'
         ? parseLegacyOptions(r.Options)
         : []
       return {
@@ -56,9 +56,7 @@ export function mapLegacyRsvpConfigToFormFields(rows: RsvpConfigField[]): RsvpFo
         type,
         required: r.Required === 'x' || r.Required === 'X',
         options,
-        rules: '',
         default: '',
-        displayAs: ''
       } satisfies RsvpFormField
     })
 }
@@ -92,5 +90,5 @@ export function mergeOptionSelectionWithField(
 export function isSelectableField(
   field: RsvpFormField
 ): field is RsvpFormField & { options: NonNullable<RsvpFormField['options']> } {
-  return (field.type === 'select' || field.type === 'multi-select') && (field.options?.length ?? 0) > 0
+  return (field.type === 'select' || field.type === 'checkbox') && (field.options?.length ?? 0) > 0
 }

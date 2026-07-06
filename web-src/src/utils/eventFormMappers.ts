@@ -34,26 +34,20 @@ export function getLocalizedValue(obj: any, fieldName: string, locale: string): 
   return obj?.[fieldName]
 }
 
-// TODO: (rsvp-shape-migration) Remove this helper once ESP BE PR #903 ships AND
-// either backfills stored events or adds a read-time adapter on the BE.
-// GET responses may return either:
-//   - new shape:    { fields: [{ field, required, options }] }
-//   - legacy shape: { required: string[], visible: string[] }
-// Without this adapter, events stored under the legacy shape open with an empty
-// RSVP fields list in the form on edit.
+/**
+ * Read an event's RSVP form field config. ESP's RSVPFormFields schema stores
+ * `{ required: string[], visible: string[] }` — expand it into the form's
+ * per-field array shape (display order = visible[] order).
+ */
 function readRsvpFormFields(
   raw: any
-): Array<{ field: string; required?: boolean; options?: string[] }> {
-  if (!raw || typeof raw !== 'object') return []
-  if (Array.isArray(raw.fields)) return raw.fields
-  if (Array.isArray(raw.visible)) {
-    const requiredSet = new Set<string>(Array.isArray(raw.required) ? raw.required : [])
-    return raw.visible.map((field: string) => ({
-      field,
-      required: requiredSet.has(field),
-    }))
-  }
-  return []
+): Array<{ field: string; required?: boolean }> {
+  if (!raw || !Array.isArray(raw.visible)) return []
+  const requiredSet = new Set<string>(Array.isArray(raw.required) ? raw.required : [])
+  return raw.visible.map((field: string) => ({
+    field,
+    required: requiredSet.has(field),
+  }))
 }
 
 /**
@@ -180,8 +174,6 @@ export function mapApiResponseToFormData(event: EventApiResponse, locale: string
     // Only populate marketoFormUrl from formData when type is Marketo.
     // When type is ESP, formData is "v1" (placeholder token for rsvpFormFields) — do not show in Marketo input.
     marketoFormUrl: event.registration?.type === 'Marketo' ? (event.registration.formData || '') : '',
-    // TODO: (rsvp-shape-migration) once BE #903 ships and all stored events return
-    // the new {fields} shape, simplify back to `event.rsvpFormFields?.fields ?? []`.
     rsvpFormFields: readRsvpFormFields(event.rsvpFormFields),
     images: event.images || [],
     profiles: mapSpeakersToProfiles(event.speakers || [], locale),

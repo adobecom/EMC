@@ -17,7 +17,7 @@ import { COLORS, SURFACES } from '../../styles/designSystem'
 import OpenIn from '@react-spectrum/s2/icons/OpenIn'
 import Move from '@react-spectrum/s2/icons/Move'
 import ListBulleted from '@react-spectrum/s2/icons/ListBulleted'
-import { useGroup } from '../../contexts/GroupContext'
+import { useEventFormContext } from '../../contexts/EventFormContext'
 import { cachedApi } from '../../services/api'
 import { configService } from '../../services/configService'
 import { hasRsvpConfig } from '../../config/externalConfigs'
@@ -65,7 +65,7 @@ export const RegistrationFieldsComponent: React.FC<RegistrationFieldsComponentPr
   onRegistrationTypeChange,
   onMarketoFormUrlChange,
 }) => {
-  const { activeGroup } = useGroup()
+  const { eventId } = useEventFormContext()
   const [fields, setFields] = useState<RsvpFormField[]>([])
   const [fieldSourceMode, setFieldSourceMode] = useState<RsvpFieldSourceMode>('scope')
   const [loading, setLoading] = useState(true)
@@ -89,7 +89,6 @@ export const RegistrationFieldsComponent: React.FC<RegistrationFieldsComponentPr
   )
 
   useEffect(() => {
-    const scopeId = activeGroup?.scopeId
     const cloudForLegacy = hasRsvpConfig(cloudType) ? cloudType : 'CreativeCloud'
 
     const loadFields = async () => {
@@ -98,16 +97,17 @@ export const RegistrationFieldsComponent: React.FC<RegistrationFieldsComponentPr
         let nextFields: RsvpFormField[] = []
         let mode: RsvpFieldSourceMode = 'legacy'
 
-        if (scopeId) {
-          const result = await cachedApi.getConfig(scopeId)
-          if (result !== null && !('error' in result)) {
-            const scopeFields = hasRsvpSlice(result) ? result.rsvp.rsvpFormFields : []
+        if (eventId) {
+          const result = await cachedApi.getEventConfigs(eventId)
+          if (!('error' in result)) {
+            const config = result[0] ?? null
+            const scopeFields = config && hasRsvpSlice(config) ? config.rsvp.rsvpFormFields : []
             if (scopeFields.length > 0) {
               nextFields = scopeFields
               mode = 'scope'
             }
           } else {
-            console.warn('Scope RSVP config request failed; falling back to legacy JSON if available.', result)
+            console.warn('Event configs request failed; falling back to legacy JSON if available.', result)
           }
         }
 
@@ -129,7 +129,7 @@ export const RegistrationFieldsComponent: React.FC<RegistrationFieldsComponentPr
     }
 
     loadFields()
-  }, [activeGroup?.scopeId, cloudType])
+  }, [eventId, cloudType])
 
   const validFields = useMemo(() => fields.filter(f => f.field), [fields])
   const mandatedFieldNames = useMemo(() => validFields.filter(f => f.required).map(f => f.field), [validFields])

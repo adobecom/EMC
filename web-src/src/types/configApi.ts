@@ -16,11 +16,9 @@
 
 export type ConfigType = 'rsvp' | 'locales' | 'customAttributes'
 
-export type RsvpFieldType = 'text' | 'email' | 'phone' | 'select' | 'multi-select'
+export type RsvpFieldType = 'text' | 'email' | 'phone' | 'select' | 'checkbox'
 
-export type RsvpDisplayAs = 'dropdown' | 'radio' | 'checkbox' | ''
-
-export type CustomAttributeInputType = 'text' | 'boolean' | 'single-select' | 'multi-select'
+export type CustomAttributeInputType = 'text' | 'single-select' | 'multi-select'
 
 // ============================================================================
 // RSVP Form Field Models
@@ -40,9 +38,7 @@ export interface RsvpFormField {
   type: RsvpFieldType
   required: boolean
   options: RsvpOption[]
-  rules: string
   default: string
-  displayAs: RsvpDisplayAs
 }
 
 /** Partial RSVP field for localization overrides (only translatable properties).
@@ -118,14 +114,14 @@ export const hasAttributesSlice = (c: ScopeConfig | null | undefined): c is Cust
 // ============================================================================
 
 export interface CustomAttributeValue {
-  valueId: string
+  valueId?: string
   value: string
   label: string
   ordinal?: number
 }
 
 export interface CustomAttributeConfig {
-  attributeId: string
+  attributeId?: string
   label?: string
   name: string
   inputType: CustomAttributeInputType
