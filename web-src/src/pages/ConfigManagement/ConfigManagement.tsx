@@ -106,6 +106,17 @@ function createEmptyRsvpField(): RsvpFormField {
   }
 }
 
+const CAMEL_CASE_PATTERN = /^[a-z][a-zA-Z0-9]*$/
+
+/** Validates an RSVP field's Field Name: must be camelCase and unique among sibling fields. */
+function getFieldNameError(name: string, siblingNames: string[]): string | undefined {
+  const trimmed = name.trim()
+  if (!trimmed) return undefined
+  if (!CAMEL_CASE_PATTERN.test(trimmed)) return 'Must be camelCase (e.g. firstName)'
+  if (siblingNames.some(n => n === trimmed)) return 'Field name must be unique'
+  return undefined
+}
+
 // ============================================================================
 // MAIN COMPONENT
 // ============================================================================
@@ -157,6 +168,12 @@ export const ConfigManagement: React.FC<ConfigManagementProps> = () => {
   const [fieldToDelete, setFieldToDelete] = useState<{ field: RsvpFormField; index: number } | null>(null)
   const [expandedFieldKeys, setExpandedFieldKeys] = useState<Set<string>>(new Set())
   const [expandedAttrKeys, setExpandedAttrKeys] = useState<Set<string>>(new Set())
+
+  const handleAddRsvpField = () => {
+    const newIndex = rsvpFormFields.length
+    setRsvpFormFields(prev => [...prev, createEmptyRsvpField()])
+    setExpandedRsvpDialogFields(prev => new Set([...prev, newIndex]))
+  }
 
   // ============================================================================
   // LOCALES DIALOG STATE
@@ -369,11 +386,19 @@ export const ConfigManagement: React.FC<ConfigManagementProps> = () => {
     })
   }, [activeLocale, rsvpFormFields])
 
+  const hasRsvpFieldNameErrors = useMemo(() => (
+    rsvpFormFields.some((f, i) => !!getFieldNameError(f.field, rsvpFormFields.filter((_, si) => si !== i).map(sf => sf.field.trim())))
+  ), [rsvpFormFields])
+
   const handleSaveRsvpConfig = useCallback(async () => {
     if (!selectedScopeId) return
     const validFields = rsvpFormFields.filter(f => f.field.trim() && f.label.trim())
     if (validFields.length === 0) {
       toast.error('At least one field with a name and label is required')
+      return
+    }
+    if (hasRsvpFieldNameErrors) {
+      toast.error('Fix field name errors before saving — names must be camelCase and unique')
       return
     }
 
@@ -396,7 +421,7 @@ export const ConfigManagement: React.FC<ConfigManagementProps> = () => {
     } finally {
       setIsSaving(false)
     }
-  }, [selectedScopeId, rsvpFormFields, rsvpLocalizations, editingRsvpConfig, scopeConfig, ownsConfig, apiService, toast, loadConfigs])
+  }, [selectedScopeId, rsvpFormFields, rsvpLocalizations, hasRsvpFieldNameErrors, editingRsvpConfig, scopeConfig, ownsConfig, apiService, toast, loadConfigs])
 
   const openFieldEdit = useCallback((item: RsvpFormField & { _key: string }) => {
     const index = rsvpConfig?.rsvp.rsvpFormFields.findIndex(f => f.field === item.field) ?? -1
@@ -431,8 +456,20 @@ export const ConfigManagement: React.FC<ConfigManagementProps> = () => {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [editingFieldDialog])
 
+  const editingFieldNameError = useMemo(() => {
+    if (editingFieldDialog == null) return undefined
+    const siblingNames = (rsvpConfig?.rsvp.rsvpFormFields ?? [])
+      .filter((_, i) => i !== editingFieldDialog.index)
+      .map(f => f.field.trim())
+    return getFieldNameError(editingFieldForm.field, siblingNames)
+  }, [editingFieldDialog, editingFieldForm.field, rsvpConfig])
+
   const handleSaveFieldEdit = useCallback(async () => {
     if (!selectedScopeId || !rsvpConfig || editingFieldDialog == null) return
+    if (editingFieldNameError) {
+      toast.error(editingFieldNameError)
+      return
+    }
     setIsSaving(true)
     try {
       let updatedFields = [...rsvpConfig.rsvp.rsvpFormFields]
@@ -488,7 +525,7 @@ export const ConfigManagement: React.FC<ConfigManagementProps> = () => {
     } finally {
       setIsSaving(false)
     }
-  }, [selectedScopeId, rsvpConfig, editingFieldDialog, editingFieldForm, activeLocale, apiService, toast, loadConfigs])
+  }, [selectedScopeId, rsvpConfig, editingFieldDialog, editingFieldForm, editingFieldNameError, activeLocale, apiService, toast, loadConfigs])
 
   const handleDeleteField = useCallback(async () => {
     if (!selectedScopeId || !rsvpConfig || fieldToDelete == null) return
@@ -1213,6 +1250,8 @@ export const ConfigManagement: React.FC<ConfigManagementProps> = () => {
                       value={editingFieldForm.field}
                       onChange={(v) => setEditingFieldForm(prev => ({ ...prev, field: v }))}
                       isRequired
+                      isInvalid={!!editingFieldNameError}
+                      errorMessage={editingFieldNameError}
                     />
                     <TextField
                       label={activeLocale ? `Label (${activeLocale})` : 'Label'}
@@ -1231,6 +1270,7 @@ export const ConfigManagement: React.FC<ConfigManagementProps> = () => {
                         description="Pre-filled value shown to the user."
                         value={editingFieldForm.default}
                         onChange={(v) => setEditingFieldForm(prev => ({ ...prev, default: v }))}
+                        UNSAFE_style={{ textAlign: 'left' }}
                       />
                     )}
                     <Picker
@@ -1327,7 +1367,7 @@ export const ConfigManagement: React.FC<ConfigManagementProps> = () => {
                 <Button variant="secondary" onPress={close}>Cancel</Button>
                 <Button
                   variant="accent"
-                  isDisabled={!editingFieldForm.field.trim() || !editingFieldForm.label.trim() || isSaving}
+                  isDisabled={!editingFieldForm.field.trim() || !editingFieldForm.label.trim() || !!editingFieldNameError || isSaving}
                   onPress={handleSaveFieldEdit}
                 >
                   Save Field
@@ -1351,20 +1391,6 @@ export const ConfigManagement: React.FC<ConfigManagementProps> = () => {
                   <div>
                     <div className={style({ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 })}>
                       <Text UNSAFE_style={{ fontWeight: 700 }}>Form Fields</Text>
-                      {!(activeLocale && editingRsvpConfig) && (
-                        <Button
-                          variant="secondary"
-                          size="S"
-                          onPress={() => {
-                            const newIndex = rsvpFormFields.length
-                            setRsvpFormFields(prev => [...prev, createEmptyRsvpField()])
-                            setExpandedRsvpDialogFields(prev => new Set([...prev, newIndex]))
-                          }}
-                        >
-                          <Add />
-                          <Text>Add Field</Text>
-                        </Button>
-                      )}
                     </div>
                     {(activeLocale && editingRsvpConfig) && (
                       <div className={style({ paddingX: 12, paddingY: 8, backgroundColor: 'gray-75', borderWidth: 1, borderColor: 'gray-300', borderRadius: 'sm', marginBottom: 12 })}>
@@ -1433,6 +1459,8 @@ export const ConfigManagement: React.FC<ConfigManagementProps> = () => {
                                       return copy
                                     })}
                                     isRequired
+                                    isInvalid={!!getFieldNameError(field.field, rsvpFormFields.filter((_, i) => i !== index).map(f => f.field.trim()))}
+                                    errorMessage={getFieldNameError(field.field, rsvpFormFields.filter((_, i) => i !== index).map(f => f.field.trim()))}
                                   />
                                   <TextField
                                     label={(activeLocale && editingRsvpConfig) ? `Label (${activeLocale})` : 'Label'}
@@ -1469,6 +1497,7 @@ export const ConfigManagement: React.FC<ConfigManagementProps> = () => {
                                         copy[index] = { ...copy[index], default: v }
                                         return copy
                                       })}
+                                      UNSAFE_style={{ textAlign: 'left' }}
                                     />
                                   )}
                                   <Picker
@@ -1590,6 +1619,17 @@ export const ConfigManagement: React.FC<ConfigManagementProps> = () => {
                         )
                       })}
                     </div>
+                    {!(activeLocale && editingRsvpConfig) && (
+                      <Button
+                        variant="secondary"
+                        size="S"
+                        onPress={handleAddRsvpField}
+                        UNSAFE_style={{ width: '100%', marginTop: 8, borderStyle: 'dashed' }}
+                      >
+                        <Add />
+                        <Text>Add Field</Text>
+                      </Button>
+                    )}
                   </div>
 
                 </div>
@@ -1599,7 +1639,7 @@ export const ConfigManagement: React.FC<ConfigManagementProps> = () => {
                 <Button
                   variant="accent"
                   onPress={handleSaveRsvpConfig}
-                  isDisabled={isSaving || rsvpFormFields.filter(f => f.field.trim() && f.label.trim()).length === 0}
+                  isDisabled={isSaving || rsvpFormFields.filter(f => f.field.trim() && f.label.trim()).length === 0 || hasRsvpFieldNameErrors}
                 >
                   {editingRsvpConfig ? 'Update' : 'Create'}
                 </Button>
