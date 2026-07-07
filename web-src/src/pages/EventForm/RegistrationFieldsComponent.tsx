@@ -90,6 +90,7 @@ export const RegistrationFieldsComponent: React.FC<RegistrationFieldsComponentPr
 
   useEffect(() => {
     const cloudForLegacy = hasRsvpConfig(cloudType) ? cloudType : 'CreativeCloud'
+    let cancelled = false
 
     const loadFields = async () => {
       try {
@@ -99,8 +100,9 @@ export const RegistrationFieldsComponent: React.FC<RegistrationFieldsComponentPr
 
         if (eventId) {
           const result = await cachedApi.getEventConfigs(eventId)
+          if (cancelled) return
           if (!('error' in result)) {
-            const config = result[0] ?? null
+            const config = result.find(c => hasRsvpSlice(c)) ?? null
             const scopeFields = config && hasRsvpSlice(config) ? config.rsvp.rsvpFormFields : []
             if (scopeFields.length > 0) {
               nextFields = scopeFields
@@ -113,22 +115,30 @@ export const RegistrationFieldsComponent: React.FC<RegistrationFieldsComponentPr
 
         if (nextFields.length === 0 && hasRsvpConfig(cloudForLegacy)) {
           const legacyRows = await configService.getRsvpConfig(cloudForLegacy)
+          if (cancelled) return
           nextFields = mapLegacyRsvpConfigToFormFields(legacyRows)
           mode = 'legacy'
         }
 
+        if (cancelled) return
         setFields(nextFields)
         setFieldSourceMode(mode)
         setError(null)
       } catch (err) {
-        setError('Failed to load registration field configurations')
-        console.error('Error loading RSVP configs:', err)
+        if (!cancelled) {
+          setError('Failed to load registration field configurations')
+          console.error('Error loading RSVP configs:', err)
+        }
       } finally {
-        setLoading(false)
+        if (!cancelled) setLoading(false)
       }
     }
 
     loadFields()
+
+    return () => {
+      cancelled = true
+    }
   }, [eventId, cloudType])
 
   const validFields = useMemo(() => fields.filter(f => f.field), [fields])
