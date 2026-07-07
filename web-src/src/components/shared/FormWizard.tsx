@@ -81,11 +81,7 @@ interface FormWizardProps {
   sessionContent?: React.ReactNode
   /** True when an inline session form (add or edit) is currently open */
   sessionHasOpenForm?: boolean
-  /**
-   * Key to persist the current step under (sessionStorage), so the step
-   * survives a remount of the wizard (e.g. a background auth/group refresh)
-   * instead of resetting to the first step. Omit to disable persistence.
-   */
+  /** Key to persist the current step under (sessionStorage) so it survives a remount. Omit to disable persistence. */
   stepPersistKey?: string
 }
 
@@ -125,7 +121,11 @@ export const FormWizard: React.FC<FormWizardProps> = ({
     if (!stepPersistKey) return 0
     const persisted = loadFormStep(stepPersistKey)
     if (persisted === null) return 0
-    return Math.min(persisted, steps.length - 1)
+    // Never restore past a step the user has actually unlocked — a stale
+    // persisted step (e.g. from an abandoned draft under a shared "new
+    // event" key) must not open an inaccessible step with no data.
+    const highestUnlocked = hasEventId ? maxStepReached : 0
+    return Math.min(persisted, highestUnlocked, steps.length - 1)
   })
   const [isNavigating, setIsNavigating] = useState(false)
   const [showSessionView, setShowSessionView] = useState(false)

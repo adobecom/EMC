@@ -154,7 +154,7 @@ export const CustomAttributesComponent: React.FC = () => {
     const load = async () => {
       setLoading(true)
       try {
-        const result = await cachedApi.getEventConfigs(eventId)
+        const result = await cachedApi.getEventConfigs(eventId, undefined, { skipStaleGroupRecovery: true })
         if (cancelled) return
         if (!('error' in result)) {
           const config = result.find(c => hasAttributesSlice(c)) ?? null
