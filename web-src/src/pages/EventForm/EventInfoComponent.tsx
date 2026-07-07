@@ -29,7 +29,9 @@ import { SPACING } from '../../styles/designSystem'
 import { cachedApi } from '../../services/api'
 import { useEventFormComponent } from '../../hooks/useEventFormComponent'
 import { useEventFormContext } from '../../contexts/EventFormContext'
+import { useGroup } from '../../contexts/GroupContext'
 import { hasLocalesSlice } from '../../types/configApi'
+import type { ScopeConfig } from '../../types/configApi'
 import { SUPPORTED_SPEAKER_LOCALES, SPEAKER_LOCALE_LABELS } from '../../config/localeMapping'
 
 /**
@@ -131,6 +133,7 @@ const EVENT_TITLE_MAX_LENGTH = 150
  */
 export const EventInfoComponent: React.FC = () => {
   const { setScopeLocales } = useEventFormContext()
+  const { activeGroup } = useGroup()
 
   // ============================================================================
   // CONTEXT INTEGRATION
@@ -179,20 +182,9 @@ export const EventInfoComponent: React.FC = () => {
   const [localeOptions, setLocaleOptions] = useState<{ key: string; label: string }[]>(DEFAULT_LOCALE_PICKER_OPTIONS)
 
   useEffect(() => {
-    if (!eventId) {
-      setLocaleOptions(DEFAULT_LOCALE_PICKER_OPTIONS)
-      return
-    }
+    const scopeId = activeGroup?.scopeId
 
-    let cancelled = false
-    cachedApi.getEventConfigs(eventId).then((result) => {
-      if (cancelled) return
-      if ('error' in result) {
-        setLocaleOptions(DEFAULT_LOCALE_PICKER_OPTIONS)
-        setScopeLocales(null)
-        return
-      }
-      const config = result[0] ?? null
+    const applyLocales = (config: ScopeConfig | null) => {
       const locales = config && hasLocalesSlice(config) ? config.locales.locales : undefined
       if (locales && locales.length > 0) {
         const options = locales.map((l) => ({ key: l.code, label: l.name }))
@@ -202,17 +194,48 @@ export const EventInfoComponent: React.FC = () => {
         setLocaleOptions(DEFAULT_LOCALE_PICKER_OPTIONS)
         setScopeLocales(null)
       }
-    }).catch(() => {
-      if (!cancelled) {
-        setLocaleOptions(DEFAULT_LOCALE_PICKER_OPTIONS)
-        setScopeLocales(null)
+    }
+
+    let cancelled = false
+
+    const load = async () => {
+      try {
+        if (eventId) {
+          const result = await cachedApi.getEventConfigs(eventId)
+          if (cancelled) return
+          if ('error' in result) {
+            setLocaleOptions(DEFAULT_LOCALE_PICKER_OPTIONS)
+            setScopeLocales(null)
+            return
+          }
+          applyLocales(result.find((c) => hasLocalesSlice(c)) ?? null)
+        } else if (scopeId) {
+          const result = await cachedApi.getConfig(scopeId)
+          if (cancelled) return
+          if (result === null || 'error' in result) {
+            setLocaleOptions(DEFAULT_LOCALE_PICKER_OPTIONS)
+            setScopeLocales(null)
+            return
+          }
+          applyLocales(result)
+        } else {
+          setLocaleOptions(DEFAULT_LOCALE_PICKER_OPTIONS)
+          setScopeLocales(null)
+        }
+      } catch {
+        if (!cancelled) {
+          setLocaleOptions(DEFAULT_LOCALE_PICKER_OPTIONS)
+          setScopeLocales(null)
+        }
       }
-    })
+    }
+
+    load()
 
     return () => {
       cancelled = true
     }
-  }, [eventId, setScopeLocales])
+  }, [eventId, activeGroup?.scopeId, setScopeLocales])
 
   const pickerLocaleOptions = useMemo(() => {
     if (!locale) return localeOptions

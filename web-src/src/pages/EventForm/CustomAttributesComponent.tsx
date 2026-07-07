@@ -149,23 +149,30 @@ export const CustomAttributesComponent: React.FC = () => {
       return
     }
 
+    let cancelled = false
+
     const load = async () => {
       setLoading(true)
       try {
         const result = await cachedApi.getEventConfigs(eventId)
+        if (cancelled) return
         if (!('error' in result)) {
-          const config = result[0] ?? null
+          const config = result.find(c => hasAttributesSlice(c)) ?? null
           const attrs = config && hasAttributesSlice(config) ? config.customAttributes : []
           const enabled = attrs.filter(a => a.enabled !== false)
           setAttributes(enabled)
           updateFormData({ _customAttributeConfigs: enabled })
         }
       } finally {
-        setLoading(false)
+        if (!cancelled) setLoading(false)
       }
     }
 
     load()
+
+    return () => {
+      cancelled = true
+    }
   }, [eventId])
 
   // ============================================================================
