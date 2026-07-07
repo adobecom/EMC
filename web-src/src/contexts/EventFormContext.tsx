@@ -171,6 +171,8 @@ export interface EventFormContextValue {
   getRegisteredComponents: () => RegisteredComponent[]
   
   // Persistence
+  /** Draft storage key for this form instance (eventId, or `new-<eventType>-<seriesId>`) */
+  storageKey: string
   persistToStorage: () => void
   loadFromStorage: () => boolean
   clearStorage: () => void
@@ -628,6 +630,7 @@ export const EventFormProvider: React.FC<EventFormProviderProps> = ({
     getRegisteredComponents,
     
     // Persistence
+    storageKey,
     persistToStorage,
     loadFromStorage,
     clearStorage,
@@ -668,6 +671,7 @@ export const EventFormProvider: React.FC<EventFormProviderProps> = ({
     registerComponent,
     unregisterComponent,
     getRegisteredComponents,
+    storageKey,
     persistToStorage,
     loadFromStorage,
     clearStorage,

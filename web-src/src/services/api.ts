@@ -584,6 +584,7 @@ class ApiService {
       transformResponse?: (data: any) => T
       shouldReturnFullResponse?: boolean
       skipGroupHeader?: boolean
+      skipStaleGroupRecovery?: boolean
     }
   ): Promise<T | ErrorResponse> {
     const operationName = options?.operationName || `${method} ${endpoint}`
@@ -640,7 +641,12 @@ class ApiService {
 
         // Stale-group recovery: 403 likely means the user's group membership changed.
         // Cooldown prevents infinite loops (e.g. if getRoleById also returns 403).
-        if (response.status === 403 && this.onStaleGroup && !this.staleGroupCooldown) {
+        // Callers reading permission-scoped sub-resources (e.g. form step data) can
+        // opt out via skipStaleGroupRecovery — a 403 there just means the active
+        // group lacks access to that particular resource, not that the group itself
+        // is stale, and should degrade to an empty/no-access result locally instead
+        // of forcing an app-wide group refresh (which unmounts the whole route tree).
+        if (response.status === 403 && this.onStaleGroup && !this.staleGroupCooldown && !options?.skipStaleGroupRecovery) {
           this.staleGroupCooldown = true
           setTimeout(() => { this.staleGroupCooldown = false }, 5000)
           this.onStaleGroup()
@@ -696,6 +702,7 @@ class ApiService {
     operationName?: string
     maxPages?: number
     skipGroupHeader?: boolean
+    skipStaleGroupRecovery?: boolean
   }): Promise<T[] | ErrorResponse> {
     const {
       service,
@@ -704,7 +711,8 @@ class ApiService {
       baseParams = {},
       operationName = `fetchAllPages(${baseEndpoint})`,
       maxPages = 100,
-      skipGroupHeader
+      skipGroupHeader,
+      skipStaleGroupRecovery
     } = options
 
     const items: T[] = []
@@ -722,7 +730,8 @@ class ApiService {
       const result = await this.callExternalApi<any>(service, endpoint, 'GET', undefined, {
         operationName: `${operationName} (page ${pageCount + 1})`,
         shouldReturnFullResponse: true,
-        skipGroupHeader
+        skipGroupHeader,
+        skipStaleGroupRecovery
       })
 
       if ('error' in result) {
@@ -1374,7 +1383,8 @@ class ApiService {
       service: 'esp',
       baseEndpoint: `/v1/series/${seriesId}/speakers`,
       listKey: 'speakers',
-      operationName: 'getSpeakers'
+      operationName: 'getSpeakers',
+      skipStaleGroupRecovery: true
     })
     if ('error' in result) return result
     return { speakers: result }
@@ -1394,7 +1404,8 @@ class ApiService {
       service: 'esp',
       baseEndpoint: `/v1/events/${eventId}/speakers`,
       listKey: 'speakers',
-      operationName: 'getEventSpeakers'
+      operationName: 'getEventSpeakers',
+      skipStaleGroupRecovery: true
     })
     if ('error' in result) return result
     return { speakers: result }
@@ -1510,7 +1521,8 @@ class ApiService {
       service: 'esp',
       baseEndpoint: `/v1/series/${seriesId}/sponsors`,
       listKey: 'sponsors',
-      operationName: 'getSponsors'
+      operationName: 'getSponsors',
+      skipStaleGroupRecovery: true
     })
     if ('error' in result) return result
     return { sponsors: result }
@@ -1530,7 +1542,8 @@ class ApiService {
       service: 'esp',
       baseEndpoint: `/v1/events/${eventId}/sponsors`,
       listKey: 'sponsors',
-      operationName: 'getEventSponsors'
+      operationName: 'getEventSponsors',
+      skipStaleGroupRecovery: true
     })
     if ('error' in result) return result
     return { sponsors: result }
@@ -1616,14 +1629,14 @@ class ApiService {
   async getEventVenue(eventId: string): Promise<any | null | ErrorResponse> {
     validateString(eventId, 'eventId')
     return this.callExternalApi('esp', `/v1/events/${eventId}/venues`, 'GET', undefined,
-      { operationName: 'getEventVenue', transformResponse: (data) => data.venues?.[0] || null }
+      { operationName: 'getEventVenue', transformResponse: (data) => data.venues?.[0] || null, skipStaleGroupRecovery: true }
     )
   }
 
   async listVenueLocations(venueId: string): Promise<any | ErrorResponse> {
     validateString(venueId, 'venue ID')
     return this.callExternalApi('esp', `/v1/venues/${encodeURIComponent(venueId)}/locations`, 'GET', undefined,
-      { operationName: 'listVenueLocations', shouldReturnFullResponse: true }
+      { operationName: 'listVenueLocations', shouldReturnFullResponse: true, skipStaleGroupRecovery: true }
     )
   }
 
@@ -2042,7 +2055,7 @@ class ApiService {
   async getEventPublishingProfile(eventId: string): Promise<any | ErrorResponse> {
     validateString(eventId, 'event ID')
     return this.callExternalApi('esp', `/v1/events/${eventId}/publishing-profiles`, 'GET', undefined,
-      { operationName: `getEventPublishingProfile(${eventId})`, shouldReturnFullResponse: true }
+      { operationName: `getEventPublishingProfile(${eventId})`, shouldReturnFullResponse: true, skipStaleGroupRecovery: true }
     )
   }
 
@@ -2399,7 +2412,8 @@ class ApiService {
     validateString(scopeId, 'scope ID')
     const result = await this.callExternalApi<ScopeConfig>('esp', `/v1/scopes/${encodeURIComponent(scopeId)}/config`, 'GET', undefined, {
       operationName: 'getConfig',
-      shouldReturnFullResponse: true
+      shouldReturnFullResponse: true,
+      skipStaleGroupRecovery: true
     })
     if (typeof result !== 'object' || result === null) return null
     if ('error' in result && (result as ErrorResponse).status === 404) return null
@@ -2426,7 +2440,8 @@ class ApiService {
       baseEndpoint: `/v1/events/${encodeURIComponent(eventId)}/configs`,
       listKey: 'configs',
       baseParams,
-      operationName: 'getEventConfigs'
+      operationName: 'getEventConfigs',
+      skipStaleGroupRecovery: true
     })
   }
 
@@ -2439,7 +2454,8 @@ class ApiService {
       baseEndpoint: `/v1/series/${encodeURIComponent(seriesId)}/configs`,
       listKey: 'configs',
       baseParams,
-      operationName: 'getSeriesConfigs'
+      operationName: 'getSeriesConfigs',
+      skipStaleGroupRecovery: true
     })
   }
 }
