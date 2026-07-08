@@ -2,7 +2,7 @@
 * <license header>
 */
 
-import React, { useEffect, useMemo, useState } from 'react'
+import React, { useEffect, useMemo } from 'react'
 import { Text, Button, Heading, Picker, PickerItem } from '@react-spectrum/s2'
 import { style } from '@react-spectrum/s2/style' with { type: 'macro' }
 import Refresh from '@react-spectrum/s2/icons/Refresh'
@@ -19,10 +19,10 @@ import { COLORS, GRADIENT_BACKGROUND, SPACING, TYPOGRAPHY } from '../../styles/d
 import { IMS } from '../../types'
 import { useSafeState, useRBACFilter, useHasPermission, usePersistentState } from '../../hooks'
 import { useGroup } from '../../contexts/GroupContext'
-import { SUPPORTED_SPEAKER_LOCALES, SPEAKER_LOCALE_LABELS } from '../../config/localeMapping'
-import { hasLocalesSlice } from '../../types/configApi'
+import { SPEAKER_LOCALE_LABELS } from '../../config/localeMapping'
 
 const FILTER_ALL = '__all__'
+const FILTER_NO_LOCALE = '__none_locale__'
 
 interface OverviewDashboardProps {
   ims: IMS
@@ -268,19 +268,13 @@ const TemplateBreakdown: React.FC<TemplateBreakdownProps> = ({ templateCounts })
   )
 }
 
-/** Default locale picker entries when no scope config is available */
-const DEFAULT_LOCALE_PICKER_OPTIONS = SUPPORTED_SPEAKER_LOCALES.map((key) => ({
-  key,
-  label: SPEAKER_LOCALE_LABELS[key] || key,
-}))
-
 /**
  * Overview Dashboard - Main component
  * Displays comprehensive statistics and metrics for events and series
  */
 export const OverviewDashboard: React.FC<OverviewDashboardProps> = () => {
   const { filterEvents, filterSeries } = useRBACFilter()
-  const { groupVersion, activeGroup } = useGroup()
+  const { groupVersion } = useGroup()
   const canReadEvents = useHasPermission('event', 'read')
   const canReadSeries = useHasPermission('series', 'read')
   const [events, setEvents] = useSafeState<EventApiResponse[]>([])
@@ -315,39 +309,31 @@ export const OverviewDashboard: React.FC<OverviewDashboardProps> = () => {
     loadData()
   }, [groupVersion]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Locale options fetched from scope config; falls back to the static default list
-  const [localeOptions, setLocaleOptions] = useState(DEFAULT_LOCALE_PICKER_OPTIONS)
-  useEffect(() => {
-    const scopeId = activeGroup?.scopeId
-    if (!scopeId) {
-      setLocaleOptions(DEFAULT_LOCALE_PICKER_OPTIONS)
-      return
-    }
-    let cancelled = false
-    cachedApi.getConfig(scopeId).then((result) => {
-      if (cancelled) return
-      if (result === null || 'error' in result) {
-        setLocaleOptions(DEFAULT_LOCALE_PICKER_OPTIONS)
-        return
-      }
-      const locales = hasLocalesSlice(result) ? result.locales.locales : undefined
-      if (locales && locales.length > 0) {
-        setLocaleOptions(locales.map((l) => ({ key: l.code, label: l.name })))
-      } else {
-        setLocaleOptions(DEFAULT_LOCALE_PICKER_OPTIONS)
-      }
-    }).catch(() => {
-      if (!cancelled) setLocaleOptions(DEFAULT_LOCALE_PICKER_OPTIONS)
-    })
-    return () => { cancelled = true }
-  }, [activeGroup?.scopeId])
+  // Derive locale filter options directly from loaded events so the list
+  // always reflects actual data — no static fallback list, no extra API call.
+  const localeOptions = useMemo(() => {
+    const codes = [...new Set(
+      events.map(e => e.defaultLocale).filter((c): c is string => !!c)
+    )]
+    codes.sort((a, b) =>
+      (SPEAKER_LOCALE_LABELS[a] || a).localeCompare(SPEAKER_LOCALE_LABELS[b] || b)
+    )
+    return codes.map(key => ({ key, label: SPEAKER_LOCALE_LABELS[key] || key }))
+  }, [events])
+
+  const hasEventsWithoutLocale = useMemo(
+    () => events.some(e => !e.defaultLocale),
+    [events]
+  )
 
   // Calculate statistics
   const stats = useMemo(() => {
     // Apply locale filter to event-derived stats only; series stats are always full counts.
     const filteredByLocale = localeFilter === FILTER_ALL
       ? events
-      : events.filter(e => e.defaultLocale === localeFilter)
+      : localeFilter === FILTER_NO_LOCALE
+        ? events.filter(e => !e.defaultLocale)
+        : events.filter(e => e.defaultLocale === localeFilter)
 
     // Basic counts
     const totalEvents = filteredByLocale.length
@@ -484,6 +470,9 @@ export const OverviewDashboard: React.FC<OverviewDashboardProps> = () => {
               }}
             >
               <PickerItem id={FILTER_ALL} textValue="All languages">All languages</PickerItem>
+              {hasEventsWithoutLocale && (
+                <PickerItem id={FILTER_NO_LOCALE} textValue="(no language)">(no language)</PickerItem>
+              )}
               {localeOptions.map(o => (
                 <PickerItem key={o.key} id={o.key} textValue={o.label}>
                   {o.label}
