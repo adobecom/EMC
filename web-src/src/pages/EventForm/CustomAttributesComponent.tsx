@@ -43,29 +43,29 @@ const MultiSelectRepeater: React.FC<MultiSelectRepeaterProps> = ({ attr, values,
   const sortedOptions = attr.values.slice().sort((a, b) => (a.ordinal ?? 0) - (b.ordinal ?? 0))
 
   const rowsFromValues = (vals: EventCustomAttributeValue[]): RepeaterRow[] =>
-    vals.map((v, i) => ({ id: `row-${attr.attributeId}-${i}-${v.value}`, value: v.value }))
+    vals.map((v, i) => ({ id: `row-${attr.attributeId}-${i}-${v.valueId}`, value: v.valueId }))
 
   const [rows, setRows] = useState<RepeaterRow[]>(() => rowsFromValues(values))
 
   // Sync from external changes (e.g., form load) without re-triggering on local updates
-  const prevValuesRef = useRef<string>(JSON.stringify(values.map(v => v.value)))
+  const prevValuesRef = useRef<string>(JSON.stringify(values.map(v => v.valueId)))
   const localUpdateRef = useRef(false)
 
   useEffect(() => {
     if (localUpdateRef.current) {
       localUpdateRef.current = false
-      prevValuesRef.current = JSON.stringify(values.map(v => v.value))
+      prevValuesRef.current = JSON.stringify(values.map(v => v.valueId))
       return
     }
-    const serialized = JSON.stringify(values.map(v => v.value))
+    const serialized = JSON.stringify(values.map(v => v.valueId))
     if (serialized === prevValuesRef.current) return
     setRows(rowsFromValues(values))
     prevValuesRef.current = serialized
   }, [values]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  const getAvailableOptions = (currentRowValue: string): CustomAttributeValue[] => {
-    const otherSelected = rows.map(r => r.value).filter(v => v && v !== currentRowValue)
-    return sortedOptions.filter(opt => !otherSelected.includes(opt.value))
+  const getAvailableOptions = (currentRowValueId: string): CustomAttributeValue[] => {
+    const otherSelected = rows.map(r => r.value).filter(v => v && v !== currentRowValueId)
+    return sortedOptions.filter(opt => !otherSelected.includes(opt.valueId ?? ''))
   }
 
   const allOptionsUsed = rows.filter(r => r.value).length >= sortedOptions.length
@@ -104,7 +104,7 @@ const MultiSelectRepeater: React.FC<MultiSelectRepeaterProps> = ({ attr, values,
             styles={style({ flexGrow: 1 })}
           >
             {getAvailableOptions(row.value).map(opt => (
-              <PickerItem key={opt.value} id={opt.value}>{opt.label || opt.value}</PickerItem>
+              <PickerItem key={opt.valueId} id={opt.valueId}>{opt.label || opt.value}</PickerItem>
             ))}
           </Picker>
           <ActionButton
@@ -185,7 +185,7 @@ export const CustomAttributesComponent: React.FC = () => {
     currentValues.find(v => v.attributeId === attr.attributeId)?.value ?? ''
 
   const getSingleSelectValue = (attr: CustomAttributeConfig): string =>
-    currentValues.find(v => v.attributeId === attr.attributeId)?.value ?? ''
+    currentValues.find(v => v.attributeId === attr.attributeId)?.valueId ?? ''
 
   const getMultiSelectValues = (attr: CustomAttributeConfig): EventCustomAttributeValue[] =>
     currentValues.filter(v => v.attributeId === attr.attributeId)
@@ -202,13 +202,13 @@ export const CustomAttributesComponent: React.FC = () => {
     updateFormData({ customAttributes: [...others, ...entry] })
   }
 
-  const updateSingleSelectValue = (attr: CustomAttributeConfig, selectedValue: string) => {
+  const updateSingleSelectValue = (attr: CustomAttributeConfig, selectedValueId: string) => {
     const others = currentValues.filter(v => v.attributeId !== attr.attributeId!)
-    if (!selectedValue) {
+    if (!selectedValueId) {
       updateFormData({ customAttributes: others })
       return
     }
-    const opt = attr.values.find(v => v.value === selectedValue)
+    const opt = attr.values.find(v => v.valueId === selectedValueId)
     if (!opt) return
     updateFormData({
       customAttributes: [
@@ -224,15 +224,15 @@ export const CustomAttributesComponent: React.FC = () => {
     })
   }
 
-  const updateMultiSelectValue = useCallback((attr: CustomAttributeConfig, selectedValues: string[]) => {
+  const updateMultiSelectValue = useCallback((attr: CustomAttributeConfig, selectedValueIds: string[]) => {
     const others = currentValues.filter(v => v.attributeId !== attr.attributeId!)
-    const newEntries: EventCustomAttributeValue[] = selectedValues.map((sv, i) => {
-      const opt = attr.values.find(v => v.value === sv)
+    const newEntries: EventCustomAttributeValue[] = selectedValueIds.map((svId, i) => {
+      const opt = attr.values.find(v => v.valueId === svId)
       return {
         attributeId: attr.attributeId!,
         attribute: attr.name,
-        valueId: opt?.valueId ?? '',
-        value: sv,
+        valueId: svId,
+        value: opt?.value ?? '',
         ordinal: i,
       }
     })
@@ -268,7 +268,7 @@ export const CustomAttributesComponent: React.FC = () => {
               .slice()
               .sort((a, b) => (a.ordinal ?? 0) - (b.ordinal ?? 0))
               .map(v => (
-                <PickerItem key={v.value} id={v.value}>{v.label || v.value}</PickerItem>
+                <PickerItem key={v.valueId} id={v.valueId}>{v.label || v.value}</PickerItem>
               ))
             }
           </Picker>
