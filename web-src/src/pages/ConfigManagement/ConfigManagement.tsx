@@ -48,6 +48,7 @@ import type {
   ScopeConfig,
   RsvpScopeConfig,
   LocalesScopeConfig,
+  DomainScopeConfig,
   CustomAttributesScopeConfig,
   RsvpFormField,
   RsvpFormFieldLocaleOverride,
@@ -57,10 +58,11 @@ import type {
   CustomAttributeInputType,
   RsvpFieldType,
 } from '../../types/configApi'
-import { hasRsvpSlice, hasLocalesSlice, hasAttributesSlice } from '../../types/configApi'
-import { BlurredLoadingOverlay } from '../../components/shared'
+import { hasRsvpSlice, hasLocalesSlice, hasDomainSlice, hasAttributesSlice } from '../../types/configApi'
+import { ResourceDashboardLayout, BlurredLoadingOverlay } from '../../components/shared'
 import { useHasPermission } from '../../hooks/useHasPermission'
 import { SUPPORTED_SPEAKER_LOCALES, SPEAKER_LOCALE_LABELS } from '../../config/localeMapping'
+import { normalizeRelatedDomain } from '../../utils/seriesFormAutoCorrect'
 
 interface ConfigManagementProps {
   ims: IMS
@@ -185,6 +187,16 @@ export const ConfigManagement: React.FC<ConfigManagementProps> = () => {
   const [localesToDelete, setLocalesToDelete] = useState<ScopeConfig | null>(null)
 
   // ============================================================================
+  // DOMAIN DIALOG STATE
+  // ============================================================================
+
+  const [isDomainFormOpen, setIsDomainFormOpen] = useState(false)
+  const [editingDomainConfig, setEditingDomainConfig] = useState<DomainScopeConfig | null>(null)
+  const [domainProdDomain, setDomainProdDomain] = useState('')
+  const [domainStageDomain, setDomainStageDomain] = useState('')
+  const [domainToDelete, setDomainToDelete] = useState<ScopeConfig | null>(null)
+
+  // ============================================================================
   // CUSTOM ATTRIBUTE DIALOG STATE
   // ============================================================================
 
@@ -241,6 +253,10 @@ export const ConfigManagement: React.FC<ConfigManagementProps> = () => {
   )
   const localesConfig = useMemo<LocalesScopeConfig | null>(
     () => (hasLocalesSlice(scopeConfig) ? scopeConfig : null),
+    [scopeConfig]
+  )
+  const domainConfig = useMemo<DomainScopeConfig | null>(
+    () => (hasDomainSlice(scopeConfig) ? scopeConfig : null),
     [scopeConfig]
   )
   const customAttrsConfig = useMemo<CustomAttributesScopeConfig | null>(
@@ -554,7 +570,7 @@ export const ConfigManagement: React.FC<ConfigManagementProps> = () => {
    *  config is DELETEd. */
   const deleteSlice = useCallback(async (
     config: ScopeConfig,
-    sliceKind: 'rsvp' | 'locales' | 'customAttributes',
+    sliceKind: 'rsvp' | 'locales' | 'domain' | 'customAttributes',
     label: string,
   ) => {
     if (!selectedScopeId) return
@@ -565,6 +581,8 @@ export const ConfigManagement: React.FC<ConfigManagementProps> = () => {
         delete stripped.rsvp
       } else if (sliceKind === 'locales') {
         delete stripped.locales
+      } else if (sliceKind === 'domain') {
+        delete stripped.domain
       } else {
         delete stripped.customAttributes
       }
@@ -579,6 +597,7 @@ export const ConfigManagement: React.FC<ConfigManagementProps> = () => {
       setRsvpConfigToDelete(null)
       setLocalesToDelete(null)
       setAttrToDelete(null)
+      setDomainToDelete(null)
       setIsSaving(false)
       await loadConfigs()
     } catch (err) {
@@ -643,6 +662,58 @@ export const ConfigManagement: React.FC<ConfigManagementProps> = () => {
       setIsSaving(false)
     }
   }, [selectedScopeId, localeEntries, editingLocalesConfig, scopeConfig, ownsConfig, apiService, toast, loadConfigs])
+
+  // ============================================================================
+  // DOMAIN CONFIG CRUD
+  // ============================================================================
+
+  const openDomainCreate = useCallback(() => {
+    setEditingDomainConfig(null)
+    setDomainProdDomain('')
+    setDomainStageDomain('')
+    setIsDomainFormOpen(true)
+  }, [])
+
+  const openDomainEdit = useCallback((config: DomainScopeConfig) => {
+    setEditingDomainConfig(config)
+    setDomainProdDomain(config.domain.prodDomain ?? '')
+    setDomainStageDomain(config.domain.stageDomain ?? '')
+    setIsDomainFormOpen(true)
+  }, [])
+
+  const handleSaveDomainConfig = useCallback(async () => {
+    if (!selectedScopeId) return
+    const prodDomain = normalizeRelatedDomain(domainProdDomain)
+    const stageDomain = normalizeRelatedDomain(domainStageDomain)
+    if (!prodDomain && !stageDomain) {
+      toast.error('At least one of Prod Domain or Stage Domain is required')
+      return
+    }
+
+    setIsSaving(true)
+    try {
+      const domain = {
+        ...(prodDomain ? { prodDomain } : {}),
+        ...(stageDomain ? { stageDomain } : {}),
+      }
+      const body = scopeConfig && ownsConfig
+        ? buildPutBody(scopeConfig, { domain })
+        : { domain }
+      const result = await apiService.upsertConfig(selectedScopeId, body)
+      if ('error' in result) {
+        toast.error('Failed to save domain config')
+        return
+      }
+      toast.success(editingDomainConfig ? 'Domain config updated' : 'Domain config created')
+      setIsDomainFormOpen(false)
+      setIsSaving(false)
+      await loadConfigs()
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Failed to save domain config')
+    } finally {
+      setIsSaving(false)
+    }
+  }, [selectedScopeId, domainProdDomain, domainStageDomain, editingDomainConfig, scopeConfig, ownsConfig, apiService, toast, loadConfigs])
 
   // ============================================================================
   // CUSTOM ATTRIBUTE CRUD
@@ -741,15 +812,15 @@ export const ConfigManagement: React.FC<ConfigManagementProps> = () => {
 
   const { loadingOverlayVisible, savingOverlayVisible } = useMemo(() => {
     const isBlockingDialogOpen =
-      isRsvpFormOpen || isLocalesFormOpen || isAttrFormOpen ||
-      rsvpConfigToDelete != null || localesToDelete != null || attrToDelete != null
+      isRsvpFormOpen || isLocalesFormOpen || isDomainFormOpen || isAttrFormOpen ||
+      rsvpConfigToDelete != null || localesToDelete != null || domainToDelete != null || attrToDelete != null
     return {
       loadingOverlayVisible: (isLoadingScopes || isLoadingConfigs) && !isSaving,
       savingOverlayVisible: isSaving && !isBlockingDialogOpen,
     }
   }, [
-    isRsvpFormOpen, isLocalesFormOpen, isAttrFormOpen,
-    rsvpConfigToDelete, localesToDelete, attrToDelete,
+    isRsvpFormOpen, isLocalesFormOpen, isDomainFormOpen, isAttrFormOpen,
+    rsvpConfigToDelete, localesToDelete, domainToDelete, attrToDelete,
     isLoadingScopes, isLoadingConfigs,
     isSaving,
   ])
@@ -821,6 +892,7 @@ export const ConfigManagement: React.FC<ConfigManagementProps> = () => {
             <TabList>
               <Tab id="rsvp">RSVP Fields</Tab>
               <Tab id="locales">Locale Mapping</Tab>
+              <Tab id="domain">Domain</Tab>
               <Tab id="attributes">Custom Attributes</Tab>
             </TabList>
 
@@ -1069,6 +1141,79 @@ export const ConfigManagement: React.FC<ConfigManagementProps> = () => {
                         <Button variant="accent" onPress={openLocalesCreate}>
                           <Add />
                           <Text>Create Locales Config</Text>
+                        </Button>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            </TabPanel>
+
+            {/* ── Domain Tab ── */}
+            <TabPanel id="domain">
+              <div className={style({ display: 'flex', flexDirection: 'column', gap: 24, marginTop: 24 })}>
+                {domainConfig ? (
+                  <div>
+                    <div className={style({ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 })}>
+                      <Heading level={3}>Domain</Heading>
+                      <ButtonGroup>
+                        {canWriteConfig && (
+                          <Button variant="secondary" onPress={() => openDomainEdit(domainConfig)}>
+                            <EditIcon />
+                            <Text>Edit</Text>
+                          </Button>
+                        )}
+                        {canDeleteConfig && (
+                          <Button variant="secondary" onPress={() => setDomainToDelete(domainConfig)}>
+                            <RemoveCircle />
+                            <Text>Delete</Text>
+                          </Button>
+                        )}
+                      </ButtonGroup>
+                    </div>
+                    <div style={{
+                      border: '1px solid var(--spectrum-global-color-gray-300)',
+                      borderRadius: 8,
+                      overflow: 'hidden',
+                    }}>
+                      <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                        <thead>
+                          <tr style={{ backgroundColor: 'var(--spectrum-global-color-gray-100)' }}>
+                            <th style={{ padding: '12px 16px', textAlign: 'left', fontWeight: 600, fontSize: 13 }}>Environment</th>
+                            <th style={{ padding: '12px 16px', textAlign: 'left', fontWeight: 600, fontSize: 13 }}>Domain</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          <tr style={{ borderTop: '1px solid var(--spectrum-global-color-gray-300)' }}>
+                            <td style={{ padding: '10px 16px' }}><Badge variant="positive">Prod</Badge></td>
+                            <td style={{ padding: '10px 16px' }}><Text>{domainConfig.domain.prodDomain || '—'}</Text></td>
+                          </tr>
+                          <tr style={{ borderTop: '1px solid var(--spectrum-global-color-gray-300)' }}>
+                            <td style={{ padding: '10px 16px' }}><Badge variant="informative">Stage</Badge></td>
+                            <td style={{ padding: '10px 16px' }}><Text>{domainConfig.domain.stageDomain || '—'}</Text></td>
+                          </tr>
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                ) : (
+                  <div
+                    style={{
+                      padding: 48,
+                      border: '1px solid var(--spectrum-global-color-gray-300)',
+                      borderRadius: 8,
+                      backgroundColor: 'var(--spectrum-global-color-gray-100)',
+                      textAlign: 'center',
+                    }}
+                  >
+                    <Text UNSAFE_style={{ color: 'var(--spectrum-global-color-gray-700)' }}>
+                      No domain config for this scope. Series in this scope fall back to their own &quot;Related domain&quot; field.
+                    </Text>
+                    {canWriteConfig && (
+                      <div style={{ marginTop: 16, display: 'flex', justifyContent: 'center' }}>
+                        <Button variant="accent" onPress={openDomainCreate}>
+                          <Add />
+                          <Text>Create Domain Config</Text>
                         </Button>
                       </div>
                     )}
@@ -1742,6 +1887,48 @@ export const ConfigManagement: React.FC<ConfigManagementProps> = () => {
         </Dialog>
       </DialogTrigger>
 
+      {/* Domain Config Create/Edit Dialog */}
+      <DialogTrigger isOpen={isDomainFormOpen} onOpenChange={setIsDomainFormOpen}>
+        <div style={{ display: 'none' }} />
+        <Dialog>
+          {({close}) => (
+            <>
+              <Heading slot="title">{editingDomainConfig ? 'Edit Domain Config' : 'Create Domain Config'}</Heading>
+              <Content>
+                <div className={style({ display: 'flex', flexDirection: 'column', gap: 16 })}>
+                  <TextField
+                    label="Prod Domain"
+                    description="Production host used to build the event detail-page URL, e.g. https://www.adobe.com"
+                    value={domainProdDomain}
+                    onChange={setDomainProdDomain}
+                    onBlur={() => setDomainProdDomain(prev => normalizeRelatedDomain(prev))}
+                    styles={style({ width: '[100%]' })}
+                  />
+                  <TextField
+                    label="Stage Domain"
+                    description="Stage host used for Preview links, e.g. https://www.stage.adobe.com"
+                    value={domainStageDomain}
+                    onChange={setDomainStageDomain}
+                    onBlur={() => setDomainStageDomain(prev => normalizeRelatedDomain(prev))}
+                    styles={style({ width: '[100%]' })}
+                  />
+                </div>
+              </Content>
+              <ButtonGroup>
+                <Button variant="secondary" onPress={close}>Cancel</Button>
+                <Button
+                  variant="accent"
+                  onPress={handleSaveDomainConfig}
+                  isDisabled={isSaving || (!domainProdDomain.trim() && !domainStageDomain.trim())}
+                >
+                  {editingDomainConfig ? 'Update' : 'Create'}
+                </Button>
+              </ButtonGroup>
+            </>
+          )}
+        </Dialog>
+      </DialogTrigger>
+
       {/* Custom Attribute Create/Edit Dialog */}
       <DialogTrigger isOpen={isAttrFormOpen} onOpenChange={setIsAttrFormOpen}>
         <div style={{ display: 'none' }} />
@@ -1921,6 +2108,24 @@ export const ConfigManagement: React.FC<ConfigManagementProps> = () => {
           isPrimaryActionDisabled={isSaving}
         >
           Delete the locales config for this scope? This action cannot be undone.
+        </AlertDialog>
+      </DialogTrigger>
+
+      <DialogTrigger
+        isOpen={!!domainToDelete}
+        onOpenChange={(open) => !open && setDomainToDelete(null)}
+      >
+        <div style={{ display: 'none' }} />
+        <AlertDialog
+          title="Delete Domain Config"
+          variant="destructive"
+          primaryActionLabel="Delete"
+          cancelLabel="Cancel"
+          onPrimaryAction={() => { if (domainToDelete) deleteSlice(domainToDelete, 'domain', 'Domain config') }}
+          onCancel={() => setDomainToDelete(null)}
+          isPrimaryActionDisabled={isSaving}
+        >
+          Delete the domain config for this scope? Series will fall back to their own &quot;Related domain&quot; field. This action cannot be undone.
         </AlertDialog>
       </DialogTrigger>
 

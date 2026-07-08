@@ -17,6 +17,7 @@ import type {
   UrlPatternEntry,
 } from '../types/domain'
 import type { Locale } from '../types/configApi'
+import { hasDomainSlice } from '../types/configApi'
 import { getDetailPageLocalePrefixFromIetf } from '../config/detailPageLocalePrefix'
 import {
   buildTokenContext,
@@ -118,7 +119,20 @@ export function useCustomDetailPagePath() {
       return null
     }
 
-    const relatedDomain = series.relatedDomain || ''
+    // Prefer the scope's "domain" config (prod host) over the legacy per-series
+    // relatedDomain field. Scopes that haven't migrated yet (no domain config,
+    // or a domain slice missing prodDomain) fall back to series.relatedDomain
+    // so existing series keep working unchanged.
+    let prodDomain: string | undefined
+    try {
+      const seriesConfigs = await cachedApi.getSeriesConfigs(seriesId)
+      if (!('error' in seriesConfigs)) {
+        prodDomain = seriesConfigs.find(hasDomainSlice)?.domain.prodDomain
+      }
+    } catch (err) {
+      console.warn(`Failed to load domain config for series ${seriesId}:`, err)
+    }
+    const relatedDomain = prodDomain || series.relatedDomain || ''
     const contentRoot = series.contentRoot || ''
 
     const ietfToSiteKeys = options?.scopeLocales?.length
