@@ -31,7 +31,8 @@ import { IMS } from '../../types'
 import { useToast, useGroup } from '../../contexts'
 import { useSafeState, useRBACFilter } from '../../hooks'
 import { useHasPermission } from '../../hooks/useHasPermission'
-import { getEspEnvParam } from '../../config/constants'
+import { getEventPageUrls } from '../../utils/eventPageUrls'
+import { hasDomainSlice } from '../../types/configApi'
 
 const EVENTS_SEARCH_KEYS = ['eventName', 'eventType', 'cloudType', 'hostEmail', 'seriesId']
 
@@ -405,30 +406,33 @@ export const EventsDashboard: React.FC<EventsDashboardProps> = () => {
         break
       }
 
-      case 'preview-pre':
-      case 'preview-post': {
-        // Use data we already have from the events list - no fetch needed!
+      case 'preview':
+      case 'view-published': {
         if (!item.detailPagePath) {
           toast.error('Event does not have a detail page URL')
           break
         }
 
-        const previewType = action === 'preview-pre' ? 'pre-event' : 'post-event'
-        const localStartTimeMillis = item.localStartTimeMillis || 0
-        
-        // Pre-event: timing before event start, Post-event: timing after event start
-        const timing = previewType === 'pre-event' 
-          ? localStartTimeMillis - 10 
-          : localStartTimeMillis + 10
+        // Open the tab synchronously (before the await below) so browsers don't
+        // treat the async-resolved navigation as a blocked popup.
+        const newTab = window.open('', '_blank')
 
-        const previewUrl = new URL(item.detailPagePath)
-        previewUrl.searchParams.set('timing', String(timing))
-        const espenv = getEspEnvParam()
-        if (espenv) {
-          previewUrl.searchParams.set('espenv', espenv)
+        let domain = null
+        if (item.seriesId) {
+          try {
+            const seriesConfigs = await cachedApi.getSeriesConfigs(item.seriesId)
+            domain = 'error' in seriesConfigs ? null : (seriesConfigs.find(hasDomainSlice)?.domain ?? null)
+          } catch (err) {
+            console.warn(`Failed to load domain config for series ${item.seriesId}:`, err)
+          }
         }
 
-        window.open(previewUrl.toString(), '_blank')
+        const { previewUrl, publishedUrl } = getEventPageUrls(item.detailPagePath, domain)
+        const url = action === 'preview' ? previewUrl : publishedUrl
+        if (newTab) {
+          if (url) newTab.location.href = url
+          else newTab.close()
+        }
         break
       }
 
@@ -796,14 +800,16 @@ export const EventsDashboard: React.FC<EventsDashboardProps> = () => {
                 <Text slot="label">{item.published ? 'Unpublish' : 'Publish'}</Text>
               </MenuItem>
             )}
-            <MenuItem id="preview-pre" textValue="Preview pre-event">
+            <MenuItem id="preview" textValue="Preview page">
               <Preview />
-              <Text slot="label">Preview pre-event</Text>
+              <Text slot="label">Preview page</Text>
             </MenuItem>
-            <MenuItem id="preview-post" textValue="Preview post-event">
-              <Preview />
-              <Text slot="label">Preview post-event</Text>
-            </MenuItem>
+            {item.published && (
+              <MenuItem id="view-published" textValue="View published page">
+                <Preview />
+                <Text slot="label">View published page</Text>
+              </MenuItem>
+            )}
             <MenuItem id="copy-url" textValue="Copy URL">
               <Copy />
               <Text slot="label">Copy URL</Text>

@@ -41,8 +41,8 @@ export interface FormWizardTestIds {
   step?: (stepId: string) => string
   progress?: string
   backButton?: string
-  previewPre?: string
-  previewPost?: string
+  previewPage?: string
+  viewPublishedPage?: string
   publishButton?: string
   saveButton?: string
   nextButton?: string
@@ -57,8 +57,10 @@ interface FormWizardProps {
   /** Called when Save button is clicked - should save without advancing */
   onSave?: () => Promise<boolean> | boolean
   onCancel?: () => void
-  /** Called when a preview is requested */
-  onPreview?: (previewType: 'pre-event' | 'post-event') => void
+  /** Called when the "Preview page" (stage) link is clicked */
+  onPreview?: () => void
+  /** Called when the "View published page" (prod) link is clicked */
+  onViewPublished?: () => void
   isSubmitting?: boolean
   showSideNav?: boolean
   /** Whether the event has been saved at least once (has an eventId) */
@@ -100,6 +102,7 @@ export const FormWizard: React.FC<FormWizardProps> = ({
   onSave,
   onCancel,
   onPreview,
+  onViewPublished,
   isSubmitting = false,
   showSideNav = false,
   hasEventId = false,
@@ -226,10 +229,12 @@ export const FormWizard: React.FC<FormWizardProps> = ({
     })
   }
 
-  const handlePreviewClick = (type: 'pre-event' | 'post-event') => {
-    if (onPreview) {
-      onPreview(type)
-    }
+  const handlePreviewClick = () => {
+    onPreview?.()
+  }
+
+  const handleViewPublishedClick = () => {
+    onViewPublished?.()
   }
 
   const getStepStatus = (index: number): 'active' | 'locked' | 'available' => {
@@ -533,27 +538,29 @@ export const FormWizard: React.FC<FormWizardProps> = ({
                 style={{ flexWrap: 'wrap' }}
               >
                 <Button
-                  data-testid={testIds?.previewPre}
+                  data-testid={testIds?.previewPage}
                   variant="secondary"
                   fillStyle="fill"
                   staticColor="white"
-                  onPress={() => handlePreviewClick('pre-event')}
+                  onPress={handlePreviewClick}
                   isDisabled={isSubmitting || isNavigating}
                 >
                   <WebPage />
-                  <Text>Pre-event</Text>
+                  <Text>Preview page</Text>
                 </Button>
-                <Button
-                  data-testid={testIds?.previewPost}
-                  variant="secondary"
-                  fillStyle="fill"
-                  staticColor="white"
-                  onPress={() => handlePreviewClick('post-event')}
-                  isDisabled={isSubmitting || isNavigating}
-                >
-                  <WebPage />
-                  <Text>Post-event</Text>
-                </Button>
+                {isPublished && (
+                  <Button
+                    data-testid={testIds?.viewPublishedPage}
+                    variant="secondary"
+                    fillStyle="fill"
+                    staticColor="white"
+                    onPress={handleViewPublishedClick}
+                    isDisabled={isSubmitting || isNavigating}
+                  >
+                    <WebPage />
+                    <Text>View published page</Text>
+                  </Button>
+                )}
               </div>
               <div
                 style={{
