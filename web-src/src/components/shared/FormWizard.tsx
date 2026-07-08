@@ -9,6 +9,7 @@ import { useNavigate } from 'react-router-dom'
 import ChevronLeft from '@react-spectrum/s2/icons/ChevronLeft'
 import ChevronRight from '@react-spectrum/s2/icons/ChevronRight'
 import RocketQuickActions from '@react-spectrum/s2/icons/RocketQuickActions'
+import Refresh from '@react-spectrum/s2/icons/Refresh'
 import WebPage from '@react-spectrum/s2/icons/WebPage'
 import FileText from '@react-spectrum/s2/icons/FileText'
 import {
@@ -41,6 +42,7 @@ export interface FormWizardTestIds {
   step?: (stepId: string) => string
   progress?: string
   backButton?: string
+  updatePageButton?: string
   previewPage?: string
   viewPublishedPage?: string
   publishButton?: string
@@ -57,6 +59,8 @@ interface FormWizardProps {
   /** Called when Save button is clicked - should save without advancing */
   onSave?: () => Promise<boolean> | boolean
   onCancel?: () => void
+  /** Called when "Update page" is clicked — saves, then (re)generates the staged page */
+  onUpdatePage?: () => Promise<void> | void
   /** Called when the "Preview page" (stage) link is clicked */
   onPreview?: () => void
   /** Called when the "View published page" (prod) link is clicked */
@@ -101,6 +105,7 @@ export const FormWizard: React.FC<FormWizardProps> = ({
   onComplete,
   onSave,
   onCancel,
+  onUpdatePage,
   onPreview,
   onViewPublished,
   isSubmitting = false,
@@ -119,7 +124,7 @@ export const FormWizard: React.FC<FormWizardProps> = ({
   const [currentStepIndex, setCurrentStepIndex] = useState(0)
   const [isNavigating, setIsNavigating] = useState(false)
   const [showSessionView, setShowSessionView] = useState(false)
-  const [pendingAction, setPendingAction] = useState<'save' | 'publish' | 'next' | null>(null)
+  const [pendingAction, setPendingAction] = useState<'save' | 'publish' | 'updatePage' | 'next' | null>(null)
   const [sideNavStepHoverIndex, setSideNavStepHoverIndex] = useState<number | null>(null)
   const [sessionHover, setSessionHover] = useState(false)
   const [leaveSessionDialogOpen, setLeaveSessionDialogOpen] = useState(false)
@@ -141,6 +146,16 @@ export const FormWizard: React.FC<FormWizardProps> = ({
     setPendingAction('publish')
     try {
       await Promise.resolve(onComplete())
+    } finally {
+      setPendingAction(null)
+    }
+  }
+
+  const handleUpdatePage = async () => {
+    if (isSubmitting || isNavigating || currentStep.isValid === false) return
+    setPendingAction('updatePage')
+    try {
+      await Promise.resolve(onUpdatePage?.())
     } finally {
       setPendingAction(null)
     }
@@ -537,6 +552,17 @@ export const FormWizard: React.FC<FormWizardProps> = ({
                 className={style({ display: 'flex', gap: 8, alignItems: 'center' })}
                 style={{ flexWrap: 'wrap' }}
               >
+                <Button
+                  data-testid={testIds?.updatePageButton}
+                  variant="secondary"
+                  fillStyle="fill"
+                  staticColor="white"
+                  onPress={() => guardLeaveSession(handleUpdatePage)}
+                  isDisabled={isActionDisabled || pendingAction === 'updatePage'}
+                >
+                  <Refresh />
+                  <Text>{pendingAction === 'updatePage' ? 'Updating page...' : 'Update page'}</Text>
+                </Button>
                 <Button
                   data-testid={testIds?.previewPage}
                   variant="secondary"

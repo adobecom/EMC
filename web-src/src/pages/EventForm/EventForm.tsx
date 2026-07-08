@@ -81,6 +81,7 @@ const EVENT_FORM_WIZARD_TEST_IDS = {
   step: (stepId: string) => `event-form-step-${stepId}`,
   progress: 'event-form-progress',
   backButton: 'event-form-back-button',
+  updatePageButton: 'event-form-update-page-button',
   previewPage: 'event-form-preview-page',
   viewPublishedPage: 'event-form-view-published-page',
   publishButton: 'event-form-publish-button',
@@ -505,7 +506,7 @@ const EventFormInner: React.FC<EventFormInnerProps> = ({ ims: _ims }) => {
   isDirtyRef.current = isDirty
   
   // Get save hook
-  const { publishEvent, saveDraft, isSaving, saveError } = useEventFormSave()
+  const { publishEvent, previewEvent, saveDraft, isSaving, saveError } = useEventFormSave()
 
   // Custom URL pattern hook
   const { getDetailPagePathForSave, shouldRunCustomDetailPagePathFlow } = useCustomDetailPagePath()
@@ -789,6 +790,20 @@ const EventFormInner: React.FC<EventFormInnerProps> = ({ ims: _ims }) => {
     },
     [publishEvent, persistToStorage, setPublished, navigate, toast, isPublished, isEditMode]
   )
+
+  /** Saves the form, then (re)generates the staged preview page — backs the "Update page" button. */
+  const runUpdatePage = useCallback(async () => {
+    persistToStorage()
+    await previewEvent({
+      onSuccess: () => {
+        toast.success('Page updated!', { duration: 3000 })
+      },
+      onError: (error) => {
+        console.error('Failed to update page:', error)
+        toast.error('Failed to update page')
+      },
+    })
+  }, [previewEvent, persistToStorage, toast])
 
   const requestPublishAfterUrlResolved = useCallback(
     async (extraPayload?: Record<string, any>) => {
@@ -1113,6 +1128,7 @@ const EventFormInner: React.FC<EventFormInnerProps> = ({ ims: _ims }) => {
         onComplete={handleComplete}
         onSave={handleSave}
         onCancel={handleCancel}
+        onUpdatePage={runUpdatePage}
         onPreview={handlePreview}
         onViewPublished={handleViewPublished}
         isSubmitting={isSaving}

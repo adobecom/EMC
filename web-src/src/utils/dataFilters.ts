@@ -136,7 +136,9 @@ export const EVENT_DATA_FILTER: DataFilter = {
   allowGuestRegistration: { type: 'boolean', localizable: false, cloneable: true, submittable: true },
   hostEmail: { type: 'string', localizable: false, cloneable: true, submittable: true },
   eventId: { type: 'string', localizable: false, cloneable: false, submittable: true },
-  published: { type: 'boolean', localizable: false, cloneable: false, submittable: true },
+  // Read-only: the client never sets this. Only POST /events/{eventId}/actions/{publish|unpublish}
+  // changes it — see api.ts publishEventPage/unpublishEventPage.
+  published: { type: 'boolean', localizable: false, cloneable: false, submittable: false },
   creationTime: { type: 'string', localizable: false, cloneable: false, submittable: true },
   modificationTime: { type: 'string', localizable: false, cloneable: false, submittable: true },
   isPrivate: { type: 'boolean', localizable: false, cloneable: true, submittable: true },
@@ -288,14 +290,15 @@ const EVENT_FILTER_STRATEGIES: Record<EventFilterMode, (descriptor: DataFieldDes
 }
 
 /**
- * Keys stripped on every ESL **event** `PUT /v1/events/:id` (update, publish, unpublish, preview)
- * inside {@link prepareEslEventPutPayload} — not publish-specific.
+ * Keys stripped on every ESL **event** `PUT /v1/events/:id` (a plain field-only save — publish,
+ * unpublish, and preview are now dedicated POST /events/{eventId}/actions/{actionType} calls, not
+ * PUTs) inside {@link prepareEslEventPutPayload}.
  * - inviteOnly: read-only on ESL update.
  */
 export const EVENT_DATA_ESL_EVENT_PUT_EXCLUDE_KEYS: readonly string[] = ['inviteOnly']
 
 /**
- * Normalize any object intended for ESL `PUT /v1/events/:id` (update, publish, unpublish, preview).
+ * Normalize any object intended for ESL `PUT /v1/events/:id` (a plain field-only save).
  * Applies submission filtering plus {@link EVENT_DATA_ESL_EVENT_PUT_EXCLUDE_KEYS}.
  */
 export function prepareEslEventPutPayload(

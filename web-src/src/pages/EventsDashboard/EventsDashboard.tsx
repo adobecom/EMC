@@ -375,20 +375,13 @@ export const EventsDashboard: React.FC<EventsDashboardProps> = () => {
       case 'unpublish': {
         const isPublish = !item.published
         setActionInProgress(item.eventId)
-        
-        try {
-          // Fetch full event data (needed for complete payload with all localizations)
-          const eventResponse = await cachedApi.getEventFull(item.eventId)
-          
-          if ('error' in eventResponse) {
-            toast.error(`Failed to load event data: ${eventResponse.error}`)
-            break
-          }
 
-          // ApiService.publishEvent / unpublishEvent run prepareEslEventPutPayload (submission filter + ESL excludes)
+        try {
+          // Publish/unpublish are dedicated on-demand actions — no payload needed, the
+          // action endpoint flips `published` and triggers page generation server-side.
           const result = isPublish
-            ? await apiService.publishEvent(item.eventId, eventResponse)
-            : await apiService.unpublishEvent(item.eventId, eventResponse)
+            ? await cachedApi.publishEventPage(item.eventId)
+            : await cachedApi.unpublishEventPage(item.eventId)
 
           if ('error' in result) {
             toast.error(`Failed to ${isPublish ? 'publish' : 'unpublish'} event: ${result.error}`)
