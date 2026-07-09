@@ -1001,7 +1001,9 @@ class ApiService {
 
   /**
    * Page generation is on-demand: a plain PUT (updateEventExternal) no longer regenerates the
-   * DA page or changes `published` — only these action endpoints do.
+   * DA page on its own. These action endpoints are the primary, recommended way to trigger it
+   * and to change `published` — EMC always uses them going forward. (The backend keeps `published`
+   * writable on a plain PUT too, for other callers that aren't EMC — see ESP's openapi spec.)
    */
   async previewEventPage(eventId: string): Promise<any | ErrorResponse> {
     validateString(eventId, 'event ID')
