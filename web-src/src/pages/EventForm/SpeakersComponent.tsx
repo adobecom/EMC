@@ -117,7 +117,7 @@ export const SpeakersComponent: React.FC = () => {
 
       let savedSpeakers: any[] = []
       try {
-        const speakersResponse = await cachedApi.getEventSpeakers(savedEventId, { skipStaleGroupRecovery: true })
+        const speakersResponse = await cachedApi.getEventSpeakers(savedEventId)
         if (speakersResponse && !('error' in speakersResponse)) {
           savedSpeakers = speakersResponse.speakers || speakersResponse || []
           if (!Array.isArray(savedSpeakers)) {
@@ -265,7 +265,7 @@ export const SpeakersComponent: React.FC = () => {
     const loadSeriesSpeakers = async () => {
       setIsLoadingSpeakers(true)
       try {
-        const response = await cachedApi.getSpeakers(seriesId, { skipStaleGroupRecovery: true })
+        const response = await cachedApi.getSpeakers(seriesId)
         if (isMounted && response && !('error' in response)) {
           const speakers = response.speakers || response || []
           setSeriesSpeakers(Array.isArray(speakers) ? speakers : [])
@@ -290,7 +290,7 @@ export const SpeakersComponent: React.FC = () => {
 
   const refreshSeriesSpeakers = useCallback(async () => {
     if (!seriesId) return
-    const response = await cachedApi.getSpeakers(seriesId, { skipStaleGroupRecovery: true })
+    const response = await cachedApi.getSpeakers(seriesId)
     if (response && !('error' in response)) {
       const speakers = response.speakers || response || []
       setSeriesSpeakers(Array.isArray(speakers) ? speakers : [])

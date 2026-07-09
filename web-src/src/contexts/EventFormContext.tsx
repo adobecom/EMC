@@ -171,8 +171,6 @@ export interface EventFormContextValue {
   getRegisteredComponents: () => RegisteredComponent[]
   
   // Persistence
-  /** Draft storage key for this form instance (eventId, or `new-<eventType>-<seriesId>`) */
-  storageKey: string
   persistToStorage: () => void
   loadFromStorage: () => boolean
   clearStorage: () => void
@@ -238,39 +236,22 @@ export const createDefaultFormData = (): EventFormData => ({
   sponsors: []
 })
 
-interface InitialStateSeed extends Partial<EventFormData> {
-  eventId?: string | null
-}
-
-/**
- * Seeds eventId/seriesId/isEditMode synchronously from the provider's initial
- * props (rather than only via a post-mount effect), so that on a remount —
- * e.g. a background auth/group refresh — dependents like the form's
- * sessionStorage key are correct from the very first render instead of
- * transiently pointing at the "new event" key for one render pass.
- */
-const createInitialState = (initialData?: InitialStateSeed): EventFormState => {
-  const { eventId, ...formDataSeed } = initialData ?? {}
-  return {
-    eventId: eventId ?? null,
-    seriesId: formDataSeed?.seriesId ?? '',
-    isEditMode: !!eventId,
-    locale: DEFAULT_LOCALE,
-    eventDataResp: null,
-    formData: { ...createDefaultFormData(), ...formDataSeed },
-    isDirty: false,
-    saveStatus: 'idle',
-    saveError: null,
-    isLoading: false,
-    loadError: null,
-    isPublished: false,
-    // loadEvent() unconditionally unlocks all steps (maxStepReached: 3) for any
-    // existing event; seed the same value synchronously so a remount doesn't
-    // transiently re-lock the wizard down to step 1 while loadEvent re-fetches.
-    maxStepReached: eventId ? 3 : 0,
-    isFormatConfirmed: false,
-  }
-}
+const createInitialState = (initialData?: Partial<EventFormData>): EventFormState => ({
+  eventId: null,
+  seriesId: '',
+  isEditMode: false,
+  locale: DEFAULT_LOCALE,
+  eventDataResp: null,
+  formData: { ...createDefaultFormData(), ...initialData },
+  isDirty: false,
+  saveStatus: 'idle',
+  saveError: null,
+  isLoading: false,
+  loadError: null,
+  isPublished: false,
+  maxStepReached: 0,
+  isFormatConfirmed: false,
+})
 
 // ============================================================================
 // REDUCER
@@ -421,7 +402,7 @@ export const EventFormProvider: React.FC<EventFormProviderProps> = ({
   // Initialize state
   const [state, dispatch] = useReducer(
     eventFormReducer,
-    { eventType: initialEventType, seriesId: initialSeriesId, eventId: initialEventId },
+    { eventType: initialEventType, seriesId: initialSeriesId },
     createInitialState
   )
   
@@ -647,7 +628,6 @@ export const EventFormProvider: React.FC<EventFormProviderProps> = ({
     getRegisteredComponents,
     
     // Persistence
-    storageKey,
     persistToStorage,
     loadFromStorage,
     clearStorage,
@@ -688,7 +668,6 @@ export const EventFormProvider: React.FC<EventFormProviderProps> = ({
     registerComponent,
     unregisterComponent,
     getRegisteredComponents,
-    storageKey,
     persistToStorage,
     loadFromStorage,
     clearStorage,
