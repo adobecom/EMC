@@ -16,6 +16,7 @@ import { EventFormData } from '../types/domain'
  */
 
 export const STORAGE_KEY_PREFIX = 'emc-event-form-draft-'
+export const STEP_STORAGE_KEY_PREFIX = 'emc-event-form-step-'
 
 /**
  * Generate the storage key for a form draft
@@ -23,6 +24,14 @@ export const STORAGE_KEY_PREFIX = 'emc-event-form-draft-'
  */
 function getStorageKey(eventIdOrKey: string): string {
   return `${STORAGE_KEY_PREFIX}${eventIdOrKey}`
+}
+
+/**
+ * Generate the storage key for a wizard step position
+ * @param eventIdOrKey - Event ID for edits, or a descriptive key for new events
+ */
+function getStepStorageKey(eventIdOrKey: string): string {
+  return `${STEP_STORAGE_KEY_PREFIX}${eventIdOrKey}`
 }
 
 /**
@@ -83,6 +92,7 @@ export function clearFormDraft(eventIdOrKey: string): void {
   try {
     const key = getStorageKey(eventIdOrKey)
     sessionStorage.removeItem(key)
+    sessionStorage.removeItem(getStepStorageKey(eventIdOrKey))
   } catch (error) {
     console.warn('Failed to clear form draft from session storage:', error)
   }
@@ -95,17 +105,52 @@ export function clearFormDraft(eventIdOrKey: string): void {
 export function clearAllFormDrafts(): void {
   try {
     const keysToRemove: string[] = []
-    
+
     for (let i = 0; i < sessionStorage.length; i++) {
       const key = sessionStorage.key(i)
-      if (key && key.startsWith(STORAGE_KEY_PREFIX)) {
+      if (key && (key.startsWith(STORAGE_KEY_PREFIX) || key.startsWith(STEP_STORAGE_KEY_PREFIX))) {
         keysToRemove.push(key)
       }
     }
-    
+
     keysToRemove.forEach(key => sessionStorage.removeItem(key))
   } catch (error) {
     console.warn('Failed to clear all form drafts from session storage:', error)
+  }
+}
+
+/**
+ * Save the wizard's current step position to session storage, so it survives
+ * a remount of the form (e.g. a background auth/group refresh) instead of
+ * resetting the user back to the first step.
+ * @param eventIdOrKey - Event ID or key to save under (same key as the form draft)
+ * @param stepIndex - The current wizard step index
+ */
+export function saveFormStep(eventIdOrKey: string, stepIndex: number): void {
+  try {
+    sessionStorage.setItem(getStepStorageKey(eventIdOrKey), String(stepIndex))
+  } catch (error) {
+    // Session storage might be full or disabled
+    console.warn('Failed to save form step to session storage:', error)
+  }
+}
+
+/**
+ * Load the wizard's persisted step position from session storage
+ * @param eventIdOrKey - Event ID or key to load
+ * @returns The saved step index, or null if not found/invalid
+ */
+export function loadFormStep(eventIdOrKey: string): number | null {
+  try {
+    const stored = sessionStorage.getItem(getStepStorageKey(eventIdOrKey))
+    if (stored === null) {
+      return null
+    }
+    const stepIndex = Number(stored)
+    return Number.isInteger(stepIndex) && stepIndex >= 0 ? stepIndex : null
+  } catch (error) {
+    console.warn('Failed to load form step from session storage:', error)
+    return null
   }
 }
 

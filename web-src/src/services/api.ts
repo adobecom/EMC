@@ -61,6 +61,17 @@ interface SuccessResponse {
   ok: boolean
 }
 
+/**
+ * Options for read methods whose 403s should not be treated as a global
+ * stale-group signal by the caller (e.g. permission-scoped sub-resource
+ * reads during in-progress editing, where the resource-level 403 is
+ * expected to vary per user/resource and should just degrade locally).
+ * Defaults to normal stale-group recovery when omitted.
+ */
+interface ReadOptions {
+  skipStaleGroupRecovery?: boolean
+}
+
 interface ImageUploadConfig {
   targetUrl: string
   altText?: string
@@ -319,19 +330,21 @@ class ApiService {
 
   // Session APIs
 
-  async getAllEventSessions(eventId: string): Promise<any | ErrorResponse> {
+  async getAllEventSessions(eventId: string, options?: ReadOptions): Promise<any | ErrorResponse> {
     validateString(eventId, 'event ID')
     return this.callExternalApi('esp', `/v1/sessions?eventId=${encodeURIComponent(eventId)}`, 'GET', undefined, {
       operationName: 'getAllEventSessions',
       shouldReturnFullResponse: true,
+      skipStaleGroupRecovery: options?.skipStaleGroupRecovery
     })
   }
 
-  async getSingleSession(id: string): Promise<any | ErrorResponse> {
+  async getSingleSession(id: string, options?: ReadOptions): Promise<any | ErrorResponse> {
     validateString(id, 'session ID')
     return this.callExternalApi('esp', `/v1/sessions/${encodeURIComponent(id)}`, 'GET', undefined, {
       operationName: 'getSingleSession',
       shouldReturnFullResponse: true,
+      skipStaleGroupRecovery: options?.skipStaleGroupRecovery
     })
   }
 
@@ -409,13 +422,14 @@ class ApiService {
 
   // Session Time APIs
 
-  async getSessionTimes(sessionId?: string): Promise<any | ErrorResponse> {
+  async getSessionTimes(sessionId?: string, options?: ReadOptions): Promise<any | ErrorResponse> {
     const endpoint = sessionId
       ? `/v1/session-times?sessionId=${encodeURIComponent(sessionId)}`
       : '/v1/session-times'
     return this.callExternalApi('esp', endpoint, 'GET', undefined, {
       operationName: 'getSessionTimes',
       shouldReturnFullResponse: true,
+      skipStaleGroupRecovery: options?.skipStaleGroupRecovery
     })
   }
 
@@ -468,11 +482,12 @@ class ApiService {
   }
 
   /** GET /v1/sessions/{sessionId}/speakers */
-  async getSessionSpeakers(sessionId: string): Promise<any | ErrorResponse> {
+  async getSessionSpeakers(sessionId: string, options?: ReadOptions): Promise<any | ErrorResponse> {
     validateString(sessionId, 'session ID')
     return this.callExternalApi('esp', `/v1/sessions/${encodeURIComponent(sessionId)}/speakers`, 'GET', undefined, {
       operationName: 'getSessionSpeakers',
       shouldReturnFullResponse: true,
+      skipStaleGroupRecovery: options?.skipStaleGroupRecovery
     })
   }
 
@@ -584,6 +599,7 @@ class ApiService {
       transformResponse?: (data: any) => T
       shouldReturnFullResponse?: boolean
       skipGroupHeader?: boolean
+      skipStaleGroupRecovery?: boolean
     }
   ): Promise<T | ErrorResponse> {
     const operationName = options?.operationName || `${method} ${endpoint}`
@@ -640,7 +656,12 @@ class ApiService {
 
         // Stale-group recovery: 403 likely means the user's group membership changed.
         // Cooldown prevents infinite loops (e.g. if getRoleById also returns 403).
-        if (response.status === 403 && this.onStaleGroup && !this.staleGroupCooldown) {
+        // Callers reading permission-scoped sub-resources (e.g. form step data) can
+        // opt out via skipStaleGroupRecovery — a 403 there just means the active
+        // group lacks access to that particular resource, not that the group itself
+        // is stale, and should degrade to an empty/no-access result locally instead
+        // of forcing an app-wide group refresh (which unmounts the whole route tree).
+        if (response.status === 403 && this.onStaleGroup && !this.staleGroupCooldown && !options?.skipStaleGroupRecovery) {
           this.staleGroupCooldown = true
           setTimeout(() => { this.staleGroupCooldown = false }, 5000)
           this.onStaleGroup()
@@ -696,6 +717,7 @@ class ApiService {
     operationName?: string
     maxPages?: number
     skipGroupHeader?: boolean
+    skipStaleGroupRecovery?: boolean
   }): Promise<T[] | ErrorResponse> {
     const {
       service,
@@ -704,7 +726,8 @@ class ApiService {
       baseParams = {},
       operationName = `fetchAllPages(${baseEndpoint})`,
       maxPages = 100,
-      skipGroupHeader
+      skipGroupHeader,
+      skipStaleGroupRecovery
     } = options
 
     const items: T[] = []
@@ -722,7 +745,8 @@ class ApiService {
       const result = await this.callExternalApi<any>(service, endpoint, 'GET', undefined, {
         operationName: `${operationName} (page ${pageCount + 1})`,
         shouldReturnFullResponse: true,
-        skipGroupHeader
+        skipGroupHeader,
+        skipStaleGroupRecovery
       })
 
       if ('error' in result) {
@@ -1368,13 +1392,14 @@ class ApiService {
     )
   }
 
-  async getSpeakers(seriesId: string): Promise<any | ErrorResponse> {
+  async getSpeakers(seriesId: string, options?: ReadOptions): Promise<any | ErrorResponse> {
     validateString(seriesId, 'series ID')
     const result = await this.fetchAllPages<any>({
       service: 'esp',
       baseEndpoint: `/v1/series/${seriesId}/speakers`,
       listKey: 'speakers',
-      operationName: 'getSpeakers'
+      operationName: 'getSpeakers',
+      skipStaleGroupRecovery: options?.skipStaleGroupRecovery
     })
     if ('error' in result) return result
     return { speakers: result }
@@ -1388,13 +1413,14 @@ class ApiService {
     )
   }
 
-  async getEventSpeakers(eventId: string): Promise<any | ErrorResponse> {
+  async getEventSpeakers(eventId: string, options?: ReadOptions): Promise<any | ErrorResponse> {
     validateString(eventId, 'event ID')
     const result = await this.fetchAllPages<any>({
       service: 'esp',
       baseEndpoint: `/v1/events/${eventId}/speakers`,
       listKey: 'speakers',
-      operationName: 'getEventSpeakers'
+      operationName: 'getEventSpeakers',
+      skipStaleGroupRecovery: options?.skipStaleGroupRecovery
     })
     if ('error' in result) return result
     return { speakers: result }
@@ -1504,13 +1530,14 @@ class ApiService {
     )
   }
 
-  async getSponsors(seriesId: string): Promise<any | ErrorResponse> {
+  async getSponsors(seriesId: string, options?: ReadOptions): Promise<any | ErrorResponse> {
     validateString(seriesId, 'series ID')
     const result = await this.fetchAllPages<any>({
       service: 'esp',
       baseEndpoint: `/v1/series/${seriesId}/sponsors`,
       listKey: 'sponsors',
-      operationName: 'getSponsors'
+      operationName: 'getSponsors',
+      skipStaleGroupRecovery: options?.skipStaleGroupRecovery
     })
     if ('error' in result) return result
     return { sponsors: result }
@@ -1524,13 +1551,14 @@ class ApiService {
     )
   }
 
-  async getEventSponsors(eventId: string): Promise<any | ErrorResponse> {
+  async getEventSponsors(eventId: string, options?: ReadOptions): Promise<any | ErrorResponse> {
     validateString(eventId, 'event ID')
     const result = await this.fetchAllPages<any>({
       service: 'esp',
       baseEndpoint: `/v1/events/${eventId}/sponsors`,
       listKey: 'sponsors',
-      operationName: 'getEventSponsors'
+      operationName: 'getEventSponsors',
+      skipStaleGroupRecovery: options?.skipStaleGroupRecovery
     })
     if ('error' in result) return result
     return { sponsors: result }
@@ -1613,17 +1641,17 @@ class ApiService {
     )
   }
 
-  async getEventVenue(eventId: string): Promise<any | null | ErrorResponse> {
+  async getEventVenue(eventId: string, options?: ReadOptions): Promise<any | null | ErrorResponse> {
     validateString(eventId, 'eventId')
     return this.callExternalApi('esp', `/v1/events/${eventId}/venues`, 'GET', undefined,
-      { operationName: 'getEventVenue', transformResponse: (data) => data.venues?.[0] || null }
+      { operationName: 'getEventVenue', transformResponse: (data) => data.venues?.[0] || null, skipStaleGroupRecovery: options?.skipStaleGroupRecovery }
     )
   }
 
-  async listVenueLocations(venueId: string): Promise<any | ErrorResponse> {
+  async listVenueLocations(venueId: string, options?: ReadOptions): Promise<any | ErrorResponse> {
     validateString(venueId, 'venue ID')
     return this.callExternalApi('esp', `/v1/venues/${encodeURIComponent(venueId)}/locations`, 'GET', undefined,
-      { operationName: 'listVenueLocations', shouldReturnFullResponse: true }
+      { operationName: 'listVenueLocations', shouldReturnFullResponse: true, skipStaleGroupRecovery: options?.skipStaleGroupRecovery }
     )
   }
 
@@ -2039,10 +2067,10 @@ class ApiService {
   /**
    * Get the publishing profile for an event
    */
-  async getEventPublishingProfile(eventId: string): Promise<any | ErrorResponse> {
+  async getEventPublishingProfile(eventId: string, options?: ReadOptions): Promise<any | ErrorResponse> {
     validateString(eventId, 'event ID')
     return this.callExternalApi('esp', `/v1/events/${eventId}/publishing-profiles`, 'GET', undefined,
-      { operationName: `getEventPublishingProfile(${eventId})`, shouldReturnFullResponse: true }
+      { operationName: `getEventPublishingProfile(${eventId})`, shouldReturnFullResponse: true, skipStaleGroupRecovery: options?.skipStaleGroupRecovery }
     )
   }
 
@@ -2395,11 +2423,12 @@ class ApiService {
 
   // --- Scope Configs ---
 
-  async getConfig(scopeId: string): Promise<ScopeConfig | null | ErrorResponse> {
+  async getConfig(scopeId: string, options?: ReadOptions): Promise<ScopeConfig | null | ErrorResponse> {
     validateString(scopeId, 'scope ID')
     const result = await this.callExternalApi<ScopeConfig>('esp', `/v1/scopes/${encodeURIComponent(scopeId)}/config`, 'GET', undefined, {
       operationName: 'getConfig',
-      shouldReturnFullResponse: true
+      shouldReturnFullResponse: true,
+      skipStaleGroupRecovery: options?.skipStaleGroupRecovery
     })
     if (typeof result !== 'object' || result === null) return null
     if ('error' in result && (result as ErrorResponse).status === 404) return null
@@ -2417,7 +2446,7 @@ class ApiService {
 
   // --- Convenience Endpoints (resolved configs for events/series) ---
 
-  async getEventConfigs(eventId: string, type?: ConfigType): Promise<ScopeConfig[] | ErrorResponse> {
+  async getEventConfigs(eventId: string, type?: ConfigType, options?: ReadOptions): Promise<ScopeConfig[] | ErrorResponse> {
     validateString(eventId, 'event ID')
     const baseParams: Record<string, string> = {}
     if (type) baseParams.type = type
@@ -2426,11 +2455,12 @@ class ApiService {
       baseEndpoint: `/v1/events/${encodeURIComponent(eventId)}/configs`,
       listKey: 'configs',
       baseParams,
-      operationName: 'getEventConfigs'
+      operationName: 'getEventConfigs',
+      skipStaleGroupRecovery: options?.skipStaleGroupRecovery
     })
   }
 
-  async getSeriesConfigs(seriesId: string, type?: ConfigType): Promise<ScopeConfig[] | ErrorResponse> {
+  async getSeriesConfigs(seriesId: string, type?: ConfigType, options?: ReadOptions): Promise<ScopeConfig[] | ErrorResponse> {
     validateString(seriesId, 'series ID')
     const baseParams: Record<string, string> = {}
     if (type) baseParams.type = type
@@ -2439,7 +2469,8 @@ class ApiService {
       baseEndpoint: `/v1/series/${encodeURIComponent(seriesId)}/configs`,
       listKey: 'configs',
       baseParams,
-      operationName: 'getSeriesConfigs'
+      operationName: 'getSeriesConfigs',
+      skipStaleGroupRecovery: options?.skipStaleGroupRecovery
     })
   }
 }
@@ -2536,16 +2567,16 @@ export const cachedApi = {
   },
 
   // === SPEAKERS (GET Operations - Cached with Deduplication) ===
-  getSpeakers: async (seriesId: string) => {
-    const result = await apiCache.get((id: string) => apiService.getSpeakers(id), seriesId)
+  getSpeakers: async (seriesId: string, options?: ReadOptions) => {
+    const result = await apiCache.get((id: string, opts?: ReadOptions) => apiService.getSpeakers(id, opts), seriesId, options)
     if (result.speakers && Array.isArray(result.speakers)) {
       result.speakers = deduplicateBy(result.speakers, (s: any) => s.speakerId, { warnOnDuplicates: true })
     }
     return result
   },
   getSpeaker: (seriesId: string, speakerId: string) => apiCache.get((sId: string, spId: string) => apiService.getSpeaker(sId, spId), seriesId, speakerId),
-  getEventSpeakers: async (eventId: string) => {
-    const result = await apiCache.get((id: string) => apiService.getEventSpeakers(id), eventId)
+  getEventSpeakers: async (eventId: string, options?: ReadOptions) => {
+    const result = await apiCache.get((id: string, opts?: ReadOptions) => apiService.getEventSpeakers(id, opts), eventId, options)
     if (result.speakers && Array.isArray(result.speakers)) {
       result.speakers = deduplicateBy(result.speakers, (s: any) => s.speakerId, { warnOnDuplicates: true })
     }
@@ -2578,16 +2609,16 @@ export const cachedApi = {
   getAttendee: (eventId: string, attendeeId: string) => apiCache.get((eId: string, aId: string) => apiService.getAttendee(eId, aId), eventId, attendeeId),
 
   // === SPONSORS (GET Operations - Cached with Deduplication) ===
-  getSponsors: async (seriesId: string) => {
-    const result = await apiCache.get((id: string) => apiService.getSponsors(id), seriesId)
+  getSponsors: async (seriesId: string, options?: ReadOptions) => {
+    const result = await apiCache.get((id: string, opts?: ReadOptions) => apiService.getSponsors(id, opts), seriesId, options)
     if (result.sponsors && Array.isArray(result.sponsors)) {
       result.sponsors = deduplicateBy(result.sponsors, (s: any) => s.sponsorId, { warnOnDuplicates: true })
     }
     return result
   },
   getSponsor: (seriesId: string, sponsorId: string) => apiCache.get((sId: string, spId: string) => apiService.getSponsor(sId, spId), seriesId, sponsorId),
-  getEventSponsors: async (eventId: string) => {
-    const result = await apiCache.get((id: string) => apiService.getEventSponsors(id), eventId)
+  getEventSponsors: async (eventId: string, options?: ReadOptions) => {
+    const result = await apiCache.get((id: string, opts?: ReadOptions) => apiService.getEventSponsors(id, opts), eventId, options)
     if (result.sponsors && Array.isArray(result.sponsors)) {
       result.sponsors = deduplicateBy(result.sponsors, (s: any) => s.sponsorId, { warnOnDuplicates: true })
     }
@@ -2598,17 +2629,17 @@ export const cachedApi = {
   getLocales: () => apiCache.get(() => apiService.getLocales()),
   getPublishingProfiles: () => apiCache.get(() => apiService.getPublishingProfiles()),
   getPublishingProfile: (profileId: string) => apiCache.get((id: string) => apiService.getPublishingProfile(id), profileId),
-  getEventPublishingProfile: (eventId: string) => apiCache.get((id: string) => apiService.getEventPublishingProfile(id), eventId),
+  getEventPublishingProfile: (eventId: string, options?: ReadOptions) => apiCache.get((id: string, opts?: ReadOptions) => apiService.getEventPublishingProfile(id, opts), eventId, options),
   getCaasTags: () => apiService.getCaasTags(), // Already has internal caching
   getTagsFromUrl: (url: string) => apiService.getTagsFromUrl(url), // Already has internal per-URL caching
 
   // === CONFIGS (GET Operations - Cached) ===
-  getConfig: (scopeId: string) =>
-    apiCache.get((id: string) => apiService.getConfig(id), scopeId),
-  getEventConfigs: (eventId: string, type?: ConfigType) =>
-    apiCache.get((id: string, t?: ConfigType) => apiService.getEventConfigs(id, t), eventId, type),
-  getSeriesConfigs: (seriesId: string, type?: ConfigType) =>
-    apiCache.get((id: string, t?: ConfigType) => apiService.getSeriesConfigs(id, t), seriesId, type),
+  getConfig: (scopeId: string, options?: ReadOptions) =>
+    apiCache.get((id: string, opts?: ReadOptions) => apiService.getConfig(id, opts), scopeId, options),
+  getEventConfigs: (eventId: string, type?: ConfigType, options?: ReadOptions) =>
+    apiCache.get((id: string, t?: ConfigType, opts?: ReadOptions) => apiService.getEventConfigs(id, t, opts), eventId, type, options),
+  getSeriesConfigs: (seriesId: string, type?: ConfigType, options?: ReadOptions) =>
+    apiCache.get((id: string, t?: ConfigType, opts?: ReadOptions) => apiService.getSeriesConfigs(id, t, opts), seriesId, type, options),
 
   // === MUTATIONS (with cache invalidation) ===
   
