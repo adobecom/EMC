@@ -715,7 +715,15 @@ export function useEventFormSave() {
         onError?.(new Error(errorMessage))
         return { success: false, eventId: saveResult.eventId, error: errorMessage }
       }
-      const response = result as EventApiResponse
+      // The action endpoint returns the full persisted event, but skips the same
+      // customAttributes-label resolution that a normal save/read applies — refresh via
+      // getEventFull so eventDataResp always reflects the same fully-hydrated shape,
+      // mirroring saveEvent's own post-write refresh (step 7 above).
+      let response = result as EventApiResponse
+      const refreshedResponse = await cachedApi.getEventFull(saveResult.eventId)
+      if (!('error' in refreshedResponse)) {
+        response = refreshedResponse as EventApiResponse
+      }
       setEventResponse(response)
       onSuccess?.(saveResult.eventId, response)
       return { success: true, eventId: saveResult.eventId, response }

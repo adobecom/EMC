@@ -48,18 +48,27 @@ export function getEventPageUrls(
   const prodDomain = domain?.prodDomain
 
   let previewUrl = stageDomain ? (swapHost(detailPagePath, stageDomain) ?? detailPagePath) : detailPagePath
-  const publishedUrl = prodDomain ? (swapHost(detailPagePath, prodDomain) ?? detailPagePath) : detailPagePath
+  let publishedUrl = prodDomain ? (swapHost(detailPagePath, prodDomain) ?? detailPagePath) : detailPagePath
 
-  // Off-prod stage hosts still resolve against a tiered ESP backend — carry the
-  // same espenv signal the old pre/post-event links used.
+  // The page's static shell is served from whichever host above, but it still queries
+  // whichever ESP/ESL tier *this EMC build* talks to for dynamic content. Off-prod, that's
+  // never the real production backend, so both links need espenv — same as the old
+  // pre/post-event links, which carried it unconditionally regardless of domain.
   const espenv = getEspEnvParam()
   if (espenv) {
     try {
-      const url = new URL(previewUrl)
-      url.searchParams.set('espenv', espenv)
-      previewUrl = url.toString()
+      const previewUrlObj = new URL(previewUrl)
+      previewUrlObj.searchParams.set('espenv', espenv)
+      previewUrl = previewUrlObj.toString()
     } catch {
       // Leave previewUrl unmodified if somehow invalid
+    }
+    try {
+      const publishedUrlObj = new URL(publishedUrl)
+      publishedUrlObj.searchParams.set('espenv', espenv)
+      publishedUrl = publishedUrlObj.toString()
+    } catch {
+      // Leave publishedUrl unmodified if somehow invalid
     }
   }
 
