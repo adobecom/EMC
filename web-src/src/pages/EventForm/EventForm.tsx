@@ -708,7 +708,11 @@ const EventFormInner: React.FC<EventFormInnerProps> = ({ ims: _ims }) => {
     setSeriesId(seriesId)
     setFormatConfirmed(true)
     loadSeriesCustomTagsUrl(seriesId)
-  }, [updateFormData, setSeriesId, setFormatConfirmed, loadSeriesCustomTagsUrl])
+    // Load domain config as soon as the series is known (before the first save), so it's
+    // already available by the time hasEventId flips true and Preview/Update-page render —
+    // otherwise there'd be a brief window where Preview falls back to the prod host.
+    loadSeriesDomainConfig(seriesId)
+  }, [updateFormData, setSeriesId, setFormatConfirmed, loadSeriesCustomTagsUrl, loadSeriesDomainConfig])
   
   /**
    * Handle cancel from the format selection overlay — go back to dashboard
