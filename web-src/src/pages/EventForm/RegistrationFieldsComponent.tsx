@@ -99,7 +99,7 @@ export const RegistrationFieldsComponent: React.FC<RegistrationFieldsComponentPr
         let mode: RsvpFieldSourceMode = 'legacy'
 
         if (eventId) {
-          const result = await cachedApi.getEventConfigs(eventId, undefined, { skipStaleGroupRecovery: true })
+          const result = await cachedApi.getEventConfigs(eventId)
           if (cancelled) return
           if (!('error' in result)) {
             const config = result.find(c => hasRsvpSlice(c)) ?? null

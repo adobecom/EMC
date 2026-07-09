@@ -127,7 +127,7 @@ function sortSessionsByDate(sessions: Session[]): Session[] {
 }
 
 async function hydrateSessionWithTime(session: Session): Promise<Session> {
-  const timesRes = await apiService.getSessionTimes(session.id, { skipStaleGroupRecovery: true });
+  const timesRes = await apiService.getSessionTimes(session.id);
   if (timesRes && "error" in timesRes) return session;
 
   const times = Array.isArray((timesRes as any)?.sessionTimes)
@@ -278,7 +278,7 @@ export const Sessions: React.FC<SessionsProps> = ({ onOpenFormChange }) => {
     if (!seriesId) return;
     if (seriesSpeakers.length > 0) return;
     try {
-      const response = await cachedApi.getSpeakers(seriesId, { skipStaleGroupRecovery: true });
+      const response = await cachedApi.getSpeakers(seriesId);
       if (response && !("error" in response)) {
         const speakers = response.speakers || response || [];
         setSeriesSpeakers(Array.isArray(speakers) ? speakers : []);
@@ -291,9 +291,9 @@ export const Sessions: React.FC<SessionsProps> = ({ onOpenFormChange }) => {
   const loadVenueLocationsIfNeeded = useCallback(async () => {
     if (!eventId || venueLocations.length > 0) return
     try {
-      const venueRes = await apiService.getEventVenue(eventId, { skipStaleGroupRecovery: true })
+      const venueRes = await apiService.getEventVenue(eventId)
       if (!venueRes || 'error' in venueRes || !venueRes.venueId) return
-      const locRes = await apiService.listVenueLocations(venueRes.venueId, { skipStaleGroupRecovery: true })
+      const locRes = await apiService.listVenueLocations(venueRes.venueId)
       if (locRes && !('error' in locRes)) {
         const list = (locRes as any).locations ?? locRes ?? []
         setVenueLocations(Array.isArray(list) ? list : [])
@@ -306,7 +306,7 @@ export const Sessions: React.FC<SessionsProps> = ({ onOpenFormChange }) => {
   const refreshSeriesSpeakers = useCallback(async () => {
     if (!seriesId) return;
     try {
-      const response = await cachedApi.getSpeakers(seriesId, { skipStaleGroupRecovery: true });
+      const response = await cachedApi.getSpeakers(seriesId);
       if (response && !("error" in response)) {
         const speakers = response.speakers || response || [];
         setSeriesSpeakers(Array.isArray(speakers) ? speakers : []);
@@ -323,7 +323,7 @@ export const Sessions: React.FC<SessionsProps> = ({ onOpenFormChange }) => {
     }
     setIsLoading(true);
     try {
-      const response = await apiService.getAllEventSessions(eventId, { skipStaleGroupRecovery: true });
+      const response = await apiService.getAllEventSessions(eventId);
       if (response && "error" in response) {
         toast.error(response.error?.message || String(response.error), { duration: 8000 });
         setSessions([]);

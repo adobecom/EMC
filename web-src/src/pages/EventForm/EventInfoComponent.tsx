@@ -165,7 +165,7 @@ export const EventInfoComponent: React.FC = () => {
     const load = async () => {
       try {
         if (eventId) {
-          const result = await cachedApi.getEventConfigs(eventId, undefined, { skipStaleGroupRecovery: true })
+          const result = await cachedApi.getEventConfigs(eventId)
           if (cancelled) return
           if ('error' in result) {
             setLocaleOptions(DEFAULT_LOCALE_PICKER_OPTIONS)
@@ -174,7 +174,7 @@ export const EventInfoComponent: React.FC = () => {
           }
           applyLocales(result.find((c) => hasLocalesSlice(c)) ?? null)
         } else if (scopeId) {
-          const result = await cachedApi.getConfig(scopeId, { skipStaleGroupRecovery: true })
+          const result = await cachedApi.getConfig(scopeId)
           if (cancelled) return
           if (result === null || 'error' in result) {
             setLocaleOptions(DEFAULT_LOCALE_PICKER_OPTIONS)
