@@ -31,6 +31,7 @@ import { useEventFormComponent } from '../../hooks/useEventFormComponent'
 import { useEventFormContext } from '../../contexts/EventFormContext'
 import { useGroup } from '../../contexts/GroupContext'
 import { hasLocalesSlice } from '../../types/configApi'
+import type { ScopeConfig } from '../../types/configApi'
 import { SUPPORTED_SPEAKER_LOCALES, SPEAKER_LOCALE_LABELS } from '../../config/localeMapping'
 
 /**
@@ -52,62 +53,21 @@ function safeParseDateTimeString(dateString: string | undefined | null): Calenda
 }
 
 /**
- * Add minutes to a CalendarDateTime
- * Returns a new CalendarDateTime with the added minutes
- */
-function addMinutes(dt: CalendarDateTime, minutes: number): CalendarDateTime {
-  let newMinute = dt.minute + minutes
-  let newHour = dt.hour
-  let newDay = dt.day
-  let newMonth = dt.month
-  let newYear = dt.year
-  
-  // Handle minute overflow
-  while (newMinute >= 60) {
-    newMinute -= 60
-    newHour += 1
-  }
-  while (newMinute < 0) {
-    newMinute += 60
-    newHour -= 1
-  }
-  
-  // Handle hour overflow
-  while (newHour >= 24) {
-    newHour -= 24
-    newDay += 1
-  }
-  while (newHour < 0) {
-    newHour += 24
-    newDay -= 1
-  }
-  
-  // For simplicity, handle day overflow approximately (doesn't need to be perfect for +1 minute)
-  const daysInMonth = [0, 31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
-  // Adjust for leap years
-  if ((newYear % 4 === 0 && newYear % 100 !== 0) || newYear % 400 === 0) {
-    daysInMonth[2] = 29
-  }
-  
-  while (newDay > daysInMonth[newMonth]) {
-    newDay -= daysInMonth[newMonth]
-    newMonth += 1
-    if (newMonth > 12) {
-      newMonth = 1
-      newYear += 1
-    }
-  }
-  
-  return new CalendarDateTime(newYear, newMonth, newDay, newHour, newMinute, dt.second || 0)
-}
-
-/**
- * Get minimum end datetime (start + 1 minute) to ensure positive duration
+ * Get minimum end datetime (start + 1 minute) to ensure positive duration.
+ * Uses @internationalized/date built-in arithmetic for correct overflow handling.
  */
 function getMinEndDateTime(startDateTimeStr: string): CalendarDateTime | undefined {
   const startDt = safeParseDateTimeString(startDateTimeStr)
-  if (!startDt) return undefined
-  return addMinutes(startDt, 1)
+  return startDt ? startDt.add({ minutes: 1 }) : undefined
+}
+
+/**
+ * Get maximum start datetime (end − 1 minute) to prevent start from exceeding end.
+ * Symmetric guardrail for the start picker when the end is already set.
+ */
+function getMaxStartDateTime(endDateTimeStr: string): CalendarDateTime | undefined {
+  const endDt = safeParseDateTimeString(endDateTimeStr)
+  return endDt ? endDt.subtract({ minutes: 1 }) : undefined
 }
 
 /** Default picker entries when no scope locales config exists (aligned with ConfigManagement RSVP locales). */
@@ -131,8 +91,8 @@ const EVENT_TITLE_MAX_LENGTH = 150
  * startDateTime, endDateTime, timezone, communityForumUrl, secondaryLinkTitle, isPrivate
  */
 export const EventInfoComponent: React.FC = () => {
-  const { activeGroup } = useGroup()
   const { setScopeLocales } = useEventFormContext()
+  const { activeGroup } = useGroup()
 
   // ============================================================================
   // CONTEXT INTEGRATION
@@ -151,6 +111,11 @@ export const EventInfoComponent: React.FC = () => {
       const url = formData.communityForumUrl
       if (url && !url.startsWith('http://') && !url.startsWith('https://')) {
         return 'Secondary Link URL must start with https://'
+      }
+      const s = safeParseDateTimeString(formData.startDateTime)
+      const e = safeParseDateTimeString(formData.endDateTime)
+      if (s && e && e.compare(s) <= 0) {
+        return 'End date & time must be after the start date & time.'
       }
       return true
     },
@@ -182,20 +147,9 @@ export const EventInfoComponent: React.FC = () => {
 
   useEffect(() => {
     const scopeId = activeGroup?.scopeId
-    if (!scopeId) {
-      setLocaleOptions(DEFAULT_LOCALE_PICKER_OPTIONS)
-      return
-    }
 
-    let cancelled = false
-    cachedApi.getConfig(scopeId).then((result) => {
-      if (cancelled) return
-      if (result === null || 'error' in result) {
-        setLocaleOptions(DEFAULT_LOCALE_PICKER_OPTIONS)
-        setScopeLocales(null)
-        return
-      }
-      const locales = hasLocalesSlice(result) ? result.locales.locales : undefined
+    const applyLocales = (config: ScopeConfig | null) => {
+      const locales = config && hasLocalesSlice(config) ? config.locales.locales : undefined
       if (locales && locales.length > 0) {
         const options = locales.map((l) => ({ key: l.code, label: l.name }))
         setLocaleOptions(options)
@@ -204,23 +158,65 @@ export const EventInfoComponent: React.FC = () => {
         setLocaleOptions(DEFAULT_LOCALE_PICKER_OPTIONS)
         setScopeLocales(null)
       }
-    }).catch(() => {
-      if (!cancelled) {
-        setLocaleOptions(DEFAULT_LOCALE_PICKER_OPTIONS)
-        setScopeLocales(null)
+    }
+
+    let cancelled = false
+
+    const load = async () => {
+      try {
+        if (eventId) {
+          const result = await cachedApi.getEventConfigs(eventId)
+          if (cancelled) return
+          if ('error' in result) {
+            setLocaleOptions(DEFAULT_LOCALE_PICKER_OPTIONS)
+            setScopeLocales(null)
+            return
+          }
+          applyLocales(result.find((c) => hasLocalesSlice(c)) ?? null)
+        } else if (scopeId) {
+          const result = await cachedApi.getConfig(scopeId)
+          if (cancelled) return
+          if (result === null || 'error' in result) {
+            setLocaleOptions(DEFAULT_LOCALE_PICKER_OPTIONS)
+            setScopeLocales(null)
+            return
+          }
+          applyLocales(result)
+        } else {
+          setLocaleOptions(DEFAULT_LOCALE_PICKER_OPTIONS)
+          setScopeLocales(null)
+        }
+      } catch {
+        if (!cancelled) {
+          setLocaleOptions(DEFAULT_LOCALE_PICKER_OPTIONS)
+          setScopeLocales(null)
+        }
       }
-    })
+    }
+
+    load()
 
     return () => {
       cancelled = true
     }
-  }, [activeGroup?.scopeId, setScopeLocales])
+  }, [eventId, activeGroup?.scopeId, setScopeLocales])
 
   const pickerLocaleOptions = useMemo(() => {
     if (!locale) return localeOptions
     if (localeOptions.some((o) => o.key === locale)) return localeOptions
     return [{ key: locale, label: locale }, ...localeOptions]
   }, [localeOptions, locale])
+
+  /**
+   * Live inline error for the datetime pickers.
+   * Only set when both values are present and end ≤ start (invalid duration).
+   */
+  const durationError = useMemo(() => {
+    const s = safeParseDateTimeString(startDateTime)
+    const e = safeParseDateTimeString(endDateTime)
+    if (!s || !e) return undefined
+    return e.compare(s) <= 0 ? 'End date & time must be after the start date & time.' : undefined
+  }, [startDateTime, endDateTime])
 
   useEffect(() => {
     if (communityForumUrl) {
@@ -430,6 +426,9 @@ export const EventInfoComponent: React.FC = () => {
           granularity="minute"
           value={safeParseDateTimeString(startDateTime)}
           onChange={(date) => updateFormData({ startDateTime: date?.toString() || '' })}
+          maxValue={getMaxStartDateTime(endDateTime)}
+          isInvalid={!!durationError}
+          errorMessage={durationError}
         />
 
         <DatePicker
@@ -440,6 +439,8 @@ export const EventInfoComponent: React.FC = () => {
           value={safeParseDateTimeString(endDateTime)}
           onChange={(date) => updateFormData({ endDateTime: date?.toString() || '' })}
           minValue={getMinEndDateTime(startDateTime)}
+          isInvalid={!!durationError}
+          errorMessage={durationError}
         />
 
         <ComboBox

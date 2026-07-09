@@ -3,7 +3,7 @@
 */
 
 import React, { useEffect, useMemo } from 'react'
-import { Text, Button, Heading } from '@react-spectrum/s2'
+import { Text, Button, Heading, Picker, PickerItem } from '@react-spectrum/s2'
 import { style } from '@react-spectrum/s2/style' with { type: 'macro' }
 import Refresh from '@react-spectrum/s2/icons/Refresh'
 import Calendar from '@react-spectrum/s2/icons/Calendar'
@@ -17,8 +17,12 @@ import { BlurredLoadingOverlay } from '../../components/shared'
 import { EventApiResponse, SeriesApiResponse } from '../../types/domain'
 import { COLORS, GRADIENT_BACKGROUND, SPACING, TYPOGRAPHY } from '../../styles/designSystem'
 import { IMS } from '../../types'
-import { useSafeState, useRBACFilter, useHasPermission } from '../../hooks'
+import { useSafeState, useRBACFilter, useHasPermission, usePersistentState } from '../../hooks'
 import { useGroup } from '../../contexts/GroupContext'
+import { SPEAKER_LOCALE_LABELS } from '../../config/localeMapping'
+
+const FILTER_ALL = '__all__'
+const FILTER_NO_LOCALE = '__none_locale__'
 
 interface OverviewDashboardProps {
   ims: IMS
@@ -278,6 +282,7 @@ export const OverviewDashboard: React.FC<OverviewDashboardProps> = () => {
   const [isLoading, setIsLoading] = useSafeState(true)
   const [error, setError] = useSafeState<string | null>(null)
   const [lastUpdated, setLastUpdated] = useSafeState<Date | null>(null)
+  const [localeFilter, setLocaleFilter] = usePersistentState<string>('emc-overview-locale', FILTER_ALL)
 
   const loadData = async () => {
     setIsLoading(true)
@@ -304,39 +309,64 @@ export const OverviewDashboard: React.FC<OverviewDashboardProps> = () => {
     loadData()
   }, [groupVersion]) // eslint-disable-line react-hooks/exhaustive-deps
 
+  // Derive locale filter options directly from loaded events so the list
+  // always reflects actual data — no static fallback list, no extra API call.
+  const localeOptions = useMemo(() => {
+    const codes = [...new Set(
+      events.map(e => e.defaultLocale).filter((c): c is string => !!c)
+    )]
+    codes.sort((a, b) =>
+      (SPEAKER_LOCALE_LABELS[a] || a).localeCompare(SPEAKER_LOCALE_LABELS[b] || b)
+    )
+    return codes.map(key => ({ key, label: SPEAKER_LOCALE_LABELS[key] || key }))
+  }, [events])
+
+  const hasEventsWithoutLocale = useMemo(
+    () => events.some(e => !e.defaultLocale),
+    [events]
+  )
+
   // Calculate statistics
   const stats = useMemo(() => {
+    // Apply locale filter to event-derived stats only; series stats are always full counts.
+    const filteredByLocale = localeFilter === FILTER_ALL
+      ? events
+      : localeFilter === FILTER_NO_LOCALE
+        ? events.filter(e => !e.defaultLocale)
+        : events.filter(e => e.defaultLocale === localeFilter)
+
     // Basic counts
-    const totalEvents = events.length
+    const totalEvents = filteredByLocale.length
     const totalSeries = series.length
 
     // Event status distribution
-    const publishedEvents = events.filter(e => e.published).length
-    const draftEvents = events.filter(e => !e.published).length
+    const publishedEvents = filteredByLocale.filter(e => e.published).length
+    const draftEvents = filteredByLocale.filter(e => !e.published).length
 
     // Series status distribution
     const publishedSeries = series.filter(s => s.seriesStatus === 'published').length
     const draftSeries = series.filter(s => s.seriesStatus === 'draft').length
     const archivedSeries = series.filter(s => s.seriesStatus === 'archived').length
 
-    // Event type distribution
-    const inPersonEvents = events.filter(e => e.eventType === 'in-person' || e.eventType === 'InPerson').length
-    const webinarEvents = events.filter(e => e.eventType === 'webinar' || e.eventType === 'Webinar').length
+    // Event type distribution (locale-filtered)
+    const inPersonEvents = filteredByLocale.filter(e => e.eventType === 'in-person' || e.eventType === 'InPerson').length
+    const webinarEvents = filteredByLocale.filter(e => e.eventType === 'webinar' || e.eventType === 'Webinar').length
     const otherEvents = totalEvents - inPersonEvents - webinarEvents
 
-    // Cloud type distribution
-    const creativeCloudEvents = events.filter(e => e.cloudType === 'CreativeCloud').length
-    const experienceCloudEvents = events.filter(e => e.cloudType === 'ExperienceCloud').length
+    // Cloud type distribution (locale-filtered)
+    const creativeCloudEvents = filteredByLocale.filter(e => e.cloudType === 'CreativeCloud').length
+    const experienceCloudEvents = filteredByLocale.filter(e => e.cloudType === 'ExperienceCloud').length
 
+    // Series cloud distribution (always full — series have no locale field)
     const creativeCloudSeries = series.filter(s => s.cloudType === 'CreativeCloud').length
     const experienceCloudSeries = series.filter(s => s.cloudType === 'ExperienceCloud').length
 
-    // Calculate total attendees
-    const totalAttendees = events.reduce((sum, e) => sum + (e.attendeeCount || 0), 0)
-    const totalCapacity = events.reduce((sum, e) => sum + (e.attendeeLimit || 0), 0)
+    // Total attendees (locale-filtered)
+    const totalAttendees = filteredByLocale.reduce((sum, e) => sum + (e.attendeeCount || 0), 0)
+    const totalCapacity = filteredByLocale.reduce((sum, e) => sum + (e.attendeeLimit || 0), 0)
 
-    // Events by templateId (via series)
-    // First, create a map of seriesId -> templateId
+    // Events by templateId (via series) — template breakdown uses full event set intentionally
+    // because templateId is resolved via series which have no locale field
     const seriesTemplateMap = new Map<string, string>()
     series.forEach(s => {
       if (s.templateId) {
@@ -344,10 +374,9 @@ export const OverviewDashboard: React.FC<OverviewDashboardProps> = () => {
       }
     })
 
-    // Then count events per template
+    // Count events per template
     const templateCounts = new Map<string, { count: number; seriesCount: number }>()
 
-    // First, count series per template
     series.forEach(s => {
       if (s.templateId) {
         const existing = templateCounts.get(s.templateId) || { count: 0, seriesCount: 0 }
@@ -356,7 +385,6 @@ export const OverviewDashboard: React.FC<OverviewDashboardProps> = () => {
       }
     })
 
-    // Then count events per template (via their series)
     events.forEach(e => {
       if (e.seriesId) {
         const templateId = seriesTemplateMap.get(e.seriesId)
@@ -368,15 +396,14 @@ export const OverviewDashboard: React.FC<OverviewDashboardProps> = () => {
       }
     })
 
-    // Upcoming events (events with start date in the future)
+    // Upcoming / past events (locale-filtered)
     const now = Date.now()
-    const upcomingEvents = events.filter(e => {
+    const upcomingEvents = filteredByLocale.filter(e => {
       if (e.localStartTimeMillis) return e.localStartTimeMillis > now
       if (e.startDate) return new Date(e.startDate).getTime() > now
       return false
     }).length
 
-    // Past events
     const pastEvents = totalEvents - upcomingEvents
 
     return {
@@ -400,7 +427,7 @@ export const OverviewDashboard: React.FC<OverviewDashboardProps> = () => {
       upcomingEvents,
       pastEvents
     }
-  }, [events, series])
+  }, [events, series, localeFilter])
 
   if (error) {
     return (
@@ -435,6 +462,23 @@ export const OverviewDashboard: React.FC<OverviewDashboardProps> = () => {
                 Last updated: {lastUpdated.toLocaleTimeString()}
               </Text>
             )}
+            <Picker
+              aria-label="Filter by language"
+              selectedKey={localeFilter}
+              onSelectionChange={(key) => {
+                if (key != null) setLocaleFilter(String(key))
+              }}
+            >
+              <PickerItem id={FILTER_ALL} textValue="All languages">All languages</PickerItem>
+              {hasEventsWithoutLocale && (
+                <PickerItem id={FILTER_NO_LOCALE} textValue="(no language)">(no language)</PickerItem>
+              )}
+              {localeOptions.map(o => (
+                <PickerItem key={o.key} id={o.key} textValue={o.label}>
+                  {o.label}
+                </PickerItem>
+              ))}
+            </Picker>
             <Button variant="secondary" onPress={loadData} isPending={isLoading}>
               <Refresh />
               <Text>Refresh</Text>
