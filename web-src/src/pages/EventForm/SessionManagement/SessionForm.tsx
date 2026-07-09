@@ -265,7 +265,7 @@ export const SessionForm: React.FC<SessionFormProps> = ({
   useEffect(() => {
     if (!session?.id) return;
     let cancelled = false;
-    apiService.getSessionSpeakers(session.id).then((res) => {
+    apiService.getSessionSpeakers(session.id, { skipStaleGroupRecovery: true }).then((res) => {
       if (cancelled) return;
       if (res && !("error" in res)) {
         const list = (res as any)?.speakers ?? [];
@@ -312,7 +312,7 @@ export const SessionForm: React.FC<SessionFormProps> = ({
     setDetailError(null);
 
     // Only fetch session detail — session-time data is already cached on session.sessionTime
-    apiService.getSingleSession(session.id).then((res) => {
+    apiService.getSingleSession(session.id, { skipStaleGroupRecovery: true }).then((res) => {
       if (cancelled) return;
       setLoadingDetails(false);
       if (res && "error" in res) {
