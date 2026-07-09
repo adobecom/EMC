@@ -397,6 +397,10 @@ export const EventsDashboard: React.FC<EventsDashboardProps> = () => {
         // Open the tab synchronously (before the await below) so browsers don't
         // treat the async-resolved navigation as a blocked popup.
         const newTab = window.open('', '_blank')
+        if (!newTab) {
+          toast.error('Popup blocked — allow popups for this site to preview or view the page')
+          break
+        }
 
         let domain = null
         if (item.seriesId) {
@@ -410,10 +414,8 @@ export const EventsDashboard: React.FC<EventsDashboardProps> = () => {
 
         const { previewUrl, publishedUrl } = getEventPageUrls(item.detailPagePath, domain)
         const url = action === 'preview' ? previewUrl : publishedUrl
-        if (newTab) {
-          if (url) newTab.location.href = url
-          else newTab.close()
-        }
+        if (url) newTab.location.href = url
+        else newTab.close()
         break
       }
 
