@@ -56,6 +56,7 @@ import type {
   CustomAttributeValue,
   CustomAttributeInputType,
   RsvpFieldType,
+  RsvpDisplayAs,
 } from '../../types/configApi'
 import { hasRsvpSlice, hasLocalesSlice, hasAttributesSlice } from '../../types/configApi'
 import { BlurredLoadingOverlay } from '../../components/shared'
@@ -80,6 +81,27 @@ const RSVP_FIELD_TYPES: { key: RsvpFieldType; label: string }[] = [
   { key: 'checkbox', label: 'Checkbox' },
 ]
 
+/** Render-style options for a `select`/`checkbox` RSVP field. The attendee-facing
+ *  renderer (event-libs' events-form.js) remaps its dispatch type based on this
+ *  value — see RsvpDisplayAs doc comment in types/configApi.ts. */
+function getDisplayAsOptions(type: RsvpFieldType): { key: RsvpDisplayAs; label: string }[] {
+  if (type === 'select') return [
+    { key: 'dropdown', label: 'Dropdown' },
+    { key: 'radio', label: 'Radio' },
+  ]
+  if (type === 'checkbox') return [
+    { key: 'checkbox', label: 'Checkbox' },
+    { key: 'dropdown', label: 'Multi-select dropdown' },
+  ]
+  return []
+}
+
+/** Default `displayAs` for a given type — used when creating a field or when
+ *  switching `type` away from a value the current `displayAs` isn't valid for. */
+function getDefaultDisplayAs(type: RsvpFieldType): RsvpDisplayAs | undefined {
+  const options = getDisplayAsOptions(type)
+  return options.length > 0 ? options[0].key : undefined
+}
 
 export const ATTRIBUTE_INPUT_TYPES: { key: CustomAttributeInputType; label: string }[] = [
   { key: 'text', label: 'Text' },
@@ -486,6 +508,7 @@ export const ConfigManagement: React.FC<ConfigManagementProps> = () => {
           type: editingFieldForm.type,
           required: editingFieldForm.required,
           default: editingFieldForm.default,
+          displayAs: editingFieldForm.displayAs,
           // base-level label/placeholder/options stay from baseField (not locale values)
         }
         // Save translatable fields to locale override
@@ -1276,16 +1299,33 @@ export const ConfigManagement: React.FC<ConfigManagementProps> = () => {
                     <Picker
                       label="Type"
                       selectedKey={editingFieldForm.type}
-                      onSelectionChange={(key) => setEditingFieldForm(prev => ({
-                        ...prev,
-                        type: key as RsvpFieldType,
-                        options: (key === 'text' || key === 'email' || key === 'phone') ? [] : prev.options,
-                      }))}
+                      onSelectionChange={(key) => setEditingFieldForm(prev => {
+                        const newType = key as RsvpFieldType
+                        const displayAsOptions = getDisplayAsOptions(newType)
+                        const displayAsStillValid = displayAsOptions.some(o => o.key === prev.displayAs)
+                        return {
+                          ...prev,
+                          type: newType,
+                          options: (newType === 'text' || newType === 'email' || newType === 'phone') ? [] : prev.options,
+                          displayAs: displayAsStillValid ? prev.displayAs : getDefaultDisplayAs(newType),
+                        }
+                      })}
                     >
                       {RSVP_FIELD_TYPES.map(t => (
                         <PickerItem key={t.key} id={t.key}>{t.label}</PickerItem>
                       ))}
                     </Picker>
+                    {(editingFieldForm.type === 'select' || editingFieldForm.type === 'checkbox') && (
+                      <Picker
+                        label="Display As"
+                        selectedKey={editingFieldForm.displayAs ?? getDefaultDisplayAs(editingFieldForm.type)}
+                        onSelectionChange={(key) => setEditingFieldForm(prev => ({ ...prev, displayAs: key as RsvpDisplayAs }))}
+                      >
+                        {getDisplayAsOptions(editingFieldForm.type).map(o => (
+                          <PickerItem key={o.key} id={o.key}>{o.label}</PickerItem>
+                        ))}
+                      </Picker>
+                    )}
                   </div>
                   <Checkbox
                     isSelected={editingFieldForm.required}
@@ -1505,10 +1545,14 @@ export const ConfigManagement: React.FC<ConfigManagementProps> = () => {
                                     selectedKey={field.type}
                                     onSelectionChange={(key) => setRsvpFormFields(prev => {
                                       const copy = [...prev]
+                                      const newType = key as RsvpFieldType
+                                      const displayAsOptions = getDisplayAsOptions(newType)
+                                      const displayAsStillValid = displayAsOptions.some(o => o.key === copy[index].displayAs)
                                       copy[index] = {
                                         ...copy[index],
-                                        type: key as RsvpFieldType,
-                                        options: (key === 'text' || key === 'email' || key === 'phone') ? [] : copy[index].options,
+                                        type: newType,
+                                        options: (newType === 'text' || newType === 'email' || newType === 'phone') ? [] : copy[index].options,
+                                        displayAs: displayAsStillValid ? copy[index].displayAs : getDefaultDisplayAs(newType),
                                       }
                                       return copy
                                     })}
@@ -1517,6 +1561,21 @@ export const ConfigManagement: React.FC<ConfigManagementProps> = () => {
                                       <PickerItem key={t.key} id={t.key}>{t.label}</PickerItem>
                                     ))}
                                   </Picker>
+                                  {(field.type === 'select' || field.type === 'checkbox') && (
+                                    <Picker
+                                      label="Display As"
+                                      selectedKey={field.displayAs ?? getDefaultDisplayAs(field.type)}
+                                      onSelectionChange={(key) => setRsvpFormFields(prev => {
+                                        const copy = [...prev]
+                                        copy[index] = { ...copy[index], displayAs: key as RsvpDisplayAs }
+                                        return copy
+                                      })}
+                                    >
+                                      {getDisplayAsOptions(field.type).map(o => (
+                                        <PickerItem key={o.key} id={o.key}>{o.label}</PickerItem>
+                                      ))}
+                                    </Picker>
+                                  )}
                                 </div>
                                 <div className={style({ display: 'flex', gap: 16, marginTop: 12, alignItems: 'center' })}>
                                   <Checkbox
