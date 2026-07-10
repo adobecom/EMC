@@ -59,7 +59,7 @@ import type {
   RsvpFieldType,
 } from '../../types/configApi'
 import { hasRsvpSlice, hasLocalesSlice, hasDomainSlice, hasAttributesSlice } from '../../types/configApi'
-import { ResourceDashboardLayout, BlurredLoadingOverlay } from '../../components/shared'
+import { BlurredLoadingOverlay } from '../../components/shared'
 import { useHasPermission } from '../../hooks/useHasPermission'
 import { SUPPORTED_SPEAKER_LOCALES, SPEAKER_LOCALE_LABELS } from '../../config/localeMapping'
 import { normalizeRelatedDomain } from '../../utils/seriesFormAutoCorrect'
