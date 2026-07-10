@@ -136,7 +136,7 @@ const MultiSelectRepeater: React.FC<MultiSelectRepeaterProps> = ({ attr, values,
 // ============================================================================
 
 export const CustomAttributesComponent: React.FC = () => {
-  const { formData, updateFormData, eventId } = useEventFormComponent({
+  const { formData, updateFormData, eventId, eventDataResp } = useEventFormComponent({
     componentId: 'customAttributes',
   })
 
@@ -148,6 +148,11 @@ export const CustomAttributesComponent: React.FC = () => {
       setLoading(false)
       return
     }
+
+    // Wait for the parent event to load successfully before requesting
+    // event-scoped sub-resources, to avoid leaking the event UUID / its
+    // existence when the user lacks access to the event.
+    if (!eventDataResp) return
 
     let cancelled = false
 
@@ -173,7 +178,7 @@ export const CustomAttributesComponent: React.FC = () => {
     return () => {
       cancelled = true
     }
-  }, [eventId])
+  }, [eventId, eventDataResp])
 
   // ============================================================================
   // VALUE HELPERS
