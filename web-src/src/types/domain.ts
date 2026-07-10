@@ -266,7 +266,7 @@ export interface EventApiResponse {
   localizations?: Record<string, EventLocalization>
   venue?: Record<string, any>
   agenda?: AgendaDataItem[] // Localizable array
-  rsvpFormFields?: { fields: { field: string; required?: boolean; options?: string[] }[] }
+  rsvpFormFields?: { required?: string[]; visible?: string[]; optionOrders?: Record<string, string[]> }
   rsvpDescription?: string // Localizable
   video?: VideoData
   registration?: RegistrationData
