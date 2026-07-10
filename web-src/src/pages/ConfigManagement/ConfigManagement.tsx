@@ -83,7 +83,11 @@ const RSVP_FIELD_TYPES: { key: RsvpFieldType; label: string }[] = [
 
 /** Render-style options for a `select`/`checkbox` RSVP field. The attendee-facing
  *  renderer (event-libs' events-form.js) remaps its dispatch type based on this
- *  value — see RsvpDisplayAs doc comment in types/configApi.ts. */
+ *  value — see RsvpDisplayAs doc comment in types/configApi.ts.
+ *  Note: `'dropdown'` means different widgets per type (single-select dropdown
+ *  for `select`, multi-select dropdown for `checkbox`) — switching `type` while
+ *  `displayAs` is `'dropdown'` intentionally carries the value over rather than
+ *  resetting, since it's valid for both. */
 function getDisplayAsOptions(type: RsvpFieldType): { key: RsvpDisplayAs; label: string }[] {
   if (type === 'select') return [
     { key: 'dropdown', label: 'Dropdown' },
