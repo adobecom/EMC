@@ -36,17 +36,20 @@ export function getLocalizedValue(obj: any, fieldName: string, locale: string): 
 
 /**
  * Read an event's RSVP form field config. ESP's RSVPFormFields schema stores
- * `{ required: string[], visible: string[] }` — expand it into the form's
- * per-field array shape (display order = visible[] order).
+ * `{ required: string[], visible: string[], optionOrders?: Record<string, string[]> }`
+ * — expand it into the form's per-field array shape (display order = visible[]
+ * order), merging each field's `optionOrders` entry (if any) back into `options`.
  */
 function readRsvpFormFields(
   raw: any
-): Array<{ field: string; required?: boolean }> {
+): Array<{ field: string; required?: boolean; options?: string[] }> {
   if (!raw || !Array.isArray(raw.visible)) return []
   const requiredSet = new Set<string>(Array.isArray(raw.required) ? raw.required : [])
+  const optionOrders = raw.optionOrders && typeof raw.optionOrders === 'object' ? raw.optionOrders : {}
   return raw.visible.map((field: string) => ({
     field,
     required: requiredSet.has(field),
+    ...(Array.isArray(optionOrders[field]) ? { options: optionOrders[field] } : {}),
   }))
 }
 

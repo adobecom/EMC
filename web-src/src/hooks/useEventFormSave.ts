@@ -13,22 +13,24 @@ import {
 } from '../utils/dataFilters'
 
 /**
- * Convert RSVP fields to the `{ required, visible }` shape ESP's RSVPFormFields
- * schema requires (openapi.json, events-service-platform). There is no `{ fields }`
- * shape in the spec — per-field `options` overrides aren't representable and are
- * dropped, so we warn to make the loss visible.
+ * Convert RSVP fields to the `{ required, visible, optionOrders }` shape ESP's
+ * RSVPFormFields schema requires (openapi.json, events-service-platform).
+ * `optionOrders` is a per-field whitelist/ordering of option values from the
+ * scope pool — only fields with an explicit `options` override contribute an
+ * entry; fields without one fall back to the scope's default option order.
  */
 function toLegacyRsvpFormFields(
-  fields: Array<{ field: string; required?: boolean; options?: unknown }>
-): { required: string[]; visible: string[] } {
-  if (fields.some(f => f.options !== undefined)) {
-    console.warn(
-      '[useEventFormSave] rsvpFormFields options overrides are dropped — ESP only supports the {required, visible} shape.'
-    )
-  }
+  fields: Array<{ field: string; required?: boolean; options?: string[] }>
+): { required: string[]; visible: string[]; optionOrders?: Record<string, string[]> } {
+  const optionOrders = Object.fromEntries(
+    fields
+      .filter(f => Array.isArray(f.options) && f.options.length)
+      .map(f => [f.field, f.options as string[]])
+  )
   return {
     required: fields.filter(f => f.required).map(f => f.field),
     visible: fields.map(f => f.field),
+    ...(Object.keys(optionOrders).length ? { optionOrders } : {}),
   }
 }
 
@@ -334,7 +336,7 @@ export function useEventFormSave() {
     // RSVP form fields — array order = display order; required/options are per-field overrides.
     // Guard with Array.isArray: form state stores this as an array; an empty array must not be
     // sent as-is (BE rejects non-object values).
-    // ESP's RSVPFormFields schema only supports { required, visible, optionOrders? } — always
+    // ESP's RSVPFormFields schema is { required, visible, optionOrders? } — always convert.
     // TODO(PIM): serialize rsvpOptionSelections when event API exposes per-option RSVP selection.
     if (Array.isArray(mergedData.rsvpFormFields) && mergedData.rsvpFormFields.length) {
       payload.rsvpFormFields = toLegacyRsvpFormFields(mergedData.rsvpFormFields)
