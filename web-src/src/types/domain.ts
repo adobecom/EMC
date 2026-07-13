@@ -550,9 +550,11 @@ export interface VenueData {
   gmtOffset?: number
   addressComponents?: AddressComponent[] // Required by OpenAPI for venue creation
   additionalInformation?: string // "Instructions for attendees" in UI
-  /** Venue step only — ESP imageKind `venue-additional-image` / `venue-map-image`; not `venue-image` (Additional Content). */
+  /** Venue step only — ESP imageKind `venue-additional-image`; not `venue-image` (Additional Content). */
   venueAdditionalImageUrl?: string
   venueAdditionalImageId?: string
+  /** Read-only. BE-generated map image (imageKind `venue-map-image`). Never editable by the user. */
+  venueMapImageUrl?: string
   showVenuePostEvent?: boolean
   showVenueImagePostEvent?: boolean // Display image and instructions post-event
   showAdditionalInfoPostEvent?: boolean
