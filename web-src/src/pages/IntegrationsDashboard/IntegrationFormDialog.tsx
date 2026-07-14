@@ -333,6 +333,18 @@ export const IntegrationFormDialog: React.FC<IntegrationFormDialogProps> = ({
       }
     })
 
+    // A key that was already-set on load but no longer appears in the current rows was
+    // removed via the "Remove secret" button. The backend treats an omitted key as
+    // "leave alone" (merge-patch), so a removed secret must be sent as an explicit
+    // empty-string tombstone or it would silently remain set server-side.
+    const originalSecretKeys = Object.keys(integration?.connection?.secrets || {})
+    const currentSecretKeys = new Set(form.secrets.map((row) => row.key.trim()))
+    originalSecretKeys.forEach((key) => {
+      if (!currentSecretKeys.has(key)) {
+        secrets[key] = ''
+      }
+    })
+
     const data: IntegrationWriteBody = {
       name: form.name.trim(),
       enabled: form.enabled,
