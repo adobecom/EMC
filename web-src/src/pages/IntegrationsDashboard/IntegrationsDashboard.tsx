@@ -1,0 +1,602 @@
+/*
+* <license header>
+*/
+
+/**
+ * IntegrationsDashboard - Webhook Integrations Hub
+ *
+ * Self-service webhook configurator: admins configure a webhook against a
+ * resource+trigger (e.g. `event.update`), optional conditions, a payload
+ * shape, a connection/auth config, and a retry policy. ESP fires webhooks
+ * automatically and logs every delivery attempt (see DeliveriesDashboard for
+ * the jobs/delivery-log view with redeliver).
+ *
+ * Integrations are scope-scoped (`/v1/scopes/{scopeId}/integrations`), so
+ * this page reuses ConfigManagement's scope-picker pattern (a searchable
+ * ComboBox over `RBACApiScope[]`) rather than the series-selector used by
+ * SpeakersDashboard.
+ */
+
+import React, { useEffect, useMemo, useCallback, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
+import {
+  ActionButton,
+  Button,
+  MenuTrigger,
+  Menu,
+  Text,
+  DialogTrigger,
+  AlertDialog,
+  Badge,
+  ComboBox,
+  ComboBoxItem,
+} from '@react-spectrum/s2'
+import { style } from '@react-spectrum/s2/style' with { type: 'macro' }
+import Add from '@react-spectrum/s2/icons/Add'
+import More from '@react-spectrum/s2/icons/More'
+import RotateCCW from '@react-spectrum/s2/icons/RotateCCW'
+import PluginIllustration from '@react-spectrum/s2/illustrations/linear/Plugin'
+import { TableColumn } from '../../components/shared/DataTable'
+import { StatusBadge, ResourceDashboardLayout, BlurredLoadingOverlay } from '../../components/shared'
+import { apiService, cachedApi } from '../../services/api'
+import { IMS } from '../../types'
+import type { RBACApiScope, ScopeType } from '../../types/rbacApi'
+import type { IntegrationApiResponse, IntegrationDashboardItem, IntegrationWriteBody, DeliveryStatus } from '../../types/webhookApi'
+import { useToast } from '../../contexts'
+import { useSafeState } from '../../hooks'
+import { useHasPermission } from '../../hooks/useHasPermission'
+import { createShimmerStyle } from '../../styles/designSystem'
+import { buildIntegrationManageActions } from './integrationManageActions'
+import { IntegrationFormDialog } from './IntegrationFormDialog'
+
+const INTEGRATIONS_SEARCH_KEYS = ['name', 'endpoint', 'triggerResource']
+
+const INTEGRATIONS_DASHBOARD_TABLE_TEST_IDS = {
+  root: 'integrations-dashboard-table',
+  emptyState: 'integrations-dashboard-table-empty-state',
+  pageInput: 'integrations-dashboard-table-page-input',
+  header: (columnKey: string) => `integrations-dashboard-table-header-${columnKey}`,
+  row: (itemKey: string) => `integrations-dashboard-table-row-${itemKey}`,
+}
+
+const SCOPE_TYPE_VARIANTS: Record<ScopeType, 'positive' | 'informative' | 'neutral'> = {
+  platform: 'positive',
+  org: 'informative',
+  team: 'neutral',
+}
+
+function toIntegrationDashboardItem(item: IntegrationApiResponse): IntegrationDashboardItem {
+  return {
+    integrationId: item.integrationId,
+    scopeId: item.scopeId,
+    name: item.name,
+    enabled: item.enabled,
+    triggerResource: item.trigger?.resource || '',
+    triggerOperation: item.trigger?.operation || 'update',
+    connectionType: item.connection?.type || 'generic',
+    conditionCount: item.conditions?.length || 0,
+    endpoint: item.action?.endpoint || '',
+    creationTime: item.creationTime,
+    modificationTime: item.modificationTime,
+  }
+}
+
+/** Builds a full write body from an existing API response, for quick mutations
+ *  (e.g. the enable/disable toggle) that don't go through the edit dialog.
+ *  Secret values are intentionally omitted — ESP never returns them in
+ *  plaintext, so a write body can only ever resend a *new* value for a
+ *  secret; keys omitted here are left untouched server-side. */
+function toWriteBody(item: IntegrationApiResponse, overrides?: Partial<IntegrationWriteBody>): IntegrationWriteBody {
+  return {
+    name: item.name,
+    enabled: item.enabled,
+    trigger: { ...item.trigger },
+    conditions: item.conditions.map((c) => ({ ...c })),
+    action: {
+      endpoint: item.action.endpoint,
+      data: {
+        objects: [...item.action.data.objects],
+        ...(item.action.data.transforms ? { transforms: item.action.data.transforms } : {}),
+      },
+    },
+    connection: {
+      type: item.connection.type,
+      secrets: {},
+      ...(item.connection.hmac ? { hmac: { ...item.connection.hmac } } : {}),
+    },
+    retryPolicy: {
+      maxAttempts: item.retryPolicy.maxAttempts,
+      backoffSeconds: [...item.retryPolicy.backoffSeconds],
+    },
+    ...overrides,
+  }
+}
+
+interface IntegrationsDashboardProps {
+  ims: IMS
+}
+
+export const IntegrationsDashboard: React.FC<IntegrationsDashboardProps> = () => {
+  const toast = useToast()
+  const navigate = useNavigate()
+  const canWriteIntegration = useHasPermission('integration', 'write')
+  const canDeleteIntegration = useHasPermission('integration', 'delete')
+
+  // ── Scope selection ──
+  const [scopes, setScopes] = useSafeState<RBACApiScope[]>([])
+  const [selectedScopeId, setSelectedScopeId] = useSafeState<string | null>(null)
+  const [scopeFilterText, setScopeFilterText] = useState('')
+  const [isLoadingScopes, setIsLoadingScopes] = useSafeState(true)
+
+  // ── Integrations data ──
+  const [integrations, setIntegrations] = useSafeState<IntegrationDashboardItem[]>([])
+  const [rawIntegrations, setRawIntegrations] = useSafeState<Map<string, IntegrationApiResponse>>(new Map())
+  const [isLoading, setIsLoading] = useSafeState(false)
+  const [error, setError] = useSafeState<string | null>(null)
+
+  // ── Last-delivery-status enrichment (visible rows only) ──
+  const [deliveryStatuses, setDeliveryStatuses] = useSafeState<Map<string, DeliveryStatus>>(new Map())
+  const [loadingDeliveryStatus, setLoadingDeliveryStatus] = useSafeState<Set<string>>(new Set())
+
+  // ── Dialog / action state ──
+  const [isFormOpen, setIsFormOpen] = useSafeState(false)
+  const [editingIntegration, setEditingIntegration] = useSafeState<IntegrationApiResponse | null>(null)
+  const [itemToDelete, setItemToDelete] = useSafeState<IntegrationDashboardItem | null>(null)
+  const [actionInProgress, setActionInProgress] = useSafeState<string | null>(null)
+
+  const selectedScope = useMemo(
+    () => scopes.find((s) => s.scopeId === selectedScopeId) || null,
+    [scopes, selectedScopeId]
+  )
+
+  const scopeItems = useMemo(() => scopes.map((s) => ({ id: s.scopeId, name: s.name, type: s.type })), [scopes])
+
+  const filteredScopeItems = useMemo(() => {
+    if (!scopeFilterText) return scopeItems
+    const lower = scopeFilterText.toLowerCase()
+    return scopeItems.filter((s) => s.name.toLowerCase().includes(lower) || s.type.toLowerCase().includes(lower))
+  }, [scopeItems, scopeFilterText])
+
+  // ── Load scopes ──
+  useEffect(() => {
+    const loadScopes = async () => {
+      setIsLoadingScopes(true)
+      try {
+        const result = await apiService.getScopes()
+        if (!('error' in result)) setScopes(result)
+      } catch (err) {
+        console.error('Error loading scopes:', err)
+      } finally {
+        setIsLoadingScopes(false)
+      }
+    }
+    loadScopes()
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // ── Load integrations for the selected scope ──
+  const loadIntegrations = useCallback(async () => {
+    if (!selectedScopeId) {
+      setIntegrations([])
+      setRawIntegrations(new Map())
+      return
+    }
+    setIsLoading(true)
+    setError(null)
+    try {
+      const result = await cachedApi.getIntegrations(selectedScopeId)
+      if ('error' in result) {
+        throw new Error(typeof result.error === 'string' ? result.error : 'Failed to load integrations')
+      }
+      setRawIntegrations(new Map(result.map((i) => [i.integrationId, i])))
+      setIntegrations(result.map(toIntegrationDashboardItem))
+    } catch (err) {
+      console.error('Error loading integrations:', err)
+      setError('Failed to load integrations')
+    } finally {
+      setIsLoading(false)
+    }
+  }, [selectedScopeId])
+
+  useEffect(() => {
+    loadIntegrations()
+  }, [loadIntegrations])
+
+  // ── Enrich visible rows with their most recent delivery status ──
+  const handleVisibleItemsChange = useCallback((visible: IntegrationDashboardItem[]) => {
+    if (!selectedScopeId || visible.length === 0) return
+    const toLoad = visible.filter((i) => !deliveryStatuses.has(i.integrationId) && !loadingDeliveryStatus.has(i.integrationId))
+    if (toLoad.length === 0) return
+
+    setLoadingDeliveryStatus((prev) => new Set([...prev, ...toLoad.map((i) => i.integrationId)]))
+
+    Promise.all(
+      toLoad.map(async (item) => {
+        try {
+          const result = await cachedApi.getDeliveries(selectedScopeId, item.integrationId)
+          if ('error' in result || result.length === 0) return { id: item.integrationId, status: undefined }
+          const latest = [...result].sort((a, b) => b.timestamp - a.timestamp)[0]
+          return { id: item.integrationId, status: latest.status }
+        } catch {
+          return { id: item.integrationId, status: undefined }
+        }
+      })
+    ).then((results) => {
+      setDeliveryStatuses((prev) => {
+        const next = new Map(prev)
+        results.forEach(({ id, status }) => {
+          if (status) next.set(id, status)
+        })
+        return next
+      })
+      setLoadingDeliveryStatus((prev) => {
+        const next = new Set(prev)
+        toLoad.forEach((i) => next.delete(i.integrationId))
+        return next
+      })
+    })
+  }, [selectedScopeId, deliveryStatuses, loadingDeliveryStatus])
+
+  // ── Handlers ──
+  const handleCreateIntegration = useCallback(() => {
+    setEditingIntegration(null)
+    setIsFormOpen(true)
+  }, [])
+
+  const handleEditIntegration = useCallback((item: IntegrationDashboardItem) => {
+    const raw = rawIntegrations.get(item.integrationId)
+    if (!raw) return
+    setEditingIntegration(raw)
+    setIsFormOpen(true)
+  }, [rawIntegrations])
+
+  const handleToggleEnabled = useCallback(async (item: IntegrationDashboardItem) => {
+    const raw = rawIntegrations.get(item.integrationId)
+    if (!raw || !selectedScopeId) return
+    setActionInProgress(item.integrationId)
+    try {
+      const result = await cachedApi.updateIntegration(selectedScopeId, item.integrationId, toWriteBody(raw, { enabled: !raw.enabled }))
+      if ('error' in result) {
+        toast.error(`Failed to ${raw.enabled ? 'disable' : 'enable'} integration`)
+      } else {
+        toast.success(`Integration ${raw.enabled ? 'disabled' : 'enabled'}`)
+        await loadIntegrations()
+      }
+    } catch (err) {
+      console.error('Error toggling integration:', err)
+      toast.error('Failed to update integration')
+    } finally {
+      setActionInProgress(null)
+    }
+  }, [rawIntegrations, selectedScopeId, toast, loadIntegrations])
+
+  const handlePing = useCallback(async (item: IntegrationDashboardItem) => {
+    if (!selectedScopeId) return
+    setActionInProgress(item.integrationId)
+    try {
+      const result = await cachedApi.pingIntegration(selectedScopeId, item.integrationId)
+      if ('error' in result) {
+        toast.error('Ping failed to reach the webhook endpoint')
+        return
+      }
+      if (result.success) {
+        toast.success(`Ping succeeded${result.statusCode ? ` (HTTP ${result.statusCode})` : ''}`)
+      } else {
+        toast.error(`Ping failed${result.statusCode ? ` (HTTP ${result.statusCode})` : ''}${result.error ? `: ${result.error}` : ''}`)
+      }
+    } catch (err) {
+      console.error('Error pinging integration:', err)
+      toast.error('Ping failed')
+    } finally {
+      setActionInProgress(null)
+    }
+  }, [selectedScopeId, toast])
+
+  const handleViewDeliveries = useCallback((item: IntegrationDashboardItem) => {
+    if (!selectedScopeId) return
+    navigate(`/integrations/${item.integrationId}/deliveries?scopeId=${encodeURIComponent(selectedScopeId)}`)
+  }, [selectedScopeId, navigate])
+
+  const handleMenuAction = useCallback((action: string, item: IntegrationDashboardItem) => {
+    if (actionInProgress) return
+    switch (action) {
+      case 'edit':
+        handleEditIntegration(item)
+        break
+      case 'toggle-enabled':
+        handleToggleEnabled(item)
+        break
+      case 'ping':
+        handlePing(item)
+        break
+      case 'view-deliveries':
+        handleViewDeliveries(item)
+        break
+      case 'delete':
+        setItemToDelete(item)
+        break
+      default:
+        break
+    }
+  }, [actionInProgress, handleEditIntegration, handleToggleEnabled, handlePing, handleViewDeliveries])
+
+  const handleFormSubmit = useCallback(async (data: IntegrationWriteBody) => {
+    if (!selectedScopeId) return
+    setActionInProgress(editingIntegration?.integrationId || 'new')
+    try {
+      const result = editingIntegration
+        ? await cachedApi.updateIntegration(selectedScopeId, editingIntegration.integrationId, data)
+        : await cachedApi.createIntegration(selectedScopeId, data)
+
+      if ('error' in result) {
+        toast.error(`Failed to ${editingIntegration ? 'update' : 'create'} integration`)
+        return
+      }
+
+      toast.success(`Integration ${editingIntegration ? 'updated' : 'created'} successfully!`)
+      setIsFormOpen(false)
+      setEditingIntegration(null)
+      await loadIntegrations()
+    } catch (err) {
+      console.error('Error saving integration:', err)
+      toast.error(`Failed to ${editingIntegration ? 'update' : 'create'} integration`)
+    } finally {
+      setActionInProgress(null)
+    }
+  }, [selectedScopeId, editingIntegration, toast, loadIntegrations])
+
+  const handleDeleteIntegration = useCallback(async (item: IntegrationDashboardItem) => {
+    if (!selectedScopeId) return
+    setActionInProgress(item.integrationId)
+    try {
+      const result = await cachedApi.deleteIntegration(selectedScopeId, item.integrationId)
+      if ('error' in result) {
+        toast.error('Failed to delete integration')
+      } else {
+        toast.success('Integration deleted successfully!')
+        await loadIntegrations()
+      }
+    } catch (err) {
+      console.error('Error deleting integration:', err)
+      toast.error('Failed to delete integration')
+    } finally {
+      setItemToDelete(null)
+      setActionInProgress(null)
+    }
+  }, [selectedScopeId, toast, loadIntegrations])
+
+  const formatDate = useCallback((timestamp?: number): string => {
+    if (!timestamp) return 'N/A'
+    return new Date(timestamp).toLocaleDateString('en-US', { year: 'numeric', month: '2-digit', day: '2-digit' })
+  }, [])
+
+  // ── Table columns ──
+  const columns = useMemo<TableColumn<IntegrationDashboardItem>[]>(() => [
+    {
+      key: 'name',
+      name: 'NAME',
+      width: 200,
+      sortable: true,
+      render: (item) => <Text UNSAFE_style={{ fontWeight: 'bold' }}>{item.name}</Text>
+    },
+    {
+      key: 'trigger',
+      name: 'TRIGGER',
+      width: 160,
+      sortable: true,
+      sortFn: (a, b) => `${a.triggerResource}.${a.triggerOperation}`.localeCompare(`${b.triggerResource}.${b.triggerOperation}`),
+      render: (item) => (
+        <div className={style({ display: 'flex', alignItems: 'start' })}>
+          <Badge variant="neutral">{item.triggerResource}.{item.triggerOperation}</Badge>
+        </div>
+      )
+    },
+    {
+      key: 'enabled',
+      name: 'ENABLED',
+      width: 120,
+      sortable: true,
+      sortFn: (a, b) => (b.enabled ? 1 : 0) - (a.enabled ? 1 : 0),
+      render: (item) => <StatusBadge status={item.enabled ? 'active' : 'draft'} label={item.enabled ? 'Enabled' : 'Disabled'} />
+    },
+    {
+      key: 'lastDeliveryStatus',
+      name: 'LAST DELIVERY',
+      width: 140,
+      sortable: false,
+      render: (item) => {
+        const isLoadingStatus = loadingDeliveryStatus.has(item.integrationId)
+        if (isLoadingStatus) return <div style={createShimmerStyle(80, 20)} />
+        const status = deliveryStatuses.get(item.integrationId)
+        if (!status) return <Text UNSAFE_style={{ color: 'var(--spectrum-global-color-gray-600)' }}>No deliveries</Text>
+        return <StatusBadge status={status === 'success' ? 'confirmed' : status === 'failed' ? 'cancelled' : 'pending'} label={status} />
+      }
+    },
+    {
+      key: 'endpoint',
+      name: 'ENDPOINT',
+      width: 260,
+      sortable: true,
+      render: (item) => (
+        <Text UNSAFE_style={{ fontSize: 13, color: 'var(--spectrum-global-color-gray-700)', wordBreak: 'break-all' }}>
+          {item.endpoint || 'N/A'}
+        </Text>
+      )
+    },
+    {
+      key: 'conditionCount',
+      name: 'CONDITIONS',
+      width: 110,
+      sortable: true,
+      render: (item) => <Text>{item.conditionCount}</Text>
+    },
+    {
+      key: 'modificationTime',
+      name: 'LAST MODIFIED',
+      width: 150,
+      sortable: true,
+      render: (item) => <Text>{formatDate(item.modificationTime)}</Text>
+    },
+    {
+      key: 'manage',
+      name: 'MANAGE',
+      width: 130,
+      sortable: false,
+      cellNoWrap: true,
+      render: (item) => (
+        <MenuTrigger>
+          <ActionButton isQuiet aria-label="Actions menu">
+            <More />
+          </ActionButton>
+          <Menu onAction={(key) => handleMenuAction(key as string, item)}>
+            {buildIntegrationManageActions({ item, canWrite: canWriteIntegration, canDelete: canDeleteIntegration })}
+          </Menu>
+        </MenuTrigger>
+      )
+    }
+  ], [formatDate, loadingDeliveryStatus, deliveryStatuses, handleMenuAction, canWriteIntegration, canDeleteIntegration])
+
+  const createButton = useMemo(() => {
+    if (!canWriteIntegration) return undefined
+    return (
+      <Button
+        data-testid="create-integration-trigger"
+        variant="accent"
+        onPress={handleCreateIntegration}
+        isDisabled={!selectedScopeId}
+      >
+        <Add />
+        <Text>New Integration</Text>
+      </Button>
+    )
+  }, [canWriteIntegration, handleCreateIntegration, selectedScopeId])
+
+  const scopeSelectorHeader = useMemo(() => (
+    <div
+      style={{
+        marginBottom: 16,
+        padding: 20,
+        background: 'var(--spectrum-global-color-gray-75)',
+        borderRadius: 8,
+        border: '1px solid var(--spectrum-global-color-gray-200)',
+      }}
+    >
+      <div className={style({ display: 'flex', alignItems: 'end', gap: 8, flexWrap: 'wrap' })}>
+        {isLoadingScopes ? (
+          <Text UNSAFE_style={{ fontWeight: 600 }}>Loading scopes...</Text>
+        ) : (
+          <ComboBox
+            data-testid="integration-scope-selector"
+            label={`Select Scope (${filteredScopeItems.length} available)`}
+            selectedKey={selectedScopeId}
+            onSelectionChange={(key) => setSelectedScopeId(key as string | null)}
+            onInputChange={setScopeFilterText}
+            defaultItems={filteredScopeItems}
+            styles={style({ width: 420 })}
+            menuTrigger="input"
+            menuWidth={420}
+            allowsCustomValue={false}
+          >
+            {(item) => (
+              <ComboBoxItem id={item.id} textValue={item.name}>
+                <Text slot="label">{item.name}</Text>
+                <Text slot="description">{item.type}</Text>
+              </ComboBoxItem>
+            )}
+          </ComboBox>
+        )}
+        {selectedScope && (
+          <div className={style({ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 4 })}>
+            <Badge variant={SCOPE_TYPE_VARIANTS[selectedScope.type] || 'neutral'}>{selectedScope.type}</Badge>
+            <Button
+              size="S"
+              variant="secondary"
+              onPress={() => {
+                setSelectedScopeId(null)
+                setScopeFilterText('')
+              }}
+            >
+              <RotateCCW />
+              <Text>Reset scope</Text>
+            </Button>
+          </div>
+        )}
+      </div>
+    </div>
+  ), [isLoadingScopes, filteredScopeItems, selectedScopeId, selectedScope])
+
+  return (
+    <div data-testid="integrations-dashboard">
+      <div style={{ paddingLeft: 32, paddingRight: 32, paddingTop: 32 }}>
+        {scopeSelectorHeader}
+      </div>
+
+      {!selectedScopeId ? (
+        <div style={{ minHeight: 480 }} aria-hidden />
+      ) : (
+        <div className={style({ padding: 32 })} style={{ paddingTop: 0 }}>
+          <ResourceDashboardLayout
+            title="Webhook Integrations"
+            totalCount={integrations.length}
+            error={error}
+            data={integrations}
+            columns={columns}
+            getItemKey={(item) => item.integrationId}
+            onVisibleItemsChange={handleVisibleItemsChange}
+            onRefresh={loadIntegrations}
+            createButton={createButton}
+            emptyStateIllustration={<PluginIllustration aria-hidden />}
+            emptyStateTitle="No Webhook Integrations"
+            emptyStateDescription="Create a webhook integration to start receiving delivery notifications for this scope"
+            dataTableTestIds={INTEGRATIONS_DASHBOARD_TABLE_TEST_IDS}
+            searchPlaceholder="Search integrations..."
+            searchKeys={INTEGRATIONS_SEARCH_KEYS}
+          />
+        </div>
+      )}
+
+      <IntegrationFormDialog
+        isOpen={isFormOpen}
+        onClose={() => {
+          setIsFormOpen(false)
+          setEditingIntegration(null)
+        }}
+        onSubmit={handleFormSubmit}
+        integration={editingIntegration}
+        isSubmitting={!!actionInProgress}
+      />
+
+      <DialogTrigger
+        isOpen={!!itemToDelete}
+        onOpenChange={(open) => !open && setItemToDelete(null)}
+      >
+        <div style={{ display: 'none' }} />
+        <AlertDialog
+          title="Delete Webhook Integration"
+          variant="destructive"
+          primaryActionLabel="Delete"
+          cancelLabel="Cancel"
+          onPrimaryAction={() => {
+            if (itemToDelete) handleDeleteIntegration(itemToDelete)
+          }}
+          onCancel={() => setItemToDelete(null)}
+          isPrimaryActionDisabled={!!actionInProgress}
+        >
+          Are you sure you want to delete <strong>{itemToDelete?.name}</strong>? This action cannot be undone
+          and future deliveries for this webhook will stop immediately.
+        </AlertDialog>
+      </DialogTrigger>
+
+      <BlurredLoadingOverlay
+        visible={isLoading}
+        message="Loading integrations..."
+        ariaLabel="Loading integrations"
+      />
+      <BlurredLoadingOverlay
+        visible={!!actionInProgress}
+        message="Processing..."
+        ariaLabel="Processing action"
+        zIndex={9999}
+      />
+    </div>
+  )
+}
