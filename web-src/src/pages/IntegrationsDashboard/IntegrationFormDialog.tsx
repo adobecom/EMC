@@ -278,11 +278,17 @@ export const IntegrationFormDialog: React.FC<IntegrationFormDialogProps> = ({
   }, [])
 
   // ── Retry / backoff ──
+  // Backend bounds (openapi.json IntegrationRetryPolicy): backoffSeconds is
+  // 1-10 items, each an integer 1-86400 seconds.
+  const MAX_BACKOFF_STEPS = 10
+  const MAX_BACKOFF_SECONDS = 86400
+
   const addBackoffStep = useCallback(() => {
-    setForm((prev) => ({
-      ...prev,
-      backoffSeconds: [...prev.backoffSeconds, (prev.backoffSeconds[prev.backoffSeconds.length - 1] ?? 30) * 2],
-    }))
+    setForm((prev) => {
+      if (prev.backoffSeconds.length >= MAX_BACKOFF_STEPS) return prev
+      const next = Math.min((prev.backoffSeconds[prev.backoffSeconds.length - 1] ?? 30) * 2, MAX_BACKOFF_SECONDS)
+      return { ...prev, backoffSeconds: [...prev.backoffSeconds, next] }
+    })
   }, [])
 
   const updateBackoffStep = useCallback((index: number, value: number) => {
@@ -303,7 +309,10 @@ export const IntegrationFormDialog: React.FC<IntegrationFormDialogProps> = ({
       form.endpoint.trim().length > 0 &&
       form.payloadObjects.length > 0 &&
       form.maxAttempts >= 1 &&
+      form.maxAttempts <= 10 &&
       form.backoffSeconds.length > 0 &&
+      form.backoffSeconds.length <= MAX_BACKOFF_STEPS &&
+      form.backoffSeconds.every((s) => s >= 1 && s <= MAX_BACKOFF_SECONDS) &&
       (!form.hmacEnabled || form.hmacHeaderName.trim().length > 0)
     )
   }, [form])
@@ -658,7 +667,7 @@ export const IntegrationFormDialog: React.FC<IntegrationFormDialogProps> = ({
                       <div>
                         <div className={style({ display: 'flex', justifyContent: 'space-between', alignItems: 'center' })}>
                           <Text UNSAFE_style={TYPOGRAPHY.FIELD_LABEL}>Backoff schedule (seconds between retries)</Text>
-                          <ActionButton isQuiet onPress={addBackoffStep}>
+                          <ActionButton isQuiet onPress={addBackoffStep} isDisabled={form.backoffSeconds.length >= MAX_BACKOFF_STEPS}>
                             <Add />
                             <Text>Add Step</Text>
                           </ActionButton>
@@ -674,6 +683,7 @@ export const IntegrationFormDialog: React.FC<IntegrationFormDialogProps> = ({
                                 value={seconds}
                                 onChange={(v) => updateBackoffStep(index, v)}
                                 minValue={1}
+                                maxValue={MAX_BACKOFF_SECONDS}
                                 styles={style({ flexGrow: 1 })}
                               />
                               <ActionButton

@@ -165,13 +165,13 @@ export const DeliveriesDashboard: React.FC<DeliveriesDashboardProps> = () => {
   }, [])
 
   // The list endpoint may return truncated request/response bodies (see
-  // `DeliveryRecord.truncated`); the single-delivery GET is documented to
-  // return the full bodies, so fetch it lazily the first time a truncated
-  // row is expanded and merge the full record into local state.
+  // `DeliveryRecord.requestTruncated`/`responseTruncated`); the single-delivery
+  // GET is documented to return the full bodies, so fetch it lazily the first
+  // time a truncated row is expanded and merge the full record into local state.
   useEffect(() => {
     if (!scopeId || !integrationId) return
     const toFetch = deliveries.filter(
-      (d) => expandedKeys.has(d.deliveryId) && d.truncated && !detailLoadingIds.has(d.deliveryId)
+      (d) => expandedKeys.has(d.deliveryId) && (d.requestTruncated || d.responseTruncated) && !detailLoadingIds.has(d.deliveryId)
     )
     if (toFetch.length === 0) return
 
@@ -294,7 +294,7 @@ export const DeliveriesDashboard: React.FC<DeliveriesDashboardProps> = () => {
     const isFetchingFullDetail = detailLoadingIds.has(item.deliveryId)
     return (
       <div className={style({ display: 'flex', flexDirection: 'column', gap: 12 })}>
-        {item.truncated && (
+        {(item.requestTruncated || item.responseTruncated) && (
           <Text UNSAFE_style={{ fontSize: 12, color: 'var(--spectrum-global-color-orange-700)', fontStyle: 'italic' }}>
             {isFetchingFullDetail ? 'Loading full request/response bodies…' : 'Request/response bodies were truncated by the server.'}
           </Text>
@@ -312,7 +312,8 @@ export const DeliveriesDashboard: React.FC<DeliveriesDashboardProps> = () => {
   }, [detailLoadingIds])
 
   const isRowExpandable = useCallback(
-    (item: DeliveryRecord) => item.requestBody !== undefined || item.responseBody !== undefined || !!item.truncated,
+    (item: DeliveryRecord) =>
+      item.requestBody !== undefined || item.responseBody !== undefined || !!item.requestTruncated || !!item.responseTruncated,
     []
   )
 

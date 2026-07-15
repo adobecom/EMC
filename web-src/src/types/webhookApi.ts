@@ -134,14 +134,30 @@ export interface IntegrationWriteBody {
   retryPolicy: RetryPolicy
 }
 
+/** Lightweight shape the list endpoint actually returns — no `connection`,
+ *  `conditions`, `action`, or timestamps. Fetch by id (`IntegrationApiResponse`)
+ *  for the full record. */
+export interface IntegrationSummary {
+  integrationId: string
+  scopeId: string
+  name: string
+  enabled: boolean
+  trigger: IntegrationTrigger
+}
+
 export interface IntegrationListResponse {
-  items: IntegrationApiResponse[]
+  items: IntegrationSummary[]
   count: number
   nextPageToken?: string
 }
 
 /** Flattened dashboard row — mirrors how `EventDashboardItem` flattens
- *  `EventApiResponse` in domain.ts (one level of nesting, table-friendly keys). */
+ *  `EventApiResponse` in domain.ts (one level of nesting, table-friendly keys).
+ *
+ *  Built from `IntegrationSummary` (name/enabled/trigger only); the remaining
+ *  fields are populated by a follow-up per-row GET-by-id enrichment for
+ *  visible rows (mirrors `lastDeliveryStatus`'s enrichment pattern) and are
+ *  `undefined` until that resolves for a given row. */
 export interface IntegrationDashboardItem {
   integrationId: string
   scopeId: string
@@ -149,11 +165,11 @@ export interface IntegrationDashboardItem {
   enabled: boolean
   triggerResource: string
   triggerOperation: IntegrationTriggerOperation
-  connectionType: ConnectionType
-  conditionCount: number
-  endpoint: string
-  creationTime: number
-  modificationTime: number
+  connectionType?: ConnectionType
+  conditionCount?: number
+  endpoint?: string
+  creationTime?: number
+  modificationTime?: number
   /** Populated by a follow-up enrichment fetch of the most recent delivery, if available. */
   lastDeliveryStatus?: DeliveryStatus
 }
@@ -182,9 +198,10 @@ export interface DeliveryRecord {
   attemptCount: number
   timestamp: number
   requestBody?: unknown
+  requestTruncated?: boolean
   responseBody?: unknown
+  responseTruncated?: boolean
   responseStatusCode?: number
-  truncated?: boolean
   error?: string
 }
 

@@ -49,6 +49,7 @@ import type {
 } from '../types/configApi'
 import type {
   IntegrationApiResponse,
+  IntegrationSummary,
   IntegrationWriteBody,
   PingResult as WebhookPingResult,
   DeliveryRecord,
@@ -2453,9 +2454,11 @@ class ApiService {
   // WEBHOOK INTEGRATIONS
   // ============================================================================
 
-  async getIntegrations(scopeId: string): Promise<IntegrationApiResponse[] | ErrorResponse> {
+  async getIntegrations(scopeId: string): Promise<IntegrationSummary[] | ErrorResponse> {
     validateString(scopeId, 'scope ID')
-    return this.fetchAllPages<IntegrationApiResponse>({
+    // The list endpoint returns a lightweight IntegrationSummary (no connection/
+    // conditions/action/timestamps) — fetch by id for the full record.
+    return this.fetchAllPages<IntegrationSummary>({
       service: 'esp',
       baseEndpoint: `/v1/scopes/${encodeURIComponent(scopeId)}/integrations`,
       listKey: 'items',

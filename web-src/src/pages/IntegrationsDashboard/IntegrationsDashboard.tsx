@@ -17,7 +17,7 @@
  * SpeakersDashboard.
  */
 
-import React, { useEffect, useMemo, useCallback, useState } from 'react'
+import React, { useEffect, useMemo, useCallback, useState, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
   ActionButton,
@@ -41,7 +41,7 @@ import { StatusBadge, ResourceDashboardLayout, BlurredLoadingOverlay } from '../
 import { apiService, cachedApi } from '../../services/api'
 import { IMS } from '../../types'
 import type { RBACApiScope, ScopeType } from '../../types/rbacApi'
-import type { IntegrationApiResponse, IntegrationDashboardItem, IntegrationWriteBody, DeliveryStatus } from '../../types/webhookApi'
+import type { IntegrationApiResponse, IntegrationSummary, IntegrationDashboardItem, IntegrationWriteBody, DeliveryStatus } from '../../types/webhookApi'
 import { useToast } from '../../contexts'
 import { useSafeState } from '../../hooks'
 import { useHasPermission } from '../../hooks/useHasPermission'
@@ -65,7 +65,11 @@ const SCOPE_TYPE_VARIANTS: Record<ScopeType, 'positive' | 'informative' | 'neutr
   team: 'neutral',
 }
 
-function toIntegrationDashboardItem(item: IntegrationApiResponse): IntegrationDashboardItem {
+/** Builds a dashboard row from the list endpoint's lightweight summary.
+ *  `connectionType`/`conditionCount`/`endpoint`/timestamps aren't in the
+ *  summary — they're filled in by `mergeIntegrationDetail` once the
+ *  per-row GET-by-id enrichment resolves for a visible row. */
+function toIntegrationDashboardItem(item: IntegrationSummary): IntegrationDashboardItem {
   return {
     integrationId: item.integrationId,
     scopeId: item.scopeId,
@@ -73,11 +77,19 @@ function toIntegrationDashboardItem(item: IntegrationApiResponse): IntegrationDa
     enabled: item.enabled,
     triggerResource: item.trigger?.resource || '',
     triggerOperation: item.trigger?.operation || 'update',
-    connectionType: item.connection?.type || 'generic',
-    conditionCount: item.conditions?.length || 0,
-    endpoint: item.action?.endpoint || '',
-    creationTime: item.creationTime,
-    modificationTime: item.modificationTime,
+  }
+}
+
+/** Merges a full `IntegrationApiResponse` (from the by-id enrichment fetch)
+ *  into an existing dashboard row, populating the fields the summary omits. */
+function mergeIntegrationDetail(item: IntegrationDashboardItem, raw: IntegrationApiResponse): IntegrationDashboardItem {
+  return {
+    ...item,
+    connectionType: raw.connection?.type || 'generic',
+    conditionCount: raw.conditions?.length || 0,
+    endpoint: raw.action?.endpoint || '',
+    creationTime: raw.creationTime,
+    modificationTime: raw.modificationTime,
   }
 }
 
@@ -130,6 +142,9 @@ export const IntegrationsDashboard: React.FC<IntegrationsDashboardProps> = () =>
 
   // ── Integrations data ──
   const [integrations, setIntegrations] = useSafeState<IntegrationDashboardItem[]>([])
+  // Populated lazily by per-row GET-by-id enrichment — the list endpoint only
+  // returns IntegrationSummary, so this map only ever holds rows that have
+  // been visible at some point (or were fetched on-demand for edit/toggle).
   const [rawIntegrations, setRawIntegrations] = useSafeState<Map<string, IntegrationApiResponse>>(new Map())
   const [isLoading, setIsLoading] = useSafeState(false)
   const [error, setError] = useSafeState<string | null>(null)
@@ -137,6 +152,21 @@ export const IntegrationsDashboard: React.FC<IntegrationsDashboardProps> = () =>
   // ── Last-delivery-status enrichment (visible rows only) ──
   const [deliveryStatuses, setDeliveryStatuses] = useSafeState<Map<string, DeliveryStatus>>(new Map())
   const [loadingDeliveryStatus, setLoadingDeliveryStatus] = useSafeState<Set<string>>(new Set())
+
+  // ── Full-detail enrichment (visible rows only) — fills connection/conditions/
+  // endpoint/timestamps, which the summary list response doesn't include.
+  const [loadingIntegrationDetail, setLoadingIntegrationDetail] = useSafeState<Set<string>>(new Set())
+
+  // Mirrors the latest `rawIntegrations`/`selectedScopeId` for reads inside
+  // callbacks that must NOT depend on them (depending on `rawIntegrations`
+  // would recreate `loadIntegrations` — and thus re-trigger its mount effect —
+  // on every enrichment tick; depending on `selectedScopeId` inside a
+  // long-running mutation handler would let a scope switch mid-flight silently
+  // redirect that handler's *reload* to the new scope).
+  const rawIntegrationsRef = useRef(rawIntegrations)
+  useEffect(() => { rawIntegrationsRef.current = rawIntegrations }, [rawIntegrations])
+  const selectedScopeIdRef = useRef(selectedScopeId)
+  useEffect(() => { selectedScopeIdRef.current = selectedScopeId }, [selectedScopeId])
 
   // ── Dialog / action state ──
   const [isFormOpen, setIsFormOpen] = useSafeState(false)
@@ -187,8 +217,24 @@ export const IntegrationsDashboard: React.FC<IntegrationsDashboardProps> = () =>
       if ('error' in result) {
         throw new Error(typeof result.error === 'string' ? result.error : 'Failed to load integrations')
       }
-      setRawIntegrations(new Map(result.map((i) => [i.integrationId, i])))
-      setIntegrations(result.map(toIntegrationDashboardItem))
+      // The list is a lightweight summary. Rows already enriched (still
+      // present in `rawIntegrations`) keep showing their detail immediately —
+      // dropping it here would flash every visible row's endpoint/conditions/
+      // last-modified back to "not yet loaded" placeholders on every reload,
+      // not just the row that actually changed. A mutation handler that wants
+      // fresher detail for one specific row evicts it via `evictRawIntegration`
+      // before calling this, so only that row re-enriches.
+      const validIds = new Set(result.map((i) => i.integrationId))
+      const preservedRaw = new Map<string, IntegrationApiResponse>()
+      rawIntegrationsRef.current.forEach((raw, id) => {
+        if (validIds.has(id)) preservedRaw.set(id, raw)
+      })
+      setRawIntegrations(preservedRaw)
+      setIntegrations(result.map((summary) => {
+        const base = toIntegrationDashboardItem(summary)
+        const raw = preservedRaw.get(summary.integrationId)
+        return raw ? mergeIntegrationDetail(base, raw) : base
+      }))
     } catch (err) {
       console.error('Error loading integrations:', err)
       setError('Failed to load integrations')
@@ -202,8 +248,8 @@ export const IntegrationsDashboard: React.FC<IntegrationsDashboardProps> = () =>
   }, [loadIntegrations])
 
   // ── Enrich visible rows with their most recent delivery status ──
-  const handleVisibleItemsChange = useCallback((visible: IntegrationDashboardItem[]) => {
-    if (!selectedScopeId || visible.length === 0) return
+  const enrichDeliveryStatuses = useCallback((visible: IntegrationDashboardItem[]) => {
+    if (!selectedScopeId) return
     const toLoad = visible.filter((i) => !deliveryStatuses.has(i.integrationId) && !loadingDeliveryStatus.has(i.integrationId))
     if (toLoad.length === 0) return
 
@@ -236,30 +282,120 @@ export const IntegrationsDashboard: React.FC<IntegrationsDashboardProps> = () =>
     })
   }, [selectedScopeId, deliveryStatuses, loadingDeliveryStatus])
 
+  // ── Enrich visible rows with the full integration (connection/conditions/
+  // endpoint/timestamps) — the list endpoint only returns IntegrationSummary. ──
+  const enrichIntegrationDetail = useCallback((visible: IntegrationDashboardItem[]) => {
+    if (!selectedScopeId) return
+    const toLoad = visible.filter((i) => !rawIntegrations.has(i.integrationId) && !loadingIntegrationDetail.has(i.integrationId))
+    if (toLoad.length === 0) return
+
+    setLoadingIntegrationDetail((prev) => new Set([...prev, ...toLoad.map((i) => i.integrationId)]))
+
+    Promise.all(
+      toLoad.map(async (item) => {
+        try {
+          const result = await cachedApi.getIntegrationById(selectedScopeId, item.integrationId)
+          return 'error' in result ? null : result
+        } catch {
+          return null
+        }
+      })
+    ).then((results) => {
+      const resolved = results.filter((r): r is IntegrationApiResponse => !!r)
+      if (resolved.length > 0) {
+        setRawIntegrations((prev) => {
+          const next = new Map(prev)
+          resolved.forEach((raw) => next.set(raw.integrationId, raw))
+          return next
+        })
+        setIntegrations((prev) => prev.map((item) => {
+          const raw = resolved.find((r) => r.integrationId === item.integrationId)
+          return raw ? mergeIntegrationDetail(item, raw) : item
+        }))
+      }
+      setLoadingIntegrationDetail((prev) => {
+        const next = new Set(prev)
+        toLoad.forEach((i) => next.delete(i.integrationId))
+        return next
+      })
+    })
+  }, [selectedScopeId, rawIntegrations, loadingIntegrationDetail])
+
+  const handleVisibleItemsChange = useCallback((visible: IntegrationDashboardItem[]) => {
+    if (visible.length === 0) return
+    enrichDeliveryStatuses(visible)
+    enrichIntegrationDetail(visible)
+  }, [enrichDeliveryStatuses, enrichIntegrationDetail])
+
+  /** Returns the full integration for a row, fetching it on-demand if the row
+   *  hasn't been enriched yet (e.g. acted on before it scrolled into view). */
+  const getOrFetchRawIntegration = useCallback(async (integrationId: string): Promise<IntegrationApiResponse | null> => {
+    const cached = rawIntegrations.get(integrationId)
+    if (cached) return cached
+    if (!selectedScopeId) return null
+    const result = await cachedApi.getIntegrationById(selectedScopeId, integrationId)
+    if ('error' in result) return null
+    setRawIntegrations((prev) => new Map(prev).set(integrationId, result))
+    return result
+  }, [rawIntegrations, selectedScopeId])
+
+  /** Drops a row's cached detail (kept in sync via the ref so a same-tick
+   *  `loadIntegrations()` — see its "preservedRaw" step — doesn't just carry
+   *  the stale value forward) so it re-enriches with fresh data on the next
+   *  reload, instead of `loadIntegrations` preserving a now-outdated value. */
+  const evictRawIntegration = useCallback((integrationId: string) => {
+    setRawIntegrations((prev) => {
+      if (!prev.has(integrationId)) return prev
+      const next = new Map(prev)
+      next.delete(integrationId)
+      rawIntegrationsRef.current = next
+      return next
+    })
+  }, [])
+
   // ── Handlers ──
   const handleCreateIntegration = useCallback(() => {
     setEditingIntegration(null)
     setIsFormOpen(true)
   }, [])
 
-  const handleEditIntegration = useCallback((item: IntegrationDashboardItem) => {
-    const raw = rawIntegrations.get(item.integrationId)
-    if (!raw) return
-    setEditingIntegration(raw)
-    setIsFormOpen(true)
-  }, [rawIntegrations])
-
-  const handleToggleEnabled = useCallback(async (item: IntegrationDashboardItem) => {
-    const raw = rawIntegrations.get(item.integrationId)
-    if (!raw || !selectedScopeId) return
+  const handleEditIntegration = useCallback(async (item: IntegrationDashboardItem) => {
     setActionInProgress(item.integrationId)
     try {
-      const result = await cachedApi.updateIntegration(selectedScopeId, item.integrationId, toWriteBody(raw, { enabled: !raw.enabled }))
+      const raw = await getOrFetchRawIntegration(item.integrationId)
+      if (!raw) {
+        toast.error('Failed to load integration details')
+        return
+      }
+      setEditingIntegration(raw)
+      setIsFormOpen(true)
+    } catch (err) {
+      console.error('Error loading integration details:', err)
+      toast.error('Failed to load integration details')
+    } finally {
+      setActionInProgress(null)
+    }
+  }, [getOrFetchRawIntegration, toast])
+
+  const handleToggleEnabled = useCallback(async (item: IntegrationDashboardItem) => {
+    const scopeId = selectedScopeId
+    if (!scopeId) return
+    setActionInProgress(item.integrationId)
+    try {
+      const raw = await getOrFetchRawIntegration(item.integrationId)
+      if (!raw) {
+        toast.error('Failed to load integration details')
+        return
+      }
+      const result = await cachedApi.updateIntegration(scopeId, item.integrationId, toWriteBody(raw, { enabled: !raw.enabled }))
       if ('error' in result) {
         toast.error(`Failed to ${raw.enabled ? 'disable' : 'enable'} integration`)
       } else {
         toast.success(`Integration ${raw.enabled ? 'disabled' : 'enabled'}`)
-        await loadIntegrations()
+        evictRawIntegration(item.integrationId)
+        // The user may have switched scopes while this awaited — don't let a
+        // stale reload for scope A overwrite scope B's already-current list.
+        if (selectedScopeIdRef.current === scopeId) await loadIntegrations()
       }
     } catch (err) {
       console.error('Error toggling integration:', err)
@@ -267,7 +403,7 @@ export const IntegrationsDashboard: React.FC<IntegrationsDashboardProps> = () =>
     } finally {
       setActionInProgress(null)
     }
-  }, [rawIntegrations, selectedScopeId, toast, loadIntegrations])
+  }, [selectedScopeId, getOrFetchRawIntegration, evictRawIntegration, toast, loadIntegrations])
 
   const handlePing = useCallback(async (item: IntegrationDashboardItem) => {
     if (!selectedScopeId) return
@@ -320,12 +456,13 @@ export const IntegrationsDashboard: React.FC<IntegrationsDashboardProps> = () =>
   }, [actionInProgress, handleEditIntegration, handleToggleEnabled, handlePing, handleViewDeliveries])
 
   const handleFormSubmit = useCallback(async (data: IntegrationWriteBody) => {
-    if (!selectedScopeId) return
+    const scopeId = selectedScopeId
+    if (!scopeId) return
     setActionInProgress(editingIntegration?.integrationId || 'new')
     try {
       const result = editingIntegration
-        ? await cachedApi.updateIntegration(selectedScopeId, editingIntegration.integrationId, data)
-        : await cachedApi.createIntegration(selectedScopeId, data)
+        ? await cachedApi.updateIntegration(scopeId, editingIntegration.integrationId, data)
+        : await cachedApi.createIntegration(scopeId, data)
 
       if ('error' in result) {
         toast.error(`Failed to ${editingIntegration ? 'update' : 'create'} integration`)
@@ -333,27 +470,34 @@ export const IntegrationsDashboard: React.FC<IntegrationsDashboardProps> = () =>
       }
 
       toast.success(`Integration ${editingIntegration ? 'updated' : 'created'} successfully!`)
+      if (editingIntegration) evictRawIntegration(editingIntegration.integrationId)
       setIsFormOpen(false)
       setEditingIntegration(null)
-      await loadIntegrations()
+      // The user may have switched scopes while this awaited — don't let a
+      // stale reload for scope A overwrite scope B's already-current list.
+      if (selectedScopeIdRef.current === scopeId) await loadIntegrations()
     } catch (err) {
       console.error('Error saving integration:', err)
       toast.error(`Failed to ${editingIntegration ? 'update' : 'create'} integration`)
     } finally {
       setActionInProgress(null)
     }
-  }, [selectedScopeId, editingIntegration, toast, loadIntegrations])
+  }, [selectedScopeId, editingIntegration, evictRawIntegration, toast, loadIntegrations])
 
   const handleDeleteIntegration = useCallback(async (item: IntegrationDashboardItem) => {
-    if (!selectedScopeId) return
+    const scopeId = selectedScopeId
+    if (!scopeId) return
     setActionInProgress(item.integrationId)
     try {
-      const result = await cachedApi.deleteIntegration(selectedScopeId, item.integrationId)
+      const result = await cachedApi.deleteIntegration(scopeId, item.integrationId)
       if ('error' in result) {
         toast.error('Failed to delete integration')
       } else {
         toast.success('Integration deleted successfully!')
-        await loadIntegrations()
+        evictRawIntegration(item.integrationId)
+        // The user may have switched scopes while this awaited — don't let a
+        // stale reload for scope A overwrite scope B's already-current list.
+        if (selectedScopeIdRef.current === scopeId) await loadIntegrations()
       }
     } catch (err) {
       console.error('Error deleting integration:', err)
@@ -362,7 +506,7 @@ export const IntegrationsDashboard: React.FC<IntegrationsDashboardProps> = () =>
       setItemToDelete(null)
       setActionInProgress(null)
     }
-  }, [selectedScopeId, toast, loadIntegrations])
+  }, [selectedScopeId, evictRawIntegration, toast, loadIntegrations])
 
   const formatDate = useCallback((timestamp?: number): string => {
     if (!timestamp) return 'N/A'
@@ -416,25 +560,40 @@ export const IntegrationsDashboard: React.FC<IntegrationsDashboardProps> = () =>
       name: 'ENDPOINT',
       width: 260,
       sortable: true,
-      render: (item) => (
-        <Text UNSAFE_style={{ fontSize: 13, color: 'var(--spectrum-global-color-gray-700)', wordBreak: 'break-all' }}>
-          {item.endpoint || 'N/A'}
-        </Text>
-      )
+      render: (item) => {
+        if (item.endpoint === undefined && loadingIntegrationDetail.has(item.integrationId)) {
+          return <div style={createShimmerStyle(180, 20)} />
+        }
+        return (
+          <Text UNSAFE_style={{ fontSize: 13, color: 'var(--spectrum-global-color-gray-700)', wordBreak: 'break-all' }}>
+            {item.endpoint || 'N/A'}
+          </Text>
+        )
+      }
     },
     {
       key: 'conditionCount',
       name: 'CONDITIONS',
       width: 110,
       sortable: true,
-      render: (item) => <Text>{item.conditionCount}</Text>
+      render: (item) => {
+        if (item.conditionCount === undefined && loadingIntegrationDetail.has(item.integrationId)) {
+          return <div style={createShimmerStyle(30, 20)} />
+        }
+        return <Text>{item.conditionCount ?? 0}</Text>
+      }
     },
     {
       key: 'modificationTime',
       name: 'LAST MODIFIED',
       width: 150,
       sortable: true,
-      render: (item) => <Text>{formatDate(item.modificationTime)}</Text>
+      render: (item) => {
+        if (item.modificationTime === undefined && loadingIntegrationDetail.has(item.integrationId)) {
+          return <div style={createShimmerStyle(90, 20)} />
+        }
+        return <Text>{formatDate(item.modificationTime)}</Text>
+      }
     },
     {
       key: 'manage',
@@ -453,7 +612,7 @@ export const IntegrationsDashboard: React.FC<IntegrationsDashboardProps> = () =>
         </MenuTrigger>
       )
     }
-  ], [formatDate, loadingDeliveryStatus, deliveryStatuses, handleMenuAction, canWriteIntegration, canDeleteIntegration])
+  ], [formatDate, loadingDeliveryStatus, deliveryStatuses, loadingIntegrationDetail, handleMenuAction, canWriteIntegration, canDeleteIntegration])
 
   const createButton = useMemo(() => {
     if (!canWriteIntegration) return undefined
