@@ -57,19 +57,25 @@ import type {
   IntegrationWriteBody,
 } from '../../types/webhookApi'
 
+// Only resources ESP's integrations Lambda actually resolves a scope for and fires
+// triggers on today. `attendee` (account-level) is a valid API value but has no
+// scope-resolution path server-side -- an integration configured against it would
+// silently never fire. See docs/integrations/migration-plan.md (events-service-platform
+// repo) for the full breakdown; re-add here once that's implemented.
 const TRIGGER_RESOURCES: { key: IntegrationTriggerResource; label: string }[] = [
   { key: 'event', label: 'Event' },
   { key: 'series', label: 'Series' },
   { key: 'session', label: 'Session' },
-  { key: 'attendee', label: 'Attendee' },
+  { key: 'sessionTime', label: 'Session Time' },
   { key: 'speaker', label: 'Speaker' },
   { key: 'sponsor', label: 'Sponsor' },
 ]
 
+// `delete` isn't outbox-wired for any resource yet -- an integration configured
+// against it would silently never fire. Re-add once that lands.
 const TRIGGER_OPERATIONS: { key: IntegrationTriggerOperation; label: string }[] = [
   { key: 'create', label: 'Create' },
   { key: 'update', label: 'Update' },
-  { key: 'delete', label: 'Delete' },
 ]
 
 const CONDITION_OPERATORS: { key: ConditionOperator; label: string }[] = [
@@ -81,11 +87,11 @@ const CONDITION_OPERATORS: { key: ConditionOperator; label: string }[] = [
   { key: 'le', label: 'Less or equal (≤)' },
 ]
 
-const PAYLOAD_OBJECTS = ['series', 'event', 'session', 'attendee', 'speaker', 'sponsor'] as const
+const PAYLOAD_OBJECTS = ['series', 'event', 'session', 'sessionTime', 'speaker', 'sponsor'] as const
 
+// 'marketo' isn't offered yet -- see the ConnectionType comment in types/webhookApi.ts.
 const CONNECTION_TYPES: { key: ConnectionType; label: string }[] = [
   { key: 'generic', label: 'Generic (custom endpoint)' },
-  { key: 'marketo', label: 'Marketo' },
 ]
 
 interface SecretRow {
@@ -139,6 +145,13 @@ function emptyFormState(): FormState {
   }
 }
 
+// Known gap: if an existing record's triggerResource/triggerOperation/connectionType/
+// payloadObjects holds a value hidden from the pickers above (e.g. a legacy 'attendee'
+// trigger, from before that option was removed), the corresponding Picker/checkbox will
+// render with no visible selection here -- the value is preserved correctly on save
+// (nothing below rewrites it), it's just not shown. Not fixed now since essentially no
+// such record can exist yet (those options were only ever briefly selectable); revisit
+// with a disabled/read-only fallback label if that changes.
 function formStateFromIntegration(integration: IntegrationApiResponse): FormState {
   const transforms: Record<string, FieldMappingRow[]> = {}
   const rawTransforms = integration.action?.data?.transforms || {}

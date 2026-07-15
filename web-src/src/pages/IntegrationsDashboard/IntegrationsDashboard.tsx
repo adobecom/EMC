@@ -41,13 +41,14 @@ import { StatusBadge, ResourceDashboardLayout, BlurredLoadingOverlay } from '../
 import { apiService, cachedApi } from '../../services/api'
 import { IMS } from '../../types'
 import type { RBACApiScope, ScopeType } from '../../types/rbacApi'
-import type { IntegrationApiResponse, IntegrationSummary, IntegrationDashboardItem, IntegrationWriteBody, DeliveryStatus } from '../../types/webhookApi'
+import type { IntegrationApiResponse, IntegrationDashboardItem, IntegrationWriteBody, DeliveryStatus } from '../../types/webhookApi'
 import { useToast } from '../../contexts'
 import { useSafeState } from '../../hooks'
 import { useHasPermission } from '../../hooks/useHasPermission'
 import { createShimmerStyle } from '../../styles/designSystem'
 import { buildIntegrationManageActions } from './integrationManageActions'
 import { IntegrationFormDialog } from './IntegrationFormDialog'
+import { toIntegrationDashboardItem, mergeIntegrationDetail, toWriteBody } from './integrationMappers'
 
 const INTEGRATIONS_SEARCH_KEYS = ['name', 'endpoint', 'triggerResource']
 
@@ -63,65 +64,6 @@ const SCOPE_TYPE_VARIANTS: Record<ScopeType, 'positive' | 'informative' | 'neutr
   platform: 'positive',
   org: 'informative',
   team: 'neutral',
-}
-
-/** Builds a dashboard row from the list endpoint's lightweight summary.
- *  `connectionType`/`conditionCount`/`endpoint`/timestamps aren't in the
- *  summary — they're filled in by `mergeIntegrationDetail` once the
- *  per-row GET-by-id enrichment resolves for a visible row. */
-function toIntegrationDashboardItem(item: IntegrationSummary): IntegrationDashboardItem {
-  return {
-    integrationId: item.integrationId,
-    scopeId: item.scopeId,
-    name: item.name,
-    enabled: item.enabled,
-    triggerResource: item.trigger?.resource || '',
-    triggerOperation: item.trigger?.operation || 'update',
-  }
-}
-
-/** Merges a full `IntegrationApiResponse` (from the by-id enrichment fetch)
- *  into an existing dashboard row, populating the fields the summary omits. */
-function mergeIntegrationDetail(item: IntegrationDashboardItem, raw: IntegrationApiResponse): IntegrationDashboardItem {
-  return {
-    ...item,
-    connectionType: raw.connection?.type || 'generic',
-    conditionCount: raw.conditions?.length || 0,
-    endpoint: raw.action?.endpoint || '',
-    creationTime: raw.creationTime,
-    modificationTime: raw.modificationTime,
-  }
-}
-
-/** Builds a full write body from an existing API response, for quick mutations
- *  (e.g. the enable/disable toggle) that don't go through the edit dialog.
- *  Secret values are intentionally omitted — ESP never returns them in
- *  plaintext, so a write body can only ever resend a *new* value for a
- *  secret; keys omitted here are left untouched server-side. */
-function toWriteBody(item: IntegrationApiResponse, overrides?: Partial<IntegrationWriteBody>): IntegrationWriteBody {
-  return {
-    name: item.name,
-    enabled: item.enabled,
-    trigger: { ...item.trigger },
-    conditions: item.conditions.map((c) => ({ ...c })),
-    action: {
-      endpoint: item.action.endpoint,
-      data: {
-        objects: [...item.action.data.objects],
-        ...(item.action.data.transforms ? { transforms: item.action.data.transforms } : {}),
-      },
-    },
-    connection: {
-      type: item.connection.type,
-      secrets: {},
-      ...(item.connection.hmac ? { hmac: { ...item.connection.hmac } } : {}),
-    },
-    retryPolicy: {
-      maxAttempts: item.retryPolicy.maxAttempts,
-      backoffSeconds: [...item.retryPolicy.backoffSeconds],
-    },
-    ...overrides,
-  }
 }
 
 interface IntegrationsDashboardProps {

@@ -20,10 +20,15 @@
 // ============================================================================
 
 /** Known trigger resources. Kept as a union for Picker options, but the API
- *  type is widened to `string` since ESP may add resources without a client release. */
+ *  type is widened to `string` since ESP may add resources without a client release.
+ *  Includes values ESP's API accepts but doesn't yet fire triggers for (e.g. `attendee`
+ *  has no scope-resolution path server-side today) -- see TRIGGER_RESOURCES in
+ *  IntegrationFormDialog.tsx for the subset actually offered in the create/edit picker. */
 export type IntegrationTriggerResource =
-  | 'event' | 'series' | 'session' | 'attendee' | 'speaker' | 'sponsor'
+  | 'event' | 'series' | 'session' | 'sessionTime' | 'attendee' | 'speaker' | 'sponsor'
 
+/** ESP's API accepts all three, but `delete` isn't outbox-wired for any resource yet --
+ *  see TRIGGER_OPERATIONS in IntegrationFormDialog.tsx for the subset offered in the picker. */
 export type IntegrationTriggerOperation = 'create' | 'update' | 'delete'
 
 export interface IntegrationTrigger {
@@ -69,6 +74,10 @@ export interface IntegrationAction {
 // Connection / auth
 // ============================================================================
 
+/** `marketo` is a placeholder for future work -- ESP has no per-type delivery behavior
+ *  today (only HMAC signing, gated on connection.hmac, not on type), so selecting it
+ *  produces a plain generic webhook. Not offered in CONNECTION_TYPES in
+ *  IntegrationFormDialog.tsx until that's actually implemented. */
 export type ConnectionType = 'generic' | 'marketo'
 
 /** Secrets are write-only — reads only ever report whether a value is set, never the value itself. */

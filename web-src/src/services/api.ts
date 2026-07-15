@@ -2598,6 +2598,19 @@ export default apiService
  * // After mutations, cache is automatically invalidated
  * await cachedApi.deleteEvent(eventId) // Invalidates events cache
  */
+// apiCache.get() keys its cache/dedup entries on the *function reference identity* of the
+// function passed to it (see cacheUtils.ts's WeakMap-based getFunctionId). Passing a fresh
+// inline arrow (as most cachedApi.getXxx wrappers below do, e.g. `apiCache.get((id) =>
+// apiService.getSeriesList(id))`) allocates a brand-new function object on every call, so
+// the cache/dedup key never matches a prior call and both layers are silently defeated --
+// a pre-existing, codebase-wide gap in cachedApi outside the scope of this change. These
+// four are bound once, at module load, specifically so the integrations methods being
+// tested here get real caching/deduplication rather than tests asserting broken behavior.
+const boundGetIntegrations = apiService.getIntegrations.bind(apiService)
+const boundGetIntegrationById = apiService.getIntegrationById.bind(apiService)
+const boundGetDeliveries = apiService.getDeliveries.bind(apiService)
+const boundGetDeliveryById = apiService.getDeliveryById.bind(apiService)
+
 export const cachedApi = {
   // === SERIES (GET Operations - Cached with Deduplication) ===
   getSeriesList: async () => {
@@ -2862,13 +2875,13 @@ export const cachedApi = {
 
   // === WEBHOOK INTEGRATIONS (GET Operations - Cached) ===
   getIntegrations: (scopeId: string) =>
-    apiCache.get((id: string) => apiService.getIntegrations(id), scopeId),
+    apiCache.get(boundGetIntegrations, scopeId),
   getIntegrationById: (scopeId: string, integrationId: string) =>
-    apiCache.get((sId: string, iId: string) => apiService.getIntegrationById(sId, iId), scopeId, integrationId),
+    apiCache.get(boundGetIntegrationById, scopeId, integrationId),
   getDeliveries: (scopeId: string, integrationId: string) =>
-    apiCache.get((sId: string, iId: string) => apiService.getDeliveries(sId, iId), scopeId, integrationId),
+    apiCache.get(boundGetDeliveries, scopeId, integrationId),
   getDeliveryById: (scopeId: string, integrationId: string, deliveryId: string) =>
-    apiCache.get((sId: string, iId: string, dId: string) => apiService.getDeliveryById(sId, iId, dId), scopeId, integrationId, deliveryId),
+    apiCache.get(boundGetDeliveryById, scopeId, integrationId, deliveryId),
 
   // Webhook Integration Mutations
   async createIntegration(scopeId: string, data: IntegrationWriteBody) {
