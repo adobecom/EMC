@@ -4,19 +4,14 @@
 
 import React, { useEffect, useMemo, useCallback, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { ActionButton, Button, ButtonGroup, MenuTrigger, Menu, MenuItem, Text, DialogTrigger, Dialog, Content, Heading, AlertDialog, Link, Picker, PickerItem } from "@react-spectrum/s2"
+import { ActionButton, Button, ButtonGroup, MenuTrigger, Menu, MenuItem, Text, DialogTrigger, Dialog, Content, Heading, AlertDialog, Link, Picker, PickerItem, Popover, ToggleButtonGroup, ToggleButton } from "@react-spectrum/s2"
 import { style } from "@react-spectrum/s2/style" with { type: "macro" }
 import More from "@react-spectrum/s2/icons/More"
-import Publish from "@react-spectrum/s2/icons/Publish"
-import PublishNo from "@react-spectrum/s2/icons/PublishNo"
-import Preview from "@react-spectrum/s2/icons/Preview"
-import Copy from "@react-spectrum/s2/icons/Copy"
-import Edit from "@react-spectrum/s2/icons/Edit"
-import Duplicate from "@react-spectrum/s2/icons/Duplicate"
-import RemoveCircle from "@react-spectrum/s2/icons/RemoveCircle"
 import Filter from "@react-spectrum/s2/icons/Filter"
 import GlobeGrid from "@react-spectrum/s2/icons/GlobeGrid"
 import Location from "@react-spectrum/s2/icons/Location"
+import Calendar from "@react-spectrum/s2/icons/Calendar"
+import Table from "@react-spectrum/s2/icons/Table"
 import { getEventTypeOptions, EventType } from '../../config/eventTypeConfig'
 import { CloneEvent } from './CloneEvent'
 import { TableColumn } from '../../components/shared/DataTable'
@@ -29,9 +24,13 @@ import { SPACING, SHIMMER_BASE, SURFACES } from '../../styles/designSystem'
 import { seriesEnrichmentManager, SeriesInfo } from '../../services/seriesEnrichment'
 import { IMS } from '../../types'
 import { useToast, useGroup } from '../../contexts'
-import { useSafeState, useRBACFilter } from '../../hooks'
+import { useSafeState, useRBACFilter, usePersistentState } from '../../hooks'
 import { useHasPermission } from '../../hooks/useHasPermission'
 import { getEspEnvParam } from '../../config/constants'
+import { SPEAKER_LOCALE_LABELS } from '../../config/localeMapping'
+import { buildEventManageActions } from './eventManageActions'
+import { EventCalendar } from './calendar/EventCalendar'
+import { EventPopoverContent } from './calendar/EventPopoverContent'
 
 const EVENTS_SEARCH_KEYS = ['eventName', 'eventType', 'cloudType', 'hostEmail', 'seriesId']
 
@@ -43,6 +42,7 @@ const eventsTableShimmerStyle: React.CSSProperties = {
 const FILTER_ALL = '__all__'
 const FILTER_NONE_SERIES = '__none__'
 const FILTER_EMPTY_CLOUD = '__empty__'
+const FILTER_NO_LOCALE = '__none_locale__'
 
 const EVENTS_DASHBOARD_TABLE_TEST_IDS = {
   root: 'events-dashboard-table',
@@ -88,20 +88,19 @@ export const EventsDashboard: React.FC<EventsDashboardProps> = () => {
   const [loadingSeries, setLoadingSeries] = useSafeState<Set<string>>(new Set())
   const [loadingHistory, setLoadingHistory] = useSafeState<Set<string>>(new Set())
   const [itemToDelete, setItemToDelete] = useSafeState<EventDashboardItem | null>(null)
+  const [itemToPublish, setItemToPublish] = useSafeState<EventDashboardItem | null>(null)
   const [actionInProgress, setActionInProgress] = useSafeState<string | null>(null)
   const [cloneItem, setCloneItem] = useSafeState<EventDashboardItem | null>(null)
 
-  const [listFilters, setListFilters] = useSafeState<{
-    seriesId: string
-    creator: string
-    publish: string
-    cloudType: string
-  }>({
+  const [listFilters, setListFilters] = usePersistentState('emc-events-dashboard-filters', {
     seriesId: FILTER_ALL,
     creator: FILTER_ALL,
     publish: FILTER_ALL,
     cloudType: FILTER_ALL,
+    locale: FILTER_ALL,
   })
+
+  const [viewMode, setViewMode] = useSafeState<'table' | 'calendar'>('table')
 
   const seriesRef = useRef<Map<string, SeriesInfo>>(series)
   seriesRef.current = series
@@ -157,6 +156,18 @@ export const EventsDashboard: React.FC<EventsDashboardProps> = () => {
   useEffect(() => {
     loadEventsData()
   }, [groupVersion]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Derive locale filter options directly from loaded events so the list
+  // always reflects actual data — no static fallback list, no extra API call.
+  const localeOptions = useMemo(() => {
+    const codes = [...new Set(
+      events.map(e => e.defaultLocale).filter((c): c is string => !!c)
+    )]
+    codes.sort((a, b) =>
+      (SPEAKER_LOCALE_LABELS[a] || a).localeCompare(SPEAKER_LOCALE_LABELS[b] || b)
+    )
+    return codes.map(key => ({ key, label: SPEAKER_LOCALE_LABELS[key] || key }))
+  }, [events])
 
   // Fetch thumbnails only for visible event IDs (triggered by pagination)
   useEffect(() => {
@@ -323,25 +334,23 @@ export const EventsDashboard: React.FC<EventsDashboardProps> = () => {
     fetchHistory()
   }, [visibleEventIds])
 
-  // Callback to track which events are currently visible
-  const handleVisibleEventsChange = useCallback((visibleEvents: EventDashboardItem[]) => {
-    const ids = visibleEvents.map(e => e.eventId)
-    
-    // Only update if the SET of IDs actually changed (not order) to prevent infinite loops
+  // Shared core: update visibleEventIds only when the SET of IDs actually changes
+  const updateVisibleEventIds = useCallback((ids: string[]) => {
     setVisibleEventIds(prevIds => {
       if (prevIds.length !== ids.length) return ids
-      
-      // Check if the same set of IDs (order doesn't matter for caching)
       const prevSet = new Set(prevIds)
       const newSet = new Set(ids)
-      
       if (prevSet.size === newSet.size && [...prevSet].every(id => newSet.has(id))) {
-        return prevIds // Same set of IDs, don't trigger re-fetch
+        return prevIds // Same set — don't trigger re-fetch
       }
-      
       return ids
     })
   }, [])
+
+  // Callback to track which events are currently visible (table view)
+  const handleVisibleEventsChange = useCallback((visibleEvents: EventDashboardItem[]) => {
+    updateVisibleEventIds(visibleEvents.map(e => e.eventId))
+  }, [updateVisibleEventIds])
 
   const formatDate = useCallback((timestamp?: number): string => {
     if (!timestamp) return 'N/A'
@@ -371,39 +380,10 @@ export const EventsDashboard: React.FC<EventsDashboardProps> = () => {
 
     switch (action) {
       case 'publish':
-      case 'unpublish': {
-        const isPublish = !item.published
-        setActionInProgress(item.eventId)
-        
-        try {
-          // Fetch full event data (needed for complete payload with all localizations)
-          const eventResponse = await cachedApi.getEventFull(item.eventId)
-          
-          if ('error' in eventResponse) {
-            toast.error(`Failed to load event data: ${eventResponse.error}`)
-            break
-          }
-
-          // ApiService.publishEvent / unpublishEvent run prepareEslEventPutPayload (submission filter + ESL excludes)
-          const result = isPublish
-            ? await apiService.publishEvent(item.eventId, eventResponse)
-            : await apiService.unpublishEvent(item.eventId, eventResponse)
-
-          if ('error' in result) {
-            toast.error(`Failed to ${isPublish ? 'publish' : 'unpublish'} event: ${result.error}`)
-          } else {
-            toast.success(`Event ${isPublish ? 'published' : 'unpublished'} successfully!`)
-            // Refresh events list
-            await loadEventsData()
-          }
-        } catch (err) {
-          console.error(`Error ${isPublish ? 'publishing' : 'unpublishing'} event:`, err)
-          toast.error(`Failed to ${isPublish ? 'publish' : 'unpublish'} event`)
-        } finally {
-          setActionInProgress(null)
-        }
+      case 'unpublish':
+        // Show publish/unpublish confirmation dialog
+        setItemToPublish(item)
         break
-      }
 
       case 'preview-pre':
       case 'preview-post': {
@@ -790,54 +770,24 @@ export const EventsDashboard: React.FC<EventsDashboardProps> = () => {
             <More />
           </ActionButton>
           <Menu onAction={(key) => handleMenuAction(key as string, item)}>
-            {canWriteEvent && (
-              <MenuItem id="publish" textValue={item.published ? 'Unpublish' : 'Publish'}>
-                {item.published ? <PublishNo /> : <Publish />}
-                <Text slot="label">{item.published ? 'Unpublish' : 'Publish'}</Text>
+            {buildEventManageActions({ item, canWriteEvent, canDeleteEvent }).map(action => (
+              <MenuItem key={action.key} id={action.key} textValue={action.label}>
+                {action.icon}
+                <Text slot="label">{action.label}</Text>
               </MenuItem>
-            )}
-            <MenuItem id="preview-pre" textValue="Preview pre-event">
-              <Preview />
-              <Text slot="label">Preview pre-event</Text>
-            </MenuItem>
-            <MenuItem id="preview-post" textValue="Preview post-event">
-              <Preview />
-              <Text slot="label">Preview post-event</Text>
-            </MenuItem>
-            <MenuItem id="copy-url" textValue="Copy URL">
-              <Copy />
-              <Text slot="label">Copy URL</Text>
-            </MenuItem>
-            {canWriteEvent && (
-              <MenuItem id="edit" textValue="Edit">
-                <Edit />
-                <Text slot="label">Edit</Text>
-              </MenuItem>
-            )}
-            {canWriteEvent && (
-              <MenuItem id="clone" textValue="Clone">
-                <Duplicate />
-                <Text slot="label">Clone</Text>
-              </MenuItem>
-            )}
-            {canDeleteEvent && (
-              <MenuItem id="delete" textValue="Delete">
-                <RemoveCircle />
-                <Text slot="label">Delete</Text>
-              </MenuItem>
-            )}
+            ))}
           </Menu>
         </MenuTrigger>
       )
     }
-  ], [formatDate, formatLocalDate, thumbnails, loadingThumbnails, venues, loadingVenues, series, loadingSeries, history, loadingHistory, handleMenuAction])
+  ], [formatDate, formatLocalDate, thumbnails, loadingThumbnails, venues, loadingVenues, series, loadingSeries, history, loadingHistory, handleMenuAction, canWriteEvent, canDeleteEvent])
 
   const handleDeleteEvent = useCallback(async (event: EventDashboardItem) => {
     setActionInProgress(event.eventId)
-    
+
     try {
       const result = await apiService.deleteEventExternal(event.eventId)
-      
+
       if ('error' in result) {
         toast.error(`Failed to delete event: ${result.error}`)
       } else {
@@ -854,6 +804,39 @@ export const EventsDashboard: React.FC<EventsDashboardProps> = () => {
     }
   }, [toast])
 
+  const handlePublishEvent = useCallback(async (event: EventDashboardItem) => {
+    const isPublish = !event.published
+    setActionInProgress(event.eventId)
+
+    try {
+      // Fetch full event data (needed for complete payload with all localizations)
+      const eventResponse = await cachedApi.getEventFull(event.eventId)
+
+      if ('error' in eventResponse) {
+        toast.error(`Failed to load event data: ${eventResponse.error}`)
+        return
+      }
+
+      // ApiService.publishEvent / unpublishEvent run prepareEslEventPutPayload (submission filter + ESL excludes)
+      const result = isPublish
+        ? await apiService.publishEvent(event.eventId, eventResponse)
+        : await apiService.unpublishEvent(event.eventId, eventResponse)
+
+      if ('error' in result) {
+        toast.error(`Failed to ${isPublish ? 'publish' : 'unpublish'} event: ${result.error}`)
+      } else {
+        toast.success(`Event ${isPublish ? 'published' : 'unpublished'} successfully!`)
+        // Refresh events list
+        await loadEventsData()
+      }
+    } catch (err) {
+      console.error(`Error ${isPublish ? 'publishing' : 'unpublishing'} event:`, err)
+      toast.error(`Failed to ${isPublish ? 'publish' : 'unpublish'} event`)
+    } finally {
+      setItemToPublish(null)
+      setActionInProgress(null)
+    }
+  }, [toast])
 
   const handleCreateEvent = useCallback((eventType: EventType) => {
     // Navigate to create event form with event type
@@ -890,6 +873,13 @@ export const EventsDashboard: React.FC<EventsDashboardProps> = () => {
         if (listFilters.cloudType === FILTER_EMPTY_CLOUD) {
           if (ct !== '') return false
         } else if (ct !== listFilters.cloudType) {
+          return false
+        }
+      }
+      if (listFilters.locale !== FILTER_ALL) {
+        if (listFilters.locale === FILTER_NO_LOCALE) {
+          if (item.defaultLocale) return false
+        } else if (item.defaultLocale !== listFilters.locale) {
           return false
         }
       }
@@ -936,112 +926,188 @@ export const EventsDashboard: React.FC<EventsDashboardProps> = () => {
     [events]
   )
 
+  const hasEventsWithoutLocale = useMemo(
+    () => events.some(e => !e.defaultLocale),
+    [events]
+  )
+
+  const hasActiveFilters = Object.values(listFilters).some(v => v !== FILTER_ALL)
+
   const clearListFilters = useCallback(() => {
     setListFilters({
       seriesId: FILTER_ALL,
       creator: FILTER_ALL,
       publish: FILTER_ALL,
       cloudType: FILTER_ALL,
+      locale: FILTER_ALL,
     })
-  }, [])
+  }, [setListFilters])
 
-  const eventsFilterToolbar = useMemo(() => (
-    <DialogTrigger>
-      <ActionButton isQuiet aria-label="Filter events">
-        <Filter />
-      </ActionButton>
-      <Dialog size="L">
-        {({ close }) => (
-          <>
-            <Heading slot="title">Filter events</Heading>
-            <Content>
-              <div
-                className={style({ display: 'flex', flexDirection: 'column' })}
-                style={{ gap: SPACING.MD }}
-              >
-                <Picker
-                  data-testid="filter-series-picker"
-                  label="Series"
-                  selectedKey={listFilters.seriesId}
-                  onSelectionChange={(key) => {
-                    if (key == null) return
-                    setListFilters(f => ({ ...f, seriesId: String(key) }))
-                  }}
+  const toolbarEndContent = useMemo(() => (
+    <div className={style({ display: 'flex', alignItems: 'center', gap: 8 })}>
+      {/* View mode toggle: table / calendar */}
+      <ToggleButtonGroup
+        selectionMode="single"
+        disallowEmptySelection
+        selectedKeys={new Set([viewMode])}
+        onSelectionChange={(keys) => {
+          const k = [...keys][0]
+          if (k === 'table' || k === 'calendar') setViewMode(k)
+        }}
+        density="compact"
+        aria-label="Events view"
+      >
+        <ToggleButton id="table" aria-label="Table view">
+          <Table />
+        </ToggleButton>
+        <ToggleButton id="calendar" aria-label="Calendar view">
+          <Calendar />
+        </ToggleButton>
+      </ToggleButtonGroup>
+
+      {/* Filter dialog — a small badge dot appears beside the button when filters are active */}
+      <div style={{ position: 'relative', display: 'inline-flex' }}>
+        <DialogTrigger>
+          <ActionButton
+            isQuiet
+            aria-label={hasActiveFilters ? 'Filter events (filters active)' : 'Filter events'}
+          >
+            <Filter />
+          </ActionButton>
+          <Dialog size="L">
+          {({ close }) => (
+            <>
+              <Heading slot="title">Filter events</Heading>
+              <Content>
+                <div
+                  className={style({ display: 'flex', flexDirection: 'column' })}
+                  style={{ gap: SPACING.MD }}
                 >
-                  <PickerItem id={FILTER_ALL} textValue="All series">All series</PickerItem>
-                  {hasEventsWithoutSeries && (
-                    <PickerItem id={FILTER_NONE_SERIES} textValue="No series">No series</PickerItem>
-                  )}
-                  {seriesFilterIds.map(sid => {
-                    const label = series.get(sid)?.seriesName || sid
-                    return (
-                      <PickerItem key={sid} id={sid} textValue={label}>
-                        {label}
+                  <Picker
+                    data-testid="filter-series-picker"
+                    label="Series"
+                    selectedKey={listFilters.seriesId}
+                    onSelectionChange={(key) => {
+                      if (key == null) return
+                      setListFilters(f => ({ ...f, seriesId: String(key) }))
+                    }}
+                  >
+                    <PickerItem id={FILTER_ALL} textValue="All series">All series</PickerItem>
+                    {hasEventsWithoutSeries && (
+                      <PickerItem id={FILTER_NONE_SERIES} textValue="No series">No series</PickerItem>
+                    )}
+                    {seriesFilterIds.map(sid => {
+                      const label = series.get(sid)?.seriesName || sid
+                      return (
+                        <PickerItem key={sid} id={sid} textValue={label}>
+                          {label}
+                        </PickerItem>
+                      )
+                    })}
+                  </Picker>
+                  <Picker
+                    data-testid="filter-creator-picker"
+                    label="Creator"
+                    selectedKey={listFilters.creator}
+                    onSelectionChange={(key) => {
+                      if (key == null) return
+                      setListFilters(f => ({ ...f, creator: String(key) }))
+                    }}
+                  >
+                    <PickerItem id={FILTER_ALL} textValue="All creators">All creators</PickerItem>
+                    {creatorFilterOptions.map(c => (
+                      <PickerItem key={c} id={c} textValue={c}>{c}</PickerItem>
+                    ))}
+                  </Picker>
+                  <Picker
+                    data-testid="filter-status-picker"
+                    label="Publish state"
+                    selectedKey={listFilters.publish}
+                    onSelectionChange={(key) => {
+                      if (key == null) return
+                      setListFilters(f => ({ ...f, publish: String(key) }))
+                    }}
+                  >
+                    <PickerItem id={FILTER_ALL} textValue="All states">All states</PickerItem>
+                    <PickerItem id="published" textValue="Published">Published</PickerItem>
+                    <PickerItem id="draft" textValue="Draft">Draft</PickerItem>
+                  </Picker>
+                  <Picker
+                    data-testid="filter-cloud-picker"
+                    label="Cloud type"
+                    selectedKey={listFilters.cloudType}
+                    onSelectionChange={(key) => {
+                      if (key == null) return
+                      setListFilters(f => ({ ...f, cloudType: String(key) }))
+                    }}
+                  >
+                    <PickerItem id={FILTER_ALL} textValue="All cloud types">All cloud types</PickerItem>
+                    {hasEventsWithoutCloudType && (
+                      <PickerItem id={FILTER_EMPTY_CLOUD} textValue="(empty)">(empty)</PickerItem>
+                    )}
+                    {cloudTypeFilterOptions.map(ct => (
+                      <PickerItem key={ct} id={ct} textValue={ct}>{ct}</PickerItem>
+                    ))}
+                  </Picker>
+                  <Picker
+                    data-testid="filter-locale-picker"
+                    label="Language"
+                    selectedKey={listFilters.locale}
+                    onSelectionChange={(key) => {
+                      if (key == null) return
+                      setListFilters(f => ({ ...f, locale: String(key) }))
+                    }}
+                  >
+                    <PickerItem id={FILTER_ALL} textValue="All languages">All languages</PickerItem>
+                    {hasEventsWithoutLocale && (
+                      <PickerItem id={FILTER_NO_LOCALE} textValue="(no language)">(no language)</PickerItem>
+                    )}
+                    {localeOptions.map(o => (
+                      <PickerItem key={o.key} id={o.key} textValue={o.label}>
+                        {o.label}
                       </PickerItem>
-                    )
-                  })}
-                </Picker>
-                <Picker
-                  data-testid="filter-creator-picker"
-                  label="Creator"
-                  selectedKey={listFilters.creator}
-                  onSelectionChange={(key) => {
-                    if (key == null) return
-                    setListFilters(f => ({ ...f, creator: String(key) }))
-                  }}
-                >
-                  <PickerItem id={FILTER_ALL} textValue="All creators">All creators</PickerItem>
-                  {creatorFilterOptions.map(c => (
-                    <PickerItem key={c} id={c} textValue={c}>{c}</PickerItem>
-                  ))}
-                </Picker>
-                <Picker
-                  data-testid="filter-status-picker"
-                  label="Publish state"
-                  selectedKey={listFilters.publish}
-                  onSelectionChange={(key) => {
-                    if (key == null) return
-                    setListFilters(f => ({ ...f, publish: String(key) }))
-                  }}
-                >
-                  <PickerItem id={FILTER_ALL} textValue="All states">All states</PickerItem>
-                  <PickerItem id="published" textValue="Published">Published</PickerItem>
-                  <PickerItem id="draft" textValue="Draft">Draft</PickerItem>
-                </Picker>
-                <Picker
-                  data-testid="filter-cloud-picker"
-                  label="Cloud type"
-                  selectedKey={listFilters.cloudType}
-                  onSelectionChange={(key) => {
-                    if (key == null) return
-                    setListFilters(f => ({ ...f, cloudType: String(key) }))
-                  }}
-                >
-                  <PickerItem id={FILTER_ALL} textValue="All cloud types">All cloud types</PickerItem>
-                  {hasEventsWithoutCloudType && (
-                    <PickerItem id={FILTER_EMPTY_CLOUD} textValue="(empty)">(empty)</PickerItem>
-                  )}
-                  {cloudTypeFilterOptions.map(ct => (
-                    <PickerItem key={ct} id={ct} textValue={ct}>{ct}</PickerItem>
-                  ))}
-                </Picker>
-              </div>
-            </Content>
-            <ButtonGroup>
-              <Button variant="secondary" onPress={clearListFilters}>Clear filters</Button>
-              <Button variant="accent" onPress={close}>Done</Button>
-            </ButtonGroup>
-          </>
+                    ))}
+                  </Picker>
+                </div>
+              </Content>
+              <ButtonGroup>
+                <Button variant="secondary" onPress={clearListFilters}>Clear filters</Button>
+                <Button variant="accent" onPress={close}>Done</Button>
+              </ButtonGroup>
+            </>
+          )}
+          </Dialog>
+        </DialogTrigger>
+        {hasActiveFilters && (
+          <span
+            aria-hidden
+            style={{
+              position: 'absolute',
+              top: 3,
+              right: 3,
+              width: 8,
+              height: 8,
+              borderRadius: '50%',
+              backgroundColor: 'var(--spectrum-global-color-blue-500)',
+              border: '2px solid var(--spectrum-global-color-gray-50)',
+              pointerEvents: 'none',
+            }}
+          />
         )}
-      </Dialog>
-    </DialogTrigger>
+      </div>
+    </div>
   ), [
+    viewMode,
+    setViewMode,
+    hasActiveFilters,
     listFilters,
+    setListFilters,
     seriesFilterIds,
     hasEventsWithoutSeries,
     creatorFilterOptions,
     cloudTypeFilterOptions,
     hasEventsWithoutCloudType,
+    hasEventsWithoutLocale,
     series,
     clearListFilters,
   ])
@@ -1064,6 +1130,49 @@ export const EventsDashboard: React.FC<EventsDashboardProps> = () => {
     )
   }, [canWriteEvent, handleCreateEvent, eventTypeOptions])
 
+  /**
+   * Renders the event detail Popover for calendar chips.
+   * Closes over enrichment maps, formatters, and handleMenuAction so chips
+   * don't need to know about those dependencies.
+   */
+  const renderEventPopover = useCallback(
+    (
+      item: EventDashboardItem,
+      triggerRef: React.RefObject<HTMLDivElement | null>,
+      isOpen: boolean,
+      onOpenChange: (open: boolean) => void
+    ) => {
+      const seriesInfo = item.seriesId ? series.get(item.seriesId) : undefined
+      const seriesName = seriesInfo?.seriesName
+      const venueInfo = venues.get(item.eventId)
+      const venueName = venueInfo?.venueName
+      const historyInfo = history.get(item.eventId)
+      const creatorName = historyInfo?.creator?.name || historyInfo?.creator?.email
+      return (
+        <Popover
+          triggerRef={triggerRef as React.RefObject<Element | null>}
+          isOpen={isOpen}
+          onOpenChange={onOpenChange}
+          placement="bottom"
+        >
+          <EventPopoverContent
+            item={item}
+            seriesName={seriesName}
+            venueName={venueName}
+            creatorName={creatorName}
+            formattedDate={formatLocalDate(item.localStartDate)}
+            formattedModified={formatDate(item.modificationTime)}
+            canWriteEvent={canWriteEvent}
+            canDeleteEvent={canDeleteEvent}
+            onAction={handleMenuAction}
+            onClose={() => onOpenChange(false)}
+          />
+        </Popover>
+      )
+    },
+    [series, venues, history, formatLocalDate, formatDate, canWriteEvent, canDeleteEvent, handleMenuAction]
+  )
+
   return (
     <>
       <div data-testid="events-dashboard" className={style({padding: 32})}>
@@ -1077,13 +1186,25 @@ export const EventsDashboard: React.FC<EventsDashboardProps> = () => {
           onVisibleItemsChange={handleVisibleEventsChange}
           onRefresh={loadEventsData}
           createButton={createEventButton}
-          toolbarEnd={eventsFilterToolbar}
+          toolbarEnd={toolbarEndContent}
           emptyStateIllustration={<CalendarIllustration aria-hidden />}
           emptyStateTitle="No Events Found"
           emptyStateDescription="Get started by creating your first event"
           dataTableTestIds={EVENTS_DASHBOARD_TABLE_TEST_IDS}
           searchPlaceholder="Search events..."
           searchKeys={EVENTS_SEARCH_KEYS}
+          renderBody={viewMode === 'calendar'
+            ? (data) => (
+                <EventCalendar
+                  events={data}
+                  thumbnails={thumbnails}
+                  loadingThumbnails={loadingThumbnails}
+                  onMonthEventIds={updateVisibleEventIds}
+                  renderEventPopover={renderEventPopover}
+                />
+              )
+            : undefined
+          }
         />
       </div>
 
@@ -1106,6 +1227,31 @@ export const EventsDashboard: React.FC<EventsDashboardProps> = () => {
         onClose={() => setCloneItem(null)}
         onCloned={loadEventsData}
       />
+
+      {/* Publish / Unpublish Confirmation Dialog */}
+      <DialogTrigger
+        isOpen={!!itemToPublish}
+        onOpenChange={(isOpen) => !isOpen && setItemToPublish(null)}
+      >
+        <div style={{ display: 'none' }} />
+        <AlertDialog
+          title={itemToPublish?.published ? 'Unpublish Event' : 'Publish Event'}
+          primaryActionLabel={itemToPublish?.published ? 'Unpublish' : 'Publish'}
+          cancelLabel="Cancel"
+          onPrimaryAction={() => {
+            if (itemToPublish) {
+              handlePublishEvent(itemToPublish)
+            }
+          }}
+          onCancel={() => setItemToPublish(null)}
+          isPrimaryActionDisabled={!!actionInProgress}
+        >
+          {itemToPublish?.published
+            ? <>Are you sure you want to unpublish <strong>{itemToPublish?.eventName}</strong>? The event will be removed from public view.</>
+            : <>Are you sure you want to publish <strong>{itemToPublish?.eventName}</strong>? The event will become publicly visible.</>}
+        </AlertDialog>
+      </DialogTrigger>
+
 
       {/* Delete Confirmation Dialog */}
       <DialogTrigger

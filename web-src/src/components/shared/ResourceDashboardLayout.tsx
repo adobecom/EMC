@@ -64,6 +64,12 @@ interface ResourceDashboardLayoutProps<T> {
   onDebouncedQueryChange?: (query: string) => void
   /** When true and the debounced query is non-empty, show the same searching state as debounce (e.g. async prefetch). */
   searchLoading?: boolean
+  /**
+   * When provided, replaces the DataTable body region with custom content while keeping the toolbar
+   * (search, refresh, create, toolbarEnd) and search debounce/spinner fully functional.
+   * The search-filtered data and active debounced query are passed in so alternate views stay in sync.
+   */
+  renderBody?: (filteredData: T[], debouncedQuery: string) => React.ReactNode
 }
 
 export function ResourceDashboardLayout<T extends Record<string, any>>({
@@ -96,6 +102,7 @@ export function ResourceDashboardLayout<T extends Record<string, any>>({
   isRowExpandable,
   onDebouncedQueryChange,
   searchLoading = false,
+  renderBody,
 }: ResourceDashboardLayoutProps<T>): React.ReactElement {
   const [inputValue, setInputValue] = useState('')
   const [debouncedQuery, setDebouncedQuery] = useState('')
@@ -252,13 +259,17 @@ export function ResourceDashboardLayout<T extends Record<string, any>>({
           </div>
         </div>
 
-        {/* Table — min height so empty IllustratedMessage centers in the band */}
+        {/* Body — min height so empty IllustratedMessage centers in the band */}
         <div className={style({ flex: 1, minHeight: '[480px]', display: 'flex', flexDirection: 'column' })}>
           {showSearchSpinner ? (
             <div
               className={`${style({ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '[100%]' })} fade-in`}
             >
               <LoadingSpinner message="Searching..." />
+            </div>
+          ) : renderBody ? (
+            <div className={`${style({ flex: 1, display: 'flex', flexDirection: 'column', minHeight: '[100%]' })} fade-in`}>
+              {renderBody(filteredData, debouncedQuery)}
             </div>
           ) : (
             <div className={`${style({ flex: 1, display: 'flex', flexDirection: 'column', minHeight: '[100%]' })} fade-in`}>

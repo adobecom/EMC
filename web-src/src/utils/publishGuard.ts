@@ -69,9 +69,6 @@ export function validateForPublish({ formData, hasVenue }: PublishGuardInput): P
   for (const cfg of configs) {
     if (!cfg.isRequired) continue
 
-    // Boolean attributes always have a value (defaults to false), skip
-    if (cfg.inputType === 'boolean') continue
-
     const hasValue = customValues.some(
       v => v.attributeId === cfg.attributeId && v.value?.trim() !== ''
     )

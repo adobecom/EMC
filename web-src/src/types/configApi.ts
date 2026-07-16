@@ -16,17 +16,23 @@
 
 export type ConfigType = 'rsvp' | 'locales' | 'customAttributes'
 
-export type RsvpFieldType = 'text' | 'email' | 'phone' | 'select' | 'multi-select'
+export type RsvpFieldType = 'text' | 'email' | 'phone' | 'select' | 'checkbox'
 
-export type RsvpDisplayAs = 'dropdown' | 'radio' | 'checkbox' | ''
+/** Render-style hint for `select`/`checkbox` fields. ESP's ScopeConfigRsvpField
+ *  already stores this as a free-form string (openapi.json) — no BE change needed.
+ *  `select` fields use 'dropdown' (default) | 'radio'; `checkbox` fields use
+ *  'checkbox' (default, flat checkbox list) | 'dropdown' (compact multi-select
+ *  dropdown widget). The attendee-facing renderer (event-libs' events-form.js)
+ *  remaps its dispatch type based on this value. */
+export type RsvpDisplayAs = 'dropdown' | 'radio' | 'checkbox'
 
-export type CustomAttributeInputType = 'text' | 'boolean' | 'single-select' | 'multi-select'
+export type CustomAttributeInputType = 'text' | 'single-select' | 'multi-select'
 
 // ============================================================================
 // RSVP Form Field Models
 // ============================================================================
 
-/** A single option in a select/multi-select RSVP field.
+/** A single option in a select/checkbox RSVP field.
  *  `value` is the locale-independent DB key; `label` is the display text shown to users. */
 export interface RsvpOption {
   value: string
@@ -40,9 +46,8 @@ export interface RsvpFormField {
   type: RsvpFieldType
   required: boolean
   options: RsvpOption[]
-  rules: string
   default: string
-  displayAs: RsvpDisplayAs
+  displayAs?: RsvpDisplayAs
 }
 
 /** Partial RSVP field for localization overrides (only translatable properties).
@@ -118,14 +123,14 @@ export const hasAttributesSlice = (c: ScopeConfig | null | undefined): c is Cust
 // ============================================================================
 
 export interface CustomAttributeValue {
-  valueId: string
+  valueId?: string
   value: string
   label: string
   ordinal?: number
 }
 
 export interface CustomAttributeConfig {
-  attributeId: string
+  attributeId?: string
   label?: string
   name: string
   inputType: CustomAttributeInputType

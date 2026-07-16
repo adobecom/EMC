@@ -8,7 +8,6 @@ import {
   Heading,
   Divider,
   TextField,
-  Switch,
   Picker,
   PickerItem,
   Button,
@@ -20,7 +19,6 @@ import Add from '@react-spectrum/s2/icons/Add'
 import RemoveCircle from '@react-spectrum/s2/icons/RemoveCircle'
 import { HeadingWithTooltip, FormCard } from '../../components/shared'
 import { useEventFormComponent } from '../../hooks/useEventFormComponent'
-import { useGroup } from '../../contexts/GroupContext'
 import { cachedApi } from '../../services/api'
 import { hasAttributesSlice } from '../../types/configApi'
 import type { CustomAttributeConfig, CustomAttributeValue } from '../../types/configApi'
@@ -45,29 +43,29 @@ const MultiSelectRepeater: React.FC<MultiSelectRepeaterProps> = ({ attr, values,
   const sortedOptions = attr.values.slice().sort((a, b) => (a.ordinal ?? 0) - (b.ordinal ?? 0))
 
   const rowsFromValues = (vals: EventCustomAttributeValue[]): RepeaterRow[] =>
-    vals.map((v, i) => ({ id: `row-${attr.attributeId}-${i}-${v.value}`, value: v.value }))
+    vals.map((v, i) => ({ id: `row-${attr.attributeId}-${i}-${v.valueId}`, value: v.valueId }))
 
   const [rows, setRows] = useState<RepeaterRow[]>(() => rowsFromValues(values))
 
   // Sync from external changes (e.g., form load) without re-triggering on local updates
-  const prevValuesRef = useRef<string>(JSON.stringify(values.map(v => v.value)))
+  const prevValuesRef = useRef<string>(JSON.stringify(values.map(v => v.valueId)))
   const localUpdateRef = useRef(false)
 
   useEffect(() => {
     if (localUpdateRef.current) {
       localUpdateRef.current = false
-      prevValuesRef.current = JSON.stringify(values.map(v => v.value))
+      prevValuesRef.current = JSON.stringify(values.map(v => v.valueId))
       return
     }
-    const serialized = JSON.stringify(values.map(v => v.value))
+    const serialized = JSON.stringify(values.map(v => v.valueId))
     if (serialized === prevValuesRef.current) return
     setRows(rowsFromValues(values))
     prevValuesRef.current = serialized
   }, [values]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  const getAvailableOptions = (currentRowValue: string): CustomAttributeValue[] => {
-    const otherSelected = rows.map(r => r.value).filter(v => v && v !== currentRowValue)
-    return sortedOptions.filter(opt => !otherSelected.includes(opt.value))
+  const getAvailableOptions = (currentRowValueId: string): CustomAttributeValue[] => {
+    const otherSelected = rows.map(r => r.value).filter(v => v && v !== currentRowValueId)
+    return sortedOptions.filter(opt => !otherSelected.includes(opt.valueId ?? ''))
   }
 
   const allOptionsUsed = rows.filter(r => r.value).length >= sortedOptions.length
@@ -106,7 +104,7 @@ const MultiSelectRepeater: React.FC<MultiSelectRepeaterProps> = ({ attr, values,
             styles={style({ flexGrow: 1 })}
           >
             {getAvailableOptions(row.value).map(opt => (
-              <PickerItem key={opt.value} id={opt.value}>{opt.label || opt.value}</PickerItem>
+              <PickerItem key={opt.valueId} id={opt.valueId}>{opt.label || opt.value}</PickerItem>
             ))}
           </Picker>
           <ActionButton
@@ -138,38 +136,44 @@ const MultiSelectRepeater: React.FC<MultiSelectRepeaterProps> = ({ attr, values,
 // ============================================================================
 
 export const CustomAttributesComponent: React.FC = () => {
-  const { formData, updateFormData } = useEventFormComponent({
+  const { formData, updateFormData, eventId } = useEventFormComponent({
     componentId: 'customAttributes',
   })
 
-  const { activeGroup } = useGroup()
   const [attributes, setAttributes] = useState<CustomAttributeConfig[]>([])
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    const scopeId = activeGroup?.scopeId
-    if (!scopeId) {
+    if (!eventId) {
       setLoading(false)
       return
     }
 
+    let cancelled = false
+
     const load = async () => {
       setLoading(true)
       try {
-        const result = await cachedApi.getConfig(scopeId)
-        if (result !== null && !('error' in result)) {
-          const enabled = (hasAttributesSlice(result) ? result.customAttributes : [])
-            .filter(a => a.enabled !== false)
+        const result = await cachedApi.getEventConfigs(eventId)
+        if (cancelled) return
+        if (!('error' in result)) {
+          const config = result.find(c => hasAttributesSlice(c)) ?? null
+          const attrs = config && hasAttributesSlice(config) ? config.customAttributes : []
+          const enabled = attrs.filter(a => a.enabled !== false)
           setAttributes(enabled)
           updateFormData({ _customAttributeConfigs: enabled })
         }
       } finally {
-        setLoading(false)
+        if (!cancelled) setLoading(false)
       }
     }
 
     load()
-  }, [activeGroup?.scopeId])
+
+    return () => {
+      cancelled = true
+    }
+  }, [eventId])
 
   // ============================================================================
   // VALUE HELPERS
@@ -180,11 +184,8 @@ export const CustomAttributesComponent: React.FC = () => {
   const getTextValue = (attr: CustomAttributeConfig): string =>
     currentValues.find(v => v.attributeId === attr.attributeId)?.value ?? ''
 
-  const getBoolValue = (attr: CustomAttributeConfig): boolean =>
-    currentValues.find(v => v.attributeId === attr.attributeId)?.value === 'true'
-
   const getSingleSelectValue = (attr: CustomAttributeConfig): string =>
-    currentValues.find(v => v.attributeId === attr.attributeId)?.value ?? ''
+    currentValues.find(v => v.attributeId === attr.attributeId)?.valueId ?? ''
 
   const getMultiSelectValues = (attr: CustomAttributeConfig): EventCustomAttributeValue[] =>
     currentValues.filter(v => v.attributeId === attr.attributeId)
@@ -194,38 +195,28 @@ export const CustomAttributesComponent: React.FC = () => {
   // ============================================================================
 
   const updateTextValue = (attr: CustomAttributeConfig, value: string) => {
-    const others = currentValues.filter(v => v.attributeId !== attr.attributeId)
+    const others = currentValues.filter(v => v.attributeId !== attr.attributeId!)
     const entry: EventCustomAttributeValue[] = value
-      ? [{ attributeId: attr.attributeId, attribute: attr.name, valueId: '', value }]
+      ? [{ attributeId: attr.attributeId!, attribute: attr.name, valueId: '', value }]
       : []
     updateFormData({ customAttributes: [...others, ...entry] })
   }
 
-  const updateBoolValue = (attr: CustomAttributeConfig, value: boolean) => {
-    const others = currentValues.filter(v => v.attributeId !== attr.attributeId)
-    updateFormData({
-      customAttributes: [
-        ...others,
-        { attributeId: attr.attributeId, attribute: attr.name, valueId: '', value: String(value) },
-      ],
-    })
-  }
-
-  const updateSingleSelectValue = (attr: CustomAttributeConfig, selectedValue: string) => {
-    const others = currentValues.filter(v => v.attributeId !== attr.attributeId)
-    if (!selectedValue) {
+  const updateSingleSelectValue = (attr: CustomAttributeConfig, selectedValueId: string) => {
+    const others = currentValues.filter(v => v.attributeId !== attr.attributeId!)
+    if (!selectedValueId) {
       updateFormData({ customAttributes: others })
       return
     }
-    const opt = attr.values.find(v => v.value === selectedValue)
+    const opt = attr.values.find(v => v.valueId === selectedValueId)
     if (!opt) return
     updateFormData({
       customAttributes: [
         ...others,
         {
-          attributeId: attr.attributeId,
+          attributeId: attr.attributeId!,
           attribute: attr.name,
-          valueId: opt.valueId,
+          valueId: opt.valueId!,
           value: opt.value,
           ordinal: opt.ordinal,
         },
@@ -233,15 +224,15 @@ export const CustomAttributesComponent: React.FC = () => {
     })
   }
 
-  const updateMultiSelectValue = useCallback((attr: CustomAttributeConfig, selectedValues: string[]) => {
-    const others = currentValues.filter(v => v.attributeId !== attr.attributeId)
-    const newEntries: EventCustomAttributeValue[] = selectedValues.map((sv, i) => {
-      const opt = attr.values.find(v => v.value === sv)
+  const updateMultiSelectValue = useCallback((attr: CustomAttributeConfig, selectedValueIds: string[]) => {
+    const others = currentValues.filter(v => v.attributeId !== attr.attributeId!)
+    const newEntries: EventCustomAttributeValue[] = selectedValueIds.map((svId, i) => {
+      const opt = attr.values.find(v => v.valueId === svId)
       return {
-        attributeId: attr.attributeId,
+        attributeId: attr.attributeId!,
         attribute: attr.name,
-        valueId: opt?.valueId ?? '',
-        value: sv,
+        valueId: svId,
+        value: opt?.value ?? '',
         ordinal: i,
       }
     })
@@ -264,16 +255,6 @@ export const CustomAttributesComponent: React.FC = () => {
           />
         )
 
-      case 'boolean':
-        return (
-          <Switch
-            isSelected={getBoolValue(attr)}
-            onChange={(v) => updateBoolValue(attr, v)}
-          >
-            {attr.name}
-          </Switch>
-        )
-
       case 'single-select':
         return (
           <Picker
@@ -287,7 +268,7 @@ export const CustomAttributesComponent: React.FC = () => {
               .slice()
               .sort((a, b) => (a.ordinal ?? 0) - (b.ordinal ?? 0))
               .map(v => (
-                <PickerItem key={v.value} id={v.value}>{v.label || v.value}</PickerItem>
+                <PickerItem key={v.valueId} id={v.valueId}>{v.label || v.value}</PickerItem>
               ))
             }
           </Picker>
