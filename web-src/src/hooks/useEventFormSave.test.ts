@@ -29,6 +29,11 @@ describe('EVENT_DATA_FILTER field configurations', () => {
   it('marks inviteOnly as non-localizable', () => {
     expect(EVENT_DATA_FILTER.inviteOnly.localizable).toBe(false)
   })
+
+  it('marks published as non-submittable — read-only, set only via the action endpoints', () => {
+    expect(EVENT_DATA_FILTER.published).toBeDefined()
+    expect(EVENT_DATA_FILTER.published.submittable).toBe(false)
+  })
 })
 
 describe('filterEventData submission mode', () => {
@@ -57,6 +62,11 @@ describe('filterEventData submission mode', () => {
     expect(result.cloudType).toBe('CreativeCloud')
     expect(result.seriesId).toBe('series-123')
     expect(result.enTitle).toBe('My Event')
+  })
+
+  it('strips published — read-only, never sent by the client', () => {
+    const result = filterEventData(sampleEvent, 'submission')
+    expect(result.published).toBeUndefined()
   })
 })
 

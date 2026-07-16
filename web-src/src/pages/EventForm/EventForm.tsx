@@ -54,8 +54,10 @@ import { EventFormProvider, useEventFormContext, useToast, useGroup } from '../.
 import { useEventFormSave } from '../../hooks/useEventFormSave'
 import { useCustomDetailPagePath } from '../../hooks/useCustomDetailPagePath'
 import { COLORS, Z_INDEX, TYPOGRAPHY, SURFACES } from '../../styles/designSystem'
-import { ENVIRONMENTS, getCurrentEnvironment, getEspEnvParam } from '../../config/constants'
+import { ENVIRONMENTS, getCurrentEnvironment } from '../../config/constants'
 import { validateForPublish, PublishGuardResult } from '../../utils/publishGuard'
+import { getEventPageUrls } from '../../utils/eventPageUrls'
+import { hasDomainSlice, DomainSlice } from '../../types/configApi'
 
 // ============================================================================
 // FORMAT SELECTION OVERLAY
@@ -79,8 +81,9 @@ const EVENT_FORM_WIZARD_TEST_IDS = {
   step: (stepId: string) => `event-form-step-${stepId}`,
   progress: 'event-form-progress',
   backButton: 'event-form-back-button',
-  previewPre: 'event-form-preview-pre',
-  previewPost: 'event-form-preview-post',
+  updatePageButton: 'event-form-update-page-button',
+  previewPage: 'event-form-preview-page',
+  viewPublishedPage: 'event-form-view-published-page',
   publishButton: 'event-form-publish-button',
   saveButton: 'event-form-save-button',
   nextButton: 'event-form-next-button',
@@ -503,7 +506,7 @@ const EventFormInner: React.FC<EventFormInnerProps> = ({ ims: _ims }) => {
   isDirtyRef.current = isDirty
   
   // Get save hook
-  const { publishEvent, saveDraft, isSaving, saveError } = useEventFormSave()
+  const { publishEvent, previewEvent, saveDraft, isSaving, saveError } = useEventFormSave()
 
   // Custom URL pattern hook
   const { getDetailPagePathForSave, shouldRunCustomDetailPagePathFlow } = useCustomDetailPagePath()
@@ -549,6 +552,26 @@ const EventFormInner: React.FC<EventFormInnerProps> = ({ ims: _ims }) => {
     }
   }, [setSeriesCustomTagsUrl])
 
+  // Scope's prod/stage domain config, used to build the Preview/View-published
+  // page links (see handlePreview/handleViewPublished below). Loaded once per
+  // series so the Preview/Publish buttons can synchronously window.open on
+  // click without an async gap that popup blockers would flag.
+  const [scopeDomainConfig, setScopeDomainConfig] = useState<DomainSlice | null>(null)
+
+  const loadSeriesDomainConfig = useCallback(async (seriesIdToLoad: string) => {
+    if (!seriesIdToLoad) {
+      setScopeDomainConfig(null)
+      return
+    }
+    try {
+      const seriesConfigs = await cachedApi.getSeriesConfigs(seriesIdToLoad)
+      setScopeDomainConfig('error' in seriesConfigs ? null : (seriesConfigs.find(hasDomainSlice)?.domain ?? null))
+    } catch (err) {
+      console.warn(`Failed to load domain config for series ${seriesIdToLoad}:`, err)
+      setScopeDomainConfig(null)
+    }
+  }, [])
+
   const loadEvent = useCallback(async (eventIdToLoad: string) => {
     setLoading(true)
     try {
@@ -570,7 +593,10 @@ const EventFormInner: React.FC<EventFormInnerProps> = ({ ims: _ims }) => {
       setLocale(eventLocale)
       const mappedData = mapApiResponseToFormData(response as EventApiResponse, eventLocale)
       populateFormDataFromResponse(mappedData)
-      if (response.seriesId) loadSeriesCustomTagsUrl(response.seriesId)
+      if (response.seriesId) {
+        loadSeriesCustomTagsUrl(response.seriesId)
+        loadSeriesDomainConfig(response.seriesId)
+      }
     } catch (err) {
       console.error('Failed to load event:', err)
       setLoadError('Failed to load event data')
@@ -586,6 +612,7 @@ const EventFormInner: React.FC<EventFormInnerProps> = ({ ims: _ims }) => {
     setLocale,
     populateFormDataFromResponse,
     loadSeriesCustomTagsUrl,
+    loadSeriesDomainConfig,
   ])
 
   const reloadAfterGroupChange = useCallback(async () => {
@@ -681,7 +708,11 @@ const EventFormInner: React.FC<EventFormInnerProps> = ({ ims: _ims }) => {
     setSeriesId(seriesId)
     setFormatConfirmed(true)
     loadSeriesCustomTagsUrl(seriesId)
-  }, [updateFormData, setSeriesId, setFormatConfirmed, loadSeriesCustomTagsUrl])
+    // Load domain config as soon as the series is known (before the first save), so it's
+    // already available by the time hasEventId flips true and Preview/Update-page render —
+    // otherwise there'd be a brief window where Preview falls back to the prod host.
+    loadSeriesDomainConfig(seriesId)
+  }, [updateFormData, setSeriesId, setFormatConfirmed, loadSeriesCustomTagsUrl, loadSeriesDomainConfig])
   
   /**
    * Handle cancel from the format selection overlay — go back to dashboard
@@ -763,6 +794,20 @@ const EventFormInner: React.FC<EventFormInnerProps> = ({ ims: _ims }) => {
     },
     [publishEvent, persistToStorage, setPublished, navigate, toast, isPublished, isEditMode]
   )
+
+  /** Saves the form, then (re)generates the staged preview page — backs the "Update page" button. */
+  const runUpdatePage = useCallback(async () => {
+    persistToStorage()
+    await previewEvent({
+      onSuccess: () => {
+        toast.success('Page updated!', { duration: 3000 })
+      },
+      onError: (error) => {
+        console.error('Failed to update page:', error)
+        toast.error('Failed to update page')
+      },
+    })
+  }, [previewEvent, persistToStorage, toast])
 
   const requestPublishAfterUrlResolved = useCallback(
     async (extraPayload?: Record<string, any>) => {
@@ -878,31 +923,20 @@ const EventFormInner: React.FC<EventFormInnerProps> = ({ ims: _ims }) => {
   }, [navigate])
   
   /**
-   * Handle preview requests
-   * Uses detailPagePath from event response with preview parameters
+   * Opens the staged (preview) version of the event's detail page in a new tab.
+   * EMC doesn't track pre-event/post-event page state — the marketer traverses
+   * event lifecycle on the page itself via other tooling.
    */
-  const handlePreview = useCallback((previewType: 'pre-event' | 'post-event') => {
-    const eventResponse = state.eventDataResp
-    
-    if (!eventResponse?.detailPagePath) {
-      return
-    }
-    
-    const localStartTimeMillis = eventResponse.localStartTimeMillis || 0
-    // Pre-event: timing before event start, Post-event: timing after event start
-    const timing = previewType === 'pre-event' 
-      ? localStartTimeMillis - 10 
-      : localStartTimeMillis + 10
-    
-    const previewUrl = new URL(eventResponse.detailPagePath)
-    previewUrl.searchParams.set('timing', String(timing))
-    const espenv = getEspEnvParam()
-    if (espenv) {
-      previewUrl.searchParams.set('espenv', espenv)
-    }
-    
-    window.open(previewUrl.toString(), '_blank')
-  }, [state.eventDataResp])
+  const handlePreview = useCallback(() => {
+    const { previewUrl } = getEventPageUrls(state.eventDataResp?.detailPagePath, scopeDomainConfig)
+    if (previewUrl) window.open(previewUrl, '_blank')
+  }, [state.eventDataResp, scopeDomainConfig])
+
+  /** Opens the live (production) version of the event's detail page in a new tab. */
+  const handleViewPublished = useCallback(() => {
+    const { publishedUrl } = getEventPageUrls(state.eventDataResp?.detailPagePath, scopeDomainConfig)
+    if (publishedUrl) window.open(publishedUrl, '_blank')
+  }, [state.eventDataResp, scopeDomainConfig])
 
   
   // ============================================================================
@@ -1098,7 +1132,9 @@ const EventFormInner: React.FC<EventFormInnerProps> = ({ ims: _ims }) => {
         onComplete={handleComplete}
         onSave={handleSave}
         onCancel={handleCancel}
+        onUpdatePage={runUpdatePage}
         onPreview={handlePreview}
+        onViewPublished={handleViewPublished}
         isSubmitting={isSaving}
         showSideNav={true}
         hasEventId={!!eventId}
