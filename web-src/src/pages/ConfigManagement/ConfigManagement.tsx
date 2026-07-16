@@ -75,27 +75,31 @@ const SCOPE_TYPE_VARIANTS: Record<ScopeType, 'positive' | 'informative' | 'neutr
 
 const RSVP_FIELD_TYPES: { key: RsvpFieldType; label: string }[] = [
   { key: 'text', label: 'Text' },
-  { key: 'email', label: 'Email' },
-  { key: 'phone', label: 'Phone' },
   { key: 'select', label: 'Select' },
-  { key: 'checkbox', label: 'Checkbox' },
+  { key: 'multi-select', label: 'Multi-select' },
 ]
 
-/** Render-style options for a `select`/`checkbox` RSVP field. The attendee-facing
- *  renderer (event-libs' events-form.js) remaps its dispatch type based on this
- *  value — see RsvpDisplayAs doc comment in types/configApi.ts.
- *  Note: `'dropdown'` means different widgets per type (single-select dropdown
- *  for `select`, multi-select dropdown for `checkbox`) — switching `type` while
- *  `displayAs` is `'dropdown'` intentionally carries the value over rather than
- *  resetting, since it's valid for both. */
+/** Concrete widget/flavor options for a field's `type` substrate. The
+ *  attendee-facing renderer (event-libs' events-form.js and the Spectrum 2
+ *  rsvp-form block) remaps its dispatch type based on this value — see
+ *  RsvpDisplayAs doc comment in types/configApi.ts. */
 function getDisplayAsOptions(type: RsvpFieldType): { key: RsvpDisplayAs; label: string }[] {
+  if (type === 'text') return [
+    { key: 'text', label: 'Text' },
+    { key: 'email', label: 'Email' },
+    { key: 'phone', label: 'Phone' },
+    { key: 'number', label: 'Number' },
+    { key: 'date', label: 'Date' },
+    { key: 'url', label: 'URL' },
+    { key: 'text-area', label: 'Text Area' },
+  ]
   if (type === 'select') return [
-    { key: 'dropdown', label: 'Dropdown' },
+    { key: 'picker', label: 'Picker' },
     { key: 'radio', label: 'Radio' },
   ]
-  if (type === 'checkbox') return [
+  if (type === 'multi-select') return [
     { key: 'checkbox', label: 'Checkbox' },
-    { key: 'dropdown', label: 'Multi-select dropdown' },
+    { key: 'combobox', label: 'Combobox' },
   ]
   return []
 }
@@ -907,7 +911,7 @@ export const ConfigManagement: React.FC<ConfigManagementProps> = () => {
                         </thead>
                         <tbody>
                           {rsvpFieldsForTable.map((item) => {
-                            const isExpandable = item.type === 'select' || item.type === 'checkbox'
+                            const isExpandable = item.type === 'select' || item.type === 'multi-select'
                             const isExpanded = expandedFieldKeys.has(item._key)
                             const localeOverride = activeLocale
                               ? rsvpConfig.rsvp?.localizations?.[activeLocale]?.rsvpFormFields?.find(f => f.field === item.field)
@@ -1305,12 +1309,13 @@ export const ConfigManagement: React.FC<ConfigManagementProps> = () => {
                       selectedKey={editingFieldForm.type}
                       onSelectionChange={(key) => setEditingFieldForm(prev => {
                         const newType = key as RsvpFieldType
+                        const isChoiceType = newType === 'select' || newType === 'multi-select'
                         const displayAsOptions = getDisplayAsOptions(newType)
                         const displayAsStillValid = displayAsOptions.some(o => o.key === prev.displayAs)
                         return {
                           ...prev,
                           type: newType,
-                          options: (newType === 'text' || newType === 'email' || newType === 'phone') ? [] : prev.options,
+                          options: isChoiceType ? prev.options : [],
                           displayAs: displayAsStillValid ? prev.displayAs : getDefaultDisplayAs(newType),
                         }
                       })}
@@ -1319,7 +1324,7 @@ export const ConfigManagement: React.FC<ConfigManagementProps> = () => {
                         <PickerItem key={t.key} id={t.key}>{t.label}</PickerItem>
                       ))}
                     </Picker>
-                    {(editingFieldForm.type === 'select' || editingFieldForm.type === 'checkbox') && (
+                    {getDisplayAsOptions(editingFieldForm.type).length > 0 && (
                       <Picker
                         label="Display As"
                         selectedKey={editingFieldForm.displayAs ?? getDefaultDisplayAs(editingFieldForm.type)}
@@ -1337,7 +1342,7 @@ export const ConfigManagement: React.FC<ConfigManagementProps> = () => {
                   >
                     Required
                   </Checkbox>
-                  {(editingFieldForm.type === 'select' || editingFieldForm.type === 'checkbox') && (
+                  {(editingFieldForm.type === 'select' || editingFieldForm.type === 'multi-select') && (
                     <div>
                       <div className={style({ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 })}>
                         <Text UNSAFE_style={{ fontWeight: 600, fontSize: 13 }}>
@@ -1445,7 +1450,7 @@ export const ConfigManagement: React.FC<ConfigManagementProps> = () => {
                     )}
                     <div className={style({ display: 'flex', flexDirection: 'column', gap: 8 })}>
                       {rsvpFormFields.map((field, index) => {
-                        const hasOptions = field.type === 'select' || field.type === 'checkbox'
+                        const hasOptions = field.type === 'select' || field.type === 'multi-select'
                         const isCollapsible = hasOptions
                         const isExpanded = !isCollapsible || expandedRsvpDialogFields.has(index)
                         const toggleExpand = isCollapsible
@@ -1550,12 +1555,13 @@ export const ConfigManagement: React.FC<ConfigManagementProps> = () => {
                                     onSelectionChange={(key) => setRsvpFormFields(prev => {
                                       const copy = [...prev]
                                       const newType = key as RsvpFieldType
+                                      const isChoiceType = newType === 'select' || newType === 'multi-select'
                                       const displayAsOptions = getDisplayAsOptions(newType)
                                       const displayAsStillValid = displayAsOptions.some(o => o.key === copy[index].displayAs)
                                       copy[index] = {
                                         ...copy[index],
                                         type: newType,
-                                        options: (newType === 'text' || newType === 'email' || newType === 'phone') ? [] : copy[index].options,
+                                        options: isChoiceType ? copy[index].options : [],
                                         displayAs: displayAsStillValid ? copy[index].displayAs : getDefaultDisplayAs(newType),
                                       }
                                       return copy
@@ -1565,7 +1571,7 @@ export const ConfigManagement: React.FC<ConfigManagementProps> = () => {
                                       <PickerItem key={t.key} id={t.key}>{t.label}</PickerItem>
                                     ))}
                                   </Picker>
-                                  {(field.type === 'select' || field.type === 'checkbox') && (
+                                  {getDisplayAsOptions(field.type).length > 0 && (
                                     <Picker
                                       label="Display As"
                                       selectedKey={field.displayAs ?? getDefaultDisplayAs(field.type)}
@@ -1593,7 +1599,7 @@ export const ConfigManagement: React.FC<ConfigManagementProps> = () => {
                                     Required
                                   </Checkbox>
                                 </div>
-                                {(field.type === 'select' || field.type === 'checkbox') && (
+                                {(field.type === 'select' || field.type === 'multi-select') && (
                                   <div className={style({ marginTop: 12 })}>
                                     <div className={style({ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 })}>
                                       <Text UNSAFE_style={{ fontWeight: 600, fontSize: 13 }}>
