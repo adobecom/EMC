@@ -20,6 +20,7 @@ export { SeriesDashboard } from './SeriesDashboard'
 export { Registrations } from './Registrations'
 export { SpeakersDashboard } from './SpeakersDashboard'
 export { OverviewDashboard } from './OverviewDashboard'
+export { IntegrationsDashboard, DeliveriesDashboard } from './IntegrationsDashboard'
 
 // Form pages
 export { EventForm } from './EventForm'

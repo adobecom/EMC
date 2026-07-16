@@ -47,6 +47,13 @@ import type {
   ScopeConfig,
   ScopeConfigUpsertBody,
 } from '../types/configApi'
+import type {
+  IntegrationApiResponse,
+  IntegrationSummary,
+  IntegrationWriteBody,
+  PingResult as WebhookPingResult,
+  DeliveryRecord,
+} from '../types/webhookApi'
 
 // ============================================================================
 // TYPES
@@ -2442,6 +2449,121 @@ class ApiService {
       operationName: 'getSeriesConfigs'
     })
   }
+
+  // ============================================================================
+  // WEBHOOK INTEGRATIONS
+  // ============================================================================
+
+  async getIntegrations(scopeId: string): Promise<IntegrationSummary[] | ErrorResponse> {
+    validateString(scopeId, 'scope ID')
+    // The list endpoint returns a lightweight IntegrationSummary (no connection/
+    // conditions/action/timestamps) — fetch by id for the full record.
+    return this.fetchAllPages<IntegrationSummary>({
+      service: 'esp',
+      baseEndpoint: `/v1/scopes/${encodeURIComponent(scopeId)}/integrations`,
+      listKey: 'items',
+      operationName: 'getIntegrations'
+    })
+  }
+
+  async getIntegrationById(scopeId: string, integrationId: string): Promise<IntegrationApiResponse | ErrorResponse> {
+    validateString(scopeId, 'scope ID')
+    validateString(integrationId, 'integration ID')
+    return this.callExternalApi<IntegrationApiResponse>(
+      'esp',
+      `/v1/scopes/${encodeURIComponent(scopeId)}/integrations/${encodeURIComponent(integrationId)}`,
+      'GET',
+      undefined,
+      { operationName: 'getIntegrationById', shouldReturnFullResponse: true }
+    )
+  }
+
+  async createIntegration(scopeId: string, data: IntegrationWriteBody): Promise<IntegrationApiResponse | ErrorResponse> {
+    validateString(scopeId, 'scope ID')
+    validateObject(data, 'integration data')
+    return this.callExternalApi<IntegrationApiResponse>(
+      'esp',
+      `/v1/scopes/${encodeURIComponent(scopeId)}/integrations`,
+      'POST',
+      data,
+      { operationName: 'createIntegration', shouldReturnFullResponse: true }
+    )
+  }
+
+  async updateIntegration(scopeId: string, integrationId: string, data: IntegrationWriteBody): Promise<IntegrationApiResponse | ErrorResponse> {
+    validateString(scopeId, 'scope ID')
+    validateString(integrationId, 'integration ID')
+    validateObject(data, 'integration data')
+    return this.callExternalApi<IntegrationApiResponse>(
+      'esp',
+      `/v1/scopes/${encodeURIComponent(scopeId)}/integrations/${encodeURIComponent(integrationId)}`,
+      'PUT',
+      data,
+      { operationName: 'updateIntegration', shouldReturnFullResponse: true }
+    )
+  }
+
+  async deleteIntegration(scopeId: string, integrationId: string): Promise<SuccessResponse | ErrorResponse> {
+    validateString(scopeId, 'scope ID')
+    validateString(integrationId, 'integration ID')
+    return this.callExternalApi(
+      'esp',
+      `/v1/scopes/${encodeURIComponent(scopeId)}/integrations/${encodeURIComponent(integrationId)}`,
+      'DELETE',
+      undefined,
+      { operationName: 'deleteIntegration' }
+    )
+  }
+
+  async pingIntegration(scopeId: string, integrationId: string): Promise<WebhookPingResult | ErrorResponse> {
+    validateString(scopeId, 'scope ID')
+    validateString(integrationId, 'integration ID')
+    return this.callExternalApi<WebhookPingResult>(
+      'esp',
+      `/v1/scopes/${encodeURIComponent(scopeId)}/integrations/${encodeURIComponent(integrationId)}/actions/ping`,
+      'POST',
+      undefined,
+      { operationName: 'pingIntegration', shouldReturnFullResponse: true }
+    )
+  }
+
+  async getDeliveries(scopeId: string, integrationId: string): Promise<DeliveryRecord[] | ErrorResponse> {
+    validateString(scopeId, 'scope ID')
+    validateString(integrationId, 'integration ID')
+    return this.fetchAllPages<DeliveryRecord>({
+      service: 'esp',
+      baseEndpoint: `/v1/scopes/${encodeURIComponent(scopeId)}/integrations/${encodeURIComponent(integrationId)}/deliveries`,
+      listKey: 'items',
+      baseParams: { 'page-size': '50' },
+      operationName: 'getDeliveries'
+    })
+  }
+
+  async getDeliveryById(scopeId: string, integrationId: string, deliveryId: string): Promise<DeliveryRecord | ErrorResponse> {
+    validateString(scopeId, 'scope ID')
+    validateString(integrationId, 'integration ID')
+    validateString(deliveryId, 'delivery ID')
+    return this.callExternalApi<DeliveryRecord>(
+      'esp',
+      `/v1/scopes/${encodeURIComponent(scopeId)}/integrations/${encodeURIComponent(integrationId)}/deliveries/${encodeURIComponent(deliveryId)}`,
+      'GET',
+      undefined,
+      { operationName: 'getDeliveryById', shouldReturnFullResponse: true }
+    )
+  }
+
+  async redeliverDelivery(scopeId: string, integrationId: string, deliveryId: string): Promise<DeliveryRecord | ErrorResponse> {
+    validateString(scopeId, 'scope ID')
+    validateString(integrationId, 'integration ID')
+    validateString(deliveryId, 'delivery ID')
+    return this.callExternalApi<DeliveryRecord>(
+      'esp',
+      `/v1/scopes/${encodeURIComponent(scopeId)}/integrations/${encodeURIComponent(integrationId)}/deliveries/${encodeURIComponent(deliveryId)}/actions/redeliver`,
+      'POST',
+      undefined,
+      { operationName: 'redeliverDelivery', shouldReturnFullResponse: true }
+    )
+  }
 }
 
 // ============================================================================
@@ -2729,6 +2851,48 @@ export const cachedApi = {
     const result = await apiService.upsertConfig(scopeId, data)
     apiCache.invalidate(scopeId)
     apiCache.invalidate('getConfig')
+    return result
+  },
+
+  // === WEBHOOK INTEGRATIONS (GET Operations - Cached) ===
+  getIntegrations: (scopeId: string) =>
+    apiCache.get((id: string) => apiService.getIntegrations(id), scopeId),
+  getIntegrationById: (scopeId: string, integrationId: string) =>
+    apiCache.get((sId: string, iId: string) => apiService.getIntegrationById(sId, iId), scopeId, integrationId),
+  getDeliveries: (scopeId: string, integrationId: string) =>
+    apiCache.get((sId: string, iId: string) => apiService.getDeliveries(sId, iId), scopeId, integrationId),
+  getDeliveryById: (scopeId: string, integrationId: string, deliveryId: string) =>
+    apiCache.get((sId: string, iId: string, dId: string) => apiService.getDeliveryById(sId, iId, dId), scopeId, integrationId, deliveryId),
+
+  // Webhook Integration Mutations
+  async createIntegration(scopeId: string, data: IntegrationWriteBody) {
+    const result = await apiService.createIntegration(scopeId, data)
+    apiCache.invalidate(scopeId)
+    apiCache.invalidate('getIntegrations')
+    return result
+  },
+  async updateIntegration(scopeId: string, integrationId: string, data: IntegrationWriteBody) {
+    const result = await apiService.updateIntegration(scopeId, integrationId, data)
+    apiCache.invalidate(scopeId)
+    apiCache.invalidate(integrationId)
+    apiCache.invalidate('getIntegrations')
+    return result
+  },
+  async deleteIntegration(scopeId: string, integrationId: string) {
+    const result = await apiService.deleteIntegration(scopeId, integrationId)
+    apiCache.invalidate(scopeId)
+    apiCache.invalidate(integrationId)
+    apiCache.invalidate('getIntegrations')
+    return result
+  },
+  async pingIntegration(scopeId: string, integrationId: string) {
+    // Read-only diagnostic call — nothing to invalidate.
+    return apiService.pingIntegration(scopeId, integrationId)
+  },
+  async redeliverDelivery(scopeId: string, integrationId: string, deliveryId: string) {
+    const result = await apiService.redeliverDelivery(scopeId, integrationId, deliveryId)
+    apiCache.invalidate(integrationId)
+    apiCache.invalidate('getDeliveries')
     return result
   },
 
