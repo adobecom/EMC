@@ -29,6 +29,7 @@ import {
   mergeOptionSelectionWithField,
   defaultOptionSelectionFromField,
   isSelectableField,
+  normalizeRsvpField,
 } from '../../utils/rsvpFieldDefinitions'
 
 type RsvpFieldEntry = { field: string; required?: boolean; options?: string[] }
@@ -103,7 +104,7 @@ export const RegistrationFieldsComponent: React.FC<RegistrationFieldsComponentPr
           if (cancelled) return
           if (!('error' in result)) {
             const config = result.find(c => hasRsvpSlice(c)) ?? null
-            const scopeFields = config && hasRsvpSlice(config) ? config.rsvp.rsvpFormFields : []
+            const scopeFields = config && hasRsvpSlice(config) ? config.rsvp.rsvpFormFields.map(normalizeRsvpField) : []
             if (scopeFields.length > 0) {
               nextFields = scopeFields
               mode = 'scope'

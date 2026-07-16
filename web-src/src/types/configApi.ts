@@ -16,7 +16,7 @@
 
 export type ConfigType = 'rsvp' | 'locales' | 'customAttributes'
 
-export type RsvpFieldType = 'text' | 'email' | 'phone' | 'select' | 'checkbox'
+export type RsvpFieldType = 'text' | 'email' | 'phone' | 'number' | 'date' | 'url' | 'text-area' | 'select' | 'checkbox'
 
 /** Render-style hint for `select`/`checkbox` fields. ESP's ScopeConfigRsvpField
  *  already stores this as a free-form string (openapi.json) — no BE change needed.

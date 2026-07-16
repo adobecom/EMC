@@ -62,6 +62,7 @@ import { hasRsvpSlice, hasLocalesSlice, hasAttributesSlice } from '../../types/c
 import { BlurredLoadingOverlay } from '../../components/shared'
 import { useHasPermission } from '../../hooks/useHasPermission'
 import { SUPPORTED_SPEAKER_LOCALES, SPEAKER_LOCALE_LABELS } from '../../config/localeMapping'
+import { normalizeRsvpField } from '../../utils/rsvpFieldDefinitions'
 
 interface ConfigManagementProps {
   ims: IMS
@@ -77,6 +78,10 @@ const RSVP_FIELD_TYPES: { key: RsvpFieldType; label: string }[] = [
   { key: 'text', label: 'Text' },
   { key: 'email', label: 'Email' },
   { key: 'phone', label: 'Phone' },
+  { key: 'number', label: 'Number' },
+  { key: 'date', label: 'Date' },
+  { key: 'url', label: 'URL' },
+  { key: 'text-area', label: 'Text Area' },
   { key: 'select', label: 'Select' },
   { key: 'checkbox', label: 'Checkbox' },
 ]
@@ -261,8 +266,13 @@ export const ConfigManagement: React.FC<ConfigManagementProps> = () => {
   // single config; saves PUT to scopeConfig.configId when one exists.
   const scopeConfig = useMemo<ScopeConfig | null>(() => configs[0] || null, [configs])
 
+  // Coerce legacy stored field types (e.g. multi-select) to the current lean
+  // vocabulary as soon as the config is loaded, so every consumer below —
+  // the table view, edit dialog, and save/delete — sees normalized data.
   const rsvpConfig = useMemo<RsvpScopeConfig | null>(
-    () => (hasRsvpSlice(scopeConfig) ? scopeConfig : null),
+    () => (hasRsvpSlice(scopeConfig)
+      ? { ...scopeConfig, rsvp: { ...scopeConfig.rsvp, rsvpFormFields: scopeConfig.rsvp.rsvpFormFields.map(normalizeRsvpField) } }
+      : null),
     [scopeConfig]
   )
   const localesConfig = useMemo<LocalesScopeConfig | null>(
@@ -1305,12 +1315,13 @@ export const ConfigManagement: React.FC<ConfigManagementProps> = () => {
                       selectedKey={editingFieldForm.type}
                       onSelectionChange={(key) => setEditingFieldForm(prev => {
                         const newType = key as RsvpFieldType
+                        const isChoiceType = newType === 'select' || newType === 'checkbox'
                         const displayAsOptions = getDisplayAsOptions(newType)
                         const displayAsStillValid = displayAsOptions.some(o => o.key === prev.displayAs)
                         return {
                           ...prev,
                           type: newType,
-                          options: (newType === 'text' || newType === 'email' || newType === 'phone') ? [] : prev.options,
+                          options: isChoiceType ? prev.options : [],
                           displayAs: displayAsStillValid ? prev.displayAs : getDefaultDisplayAs(newType),
                         }
                       })}
@@ -1550,12 +1561,13 @@ export const ConfigManagement: React.FC<ConfigManagementProps> = () => {
                                     onSelectionChange={(key) => setRsvpFormFields(prev => {
                                       const copy = [...prev]
                                       const newType = key as RsvpFieldType
+                                      const isChoiceType = newType === 'select' || newType === 'checkbox'
                                       const displayAsOptions = getDisplayAsOptions(newType)
                                       const displayAsStillValid = displayAsOptions.some(o => o.key === copy[index].displayAs)
                                       copy[index] = {
                                         ...copy[index],
                                         type: newType,
-                                        options: (newType === 'text' || newType === 'email' || newType === 'phone') ? [] : copy[index].options,
+                                        options: isChoiceType ? copy[index].options : [],
                                         displayAs: displayAsStillValid ? copy[index].displayAs : getDefaultDisplayAs(newType),
                                       }
                                       return copy

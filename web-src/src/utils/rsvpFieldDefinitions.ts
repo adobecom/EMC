@@ -23,6 +23,10 @@ function inferFieldType(raw: string | undefined): RsvpFieldType {
   if (t === 'checkbox' || t === 'multi-select' || t === 'multiselect') return 'checkbox'
   if (t === 'email') return 'email'
   if (t === 'phone' || t === 'tel') return 'phone'
+  if (t === 'number') return 'number'
+  if (t === 'date') return 'date'
+  if (t === 'url') return 'url'
+  if (t === 'text-area' || t === 'textarea') return 'text-area'
   return 'text'
 }
 
@@ -38,6 +42,20 @@ function inferDisplayAs(raw: string | undefined, type: RsvpFieldType): RsvpDispl
     return t === 'multi-select' || t === 'multiselect' ? 'dropdown' : 'checkbox'
   }
   return undefined
+}
+
+/** Coerces a field loaded from ESP (scope config or event selection) to the current
+ *  lean type vocabulary. `multi-select` predates ESP's RsvpFieldType enum validation
+ *  and was never a value the normal save path could produce, but this defensively
+ *  covers any pre-existing DynamoDB data that bypassed it (e.g. seed scripts). A
+ *  legacy `displayAs: 'checkbox'` override is preserved as the checkbox-group
+ *  widget; anything else keeps the multi-select dropdown rendering the type
+ *  implied on its own. */
+export function normalizeRsvpField(field: RsvpFormField): RsvpFormField {
+  const storedType: string = field.type
+  return storedType === 'multi-select'
+    ? { ...field, type: 'checkbox', displayAs: field.displayAs === 'checkbox' ? 'checkbox' : 'dropdown' }
+    : field
 }
 
 function parseLegacyOptions(optionsStr: string | undefined): { value: string; label: string }[] {
