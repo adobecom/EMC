@@ -62,7 +62,6 @@ import { hasRsvpSlice, hasLocalesSlice, hasAttributesSlice } from '../../types/c
 import { BlurredLoadingOverlay } from '../../components/shared'
 import { useHasPermission } from '../../hooks/useHasPermission'
 import { SUPPORTED_SPEAKER_LOCALES, SPEAKER_LOCALE_LABELS } from '../../config/localeMapping'
-import { normalizeRsvpField } from '../../utils/rsvpFieldDefinitions'
 
 interface ConfigManagementProps {
   ims: IMS
@@ -266,13 +265,8 @@ export const ConfigManagement: React.FC<ConfigManagementProps> = () => {
   // single config; saves PUT to scopeConfig.configId when one exists.
   const scopeConfig = useMemo<ScopeConfig | null>(() => configs[0] || null, [configs])
 
-  // Coerce legacy stored field types (e.g. multi-select) to the current lean
-  // vocabulary as soon as the config is loaded, so every consumer below —
-  // the table view, edit dialog, and save/delete — sees normalized data.
   const rsvpConfig = useMemo<RsvpScopeConfig | null>(
-    () => (hasRsvpSlice(scopeConfig)
-      ? { ...scopeConfig, rsvp: { ...scopeConfig.rsvp, rsvpFormFields: scopeConfig.rsvp.rsvpFormFields.map(normalizeRsvpField) } }
-      : null),
+    () => (hasRsvpSlice(scopeConfig) ? scopeConfig : null),
     [scopeConfig]
   )
   const localesConfig = useMemo<LocalesScopeConfig | null>(
