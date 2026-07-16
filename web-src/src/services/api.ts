@@ -980,11 +980,8 @@ class ApiService {
   async createEventExternal(payload: any, locale: string): Promise<any | ErrorResponse> {
     validateObject(payload, 'event payload')
     validateString(locale, 'locale')
-    // `published` is read-only server-side (defaults to false on create) — the client no
-    // longer sends it. The first save still implicitly generates the page (see BaseEventProperties
-    // in the ESP openapi spec); liveUpdate stays false here since this is a plain create, not an action.
     return this.callExternalApi('esl', '/v1/events', 'POST',
-      { ...payload, liveUpdate: false, defaultLocale: locale },
+      { ...payload, liveUpdate: false, published: false, defaultLocale: locale },
       { operationName: 'createEvent', shouldReturnFullResponse: true }
     )
   }
@@ -999,30 +996,33 @@ class ApiService {
     )
   }
 
-  /**
-   * Page generation is on-demand: a plain PUT (updateEventExternal) no longer regenerates the
-   * DA page on its own. These action endpoints are the primary, recommended way to trigger it
-   * and to change `published` — EMC always uses them going forward. (The backend keeps `published`
-   * writable on a plain PUT too, for other callers that aren't EMC — see ESP's openapi spec.)
-   */
-  async previewEventPage(eventId: string): Promise<any | ErrorResponse> {
+  async publishEvent(eventId: string, payload: any): Promise<any | ErrorResponse> {
     validateString(eventId, 'event ID')
-    return this.callExternalApi('esl', `/v1/events/${eventId}/actions/preview`, 'POST', undefined,
-      { operationName: `previewEventPage(${eventId})`, shouldReturnFullResponse: true }
+    validateObject(payload, 'event payload')
+    const body = prepareEslEventPutPayload(payload)
+    return this.callExternalApi('esl', `/v1/events/${eventId}`, 'PUT',
+      { ...body, published: true, liveUpdate: true, forceSpWrite: false },
+      { operationName: `publishEvent(${eventId})`, shouldReturnFullResponse: true }
     )
   }
 
-  async publishEventPage(eventId: string): Promise<any | ErrorResponse> {
+  async unpublishEvent(eventId: string, payload: any): Promise<any | ErrorResponse> {
     validateString(eventId, 'event ID')
-    return this.callExternalApi('esl', `/v1/events/${eventId}/actions/publish`, 'POST', undefined,
-      { operationName: `publishEventPage(${eventId})`, shouldReturnFullResponse: true }
+    validateObject(payload, 'event payload')
+    const body = prepareEslEventPutPayload(payload)
+    return this.callExternalApi('esl', `/v1/events/${eventId}`, 'PUT',
+      { ...body, published: false, liveUpdate: true, forceSpWrite: false },
+      { operationName: `unpublishEvent(${eventId})`, shouldReturnFullResponse: true }
     )
   }
 
-  async unpublishEventPage(eventId: string): Promise<any | ErrorResponse> {
+  async previewEvent(eventId: string, payload: any): Promise<any | ErrorResponse> {
     validateString(eventId, 'event ID')
-    return this.callExternalApi('esl', `/v1/events/${eventId}/actions/unpublish`, 'POST', undefined,
-      { operationName: `unpublishEventPage(${eventId})`, shouldReturnFullResponse: true }
+    validateObject(payload, 'event payload')
+    const body = prepareEslEventPutPayload(payload)
+    return this.callExternalApi('esl', `/v1/events/${eventId}`, 'PUT',
+      { ...body, liveUpdate: false, forceSpWrite: true },
+      { operationName: `previewEvent(${eventId})` }
     )
   }
 
@@ -2667,20 +2667,14 @@ export const cachedApi = {
     apiCache.invalidate('getEventsList')
     return result
   },
-  async previewEventPage(eventId: string) {
-    const result = await apiService.previewEventPage(eventId)
+  async publishEvent(eventId: string, data: any) {
+    const result = await apiService.publishEvent(eventId, data)
     apiCache.invalidate(eventId)
     apiCache.invalidate('getEventsList')
     return result
   },
-  async publishEventPage(eventId: string) {
-    const result = await apiService.publishEventPage(eventId)
-    apiCache.invalidate(eventId)
-    apiCache.invalidate('getEventsList')
-    return result
-  },
-  async unpublishEventPage(eventId: string) {
-    const result = await apiService.unpublishEventPage(eventId)
+  async unpublishEvent(eventId: string, data: any) {
+    const result = await apiService.unpublishEvent(eventId, data)
     apiCache.invalidate(eventId)
     apiCache.invalidate('getEventsList')
     return result

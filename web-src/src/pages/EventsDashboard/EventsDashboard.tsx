@@ -31,8 +31,7 @@ import { IMS } from '../../types'
 import { useToast, useGroup } from '../../contexts'
 import { useSafeState, useRBACFilter } from '../../hooks'
 import { useHasPermission } from '../../hooks/useHasPermission'
-import { getEventPageUrls } from '../../utils/eventPageUrls'
-import { hasDomainSlice } from '../../types/configApi'
+import { getEspEnvParam } from '../../config/constants'
 
 const EVENTS_SEARCH_KEYS = ['eventName', 'eventType', 'cloudType', 'hostEmail', 'seriesId']
 
@@ -375,13 +374,20 @@ export const EventsDashboard: React.FC<EventsDashboardProps> = () => {
       case 'unpublish': {
         const isPublish = !item.published
         setActionInProgress(item.eventId)
-
+        
         try {
-          // Publish/unpublish are dedicated on-demand actions — no payload needed, the
-          // action endpoint flips `published` and triggers page generation server-side.
+          // Fetch full event data (needed for complete payload with all localizations)
+          const eventResponse = await cachedApi.getEventFull(item.eventId)
+          
+          if ('error' in eventResponse) {
+            toast.error(`Failed to load event data: ${eventResponse.error}`)
+            break
+          }
+
+          // ApiService.publishEvent / unpublishEvent run prepareEslEventPutPayload (submission filter + ESL excludes)
           const result = isPublish
-            ? await cachedApi.publishEventPage(item.eventId)
-            : await cachedApi.unpublishEventPage(item.eventId)
+            ? await apiService.publishEvent(item.eventId, eventResponse)
+            : await apiService.unpublishEvent(item.eventId, eventResponse)
 
           if ('error' in result) {
             toast.error(`Failed to ${isPublish ? 'publish' : 'unpublish'} event: ${result.error}`)
@@ -399,35 +405,30 @@ export const EventsDashboard: React.FC<EventsDashboardProps> = () => {
         break
       }
 
-      case 'preview':
-      case 'view-published': {
+      case 'preview-pre':
+      case 'preview-post': {
+        // Use data we already have from the events list - no fetch needed!
         if (!item.detailPagePath) {
           toast.error('Event does not have a detail page URL')
           break
         }
 
-        // Open the tab synchronously (before the await below) so browsers don't
-        // treat the async-resolved navigation as a blocked popup.
-        const newTab = window.open('', '_blank')
-        if (!newTab) {
-          toast.error('Popup blocked — allow popups for this site to preview or view the page')
-          break
+        const previewType = action === 'preview-pre' ? 'pre-event' : 'post-event'
+        const localStartTimeMillis = item.localStartTimeMillis || 0
+        
+        // Pre-event: timing before event start, Post-event: timing after event start
+        const timing = previewType === 'pre-event' 
+          ? localStartTimeMillis - 10 
+          : localStartTimeMillis + 10
+
+        const previewUrl = new URL(item.detailPagePath)
+        previewUrl.searchParams.set('timing', String(timing))
+        const espenv = getEspEnvParam()
+        if (espenv) {
+          previewUrl.searchParams.set('espenv', espenv)
         }
 
-        let domain = null
-        if (item.seriesId) {
-          try {
-            const seriesConfigs = await cachedApi.getSeriesConfigs(item.seriesId)
-            domain = 'error' in seriesConfigs ? null : (seriesConfigs.find(hasDomainSlice)?.domain ?? null)
-          } catch (err) {
-            console.warn(`Failed to load domain config for series ${item.seriesId}:`, err)
-          }
-        }
-
-        const { previewUrl, publishedUrl } = getEventPageUrls(item.detailPagePath, domain)
-        const url = action === 'preview' ? previewUrl : publishedUrl
-        if (url) newTab.location.href = url
-        else newTab.close()
+        window.open(previewUrl.toString(), '_blank')
         break
       }
 
@@ -795,16 +796,14 @@ export const EventsDashboard: React.FC<EventsDashboardProps> = () => {
                 <Text slot="label">{item.published ? 'Unpublish' : 'Publish'}</Text>
               </MenuItem>
             )}
-            <MenuItem id="preview" textValue="Preview page">
+            <MenuItem id="preview-pre" textValue="Preview pre-event">
               <Preview />
-              <Text slot="label">Preview page</Text>
+              <Text slot="label">Preview pre-event</Text>
             </MenuItem>
-            {item.published && (
-              <MenuItem id="view-published" textValue="View published page">
-                <Preview />
-                <Text slot="label">View published page</Text>
-              </MenuItem>
-            )}
+            <MenuItem id="preview-post" textValue="Preview post-event">
+              <Preview />
+              <Text slot="label">Preview post-event</Text>
+            </MenuItem>
             <MenuItem id="copy-url" textValue="Copy URL">
               <Copy />
               <Text slot="label">Copy URL</Text>

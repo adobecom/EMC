@@ -92,6 +92,8 @@ function toLegacyRsvpFormFieldsPayload(payload: Record<string, any>): Record<str
  * Options for the save operation
  */
 export interface SaveOptions {
+  /** If true, also publish the event after saving */
+  publish?: boolean
   /** Skip calling component onAfterSave callbacks */
   skipAfterSave?: boolean
   /** Additional fields merged into the API payload after normal payload building (e.g. `detailPagePath` for URL pattern on create) */
@@ -147,6 +149,7 @@ export function useEventFormSave() {
     seriesId,
     locale,
     isEditMode,
+    isPublished,
     saveStatus,
     eventDataResp, // Raw API response - contains modificationTime/creationTime for updates
     getRegisteredComponents,
@@ -494,7 +497,7 @@ export function useEventFormSave() {
    * Main save function
    */
   const saveEvent = useCallback(async (options: SaveOptions = {}): Promise<SaveResult> => {
-    const { skipAfterSave = false, extraPayload, onSuccess, onError } = options
+    const { publish = false, skipAfterSave = false, extraPayload, onSuccess, onError } = options
     
     try {
       // 1. Set saving status
@@ -528,15 +531,19 @@ export function useEventFormSave() {
         payload.enabledAttributeIds = eventDataResp.enabledAttributeIds
       }
       
-      // `published` is read-only server-side — the client never sets it. A plain save persists
-      // the record only; publishing/unpublishing happens via the dedicated action endpoints
-      // (see publishEvent/previewEvent below), which are the only calls that may change it.
-      delete payload.published
-
+      // Published: only the explicit publish action sets true; dashboard unpublish sets false.
+      // Draft saves on an existing event must preserve server publish state (form payload usually omits `published`).
+      if (publish) {
+        payload.published = true
+      } else if (isEditMode && eventId) {
+        payload.published = eventDataResp?.published ?? isPublished
+      } else {
+        payload.published = payload.published ?? false
+      }
+      
       // Ensure required fields have values
-      // Per OpenAPI BaseEventProperties required: cloudType, seriesId, eventType,
-      // localStartDate, localEndDate, localStartTime, localEndTime, timezone
-      // (`published` is readOnly, no longer client-required — see above)
+      // Per OpenAPI BaseEventProperties required: cloudType, seriesId, eventType, 
+      // localStartDate, localEndDate, localStartTime, localEndTime, timezone, published
       if (!payload.cloudType) {
         payload.cloudType = formData.cloudType || 'CreativeCloud'
       }
@@ -582,18 +589,16 @@ export function useEventFormSave() {
         // TODO: (rsvp-shape-migration) Transitional dual-shape: send legacy shape first;
         // retry with new {fields} shape once ESP BE PR #903 ships everywhere.
         // Revert `let result` to `const result` and remove the retry block after cleanup.
-        // A plain save never triggers page generation — liveUpdate stays false here regardless
-        // of publish intent. Publishing/previewing calls the dedicated action endpoint afterward.
         let result = await apiService.updateEventExternal(
           eventId,
           payload.rsvpFormFields?.fields ? toLegacyRsvpFormFieldsPayload(payload) : payload,
-          { forceSpWrite: false, liveUpdate: false }
+          { forceSpWrite: false, liveUpdate: publish }
         )
 
         if (isRsvpFormFieldsRejection(result) && payload.rsvpFormFields?.fields) {
           result = await apiService.updateEventExternal(eventId, payload, {
             forceSpWrite: false,
-            liveUpdate: false,
+            liveUpdate: publish,
           })
         }
 
@@ -675,6 +680,7 @@ export function useEventFormSave() {
     seriesId,
     locale,
     isEditMode,
+    isPublished,
     eventDataResp,
     buildEventPayload,
     validateComponents,
@@ -686,82 +692,24 @@ export function useEventFormSave() {
     setSaveError,
     clearStorage,
   ])
-
+  
   /**
-   * Runs a page action (publish/unpublish/preview) via the dedicated action endpoint.
-   * Saves the current form state first (a plain save never triggers page generation —
-   * only the action call does), then performs the action against the saved event.
+   * Save and publish in one action
    */
-  const performPageAction = useCallback(async (
-    actionCall: (eventId: string) => Promise<EventApiResponse | { error: unknown }>,
-    actionErrorLabel: string,
-    options: SaveOptions = {}
-  ): Promise<SaveResult> => {
-    const { onSuccess, onError, ...saveOptions } = options
-    const saveResult = await saveEvent(saveOptions)
-    if (!saveResult.success || !saveResult.eventId) {
-      onError?.(new Error(saveResult.error || 'Failed to save event'))
-      return saveResult
-    }
-
-    try {
-      const result = await actionCall(saveResult.eventId)
-      if ('error' in result) {
-        const errorMessage = (result.error && typeof result.error === 'object')
-          ? ((result.error as any).message ?? '') || actionErrorLabel
-          : actionErrorLabel
-        setSaveStatus('error')
-        setSaveError(errorMessage)
-        onError?.(new Error(errorMessage))
-        return { success: false, eventId: saveResult.eventId, error: errorMessage }
-      }
-      // The action endpoint returns the full persisted event, but skips the same
-      // customAttributes-label resolution that a normal save/read applies — refresh via
-      // getEventFull so eventDataResp always reflects the same fully-hydrated shape,
-      // mirroring saveEvent's own post-write refresh (step 7 above).
-      let response = result as EventApiResponse
-      const refreshedResponse = await cachedApi.getEventFull(saveResult.eventId)
-      if (!('error' in refreshedResponse)) {
-        response = refreshedResponse as EventApiResponse
-      }
-      setEventResponse(response)
-      onSuccess?.(saveResult.eventId, response)
-      return { success: true, eventId: saveResult.eventId, response }
-    } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : actionErrorLabel
-      setSaveStatus('error')
-      setSaveError(errorMessage)
-      onError?.(error instanceof Error ? error : new Error(errorMessage))
-      return { success: false, eventId: saveResult.eventId, error: errorMessage }
-    }
-  }, [saveEvent, setEventResponse, setSaveStatus, setSaveError])
-
-  /**
-   * Save, then publish (sets published:true and generates the live page).
-   */
-  const publishEvent = useCallback(async (options: SaveOptions = {}): Promise<SaveResult> => {
-    return performPageAction(id => cachedApi.publishEventPage(id), 'Failed to publish event', options)
-  }, [performPageAction])
-
-  /**
-   * Save, then (re)generate the staged preview page without changing publish state.
-   * Backs the "Update page" button.
-   */
-  const previewEvent = useCallback(async (options: SaveOptions = {}): Promise<SaveResult> => {
-    return performPageAction(id => cachedApi.previewEventPage(id), 'Failed to update page', options)
-  }, [performPageAction])
-
+  const publishEvent = useCallback(async (options: Omit<SaveOptions, 'publish'> = {}): Promise<SaveResult> => {
+    return saveEvent({ ...options, publish: true })
+  }, [saveEvent])
+  
   /**
    * Save draft only (no publish)
    */
-  const saveDraft = useCallback(async (options: SaveOptions = {}): Promise<SaveResult> => {
-    return saveEvent(options)
+  const saveDraft = useCallback(async (options: Omit<SaveOptions, 'publish'> = {}): Promise<SaveResult> => {
+    return saveEvent({ ...options, publish: false })
   }, [saveEvent])
-
+  
   return {
     saveEvent,
     publishEvent,
-    previewEvent,
     saveDraft,
     isSaving: saveStatus === 'saving',
     saveStatus,
