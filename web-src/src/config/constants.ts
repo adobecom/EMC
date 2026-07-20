@@ -89,6 +89,8 @@ export const ALLOWED_HOSTS: Record<string, boolean> = {
   'cc-collab.adobe.io': true,
   'cc-collab-stage.adobe.io': true,
   'api.github.com': true,
+  'admin.da.live': true,
+  'admin.hlx.page': true,
   ...Object.values(API_CONFIG.esl).reduce((acc, envConfig) => {
     try {
       const url = new URL(envConfig.host)
