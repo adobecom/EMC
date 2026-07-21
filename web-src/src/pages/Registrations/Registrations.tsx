@@ -8,6 +8,7 @@ import { useParams, useNavigate, useSearchParams } from 'react-router-dom'
 import type { EventApiResponse } from '../../types/domain'
 import type { Attendee, AttendeeStats, AttendeeColumnConfig } from '../../types/attendee'
 import type { Campaign, CampaignFormData, CampaignCreatePayload, CampaignUpdatePayload, CampaignListResponse } from '../../types/campaign'
+import type { GuestRsvpLink, GuestRsvpLinkListResponse } from '../../types/guestRsvp'
 import { calculateAttendeeStats } from '../../types/attendee'
 import { apiService } from '../../services/api'
 import { useRsvpConfig } from '../../hooks/useRsvpConfig'
@@ -21,6 +22,7 @@ import { EventSelectorComponent } from './EventSelectorComponent'
 import { RegistrationsTab } from './RegistrationsTab'
 import { CampaignsTab } from './CampaignsTab'
 import { SessionsTab } from './SessionsTab'
+import { GuestRsvpUrlsTab } from './GuestRsvpUrlsTab'
 
 interface RegistrationsProps {
   ims: IMS
@@ -41,11 +43,13 @@ export const Registrations: React.FC<RegistrationsProps> = ({ ims: _ims }) => {
   const [selectedEventId, setSelectedEventId] = useState<string>(initialEventId)
   const [attendees, setAttendees] = useState<Attendee[]>([])
   const [campaigns, setCampaigns] = useState<Campaign[]>([])
+  const [guestRsvpLinks, setGuestRsvpLinks] = useState<GuestRsvpLink[]>([])
   const [selectedTab, setSelectedTab] = useState<string>('registrations')
 
   const [isLoadingEvents, setIsLoadingEvents] = useState(true)
   const [isLoadingAttendees, setIsLoadingAttendees] = useState(false)
   const [isLoadingCampaigns, setIsLoadingCampaigns] = useState(false)
+  const [isLoadingGuestRsvpLinks, setIsLoadingGuestRsvpLinks] = useState(false)
   const [, setError] = useState<string | null>(null)
 
   const selectedEvent = useMemo(() =>
@@ -177,6 +181,34 @@ export const Registrations: React.FC<RegistrationsProps> = ({ ims: _ims }) => {
     loadCampaigns()
   }, [loadCampaigns])
 
+  const loadGuestRsvpLinks = useCallback(async () => {
+    if (!selectedEventId) {
+      setGuestRsvpLinks([])
+      return
+    }
+
+    setIsLoadingGuestRsvpLinks(true)
+    setGuestRsvpLinks([])
+    try {
+      const result = await apiService.getGuestRsvpLinks(selectedEventId) as GuestRsvpLinkListResponse
+      if ('error' in result) {
+        console.error('Failed to load guest RSVP links:', result)
+        setGuestRsvpLinks([])
+        return
+      }
+      setGuestRsvpLinks(result.guestRsvpLinks || [])
+    } catch (err) {
+      console.error('Failed to load guest RSVP links:', err)
+      setGuestRsvpLinks([])
+    } finally {
+      setIsLoadingGuestRsvpLinks(false)
+    }
+  }, [selectedEventId])
+
+  useEffect(() => {
+    loadGuestRsvpLinks()
+  }, [loadGuestRsvpLinks])
+
   // ---- Statistics ----
 
   const stats: AttendeeStats = useMemo(() =>
@@ -269,9 +301,45 @@ export const Registrations: React.FC<RegistrationsProps> = ({ ims: _ims }) => {
     await loadCampaigns()
   }, [selectedEventId, loadCampaigns, toast])
 
+  const handleGenerateGuestRsvpLink = useCallback(async () => {
+    const result = await apiService.generateGuestRsvpLink(selectedEventId)
+
+    if ('error' in result) {
+      toast.error(`Failed to generate guest RSVP link: ${result.error}`)
+      throw new Error(result.error)
+    }
+
+    toast.success('Guest RSVP link generated')
+    await loadGuestRsvpLinks()
+  }, [selectedEventId, loadGuestRsvpLinks, toast])
+
+  const handleExtendGuestRsvpLink = useCallback(async (token: string, expirationTime: number) => {
+    const result = await apiService.updateGuestRsvpLink(selectedEventId, token, { expirationTime })
+
+    if ('error' in result) {
+      toast.error(`Failed to extend guest RSVP link: ${result.error}`)
+      throw new Error(result.error)
+    }
+
+    toast.success('Guest RSVP link extended')
+    await loadGuestRsvpLinks()
+  }, [selectedEventId, loadGuestRsvpLinks, toast])
+
+  const handleRevokeGuestRsvpLink = useCallback(async (token: string) => {
+    const result = await apiService.revokeGuestRsvpLink(selectedEventId, token)
+
+    if ('error' in result) {
+      toast.error(`Failed to revoke guest RSVP link: ${result.error}`)
+      throw new Error(result.error)
+    }
+
+    toast.success('Guest RSVP link revoked')
+    await loadGuestRsvpLinks()
+  }, [selectedEventId, loadGuestRsvpLinks, toast])
+
   // ---- Render ----
 
-  const isLoading = isLoadingEvents || isLoadingAttendees || isLoadingCampaigns || isLoadingConfig
+  const isLoading = isLoadingEvents || isLoadingAttendees || isLoadingCampaigns || isLoadingGuestRsvpLinks || isLoadingConfig
   const loadingMessage = isLoadingEvents
     ? 'Loading events...'
     : isLoadingConfig
@@ -280,7 +348,9 @@ export const Registrations: React.FC<RegistrationsProps> = ({ ims: _ims }) => {
         ? 'Loading attendees...'
         : isLoadingCampaigns
           ? 'Loading campaigns...'
-          : 'Loading...'
+          : isLoadingGuestRsvpLinks
+            ? 'Loading guest RSVP links...'
+            : 'Loading...'
 
   return (
     <div style={{ width: '100%', padding: '32px', boxSizing: 'border-box' }}>
@@ -323,6 +393,7 @@ export const Registrations: React.FC<RegistrationsProps> = ({ ims: _ims }) => {
           <SegmentedControlItem id="registrations">Registrations</SegmentedControlItem>
           <SegmentedControlItem id="campaigns">Campaigns</SegmentedControlItem>
           <SegmentedControlItem id="sessions">Sessions</SegmentedControlItem>
+          <SegmentedControlItem id="guestRsvpUrls">Guest RSVP URLs</SegmentedControlItem>
         </SegmentedControl>
         <div style={{ paddingTop: '24px' }}>
           {selectedTab === 'registrations' && (
@@ -350,6 +421,15 @@ export const Registrations: React.FC<RegistrationsProps> = ({ ims: _ims }) => {
               eventId={selectedEventId}
               eventTitle={selectedEvent?.title || selectedEvent?.enTitle || ''}
               attendees={attendees}
+            />
+          )}
+          {selectedTab === 'guestRsvpUrls' && (
+            <GuestRsvpUrlsTab
+              eventId={selectedEventId}
+              links={guestRsvpLinks}
+              onGenerate={handleGenerateGuestRsvpLink}
+              onExtend={handleExtendGuestRsvpLink}
+              onRevoke={handleRevokeGuestRsvpLink}
             />
           )}
         </div>

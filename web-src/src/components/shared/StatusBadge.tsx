@@ -32,6 +32,12 @@ const statusMap: Record<string, StatusConfig> = {
   pending:   { variant: 'notice',      label: 'Pending' },
   attended:  { variant: 'neutral',     label: 'Attended' },
   declined:  { variant: 'negative',    label: 'Declined' },
+
+  // Guest RSVP link statuses
+  unused:    { variant: 'informative', label: 'Unused' },
+  redeemed:  { variant: 'positive',    label: 'Redeemed' },
+  expired:   { variant: 'neutral',     label: 'Expired' },
+  revoked:   { variant: 'negative',    label: 'Revoked' },
 }
 
 export const StatusBadge: React.FC<StatusBadgeProps> = ({ status, label }) => {
