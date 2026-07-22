@@ -134,6 +134,7 @@ export const EVENT_DATA_FILTER: DataFilter = {
   attendeeLimit: { type: 'number', localizable: false, cloneable: true, submittable: true },
   allowWaitlisting: { type: 'boolean', localizable: false, cloneable: true, submittable: true },
   allowGuestRegistration: { type: 'boolean', localizable: false, cloneable: true, submittable: true },
+  closeRegistration: { type: 'boolean', localizable: false, cloneable: true, submittable: true },
   hostEmail: { type: 'string', localizable: false, cloneable: true, submittable: true },
   eventId: { type: 'string', localizable: false, cloneable: false, submittable: true },
   published: { type: 'boolean', localizable: false, cloneable: false, submittable: true },
