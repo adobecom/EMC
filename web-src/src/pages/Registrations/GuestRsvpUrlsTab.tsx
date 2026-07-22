@@ -10,8 +10,8 @@ import CalendarEdit from '@react-spectrum/s2/icons/CalendarEdit'
 import RemoveCircle from '@react-spectrum/s2/icons/RemoveCircle'
 import Copy from '@react-spectrum/s2/icons/Copy'
 import Link from '@react-spectrum/s2/illustrations/linear/Link'
-import type { GuestRsvpToken } from '../../types/guestRsvp'
-import { calculateGuestRsvpTokenStats } from '../../types/guestRsvp'
+import type { RsvpToken } from '../../types/rsvpToken'
+import { calculateRsvpTokenStats } from '../../types/rsvpToken'
 import { DataTable, TableColumn, ResourceEmptyState, StatusBadge } from '../../components/shared'
 import { COLORS } from '../../styles/designSystem'
 import { useHasPermission } from '../../hooks/useHasPermission'
@@ -37,7 +37,7 @@ const GUEST_RSVP_LINKS_TABLE_TEST_IDS = {
 
 interface GuestRsvpUrlsTabProps {
   eventId: string
-  links: GuestRsvpToken[]
+  links: RsvpToken[]
   onGenerate: () => Promise<void>
   onExtend: (token: string, expiresInDays: number) => Promise<void>
   onRevoke: (token: string) => Promise<void>
@@ -54,12 +54,12 @@ export const GuestRsvpUrlsTab: React.FC<GuestRsvpUrlsTabProps> = ({
   const canDeleteEvent = useHasPermission('event', 'delete')
   const [isGenerating, setIsGenerating] = useState(false)
   const [copiedToken, setCopiedToken] = useState<string | null>(null)
-  const [linkToRevoke, setLinkToRevoke] = useState<GuestRsvpToken | null>(null)
-  const [linkToExtend, setLinkToExtend] = useState<GuestRsvpToken | null>(null)
+  const [linkToRevoke, setLinkToRevoke] = useState<RsvpToken | null>(null)
+  const [linkToExtend, setLinkToExtend] = useState<RsvpToken | null>(null)
   const [extendDays, setExtendDays] = useState<number>(DEFAULT_EXTEND_DAYS)
   const [isSaving, setIsSaving] = useState(false)
 
-  const stats = useMemo(() => calculateGuestRsvpTokenStats(links), [links])
+  const stats = useMemo(() => calculateRsvpTokenStats(links), [links])
 
   const handleGenerate = useCallback(async () => {
     setIsGenerating(true)
@@ -72,7 +72,7 @@ export const GuestRsvpUrlsTab: React.FC<GuestRsvpUrlsTabProps> = ({
     }
   }, [onGenerate])
 
-  const handleCopyUrl = useCallback(async (link: GuestRsvpToken) => {
+  const handleCopyUrl = useCallback(async (link: RsvpToken) => {
     if (!link.url) {
       console.error('Guest RSVP link has no composed URL (event is missing a detail page path)')
       return
@@ -127,7 +127,7 @@ export const GuestRsvpUrlsTab: React.FC<GuestRsvpUrlsTabProps> = ({
     )
   }, [links.length])
 
-  const columns: TableColumn<GuestRsvpToken>[] = useMemo(() => [
+  const columns: TableColumn<RsvpToken>[] = useMemo(() => [
     {
       key: 'url',
       name: 'URL',

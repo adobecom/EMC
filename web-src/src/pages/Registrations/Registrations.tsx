@@ -8,7 +8,7 @@ import { useParams, useNavigate, useSearchParams } from 'react-router-dom'
 import type { EventApiResponse } from '../../types/domain'
 import type { Attendee, AttendeeStats, AttendeeColumnConfig } from '../../types/attendee'
 import type { Campaign, CampaignFormData, CampaignCreatePayload, CampaignUpdatePayload, CampaignListResponse } from '../../types/campaign'
-import type { GuestRsvpToken } from '../../types/guestRsvp'
+import type { RsvpToken } from '../../types/rsvpToken'
 import { calculateAttendeeStats } from '../../types/attendee'
 import { apiService } from '../../services/api'
 import { useRsvpConfig } from '../../hooks/useRsvpConfig'
@@ -43,13 +43,13 @@ export const Registrations: React.FC<RegistrationsProps> = ({ ims: _ims }) => {
   const [selectedEventId, setSelectedEventId] = useState<string>(initialEventId)
   const [attendees, setAttendees] = useState<Attendee[]>([])
   const [campaigns, setCampaigns] = useState<Campaign[]>([])
-  const [guestRsvpLinks, setGuestRsvpLinks] = useState<GuestRsvpToken[]>([])
+  const [rsvpTokens, setRsvpTokens] = useState<RsvpToken[]>([])
   const [selectedTab, setSelectedTab] = useState<string>('registrations')
 
   const [isLoadingEvents, setIsLoadingEvents] = useState(true)
   const [isLoadingAttendees, setIsLoadingAttendees] = useState(false)
   const [isLoadingCampaigns, setIsLoadingCampaigns] = useState(false)
-  const [isLoadingGuestRsvpLinks, setIsLoadingGuestRsvpLinks] = useState(false)
+  const [isLoadingRsvpTokens, setIsLoadingRsvpTokens] = useState(false)
   const [, setError] = useState<string | null>(null)
 
   const selectedEvent = useMemo(() =>
@@ -181,49 +181,49 @@ export const Registrations: React.FC<RegistrationsProps> = ({ ims: _ims }) => {
     loadCampaigns()
   }, [loadCampaigns])
 
-  // ESP never returns a composed URL for a guest RSVP token — only the raw
+  // ESP never returns a composed URL for an RSVP token — only the raw
   // token — so the shareable link is built client-side from the event's
   // published detail page, mirroring EventForm's/EventsDashboard's existing
   // preview-URL composition off event.detailPagePath.
-  const composeGuestRsvpUrl = useCallback((token: GuestRsvpToken): GuestRsvpToken => {
+  const composeRsvpTokenUrl = useCallback((token: RsvpToken): RsvpToken => {
     if (!selectedEvent?.detailPagePath) return token
     try {
       const url = new URL(selectedEvent.detailPagePath)
-      url.searchParams.set('guestToken', token.token)
+      url.searchParams.set('rsvpToken', token.token)
       return { ...token, url: url.toString() }
     } catch (err) {
-      console.error('Failed to compose guest RSVP URL from event detailPagePath:', err)
+      console.error('Failed to compose RSVP token URL from event detailPagePath:', err)
       return token
     }
   }, [selectedEvent])
 
-  const loadGuestRsvpLinks = useCallback(async () => {
+  const loadRsvpTokens = useCallback(async () => {
     if (!selectedEventId) {
-      setGuestRsvpLinks([])
+      setRsvpTokens([])
       return
     }
 
-    setIsLoadingGuestRsvpLinks(true)
-    setGuestRsvpLinks([])
+    setIsLoadingRsvpTokens(true)
+    setRsvpTokens([])
     try {
-      const result = await apiService.getGuestRsvpTokens(selectedEventId) as GuestRsvpToken[]
+      const result = await apiService.getRsvpTokens(selectedEventId) as RsvpToken[]
       if ('error' in result) {
-        console.error('Failed to load guest RSVP tokens:', result)
-        setGuestRsvpLinks([])
+        console.error('Failed to load RSVP tokens:', result)
+        setRsvpTokens([])
         return
       }
-      setGuestRsvpLinks((result || []).map(composeGuestRsvpUrl))
+      setRsvpTokens((result || []).map(composeRsvpTokenUrl))
     } catch (err) {
-      console.error('Failed to load guest RSVP tokens:', err)
-      setGuestRsvpLinks([])
+      console.error('Failed to load RSVP tokens:', err)
+      setRsvpTokens([])
     } finally {
-      setIsLoadingGuestRsvpLinks(false)
+      setIsLoadingRsvpTokens(false)
     }
-  }, [selectedEventId, composeGuestRsvpUrl])
+  }, [selectedEventId, composeRsvpTokenUrl])
 
   useEffect(() => {
-    loadGuestRsvpLinks()
-  }, [loadGuestRsvpLinks])
+    loadRsvpTokens()
+  }, [loadRsvpTokens])
 
   // ---- Statistics ----
 
@@ -317,8 +317,8 @@ export const Registrations: React.FC<RegistrationsProps> = ({ ims: _ims }) => {
     await loadCampaigns()
   }, [selectedEventId, loadCampaigns, toast])
 
-  const handleGenerateGuestRsvpLink = useCallback(async () => {
-    const result = await apiService.generateGuestRsvpToken(selectedEventId)
+  const handleGenerateRsvpToken = useCallback(async () => {
+    const result = await apiService.generateRsvpToken(selectedEventId)
 
     if ('error' in result) {
       toast.error(`Failed to generate guest RSVP link: ${result.error}`)
@@ -326,11 +326,11 @@ export const Registrations: React.FC<RegistrationsProps> = ({ ims: _ims }) => {
     }
 
     toast.success('Guest RSVP link generated')
-    await loadGuestRsvpLinks()
-  }, [selectedEventId, loadGuestRsvpLinks, toast])
+    await loadRsvpTokens()
+  }, [selectedEventId, loadRsvpTokens, toast])
 
-  const handleExtendGuestRsvpLink = useCallback(async (token: string, expiresInDays: number) => {
-    const result = await apiService.updateGuestRsvpToken(selectedEventId, token, { expiresInDays })
+  const handleExtendRsvpToken = useCallback(async (token: string, expiresInDays: number) => {
+    const result = await apiService.updateRsvpToken(selectedEventId, token, { expiresInDays })
 
     if ('error' in result) {
       toast.error(`Failed to extend guest RSVP link: ${result.error}`)
@@ -338,11 +338,11 @@ export const Registrations: React.FC<RegistrationsProps> = ({ ims: _ims }) => {
     }
 
     toast.success('Guest RSVP link extended')
-    await loadGuestRsvpLinks()
-  }, [selectedEventId, loadGuestRsvpLinks, toast])
+    await loadRsvpTokens()
+  }, [selectedEventId, loadRsvpTokens, toast])
 
-  const handleRevokeGuestRsvpLink = useCallback(async (token: string) => {
-    const result = await apiService.revokeGuestRsvpToken(selectedEventId, token)
+  const handleRevokeRsvpToken = useCallback(async (token: string) => {
+    const result = await apiService.revokeRsvpToken(selectedEventId, token)
 
     if ('error' in result) {
       toast.error(`Failed to revoke guest RSVP link: ${result.error}`)
@@ -350,12 +350,12 @@ export const Registrations: React.FC<RegistrationsProps> = ({ ims: _ims }) => {
     }
 
     toast.success('Guest RSVP link revoked')
-    await loadGuestRsvpLinks()
-  }, [selectedEventId, loadGuestRsvpLinks, toast])
+    await loadRsvpTokens()
+  }, [selectedEventId, loadRsvpTokens, toast])
 
   // ---- Render ----
 
-  const isLoading = isLoadingEvents || isLoadingAttendees || isLoadingCampaigns || isLoadingGuestRsvpLinks || isLoadingConfig
+  const isLoading = isLoadingEvents || isLoadingAttendees || isLoadingCampaigns || isLoadingRsvpTokens || isLoadingConfig
   const loadingMessage = isLoadingEvents
     ? 'Loading events...'
     : isLoadingConfig
@@ -364,7 +364,7 @@ export const Registrations: React.FC<RegistrationsProps> = ({ ims: _ims }) => {
         ? 'Loading attendees...'
         : isLoadingCampaigns
           ? 'Loading campaigns...'
-          : isLoadingGuestRsvpLinks
+          : isLoadingRsvpTokens
             ? 'Loading guest RSVP links...'
             : 'Loading...'
 
@@ -442,10 +442,10 @@ export const Registrations: React.FC<RegistrationsProps> = ({ ims: _ims }) => {
           {selectedTab === 'guestRsvpUrls' && (
             <GuestRsvpUrlsTab
               eventId={selectedEventId}
-              links={guestRsvpLinks}
-              onGenerate={handleGenerateGuestRsvpLink}
-              onExtend={handleExtendGuestRsvpLink}
-              onRevoke={handleRevokeGuestRsvpLink}
+              links={rsvpTokens}
+              onGenerate={handleGenerateRsvpToken}
+              onExtend={handleExtendRsvpToken}
+              onRevoke={handleRevokeRsvpToken}
             />
           )}
         </div>
