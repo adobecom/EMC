@@ -197,6 +197,7 @@ export function mapApiResponseToFormData(event: EventApiResponse, locale: string
     registrationOpen: true,
     allowWaitlist: event.allowWaitlisting || false,
     allowGuestRegistration: event.allowGuestRegistration || false,
+    closeRegistration: event.closeRegistration ?? false,
     hostEmail: event.hostEmail || '',
     rsvpDescription: localized.rsvpDescription || '',
     registrationType: (event.registration?.type === 'ESP' || event.registration?.type === 'Marketo')

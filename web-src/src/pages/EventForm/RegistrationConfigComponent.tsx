@@ -43,6 +43,7 @@ export const RegistrationConfigComponent: React.FC = () => {
   const attendeeLimit = formData.attendeeLimit ?? 0
   const allowWaitlist = formData.allowWaitlist ?? false
   const allowGuestRegistration = formData.allowGuestRegistration ?? false
+  const closeRegistration = formData.closeRegistration ?? false
   const hostEmail = formData.hostEmail || ''
   const rsvpDescription = formData.rsvpDescription || ''
   const registrationType = formData.registrationType || 'ESP'
@@ -196,6 +197,25 @@ export const RegistrationConfigComponent: React.FC = () => {
               </TooltipTrigger>
             </div>
           )}
+
+          {/* Close Registration Toggle */}
+          <div className={style({display: 'flex', gap: 8, alignItems: 'center'})}>
+            <Switch
+              data-testid="close-registration-switch"
+              isSelected={closeRegistration}
+              onChange={(value) => updateFormData({ closeRegistration: value })}
+            >
+              Close registration
+            </Switch>
+            <TooltipTrigger delay={0}>
+              <ActionButton isQuiet>
+                <InfoCircle />
+              </ActionButton>
+              <Tooltip>
+                When selected, registration is closed and the CTA will display &quot;Registration is closed.&quot;
+              </Tooltip>
+            </TooltipTrigger>
+          </div>
 
           {/* Contact Host Toggle and Email Field */}
           {!(isExperienceCloud && isWebinar) && (
