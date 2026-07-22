@@ -3,74 +3,77 @@
 */
 
 /**
- * Guest RSVP link type definitions aligned with the ESP API contract.
+ * Guest RSVP token type definitions aligned with the ESP API contract.
  *
- * A guest RSVP link lets an Event Marketer generate a one-time-use link that
+ * A guest RSVP token lets an Event Marketer generate a one-time-use token that
  * bypasses Adobe ID login, for VIP/on-behalf-of registrations or to unblock
- * users hitting Adobe ID account issues. The link is consumed on successful
- * registration (public POST /v1/guestRsvpLinks/{token}/redeem in event-libs).
+ * users hitting Adobe ID account issues. The token is consumed on successful
+ * registration (public POST /v1/events/{eventId}/guestRsvpAttendees in
+ * event-libs, authenticated via the x-adobe-esp-guest-token header).
  *
- * API base: POST/GET/PATCH/DELETE /v1/events/{eventId}/guestRsvpLinks[/{token}]
+ * ESP never returns a composed URL — only the raw token. EMC builds the
+ * shareable link client-side as `${event.detailPagePath}?guestToken=${token}`.
+ *
+ * API base: POST/GET/PATCH/DELETE /v1/events/{eventId}/guestRsvpTokens[/{token}]
  */
 
-export type GuestRsvpLinkStatus = 'unused' | 'redeemed' | 'expired' | 'revoked'
+export type GuestRsvpTokenStatus = 'unused' | 'used' | 'revoked'
 
 /**
- * GuestRsvpLink response object returned by the API.
+ * GuestRsvpToken response object returned by the API.
  */
-export interface GuestRsvpLink {
+export interface GuestRsvpToken {
   token: string
-  url: string
-  status: GuestRsvpLinkStatus
   eventId: string
+  campaignId?: string
+  status: GuestRsvpTokenStatus
+  isExpired: boolean
   createdBy: string
-  creationTime: number
-  expirationTime?: number
-  redeemedBy?: string
-  redemptionTime?: number
+  createdAt: number
+  expiresAt?: number
+  usedAt?: number
+  usedByAttendeeId?: string
+  /** Client-composed shareable link (`${event.detailPagePath}?guestToken=${token}`); not returned by the API. */
+  url?: string
 }
 
 /**
- * Payload for POST /v1/events/{eventId}/guestRsvpLinks
+ * Payload for POST /v1/events/{eventId}/guestRsvpTokens
  */
-export interface GuestRsvpLinkCreatePayload {
-  expirationTime?: number
+export interface GuestRsvpTokenCreatePayload {
+  campaignId?: string
+  expiresInDays?: number
 }
 
 /**
- * Payload for PATCH /v1/events/{eventId}/guestRsvpLinks/{token} — extends or
- * otherwise modifies an unused link's TTL. Only unused links can be patched.
+ * Payload for PATCH /v1/events/{eventId}/guestRsvpTokens/{token} — extends an
+ * unused token's expiry by a relative number of days (server recomputes
+ * expiresAt as now + expiresInDays, replacing the prior value). Only unused
+ * tokens can be patched.
  */
-export interface GuestRsvpLinkUpdatePayload {
-  expirationTime: number
+export interface GuestRsvpTokenUpdatePayload {
+  expiresInDays: number
 }
 
 /**
- * Wrapper returned by GET /v1/events/{eventId}/guestRsvpLinks
+ * Dashboard statistics derived from a guest RSVP token list.
  */
-export interface GuestRsvpLinkListResponse {
-  guestRsvpLinks: GuestRsvpLink[]
+export interface GuestRsvpTokenStats {
+  totalTokens: number
+  unusedTokens: number
+  usedTokens: number
 }
 
 /**
- * Dashboard statistics derived from a guest RSVP link list.
+ * Calculate guest RSVP token statistics for the stats bar.
  */
-export interface GuestRsvpLinkStats {
-  totalLinks: number
-  unusedLinks: number
-  redeemedLinks: number
-}
-
-/**
- * Calculate guest RSVP link statistics for the stats bar.
- */
-export function calculateGuestRsvpLinkStats(links: GuestRsvpLink[]): GuestRsvpLinkStats {
-  const unusedLinks = links.filter(l => l.status === 'unused')
-  const redeemedLinks = links.filter(l => l.status === 'redeemed')
+export function calculateGuestRsvpTokenStats(tokens: GuestRsvpToken[]): GuestRsvpTokenStats {
+  const unusedTokens = tokens.filter(t => t.status === 'unused')
+  const usedTokens = tokens.filter(t => t.status === 'used')
 
   return {
-    totalLinks: links.length,
-    unusedLinks: unusedLinks.length,
-    redeemedLinks: redeemedLinks.length,
+    totalTokens: tokens.length,
+    unusedTokens: unusedTokens.length,
+    usedTokens: usedTokens.length,
   }
 }

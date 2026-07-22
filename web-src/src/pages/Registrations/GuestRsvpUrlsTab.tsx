@@ -10,14 +10,13 @@ import CalendarEdit from '@react-spectrum/s2/icons/CalendarEdit'
 import RemoveCircle from '@react-spectrum/s2/icons/RemoveCircle'
 import Copy from '@react-spectrum/s2/icons/Copy'
 import Link from '@react-spectrum/s2/illustrations/linear/Link'
-import type { GuestRsvpLink } from '../../types/guestRsvp'
-import { calculateGuestRsvpLinkStats } from '../../types/guestRsvp'
+import type { GuestRsvpToken } from '../../types/guestRsvp'
+import { calculateGuestRsvpTokenStats } from '../../types/guestRsvp'
 import { DataTable, TableColumn, ResourceEmptyState, StatusBadge } from '../../components/shared'
 import { COLORS } from '../../styles/designSystem'
 import { useHasPermission } from '../../hooks/useHasPermission'
 
 const DEFAULT_EXTEND_DAYS = 7
-const MS_PER_DAY = 24 * 60 * 60 * 1000
 
 function formatEpoch(ms?: number): string {
   if (!ms) return '-'
@@ -38,9 +37,9 @@ const GUEST_RSVP_LINKS_TABLE_TEST_IDS = {
 
 interface GuestRsvpUrlsTabProps {
   eventId: string
-  links: GuestRsvpLink[]
+  links: GuestRsvpToken[]
   onGenerate: () => Promise<void>
-  onExtend: (token: string, expirationTime: number) => Promise<void>
+  onExtend: (token: string, expiresInDays: number) => Promise<void>
   onRevoke: (token: string) => Promise<void>
 }
 
@@ -55,12 +54,12 @@ export const GuestRsvpUrlsTab: React.FC<GuestRsvpUrlsTabProps> = ({
   const canDeleteEvent = useHasPermission('event', 'delete')
   const [isGenerating, setIsGenerating] = useState(false)
   const [copiedToken, setCopiedToken] = useState<string | null>(null)
-  const [linkToRevoke, setLinkToRevoke] = useState<GuestRsvpLink | null>(null)
-  const [linkToExtend, setLinkToExtend] = useState<GuestRsvpLink | null>(null)
+  const [linkToRevoke, setLinkToRevoke] = useState<GuestRsvpToken | null>(null)
+  const [linkToExtend, setLinkToExtend] = useState<GuestRsvpToken | null>(null)
   const [extendDays, setExtendDays] = useState<number>(DEFAULT_EXTEND_DAYS)
   const [isSaving, setIsSaving] = useState(false)
 
-  const stats = useMemo(() => calculateGuestRsvpLinkStats(links), [links])
+  const stats = useMemo(() => calculateGuestRsvpTokenStats(links), [links])
 
   const handleGenerate = useCallback(async () => {
     setIsGenerating(true)
@@ -73,7 +72,11 @@ export const GuestRsvpUrlsTab: React.FC<GuestRsvpUrlsTabProps> = ({
     }
   }, [onGenerate])
 
-  const handleCopyUrl = useCallback(async (link: GuestRsvpLink) => {
+  const handleCopyUrl = useCallback(async (link: GuestRsvpToken) => {
+    if (!link.url) {
+      console.error('Guest RSVP link has no composed URL (event is missing a detail page path)')
+      return
+    }
     try {
       await navigator.clipboard.writeText(link.url)
       setCopiedToken(link.token)
@@ -98,13 +101,12 @@ export const GuestRsvpUrlsTab: React.FC<GuestRsvpUrlsTabProps> = ({
 
   const handleExtendSubmit = useCallback(async () => {
     if (!linkToExtend) return
-    const base = linkToExtend.expirationTime && linkToExtend.expirationTime > Date.now()
-      ? linkToExtend.expirationTime
-      : Date.now()
-    const newExpirationTime = base + extendDays * MS_PER_DAY
+    // The API takes a relative day count and recomputes expiresAt as now +
+    // expiresInDays server-side (replacing the prior value), so no client-side
+    // epoch math is needed here.
     setIsSaving(true)
     try {
-      await onExtend(linkToExtend.token, newExpirationTime)
+      await onExtend(linkToExtend.token, extendDays)
       setLinkToExtend(null)
     } catch (err) {
       console.error('Failed to extend guest RSVP link:', err)
@@ -125,7 +127,7 @@ export const GuestRsvpUrlsTab: React.FC<GuestRsvpUrlsTabProps> = ({
     )
   }, [links.length])
 
-  const columns: TableColumn<GuestRsvpLink>[] = useMemo(() => [
+  const columns: TableColumn<GuestRsvpToken>[] = useMemo(() => [
     {
       key: 'url',
       name: 'URL',
@@ -133,10 +135,11 @@ export const GuestRsvpUrlsTab: React.FC<GuestRsvpUrlsTabProps> = ({
       render: (link) => (
         <div className={style({ display: 'flex', alignItems: 'center', gap: 8 })}>
           <Text UNSAFE_style={{ fontFamily: 'monospace', fontSize: '13px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-            {link.url}
+            {link.url ?? '-'}
           </Text>
           <ActionButton
             isQuiet
+            isDisabled={!link.url}
             onPress={() => handleCopyUrl(link)}
             aria-label="Copy guest RSVP URL"
           >
@@ -155,7 +158,10 @@ export const GuestRsvpUrlsTab: React.FC<GuestRsvpUrlsTabProps> = ({
       name: 'STATUS',
       width: 100,
       sortable: true,
-      render: (link) => <StatusBadge status={link.status} />
+      // An unused token past its expiry is still reported as status "unused" by the
+      // API (isExpired is a separate flag) — show it as "Expired" here rather than
+      // implying it's still shareable.
+      render: (link) => <StatusBadge status={link.isExpired && link.status === 'unused' ? 'expired' : link.status} />
     },
     {
       key: 'createdBy',
@@ -165,24 +171,24 @@ export const GuestRsvpUrlsTab: React.FC<GuestRsvpUrlsTabProps> = ({
       render: (link) => <Text>{link.createdBy}</Text>
     },
     {
-      key: 'creationTime',
+      key: 'createdAt',
       name: 'CREATED',
       width: 120,
       sortable: true,
-      render: (link) => <Text>{formatEpoch(link.creationTime)}</Text>
+      render: (link) => <Text>{formatEpoch(link.createdAt)}</Text>
     },
     {
-      key: 'expirationTime',
+      key: 'expiresAt',
       name: 'EXPIRES',
       width: 120,
       sortable: true,
-      render: (link) => <Text>{formatEpoch(link.expirationTime)}</Text>
+      render: (link) => <Text>{formatEpoch(link.expiresAt)}</Text>
     },
     {
-      key: 'redeemedBy',
-      name: 'REDEEMED BY',
+      key: 'usedByAttendeeId',
+      name: 'USED BY',
       width: 180,
-      render: (link) => <Text>{link.redeemedBy || '-'}</Text>
+      render: (link) => <Text>{link.usedByAttendeeId || '-'}</Text>
     },
     {
       key: 'actions',
@@ -231,9 +237,9 @@ export const GuestRsvpUrlsTab: React.FC<GuestRsvpUrlsTabProps> = ({
       {/* Stats Bar */}
       <div style={{ backgroundColor: 'var(--spectrum-global-color-gray-100)', padding: '24px', borderRadius: '8px', marginBottom: '24px' }}>
         <div className={style({ display: 'flex', gap: 48, flexWrap: 'wrap' })}>
-          <StatItem label="Total Links" value={stats.totalLinks} />
-          <StatItem label="Unused" value={stats.unusedLinks} />
-          <StatItem label="Redeemed" value={stats.redeemedLinks} />
+          <StatItem label="Total Links" value={stats.totalTokens} />
+          <StatItem label="Unused" value={stats.unusedTokens} />
+          <StatItem label="Used" value={stats.usedTokens} />
         </div>
       </div>
 

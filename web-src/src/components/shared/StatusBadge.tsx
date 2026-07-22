@@ -33,9 +33,10 @@ const statusMap: Record<string, StatusConfig> = {
   attended:  { variant: 'neutral',     label: 'Attended' },
   declined:  { variant: 'negative',    label: 'Declined' },
 
-  // Guest RSVP link statuses
+  // Guest RSVP token statuses ('expired' is a display-only status computed from
+  // isExpired + status === 'unused' — the API itself never returns 'expired')
   unused:    { variant: 'informative', label: 'Unused' },
-  redeemed:  { variant: 'positive',    label: 'Redeemed' },
+  used:      { variant: 'positive',    label: 'Used' },
   expired:   { variant: 'neutral',     label: 'Expired' },
   revoked:   { variant: 'negative',    label: 'Revoked' },
 }
