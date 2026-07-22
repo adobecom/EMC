@@ -1064,14 +1064,10 @@ class ApiService {
       const host = getApiHost('esp', env)
       const url = `${host}/v1/events/${encodeURIComponent(eventId)}`
 
-      // First, get the event and event-level speakers/sponsors/venues/images
-      const [eventResp, eventSpeakersResp, eventSponsorsResp, venuesResp, imagesResp] = await Promise.all([
-        safeFetch(url, { method: 'GET', headers: headers as any }),
-        safeFetch(`${url}/speakers`, { method: 'GET', headers: headers as any }),
-        safeFetch(`${url}/sponsors`, { method: 'GET', headers: headers as any }),
-        safeFetch(`${url}/venues`, { method: 'GET', headers: headers as any }),
-        safeFetch(`${url}/images`, { method: 'GET', headers: headers as any }),
-      ])
+      // First, check access to the parent event before requesting any sub-resources.
+      // If the user is not authorized for this event, do not leak the event UUID
+      // or the existence of its sub-resources via speakers/sponsors/venues/images calls.
+      const eventResp = await safeFetch(url, { method: 'GET', headers: headers as any })
 
       let data: any = {}
 
@@ -1081,6 +1077,13 @@ class ApiService {
         console.error(`❌ Failed to get event ${eventId}. Status: ${eventResp.status}`)
         return { status: eventResp.status, error: 'Failed to get event details' }
       }
+
+      const [eventSpeakersResp, eventSponsorsResp, venuesResp, imagesResp] = await Promise.all([
+        safeFetch(`${url}/speakers`, { method: 'GET', headers: headers as any }),
+        safeFetch(`${url}/sponsors`, { method: 'GET', headers: headers as any }),
+        safeFetch(`${url}/venues`, { method: 'GET', headers: headers as any }),
+        safeFetch(`${url}/images`, { method: 'GET', headers: headers as any }),
+      ])
 
       const seriesId = data.seriesId
 
