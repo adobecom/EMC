@@ -3,7 +3,7 @@
 */
 
 import React, { useState, useCallback, useMemo } from 'react'
-import { Button, ButtonGroup, NumberField, DialogTrigger, Dialog, Content, Heading, Text, ActionButton, AlertDialog, Picker, PickerItem } from '@react-spectrum/s2'
+import { Button, ButtonGroup, NumberField, DialogTrigger, Dialog, Content, Heading, Text, ActionButton, AlertDialog, Picker, PickerItem, TooltipTrigger, Tooltip } from '@react-spectrum/s2'
 import { style } from "@react-spectrum/s2/style" with { type: "macro" }
 import Add from '@react-spectrum/s2/icons/Add'
 import CalendarEdit from '@react-spectrum/s2/icons/CalendarEdit'
@@ -187,19 +187,17 @@ export const GuestRsvpUrlsTab: React.FC<GuestRsvpUrlsTabProps> = ({
           <Text UNSAFE_style={{ fontFamily: 'monospace', fontSize: '13px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
             {link.url ?? '-'}
           </Text>
-          <ActionButton
-            isQuiet
-            isDisabled={!link.url}
-            onPress={() => handleCopyUrl(link)}
-            aria-label="Copy guest RSVP URL"
-          >
-            <Copy />
-          </ActionButton>
-          {copiedToken === link.token && (
-            <Text UNSAFE_style={{ fontSize: '11px', color: COLORS.STATUS_DRAFT }}>
-              Copied!
-            </Text>
-          )}
+          <TooltipTrigger isOpen={copiedToken === link.token}>
+            <ActionButton
+              isQuiet
+              isDisabled={!link.url}
+              onPress={() => handleCopyUrl(link)}
+              aria-label="Copy guest RSVP URL"
+            >
+              <Copy />
+            </ActionButton>
+            <Tooltip>Copied!</Tooltip>
+          </TooltipTrigger>
         </div>
       )
     },
