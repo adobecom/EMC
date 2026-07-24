@@ -126,7 +126,12 @@ export const GuestRsvpUrlsTab: React.FC<GuestRsvpUrlsTabProps> = ({
       return
     }
     try {
+      // Explicitly set both params rather than trusting campaign.url to already
+      // carry the campaign identifier — the two are ingested by separate
+      // pipelines (campaign attribution vs. RSVP token registration) and each
+      // must be able to read its own param independently of the other.
       const url = new URL(campaign.url)
+      url.searchParams.set('campaign', campaign.campaignId)
       url.searchParams.set('rsvpToken', linkToCopy.token)
       copyToClipboard(linkToCopy.token, url.toString())
     } catch (err) {
