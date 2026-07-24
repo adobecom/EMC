@@ -8,6 +8,7 @@ import { useParams, useNavigate, useSearchParams } from 'react-router-dom'
 import type { EventApiResponse } from '../../types/domain'
 import type { Attendee, AttendeeStats, AttendeeColumnConfig } from '../../types/attendee'
 import type { Campaign, CampaignFormData, CampaignCreatePayload, CampaignUpdatePayload, CampaignListResponse } from '../../types/campaign'
+import type { RsvpToken } from '../../types/rsvpToken'
 import { calculateAttendeeStats } from '../../types/attendee'
 import { apiService } from '../../services/api'
 import { useRsvpConfig } from '../../hooks/useRsvpConfig'
@@ -21,6 +22,7 @@ import { EventSelectorComponent } from './EventSelectorComponent'
 import { RegistrationsTab } from './RegistrationsTab'
 import { CampaignsTab } from './CampaignsTab'
 import { SessionsTab } from './SessionsTab'
+import { GuestRsvpUrlsTab } from './GuestRsvpUrlsTab'
 
 interface RegistrationsProps {
   ims: IMS
@@ -41,11 +43,13 @@ export const Registrations: React.FC<RegistrationsProps> = ({ ims: _ims }) => {
   const [selectedEventId, setSelectedEventId] = useState<string>(initialEventId)
   const [attendees, setAttendees] = useState<Attendee[]>([])
   const [campaigns, setCampaigns] = useState<Campaign[]>([])
+  const [rsvpTokens, setRsvpTokens] = useState<RsvpToken[]>([])
   const [selectedTab, setSelectedTab] = useState<string>('registrations')
 
   const [isLoadingEvents, setIsLoadingEvents] = useState(true)
   const [isLoadingAttendees, setIsLoadingAttendees] = useState(false)
   const [isLoadingCampaigns, setIsLoadingCampaigns] = useState(false)
+  const [isLoadingRsvpTokens, setIsLoadingRsvpTokens] = useState(false)
   const [, setError] = useState<string | null>(null)
 
   const selectedEvent = useMemo(() =>
@@ -177,6 +181,50 @@ export const Registrations: React.FC<RegistrationsProps> = ({ ims: _ims }) => {
     loadCampaigns()
   }, [loadCampaigns])
 
+  // ESP never returns a composed URL for an RSVP token — only the raw
+  // token — so the shareable link is built client-side from the event's
+  // published detail page, mirroring EventForm's/EventsDashboard's existing
+  // preview-URL composition off event.detailPagePath.
+  const composeRsvpTokenUrl = useCallback((token: RsvpToken): RsvpToken => {
+    if (!selectedEvent?.detailPagePath) return token
+    try {
+      const url = new URL(selectedEvent.detailPagePath)
+      url.searchParams.set('rsvpToken', token.token)
+      return { ...token, url: url.toString() }
+    } catch (err) {
+      console.error('Failed to compose RSVP token URL from event detailPagePath:', err)
+      return token
+    }
+  }, [selectedEvent])
+
+  const loadRsvpTokens = useCallback(async () => {
+    if (!selectedEventId) {
+      setRsvpTokens([])
+      return
+    }
+
+    setIsLoadingRsvpTokens(true)
+    setRsvpTokens([])
+    try {
+      const result = await apiService.getRsvpTokens(selectedEventId) as RsvpToken[]
+      if ('error' in result) {
+        console.error('Failed to load RSVP tokens:', result)
+        setRsvpTokens([])
+        return
+      }
+      setRsvpTokens((result || []).map(composeRsvpTokenUrl))
+    } catch (err) {
+      console.error('Failed to load RSVP tokens:', err)
+      setRsvpTokens([])
+    } finally {
+      setIsLoadingRsvpTokens(false)
+    }
+  }, [selectedEventId, composeRsvpTokenUrl])
+
+  useEffect(() => {
+    loadRsvpTokens()
+  }, [loadRsvpTokens])
+
   // ---- Statistics ----
 
   const stats: AttendeeStats = useMemo(() =>
@@ -269,9 +317,45 @@ export const Registrations: React.FC<RegistrationsProps> = ({ ims: _ims }) => {
     await loadCampaigns()
   }, [selectedEventId, loadCampaigns, toast])
 
+  const handleGenerateRsvpToken = useCallback(async () => {
+    const result = await apiService.generateRsvpToken(selectedEventId)
+
+    if ('error' in result) {
+      toast.error(`Failed to generate guest RSVP link: ${result.error}`)
+      throw new Error(result.error)
+    }
+
+    toast.success('Guest RSVP link generated')
+    await loadRsvpTokens()
+  }, [selectedEventId, loadRsvpTokens, toast])
+
+  const handleExtendRsvpToken = useCallback(async (token: string, expiresInDays: number) => {
+    const result = await apiService.updateRsvpToken(selectedEventId, token, { expiresInDays })
+
+    if ('error' in result) {
+      toast.error(`Failed to extend guest RSVP link: ${result.error}`)
+      throw new Error(result.error)
+    }
+
+    toast.success('Guest RSVP link extended')
+    await loadRsvpTokens()
+  }, [selectedEventId, loadRsvpTokens, toast])
+
+  const handleRevokeRsvpToken = useCallback(async (token: string) => {
+    const result = await apiService.revokeRsvpToken(selectedEventId, token)
+
+    if ('error' in result) {
+      toast.error(`Failed to revoke guest RSVP link: ${result.error}`)
+      throw new Error(result.error)
+    }
+
+    toast.success('Guest RSVP link revoked')
+    await loadRsvpTokens()
+  }, [selectedEventId, loadRsvpTokens, toast])
+
   // ---- Render ----
 
-  const isLoading = isLoadingEvents || isLoadingAttendees || isLoadingCampaigns || isLoadingConfig
+  const isLoading = isLoadingEvents || isLoadingAttendees || isLoadingCampaigns || isLoadingRsvpTokens || isLoadingConfig
   const loadingMessage = isLoadingEvents
     ? 'Loading events...'
     : isLoadingConfig
@@ -280,7 +364,9 @@ export const Registrations: React.FC<RegistrationsProps> = ({ ims: _ims }) => {
         ? 'Loading attendees...'
         : isLoadingCampaigns
           ? 'Loading campaigns...'
-          : 'Loading...'
+          : isLoadingRsvpTokens
+            ? 'Loading guest RSVP links...'
+            : 'Loading...'
 
   return (
     <div style={{ width: '100%', padding: '32px', boxSizing: 'border-box' }}>
@@ -323,6 +409,7 @@ export const Registrations: React.FC<RegistrationsProps> = ({ ims: _ims }) => {
           <SegmentedControlItem id="registrations">Registrations</SegmentedControlItem>
           <SegmentedControlItem id="campaigns">Campaigns</SegmentedControlItem>
           <SegmentedControlItem id="sessions">Sessions</SegmentedControlItem>
+          <SegmentedControlItem id="guestRsvpUrls">Guest RSVP URLs</SegmentedControlItem>
         </SegmentedControl>
         <div style={{ paddingTop: '24px' }}>
           {selectedTab === 'registrations' && (
@@ -350,6 +437,16 @@ export const Registrations: React.FC<RegistrationsProps> = ({ ims: _ims }) => {
               eventId={selectedEventId}
               eventTitle={selectedEvent?.title || selectedEvent?.enTitle || ''}
               attendees={attendees}
+            />
+          )}
+          {selectedTab === 'guestRsvpUrls' && (
+            <GuestRsvpUrlsTab
+              eventId={selectedEventId}
+              links={rsvpTokens}
+              campaigns={campaigns}
+              onGenerate={handleGenerateRsvpToken}
+              onExtend={handleExtendRsvpToken}
+              onRevoke={handleRevokeRsvpToken}
             />
           )}
         </div>
