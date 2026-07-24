@@ -443,6 +443,7 @@ export const Registrations: React.FC<RegistrationsProps> = ({ ims: _ims }) => {
             <GuestRsvpUrlsTab
               eventId={selectedEventId}
               links={rsvpTokens}
+              campaigns={campaigns}
               onGenerate={handleGenerateRsvpToken}
               onExtend={handleExtendRsvpToken}
               onRevoke={handleRevokeRsvpToken}

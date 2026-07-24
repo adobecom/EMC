@@ -14,6 +14,13 @@
  * ESP never returns a composed URL — only the raw token. EMC builds the
  * shareable link client-side as `${event.detailPagePath}?rsvpToken=${token}`.
  *
+ * Campaign attribution is intentionally NOT modeled on the token itself —
+ * EMC never binds a campaign at generation time. Instead, when a marketer
+ * shares a link, an optional campaign is tracked via a separate `campaign`
+ * query param on the composed URL (see GuestRsvpUrlsTab's copy flow), which
+ * event-libs forwards to the guest submit endpoint's `campaignId` query-param
+ * fallback at registration time. Token and campaign are fully independent.
+ *
  * API base: POST/GET/PATCH/DELETE /v1/events/{eventId}/rsvpTokens[/{token}]
  */
 
@@ -25,14 +32,16 @@ export type RsvpTokenStatus = 'unused' | 'used' | 'revoked'
 export interface RsvpToken {
   token: string
   eventId: string
-  campaignId?: string
   status: RsvpTokenStatus
   isExpired: boolean
   createdBy: string
-  createdAt: number
+  creationTime: number
+  modificationTime: number
   expiresAt?: number
   usedAt?: number
-  usedByAttendeeId?: string
+  usedByAttendee?: string
+  revokedAt?: number
+  revokedBy?: string
   /** Client-composed shareable link (`${event.detailPagePath}?rsvpToken=${token}`); not returned by the API. */
   url?: string
 }
@@ -41,7 +50,6 @@ export interface RsvpToken {
  * Payload for POST /v1/events/{eventId}/rsvpTokens
  */
 export interface RsvpTokenCreatePayload {
-  campaignId?: string
   expiresInDays?: number
 }
 
