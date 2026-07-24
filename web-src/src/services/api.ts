@@ -577,7 +577,7 @@ class ApiService {
   private async callExternalApi<T = any>(
     service: 'esp' | 'esl',
     endpoint: string,
-    method: 'GET' | 'POST' | 'PUT' | 'DELETE' = 'GET',
+    method: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE' = 'GET',
     body?: any,
     options?: {
       operationName?: string
@@ -2159,6 +2159,49 @@ class ApiService {
     validateString(campaignId, 'campaign ID')
     return this.callExternalApi('esp', `/v1/events/${eventId}/campaigns/${campaignId}`, 'DELETE', undefined,
       { operationName: 'deleteCampaign', shouldReturnFullResponse: true }
+    )
+  }
+
+  // --------------------------------------------------------------------------
+  // RSVP Tokens
+  //
+  // Event Marketer-facing management of one-time-use RSVP tokens (bypass
+  // Adobe ID login). These four routes are eventScopeCheck-authenticated, same
+  // as the campaign/attendee routes above. The guest-facing routes
+  // (GET/POST /v1/events/{eventId}/rsvpTokenRegistrations, authenticated via the
+  // x-adobe-esp-rsvp-token header) are called from the guest-facing RSVP page
+  // (event-libs), not from EMC. getRsvpTokens returns a bare array, not a
+  // wrapper object.
+  // --------------------------------------------------------------------------
+
+  async getRsvpTokens(eventId: string): Promise<any | ErrorResponse> {
+    validateString(eventId, 'event ID')
+    return this.callExternalApi('esp', `/v1/events/${eventId}/rsvpTokens`, 'GET', undefined,
+      { operationName: 'getRsvpTokens', shouldReturnFullResponse: true }
+    )
+  }
+
+  async generateRsvpToken(eventId: string, payload: Record<string, unknown> = {}): Promise<any | ErrorResponse> {
+    validateString(eventId, 'event ID')
+    return this.callExternalApi('esp', `/v1/events/${eventId}/rsvpTokens`, 'POST', payload,
+      { operationName: 'generateRsvpToken', shouldReturnFullResponse: true }
+    )
+  }
+
+  async updateRsvpToken(eventId: string, token: string, payload: Record<string, unknown>): Promise<any | ErrorResponse> {
+    validateString(eventId, 'event ID')
+    validateString(token, 'RSVP token')
+    validateObject(payload, 'RSVP token payload')
+    return this.callExternalApi('esp', `/v1/events/${eventId}/rsvpTokens/${token}`, 'PATCH', payload,
+      { operationName: 'updateRsvpToken', shouldReturnFullResponse: true }
+    )
+  }
+
+  async revokeRsvpToken(eventId: string, token: string): Promise<any | ErrorResponse> {
+    validateString(eventId, 'event ID')
+    validateString(token, 'RSVP token')
+    return this.callExternalApi('esp', `/v1/events/${eventId}/rsvpTokens/${token}`, 'DELETE', undefined,
+      { operationName: 'revokeRsvpToken', shouldReturnFullResponse: true }
     )
   }
 
