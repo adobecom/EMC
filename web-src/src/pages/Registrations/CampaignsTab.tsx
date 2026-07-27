@@ -3,7 +3,7 @@
 */
 
 import React, { useState, useCallback, useMemo, useEffect } from 'react'
-import { Button, ButtonGroup, TextField, Picker, PickerItem, DialogTrigger, Dialog, Content, Heading, Text, ActionButton, NumberField, Switch, AlertDialog, SearchField } from '@react-spectrum/s2'
+import { Button, ButtonGroup, TextField, Picker, PickerItem, DialogTrigger, Dialog, Content, Heading, Text, ActionButton, NumberField, Switch, AlertDialog, SearchField, TooltipTrigger, Tooltip } from '@react-spectrum/s2'
 import { style } from "@react-spectrum/s2/style" with { type: "macro" }
 import Add from '@react-spectrum/s2/icons/Add'
 import Edit from '@react-spectrum/s2/icons/Edit'
@@ -335,7 +335,7 @@ export const CampaignsTab: React.FC<CampaignsTabProps> = ({
             {campaign.url}
           </Text>
           {campaign.url && (
-            <>
+            <TooltipTrigger isOpen={copiedId === campaign.campaignId}>
               <ActionButton
                 isQuiet
                 onPress={() => handleCopyUrl(campaign)}
@@ -343,12 +343,8 @@ export const CampaignsTab: React.FC<CampaignsTabProps> = ({
               >
                 <Copy />
               </ActionButton>
-              {copiedId === campaign.campaignId && (
-                <Text UNSAFE_style={{ fontSize: '11px', color: COLORS.STATUS_DRAFT }}>
-                  Copied!
-                </Text>
-              )}
-            </>
+              <Tooltip>Copied!</Tooltip>
+            </TooltipTrigger>
           )}
         </div>
       )
