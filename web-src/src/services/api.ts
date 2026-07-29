@@ -577,7 +577,7 @@ class ApiService {
   private async callExternalApi<T = any>(
     service: 'esp' | 'esl',
     endpoint: string,
-    method: 'GET' | 'POST' | 'PUT' | 'DELETE' = 'GET',
+    method: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE' = 'GET',
     body?: any,
     options?: {
       operationName?: string
@@ -1064,14 +1064,10 @@ class ApiService {
       const host = getApiHost('esp', env)
       const url = `${host}/v1/events/${encodeURIComponent(eventId)}`
 
-      // First, get the event and event-level speakers/sponsors/venues/images
-      const [eventResp, eventSpeakersResp, eventSponsorsResp, venuesResp, imagesResp] = await Promise.all([
-        safeFetch(url, { method: 'GET', headers: headers as any }),
-        safeFetch(`${url}/speakers`, { method: 'GET', headers: headers as any }),
-        safeFetch(`${url}/sponsors`, { method: 'GET', headers: headers as any }),
-        safeFetch(`${url}/venues`, { method: 'GET', headers: headers as any }),
-        safeFetch(`${url}/images`, { method: 'GET', headers: headers as any }),
-      ])
+      // First, check access to the parent event before requesting any sub-resources.
+      // If the user is not authorized for this event, do not leak the event UUID
+      // or the existence of its sub-resources via speakers/sponsors/venues/images calls.
+      const eventResp = await safeFetch(url, { method: 'GET', headers: headers as any })
 
       let data: any = {}
 
@@ -1081,6 +1077,13 @@ class ApiService {
         console.error(`❌ Failed to get event ${eventId}. Status: ${eventResp.status}`)
         return { status: eventResp.status, error: 'Failed to get event details' }
       }
+
+      const [eventSpeakersResp, eventSponsorsResp, venuesResp, imagesResp] = await Promise.all([
+        safeFetch(`${url}/speakers`, { method: 'GET', headers: headers as any }),
+        safeFetch(`${url}/sponsors`, { method: 'GET', headers: headers as any }),
+        safeFetch(`${url}/venues`, { method: 'GET', headers: headers as any }),
+        safeFetch(`${url}/images`, { method: 'GET', headers: headers as any }),
+      ])
 
       const seriesId = data.seriesId
 
@@ -2156,6 +2159,49 @@ class ApiService {
     validateString(campaignId, 'campaign ID')
     return this.callExternalApi('esp', `/v1/events/${eventId}/campaigns/${campaignId}`, 'DELETE', undefined,
       { operationName: 'deleteCampaign', shouldReturnFullResponse: true }
+    )
+  }
+
+  // --------------------------------------------------------------------------
+  // RSVP Tokens
+  //
+  // Event Marketer-facing management of one-time-use RSVP tokens (bypass
+  // Adobe ID login). These four routes are eventScopeCheck-authenticated, same
+  // as the campaign/attendee routes above. The guest-facing routes
+  // (GET/POST /v1/events/{eventId}/rsvpTokenRegistrations, authenticated via the
+  // x-adobe-esp-rsvp-token header) are called from the guest-facing RSVP page
+  // (event-libs), not from EMC. getRsvpTokens returns a bare array, not a
+  // wrapper object.
+  // --------------------------------------------------------------------------
+
+  async getRsvpTokens(eventId: string): Promise<any | ErrorResponse> {
+    validateString(eventId, 'event ID')
+    return this.callExternalApi('esp', `/v1/events/${eventId}/rsvpTokens`, 'GET', undefined,
+      { operationName: 'getRsvpTokens', shouldReturnFullResponse: true }
+    )
+  }
+
+  async generateRsvpToken(eventId: string, payload: Record<string, unknown> = {}): Promise<any | ErrorResponse> {
+    validateString(eventId, 'event ID')
+    return this.callExternalApi('esp', `/v1/events/${eventId}/rsvpTokens`, 'POST', payload,
+      { operationName: 'generateRsvpToken', shouldReturnFullResponse: true }
+    )
+  }
+
+  async updateRsvpToken(eventId: string, token: string, payload: Record<string, unknown>): Promise<any | ErrorResponse> {
+    validateString(eventId, 'event ID')
+    validateString(token, 'RSVP token')
+    validateObject(payload, 'RSVP token payload')
+    return this.callExternalApi('esp', `/v1/events/${eventId}/rsvpTokens/${token}`, 'PATCH', payload,
+      { operationName: 'updateRsvpToken', shouldReturnFullResponse: true }
+    )
+  }
+
+  async revokeRsvpToken(eventId: string, token: string): Promise<any | ErrorResponse> {
+    validateString(eventId, 'event ID')
+    validateString(token, 'RSVP token')
+    return this.callExternalApi('esp', `/v1/events/${eventId}/rsvpTokens/${token}`, 'DELETE', undefined,
+      { operationName: 'revokeRsvpToken', shouldReturnFullResponse: true }
     )
   }
 

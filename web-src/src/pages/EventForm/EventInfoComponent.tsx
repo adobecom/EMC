@@ -105,6 +105,7 @@ export const EventInfoComponent: React.FC = () => {
     locale,
     isDirty,
     eventId,
+    eventDataResp,
   } = useEventFormComponent({
     componentId: 'event-info',
     validate: () => {
@@ -165,6 +166,10 @@ export const EventInfoComponent: React.FC = () => {
     const load = async () => {
       try {
         if (eventId) {
+          // Wait for the parent event to load successfully before requesting
+          // event-scoped sub-resources, to avoid leaking the event UUID / its
+          // existence when the user lacks access to the event.
+          if (!eventDataResp) return
           const result = await cachedApi.getEventConfigs(eventId)
           if (cancelled) return
           if ('error' in result) {
@@ -199,7 +204,7 @@ export const EventInfoComponent: React.FC = () => {
     return () => {
       cancelled = true
     }
-  }, [eventId, activeGroup?.scopeId, setScopeLocales])
+  }, [eventId, eventDataResp, activeGroup?.scopeId, setScopeLocales])
 
   const pickerLocaleOptions = useMemo(() => {
     if (!locale) return localeOptions
