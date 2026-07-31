@@ -104,6 +104,21 @@ describe('resolveContentTypeTag — manual content-type tag on the event', () =>
     expect(result.manualOverride?.caasId).toBe('caas:content-type/article')
   })
 
+  // Regression guard for the UI copy: buildXdmTags strips ALL caas:content-type/* tags
+  // and prepends only the resolved one, so a manual tag REPLACES the derived tag in the
+  // CaaS tags array rather than coexisting with it. An earlier version of the warning
+  // text claimed both tags end up in CaaS, which is false. This pins the shape the copy
+  // depends on: the derived tag is what's reported, and the manual tag is named
+  // separately so the UI can describe the replacement correctly.
+  it('names the manual tag separately from the reported tag, so the UI can say it replaces it', () => {
+    const result = resolveContentTypeTag('in-person', [
+      { name: 'Webinar', caasId: 'caas:content-type/webinar' },
+    ])
+    expect(result.caasId).toBe('caas:content-type/in-person-event')
+    expect(result.manualOverride?.caasId).toBe('caas:content-type/webinar')
+    expect(result.manualOverride?.caasId).not.toBe(result.caasId)
+  })
+
   it('picks the first content-type tag when several conflict', () => {
     const result = resolveContentTypeTag('webinar', [
       { name: 'Article', caasId: 'caas:content-type/article' },

@@ -1,11 +1,12 @@
 /**
  * Derive the caas:content-type tag that CaaS will carry for an event, for display only.
  *
- * This tag is NOT stored on the event. It is derived downstream at CaaS-publish time
- * by events-platform-hh-webhooks (see CONTENT_TYPE_TAGS in constants.ts), so GET /events
- * never returns it and EMC has nothing to read back. To give creators visible
- * confirmation that their event is categorized correctly (MWPW-201126), we restate the
- * backend's rule here. Nothing resolved by this module is ever sent on save.
+ * This tag is NOT stored on the event. It is derived downstream at CaaS-publish time by
+ * events-platform-hh-webhooks (EVENT_TYPE_CONTENT_TAG_MAP in its actions/constants.js;
+ * EMC's local copy is CONTENT_TYPE_TAGS in constants.ts), so GET /events never returns
+ * it and EMC has nothing to read back. To give creators visible confirmation that their
+ * event is categorized correctly (MWPW-201126), we restate the backend's rule here.
+ * Nothing resolved by this module is ever sent on save.
  *
  * Because this is a restatement rather than a read-back, it is only as accurate as its
  * agreement with the backend map. Callers should present the result as the rule that
@@ -40,9 +41,12 @@ export interface ResolvedContentTypeTag {
   formatLabel?: string
   /**
    * An explicit caas:content-type/* tag the user put on the event, when present and
-   * different from the derived tag. The backend adds this to the CaaS `tags` array but
-   * still reports the derived tag as `contentType`, so surfacing it lets the UI warn
-   * instead of implying a clean override.
+   * different from the derived tag.
+   *
+   * buildXdmTags strips every caas:content-type/* tag and prepends only the resolved
+   * one, so this tag REPLACES the derived tag in the CaaS `tags` array — they do not
+   * both appear. Meanwhile `contentType` stays the derived value. Surfacing this lets
+   * the UI explain the split accurately instead of implying a clean override.
    */
   manualOverride?: { title: string; caasId: string }
 }

@@ -96,13 +96,12 @@ export const EventTagsComponent: React.FC = () => {
         </Text>
 
         {contentTypeTag.manualOverride && (
-          <Badge variant="notice" fillStyle="subtle" size="S">
-            <Text>
-              You have also selected {contentTypeTag.manualOverride.caasId} below. Both end
-              up in the event&apos;s CaaS tags, but {contentTypeTag.caasId} remains its
-              content type — remove the extra tag unless you specifically need it.
-            </Text>
-          </Badge>
+          <Text UNSAFE_style={TYPOGRAPHY.HELPER_TEXT}>
+            You have also selected {contentTypeTag.manualOverride.caasId} below, which
+            replaces {contentTypeTag.caasId} in the event&apos;s CaaS tags. The event is
+            still classified as {contentTypeTag.title} either way, so remove the extra tag
+            unless you specifically need it.
+          </Text>
         )}
       </div>
 

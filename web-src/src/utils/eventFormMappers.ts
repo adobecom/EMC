@@ -168,6 +168,11 @@ export function mapApiResponseToFormData(event: EventApiResponse, locale: string
     googlePlaceName: event.venue.venueName || ''
   } : undefined
 
+  // NOTE: this collapses every non-webinar eventType (including Hybrid) to 'in-person'.
+  // Harmless while EventForm only creates webinar/in-person events, but if Hybrid events
+  // ever load here, resolveContentTypeTag (config/contentTypeTag.ts) would show the
+  // in-person content type while the backend emits the caas:content-type/event fallback.
+  // Widen this mapping, not the resolver, if that day comes.
   const mappedEventType = event.eventType?.toLowerCase() === 'webinar' ? 'webinar' : 'in-person'
 
   return {
