@@ -1,13 +1,8 @@
 import { resolveContentTypeTag } from './contentTypeTag'
 import { CONTENT_TYPE_TAGS, CONTENT_TYPE_TAG_FALLBACK, EVENT_TYPES } from './constants'
 
-/**
- * These caasIds are a mirror of EVENT_TYPE_CONTENT_TAG_MAP in
- * events-platform-hh-webhooks (actions/constants.js). Nothing in EMC can verify that
- * repo at test time, so these assertions pin OUR values only — they catch an
- * accidental edit on this side, not a change on the backend's side. Keeping them
- * spelled out literally makes the coupling visible to anyone editing constants.ts.
- */
+// Pins OUR copy of the backend's EVENT_TYPE_CONTENT_TAG_MAP. Nothing here can reach that
+// repo, so these catch an accidental edit on this side only — not backend drift.
 describe('content-type tag values mirror the backend map', () => {
   it('pins the InPerson tag', () => {
     expect(CONTENT_TYPE_TAGS[EVENT_TYPES.IN_PERSON].caasId).toBe('caas:content-type/in-person-event')
@@ -81,10 +76,8 @@ describe('resolveContentTypeTag — fallback', () => {
 })
 
 describe('resolveContentTypeTag — manual content-type tag on the event', () => {
-  // Regression guard: the backend sets the top-level `contentType` XDM field purely
-  // from eventType (caasService.js formatEventXdm) and only the `tags` array honors an
-  // explicit tag (buildXdmTags). Reporting the manual tag as the content type would
-  // tell users something the backend does not actually do.
+  // The backend sets contentType purely from eventType; only `tags` honors an explicit
+  // tag. Reporting the manual tag as the content type would misstate what happens.
   it('still reports the derived tag, because the backend always sets contentType from eventType', () => {
     const result = resolveContentTypeTag('in-person', [
       { name: 'Webinar', caasId: 'caas:content-type/webinar' },
@@ -104,12 +97,9 @@ describe('resolveContentTypeTag — manual content-type tag on the event', () =>
     expect(result.manualOverride?.caasId).toBe('caas:content-type/article')
   })
 
-  // Regression guard for the UI copy: buildXdmTags strips ALL caas:content-type/* tags
-  // and prepends only the resolved one, so a manual tag REPLACES the derived tag in the
-  // CaaS tags array rather than coexisting with it. An earlier version of the warning
-  // text claimed both tags end up in CaaS, which is false. This pins the shape the copy
-  // depends on: the derived tag is what's reported, and the manual tag is named
-  // separately so the UI can describe the replacement correctly.
+  // A manual tag REPLACES the derived tag in the CaaS tags array rather than coexisting
+  // with it; earlier UI copy claimed both appear, which was false. Pins the shape that
+  // copy depends on.
   it('names the manual tag separately from the reported tag, so the UI can say it replaces it', () => {
     const result = resolveContentTypeTag('in-person', [
       { name: 'Webinar', caasId: 'caas:content-type/webinar' },

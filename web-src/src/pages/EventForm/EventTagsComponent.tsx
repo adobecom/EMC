@@ -35,10 +35,9 @@ export const EventTagsComponent: React.FC = () => {
 
   const selectedTags = formData.tags || []
 
-  // The caas:content-type tag is derived downstream at CaaS-publish time and never
-  // stored on the event, so this is a display-only mirror of that derivation. It is
-  // deliberately NOT written into formData — doing so would mark every event dirty
-  // on open and would make EMC a second source of truth for the tag.
+  // Display-only mirror of a tag applied downstream. Deliberately not written into
+  // formData: that would mark every event dirty on open and make EMC a second source
+  // of truth. See config/contentTypeTag.ts.
   const contentTypeTag = resolveContentTypeTag(formData.eventType, selectedTags)
 
   // ============================================================================
@@ -62,7 +61,7 @@ export const EventTagsComponent: React.FC = () => {
         </Text>
       </div>
 
-      {/* Content type tag — restates the format-based rule; read-only, never saved */}
+      {/* Content type — restates the format-based rule; read-only, never saved */}
       <div
         style={{ display: 'flex', flexDirection: 'column', gap: SPACING.XS }}
         data-testid="content-type-tag"
