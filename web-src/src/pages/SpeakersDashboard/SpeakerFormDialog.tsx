@@ -23,12 +23,12 @@ import {
   Heading,
   Form,
   ProgressCircle,
-  Checkbox,
   Picker,
   PickerItem,
 } from '@react-spectrum/s2'
 import { style } from '@react-spectrum/s2/style' with { type: 'macro' }
 import Add from '@react-spectrum/s2/icons/Add'
+import InfoCircle from '@react-spectrum/s2/icons/InfoCircle'
 import RemoveCircle from '@react-spectrum/s2/icons/RemoveCircle'
 import OpenIn from '@react-spectrum/s2/icons/OpenIn'
 import { SpeakerDashboardItem } from './SpeakersDashboard'
@@ -45,11 +45,6 @@ import {
 import type { SpeakerDashboardLocalizationDraft } from '../../services/payloadBuilders'
 import type { Locale } from '../../types/configApi'
 
-/** Mirrors `PartnerDialogSaveOptions` shape: serializable payload first, `File` second, options last */
-export interface SpeakerFormSaveOptions {
-  cascadeToEvents?: boolean
-}
-
 export interface SpeakerFormSubmitData {
   firstName: string
   lastName: string
@@ -63,15 +58,10 @@ export interface SpeakerFormSubmitData {
 interface SpeakerFormDialogProps {
   isOpen: boolean
   onClose: () => void
-  onSubmit: (
-    data: SpeakerFormSubmitData,
-    pendingFile?: File,
-    options?: SpeakerFormSaveOptions
-  ) => Promise<void>
+  onSubmit: (data: SpeakerFormSubmitData, pendingFile?: File) => Promise<void>
   speaker: SpeakerDashboardItem | null
   seriesId: string
   isSubmitting: boolean
-  cascadeToEvents?: boolean
   /** Locales from scope config; when provided, replaces the hardcoded SUPPORTED_SPEAKER_LOCALES */
   scopeLocales?: Locale[] | null
 }
@@ -120,7 +110,6 @@ export const SpeakerFormDialog: React.FC<SpeakerFormDialogProps> = ({
   speaker,
   seriesId: _seriesId,
   isSubmitting,
-  cascadeToEvents,
   scopeLocales,
 }) => {
   void _seriesId
@@ -137,7 +126,6 @@ export const SpeakerFormDialog: React.FC<SpeakerFormDialogProps> = ({
   const [selectedLocale, setSelectedLocale] = useState<string>(DEFAULT_LOCALE)
   const [pendingFile, setPendingFile] = useState<File | null>(null)
   const [removedImageId, setRemovedImageId] = useState<string | undefined>(undefined)
-  const [shouldCascade, setShouldCascade] = useState(cascadeToEvents ?? false)
   const imageIdWhenDialogOpenedRef = useRef<string | undefined>(undefined)
 
   const isEditing = !!speaker
@@ -159,7 +147,6 @@ export const SpeakerFormDialog: React.FC<SpeakerFormDialogProps> = ({
       })
       setLocalizationDrafts(localizationDraftsFromSpeaker(speaker, effectiveLocales))
       setSelectedLocale(DEFAULT_LOCALE)
-      setShouldCascade(cascadeToEvents ?? false)
       setRemovedImageId(undefined)
       setPendingFile(null)
       imageIdWhenDialogOpenedRef.current = speaker.photo?.imageId
@@ -169,10 +156,9 @@ export const SpeakerFormDialog: React.FC<SpeakerFormDialogProps> = ({
       setSelectedLocale(DEFAULT_LOCALE)
       setPendingFile(null)
       setRemovedImageId(undefined)
-      setShouldCascade(false)
       imageIdWhenDialogOpenedRef.current = undefined
     }
-  }, [isOpen, speaker, cascadeToEvents])
+  }, [isOpen, speaker])
 
   const updateField = useCallback(<K extends keyof FormState>(field: K, value: FormState[K]) => {
     setFormState((prev) => ({ ...prev, [field]: value }))
@@ -267,8 +253,8 @@ export const SpeakerFormDialog: React.FC<SpeakerFormDialogProps> = ({
       replaceImageId,
     }
 
-    await onSubmit(data, pendingFile ?? undefined, { cascadeToEvents: shouldCascade })
-  }, [formState, localizationDrafts, pendingFile, removedImageId, shouldCascade, isEditing, onSubmit])
+    await onSubmit(data, pendingFile ?? undefined)
+  }, [formState, localizationDrafts, pendingFile, removedImageId, isEditing, onSubmit])
 
   const isFormValid = formState.firstName.trim() && formState.lastName.trim()
 
@@ -430,28 +416,43 @@ export const SpeakerFormDialog: React.FC<SpeakerFormDialogProps> = ({
                     )}
                   </div>
 
-                  {isEditing && cascadeToEvents !== undefined && (
+                  {/*
+                    Deliberately does NOT promise that linked event pages refresh on their
+                    own. Saving here fans out to each linked event via the ESP stream, but
+                    that payload omits detailPagePath/published/liveUpdate (hand-picked
+                    literal in EventWebhookProcessor.dispatchAssociatedWebhooks), and
+                    buildHydratedEvent never restores them — unlike buildHydratedSessionObj,
+                    which Object.assigns the live event fields. Without detailPagePath the DA
+                    webhook bails ("Missing detailPagePath in the payload"), so no page is
+                    written at all; and with published/liveUpdate undefined it could only
+                    ever resolve to PREVIEW, never PUBLISH. Template-less and non-DA series
+                    are skipped even earlier. Saving/publishing the event itself is the only
+                    reliable path, so that is what we tell the user. See MWPW-202643.
+
+                    Hidden when the speaker is known to have no linked events; shown when the
+                    count is unresolved, since that is the honest default.
+                  */}
+                  {isEditing && speaker?.eventCount !== 0 && (
                     <div
                       style={{
-                        padding: 16,
-                        border: '1px solid var(--emc-cascade-callout-border)',
+                        display: 'flex',
+                        gap: 8,
+                        alignItems: 'flex-start',
+                        padding: 12,
                         borderRadius: 8,
-                        backgroundColor: 'var(--emc-cascade-callout-bg)',
-                        color: 'var(--emc-cascade-callout-text)',
+                        backgroundColor: 'var(--spectrum-global-color-gray-100)',
                       }}
                     >
-                      <Checkbox isSelected={shouldCascade} onChange={setShouldCascade}>
-                        Update this speaker in all linked events
-                      </Checkbox>
+                      <InfoCircle aria-hidden />
                       <Text
                         UNSAFE_style={{
                           fontSize: '12px',
-                          color: 'var(--emc-cascade-callout-text-muted)',
-                          marginTop: '4px',
+                          color: 'var(--spectrum-global-color-gray-700)',
                         }}
                       >
-                        This speaker is linked to events. Check this option to propagate changes to all
-                        linked events.
+                        This updates the speaker profile for the series. Linked event pages
+                        are not refreshed here — open each event and save or publish it to
+                        pick up these changes.
                       </Text>
                     </div>
                   )}
