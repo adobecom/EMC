@@ -125,6 +125,18 @@ export const EVENT_TYPES = {
   HYBRID: 'Hybrid',
 } as const
 
+/**
+ * Maps eventType to the caas:content-type tag applied to the event's CaaS data.
+ *
+ * MIRRORS THE BACKEND. The tag is derived downstream at CaaS-publish time by
+ * events-platform-hh-webhooks (EVENT_TYPE_CONTENT_TAG_MAP in actions/constants.js,
+ * consumed by actions/hoolihan-caas-webhook/caasService.js) and is never persisted
+ * to the event record, so GET /events never returns it. EMC re-derives it purely to
+ * show creators how their event will be categorized — it is not sent on save.
+ *
+ * Keep these caasIds byte-identical to the backend map; contentTypeTag.test.ts
+ * guards against drift.
+ */
 export const CONTENT_TYPE_TAGS = {
   [EVENT_TYPES.WEBINAR]: {
     title: 'Webinar',
@@ -134,6 +146,15 @@ export const CONTENT_TYPE_TAGS = {
     title: 'In-Person Event',
     caasId: 'caas:content-type/in-person-event',
   },
+} as const
+
+/**
+ * Applied when eventType has no entry in CONTENT_TYPE_TAGS (e.g. Hybrid, or unset).
+ * Matches the backend's `|| 'caas:content-type/event'` fallback.
+ */
+export const CONTENT_TYPE_TAG_FALLBACK = {
+  title: 'Event',
+  caasId: 'caas:content-type/event',
 } as const
 
 /**
