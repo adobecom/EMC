@@ -1450,7 +1450,8 @@ class ApiService {
 
   /**
    * Delete a speaker from a series
-   * Note: This does NOT automatically remove the speaker from events
+   * Note: the backend also removes every event association for this speaker in the same
+   * atomic transaction, so callers must not remove the speaker from events beforehand.
    */
   async deleteSpeaker(speakerId: string, seriesId: string): Promise<SuccessResponse | ErrorResponse> {
     validateString(seriesId, 'series ID')
