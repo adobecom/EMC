@@ -168,6 +168,8 @@ export function mapApiResponseToFormData(event: EventApiResponse, locale: string
     googlePlaceName: event.venue.venueName || ''
   } : undefined
 
+  // Collapses non-webinar types (incl. Hybrid) to 'in-person'. If Hybrid events ever load
+  // here, widen this — not resolveContentTypeTag — or they'll show the wrong content type.
   const mappedEventType = event.eventType?.toLowerCase() === 'webinar' ? 'webinar' : 'in-person'
 
   return {
