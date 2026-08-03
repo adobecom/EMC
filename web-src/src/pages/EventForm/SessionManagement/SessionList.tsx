@@ -16,9 +16,9 @@ import { SeriesSpeaker } from "../../../types/domain";
 import { VenueLocation } from "../LocationDialog";
 import { formatTime, formatDate } from "../../../utils/dateTime";
 import { SessionForm } from "./SessionForm";
-import type { SessionFormData } from "./SessionForm";
+import type { SessionFormData, SessionSaveResult } from "./SessionForm";
 
-export type { SessionFormData };
+export type { SessionFormData, SessionSaveResult };
 
 // ============================================================================
 // HELPERS
@@ -47,7 +47,7 @@ export interface SessionItemProps {
   isExpanded: boolean;
   onToggle: (sessionId: string) => void;
   onDelete: (sessionId: string) => void;
-  onSave: (sessionId: string, data: SessionFormData) => Promise<void>;
+  onSave: (sessionId: string, data: SessionFormData) => Promise<SessionSaveResult>;
   venueLocations: VenueLocation[];
   seriesSpeakers: SeriesSpeaker[];
   onSpeakersRefresh: () => Promise<void>;
@@ -193,9 +193,9 @@ export interface SessionsListProps {
   sessions: Session[];
   isAddingNew: boolean;
   onCancelAdd: () => void;
-  onAdd: (data: SessionFormData) => Promise<void>;
+  onAdd: (data: SessionFormData) => Promise<SessionSaveResult>;
   onDelete: (sessionId: string) => void;
-  onSave: (sessionId: string, data: SessionFormData) => Promise<void>;
+  onSave: (sessionId: string, data: SessionFormData) => Promise<SessionSaveResult>;
   venueLocations: VenueLocation[];
   seriesSpeakers: SeriesSpeaker[];
   onSpeakersRefresh: () => Promise<void>;

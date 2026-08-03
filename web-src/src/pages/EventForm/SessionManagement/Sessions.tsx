@@ -3,104 +3,24 @@ import { ProgressCircle, Button, Heading, Text } from "@react-spectrum/s2";
 import AddCircle from "@react-spectrum/s2/icons/AddCircle";
 import { Session, SessionLocalization, SessionTimeInfo } from "../../../types/sessions";
 import { SessionsList } from "./SessionList";
-import type { SessionFormData } from "./SessionForm";
+import type { SessionFormData, SessionSaveResult } from "./SessionForm";
 import { useEventFormContext, useToast } from "../../../contexts";
 import { EventApiResponse } from "../../../types/domain";
 import { apiService, cachedApi } from "../../../services/api";
 import { COLORS, SURFACES } from "../../../styles/designSystem";
 import { millisToNaiveDateTimeString, naiveDateTimeToUTCMillis } from "../../../utils/dateTime";
+import {
+  hasSessionFieldChanges,
+  hasSessionSpeakersChanges,
+  hasSessionTimeFieldChanges,
+  resolveIsAutoRegistrationEnabled,
+  serializeTagsForApi,
+} from "./sessionDiff";
 
 function parseTagsFromApi(tags: unknown): string[] {
   if (typeof tags === "string") return tags.split(",").map((t) => t.trim()).filter(Boolean);
   if (Array.isArray(tags)) return (tags as string[]).map((t) => String(t).trim()).filter(Boolean);
   return [];
-}
-
-function serializeTagsForApi(tags: string[] | undefined): string {
-  return (tags ?? []).join(",");
-}
-
-function normalizeOptionalString(value: string | undefined): string {
-  return (value ?? "").trim();
-}
-
-function normalizeOptionalNumber(value: number | undefined): number | undefined {
-  return typeof value === "number" ? value : undefined;
-}
-
-function normalizeIdList(values: string[] | undefined): string[] {
-  return [...new Set((values ?? []).map((value) => String(value).trim()).filter(Boolean))].sort();
-}
-
-function getNormalizedSessionFields(session: Session) {
-  return {
-    name: normalizeOptionalString(session.name),
-    description: normalizeOptionalString(session.description),
-    tags: serializeTagsForApi(session.tags),
-  };
-}
-
-function getNormalizedSessionFieldsFromForm(data: SessionFormData) {
-  return {
-    name: normalizeOptionalString(data.name),
-    description: normalizeOptionalString(data.description),
-    tags: serializeTagsForApi(data.tags),
-  };
-}
-
-function getNormalizedSessionTimeFields(session: Session) {
-  return {
-    startDateTime: session.startDateTime,
-    endDateTime: session.endDateTime,
-    isAutoRegistrationEnabled: session.sessionTime?.isAutoRegistrationEnabled !== false,
-    attendeeLimit:
-      session.sessionTime?.isAutoRegistrationEnabled === false
-        ? normalizeOptionalNumber(session.sessionTime?.attendeeLimit)
-        : undefined,
-    locationId: session.locationId ?? undefined,
-  };
-}
-
-function getNormalizedSessionTimeFieldsFromForm(data: SessionFormData) {
-  return {
-    startDateTime: data.startDateTime,
-    endDateTime: data.endDateTime,
-    isAutoRegistrationEnabled: data.isAutoRegistrationEnabled !== false,
-    attendeeLimit:
-      data.isAutoRegistrationEnabled === false
-        ? normalizeOptionalNumber(data.attendeeLimit)
-        : undefined,
-    locationId: data.locationId ?? undefined,
-  };
-}
-
-function hasSessionFieldChanges(session: Session, data: SessionFormData): boolean {
-  const current = getNormalizedSessionFields(session);
-  const next = getNormalizedSessionFieldsFromForm(data);
-  return (
-    current.name !== next.name ||
-    current.description !== next.description ||
-    current.tags !== next.tags
-  );
-}
-
-function hasSessionTimeFieldChanges(session: Session, data: SessionFormData): boolean {
-  const current = getNormalizedSessionTimeFields(session);
-  const next = getNormalizedSessionTimeFieldsFromForm(data);
-  return (
-    current.startDateTime !== next.startDateTime ||
-    current.endDateTime !== next.endDateTime ||
-    current.isAutoRegistrationEnabled !== next.isAutoRegistrationEnabled ||
-    current.attendeeLimit !== next.attendeeLimit ||
-    current.locationId !== next.locationId
-  );
-}
-
-function hasSessionSpeakersChanges(data: SessionFormData): boolean {
-  const current = normalizeIdList(data.originalSpeakerIds);
-  const next = normalizeIdList(data.speakerIds);
-  if (current.length !== next.length) return true;
-  return current.some((id, index) => id !== next[index]);
 }
 
 function mapApiSessionToSession(item: Record<string, unknown>, locale: string): Session {
@@ -153,7 +73,7 @@ async function hydrateSessionWithTime(session: Session): Promise<Session> {
     startDateTime,
     endDateTime,
     capacity:
-      sessionTime.isAutoRegistrationEnabled === false &&
+      !resolveIsAutoRegistrationEnabled(sessionTime) &&
       sessionTime.attendeeLimit != null
         ? Number(sessionTime.attendeeLimit)
         : session.capacity,
@@ -175,7 +95,7 @@ async function createSessionTimeForSession(
     sessionId,
     startTimeMillis,
     endTimeMillis,
-    isAutoRegistrationEnabled: data.isAutoRegistrationEnabled !== false,
+    isAutoRegistrationEnabled: resolveIsAutoRegistrationEnabled(data),
     ...(data.attendeeLimit && Number(data.attendeeLimit) > 0
       ? { attendeeLimit: Number(data.attendeeLimit) }
       : {}),
@@ -212,7 +132,7 @@ async function upsertSessionTimeForSession(
       endTimeMillis,
       creationTime: data.sessionTimeCreationTime,
       modificationTime: data.sessionTimeModificationTime,
-      isAutoRegistrationEnabled: data.isAutoRegistrationEnabled !== false,
+      isAutoRegistrationEnabled: resolveIsAutoRegistrationEnabled(data),
       ...(data.attendeeLimit != null && data.attendeeLimit > 0
         ? { attendeeLimit: data.attendeeLimit }
         : {}),
@@ -384,7 +304,7 @@ export const Sessions: React.FC<SessionsProps> = ({ onOpenFormChange }) => {
     toast.success("Session deleted successfully");
   };
 
-  const handleAddSession = async (data: SessionFormData) => {
+  const handleAddSession = async (data: SessionFormData): Promise<SessionSaveResult> => {
     if (!eventId) throw new Error("Event ID is required to create a session");
     const payload = {
       name: data.name,
@@ -431,7 +351,7 @@ export const Sessions: React.FC<SessionsProps> = ({ onOpenFormChange }) => {
       sessionTime: {
         startTimeMillis: naiveDateTimeToUTCMillis(data.startDateTime, data.timezone || "UTC"),
         endTimeMillis: naiveDateTimeToUTCMillis(data.endDateTime, data.timezone || "UTC"),
-        isAutoRegistrationEnabled: data.isAutoRegistrationEnabled,
+        isAutoRegistrationEnabled: resolveIsAutoRegistrationEnabled(data),
         attendeeLimit: data.attendeeLimit != null ? Number(data.attendeeLimit) : undefined,
         locationId: data.locationId,
         sessionTimeId: createdSessionTime.sessionTimeId,
@@ -441,12 +361,13 @@ export const Sessions: React.FC<SessionsProps> = ({ onOpenFormChange }) => {
     };
     setSessions((prev) => sortSessionsByDate([...prev, sessionWithTime]));
     setIsAddingNew(false);
+    return { changed: true };
   };
 
   const handleUpdateSession = async (
     sessionId: string,
     data: SessionFormData,
-  ) => {
+  ): Promise<SessionSaveResult> => {
     if (!eventId) throw new Error("Event ID is required to update a session");
     const existingSession = sessions.find((s) => s.id === sessionId);
     if (!existingSession) {
@@ -513,7 +434,7 @@ export const Sessions: React.FC<SessionsProps> = ({ onOpenFormChange }) => {
                 ...s.sessionTime,
                 startTimeMillis: naiveDateTimeToUTCMillis(data.startDateTime, data.timezone || "UTC"),
                 endTimeMillis: naiveDateTimeToUTCMillis(data.endDateTime, data.timezone || "UTC"),
-                isAutoRegistrationEnabled: data.isAutoRegistrationEnabled,
+                isAutoRegistrationEnabled: resolveIsAutoRegistrationEnabled(data),
                 attendeeLimit:
                   data.isAutoRegistrationEnabled === false && data.attendeeLimit != null
                     ? Number(data.attendeeLimit)
@@ -528,6 +449,8 @@ export const Sessions: React.FC<SessionsProps> = ({ onOpenFormChange }) => {
       );
       return sortSessionsByDate(updated);
     });
+
+    return { changed: shouldUpdateSession || shouldUpdateSessionTime || shouldUpdateSpeakers };
   };
 
   return (
