@@ -12,32 +12,33 @@ const toUpperWords = (input: string): string =>
 
 const LEGACY_EXCLUDED_TYPES = new Set(['submit', 'button', 'hidden'])
 
-/** Normalizes a legacy per-cloud JSON `Type` string. ESP's RsvpFieldType has no
- *  `multi-select` value — legacy rows typed `multi-select`/`multiselect` map to
- *  `checkbox` (the current multi-value type); `inferDisplayAs` below preserves
- *  the distinct "dropdown" rendering that `multi-select` used to imply, instead
- *  of silently falling through to `text` and losing the field's options. */
+/** Maps a legacy per-cloud sheet `Type` string to the current substrate. `type`
+ *  now names only the fundamental control kind — text/select/multi-select —
+ *  never a specific text flavor; `inferDisplayAs` below carries that flavor. */
 function inferFieldType(raw: string | undefined): RsvpFieldType {
   const t = (raw || 'text').toLowerCase().replace(/\s+/g, '')
   if (t === 'select') return 'select'
-  if (t === 'checkbox' || t === 'multi-select' || t === 'multiselect') return 'checkbox'
-  if (t === 'email') return 'email'
-  if (t === 'phone' || t === 'tel') return 'phone'
+  if (t === 'checkbox' || t === 'multi-select' || t === 'multiselect') return 'multi-select'
   return 'text'
 }
 
-/** Default `displayAs` for a legacy-inferred field. Legacy JSON never carried a
- *  render hint of its own, except implicitly via the raw `Type` string: rows
- *  typed `multi-select`/`multiselect` get the multi-select dropdown widget
- *  (matching their pre-migration rendering); plain `checkbox` rows get the flat
- *  checkbox-list widget; `select` rows default to a single dropdown. */
-function inferDisplayAs(raw: string | undefined, type: RsvpFieldType): RsvpDisplayAs | undefined {
-  if (type === 'select') return 'dropdown'
-  if (type === 'checkbox') {
-    const t = (raw || '').toLowerCase().replace(/\s+/g, '')
-    return t === 'multi-select' || t === 'multiselect' ? 'dropdown' : 'checkbox'
-  }
-  return undefined
+/** Concrete widget/flavor for a legacy-inferred field. Legacy JSON never
+ *  carried a render hint of its own, except implicitly via the raw `Type`
+ *  string: rows typed `multi-select`/`multiselect` get the compact combobox
+ *  widget (matching their pre-migration rendering); plain `checkbox` rows get
+ *  the flat checkbox-list widget; `select` rows get a picker; text flavors
+ *  (email/phone/number/date/url/text-area) are inferred straight from `Type`. */
+function inferDisplayAs(raw: string | undefined, type: RsvpFieldType): RsvpDisplayAs {
+  const t = (raw || '').toLowerCase().replace(/\s+/g, '')
+  if (type === 'select') return 'picker'
+  if (type === 'multi-select') return (t === 'multi-select' || t === 'multiselect') ? 'combobox' : 'checkbox'
+  if (t === 'email') return 'email'
+  if (t === 'phone' || t === 'tel') return 'phone'
+  if (t === 'number') return 'number'
+  if (t === 'date') return 'date'
+  if (t === 'url') return 'url'
+  if (t === 'text-area' || t === 'textarea') return 'text-area'
+  return 'text'
 }
 
 function parseLegacyOptions(optionsStr: string | undefined): { value: string; label: string }[] {
@@ -65,10 +66,9 @@ export function mapLegacyRsvpConfigToFormFields(rows: RsvpConfigField[]): RsvpFo
     })
     .map(r => {
       const type = inferFieldType(r.Type)
-      const options = type === 'select' || type === 'checkbox'
+      const options = type === 'select' || type === 'multi-select'
         ? parseLegacyOptions(r.Options)
         : []
-      const displayAs = inferDisplayAs(r.Type, type)
       return {
         field: r.Field.trim(),
         label: rsvpConfigUiLabel(r, toUpperWords),
@@ -77,7 +77,7 @@ export function mapLegacyRsvpConfigToFormFields(rows: RsvpConfigField[]): RsvpFo
         required: r.Required === 'x' || r.Required === 'X',
         options,
         default: '',
-        ...(displayAs ? { displayAs } : {}),
+        displayAs: inferDisplayAs(r.Type, type),
       } satisfies RsvpFormField
     })
 }
@@ -111,5 +111,5 @@ export function mergeOptionSelectionWithField(
 export function isSelectableField(
   field: RsvpFormField
 ): field is RsvpFormField & { options: NonNullable<RsvpFormField['options']> } {
-  return (field.type === 'select' || field.type === 'checkbox') && (field.options?.length ?? 0) > 0
+  return (field.type === 'select' || field.type === 'multi-select') && (field.options?.length ?? 0) > 0
 }
