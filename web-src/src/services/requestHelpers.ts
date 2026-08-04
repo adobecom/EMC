@@ -107,7 +107,7 @@ export async function safeFetch(
   // Check for non-invasive test mode
   const nonInvasiveTest = new URLSearchParams(window.location.search).get('nonInvasiveTest') === 'true'
   
-  if (nonInvasiveTest && options.method && ['PUT', 'POST', 'DELETE'].includes(options.method)) {
+  if (nonInvasiveTest && options.method && ['PUT', 'POST', 'PATCH', 'DELETE'].includes(options.method)) {
     console.log('🧪 Non-invasive test mode. Skipping request:', url, options)
     if (options.body) {
       console.log('📦 Payload:', JSON.parse(options.body as string))

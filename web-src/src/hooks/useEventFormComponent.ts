@@ -7,7 +7,7 @@ import {
   useEventFormContext,
   ComponentCallbacks,
 } from '../contexts/EventFormContext'
-import { EventFormData } from '../types/domain'
+import { EventFormData, EventApiResponse } from '../types/domain'
 
 /**
  * Options for the useEventFormComponent hook
@@ -54,6 +54,8 @@ export interface UseEventFormComponentReturn {
   
   // Context identifiers
   eventId: string | null
+  /** Raw event API response — null until the parent event has loaded successfully (or for a new, unsaved event) */
+  eventDataResp: EventApiResponse | null
   seriesId: string
   locale: string
   isEditMode: boolean
@@ -123,6 +125,7 @@ export function useEventFormComponent(
   const {
     formData,
     eventId,
+    eventDataResp,
     seriesId,
     locale,
     isEditMode,
@@ -196,6 +199,7 @@ export function useEventFormComponent(
   return {
     formData,
     eventId,
+    eventDataResp,
     seriesId,
     locale,
     isEditMode,
