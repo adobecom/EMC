@@ -333,11 +333,11 @@ export const Registrations: React.FC<RegistrationsProps> = ({ ims: _ims }) => {
     const result = await apiService.updateRsvpToken(selectedEventId, token, { expiresInDays })
 
     if ('error' in result) {
-      toast.error(`Failed to extend guest RSVP link: ${result.error}`)
+      toast.error(`Failed to update guest RSVP link expiration: ${result.error}`)
       throw new Error(result.error)
     }
 
-    toast.success('Guest RSVP link extended')
+    toast.success('Guest RSVP link expiration updated')
     await loadRsvpTokens()
   }, [selectedEventId, loadRsvpTokens, toast])
 
@@ -442,6 +442,7 @@ export const Registrations: React.FC<RegistrationsProps> = ({ ims: _ims }) => {
           {selectedTab === 'guestRsvpUrls' && (
             <GuestRsvpUrlsTab
               eventId={selectedEventId}
+              eventTitle={selectedEvent?.title || selectedEvent?.enTitle || ''}
               links={rsvpTokens}
               campaigns={campaigns}
               onGenerate={handleGenerateRsvpToken}
