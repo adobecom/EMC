@@ -36,6 +36,7 @@ import {
 } from "../../../utils/dateTime";
 import { SpeakerPickerDialog } from "../SpeakerPickerDialog";
 import { VenueLocation } from "../LocationDialog";
+import { resolveIsAutoRegistrationEnabled } from "./sessionDiff";
 
 // ============================================================================
 // SHARED TYPES
@@ -73,17 +74,10 @@ export interface SessionFormData {
   localizationOverrides?: Record<string, SessionLocalization>;
 }
 
-type SessionTimeRegistrationFields = {
-  isAutoRegistrationEnabled?: boolean;
-};
-
-function getIsAutoRegistrationEnabled(
-  primaryTime: SessionTimeRegistrationFields | null,
-): boolean {
-  if (primaryTime?.isAutoRegistrationEnabled !== undefined) {
-    return primaryTime.isAutoRegistrationEnabled;
-  }
-  return false;
+/** Returned by onSave so the form can distinguish a real write from a no-op save */
+export interface SessionSaveResult {
+  /** False when every change gate was closed and no API call was made */
+  changed: boolean;
 }
 
 function stringsToEventTags(tags: string[] | undefined): EventTag[] {
@@ -125,7 +119,7 @@ export function mapApiToSession(item: Record<string, unknown>, locale = "en-US")
 interface SessionFormProps {
   /** When null the form is blank (add mode). When provided the form is pre-filled (edit mode). */
   session: Session | null;
-  onSave: (data: SessionFormData) => Promise<void>;
+  onSave: (data: SessionFormData) => Promise<SessionSaveResult>;
   onCancel: () => void;
   /** Pre-fetched venue locations from parent — avoids refetch on each expand */
   venueLocations?: VenueLocation[];
@@ -328,7 +322,7 @@ export const SessionForm: React.FC<SessionFormProps> = ({
       setName(mapped.name);
       setDescription(mapped.description ?? "");
       setSelectedTags(stringsToEventTags(mapped.tags));
-      const resolvedIsAutoRegistrationEnabled = getIsAutoRegistrationEnabled(
+      const resolvedIsAutoRegistrationEnabled = resolveIsAutoRegistrationEnabled(
         sessionTime,
       );
       setIsAutoRegistrationEnabled(resolvedIsAutoRegistrationEnabled);
@@ -402,7 +396,7 @@ export const SessionForm: React.FC<SessionFormProps> = ({
     const startDateTime = dateAndTimeToISO(date, startTime);
     const endDateTime = dateAndTimeToISO(date, endTime);
     try {
-      await onSave({
+      const { changed } = await onSave({
         name: name.trim(),
         description: description.trim(),
         startDateTime,
@@ -434,7 +428,11 @@ export const SessionForm: React.FC<SessionFormProps> = ({
         localizations: localizationsRef.current,
         localizationOverrides: localizationOverridesRef.current,
       });
-      toast.success(isEditMode ? "Session updated successfully" : "Session created successfully");
+      if (changed) {
+        toast.success(isEditMode ? "Session updated successfully" : "Session created successfully");
+      } else {
+        toast.info("No changes to save");
+      }
       onCancel(); // unmounts this component — no state updates after this
     } catch (err) {
       const msg = err instanceof Error ? err.message : "Failed to save";

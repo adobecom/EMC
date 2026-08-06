@@ -2,20 +2,23 @@
 * <license header>
 */
 
-import React, { useState, useCallback, useMemo } from 'react'
-import { Button, ButtonGroup, NumberField, DialogTrigger, Dialog, Content, Heading, Text, ActionButton, AlertDialog, Picker, PickerItem, TooltipTrigger, Tooltip } from '@react-spectrum/s2'
+import React, { useState, useCallback, useMemo, useEffect } from 'react'
+import { Button, ButtonGroup, NumberField, DialogTrigger, Dialog, Content, Heading, Text, ActionButton, AlertDialog, Picker, PickerItem, TooltipTrigger, Tooltip, SearchField } from '@react-spectrum/s2'
 import { style } from "@react-spectrum/s2/style" with { type: "macro" }
 import Add from '@react-spectrum/s2/icons/Add'
 import CalendarEdit from '@react-spectrum/s2/icons/CalendarEdit'
 import RemoveCircle from '@react-spectrum/s2/icons/RemoveCircle'
 import Copy from '@react-spectrum/s2/icons/Copy'
+import Download from '@react-spectrum/s2/icons/Download'
 import Link from '@react-spectrum/s2/illustrations/linear/Link'
+import NoSearchResults from '@react-spectrum/s2/illustrations/linear/NoSearchResults'
 import type { RsvpToken } from '../../types/rsvpToken'
 import { calculateRsvpTokenStats } from '../../types/rsvpToken'
 import type { Campaign } from '../../types/campaign'
 import { DataTable, TableColumn, ResourceEmptyState, StatusBadge } from '../../components/shared'
 import { COLORS } from '../../styles/designSystem'
 import { useHasPermission } from '../../hooks/useHasPermission'
+import { generateCsv, downloadCsv, sanitizeFilename, exportDatetime, type CsvColumn } from '../../utils/csvExport'
 
 const DEFAULT_EXTEND_DAYS = 7
 // Sentinel id for the "No campaign" Picker option — rsvp tokens never carry a
@@ -31,6 +34,21 @@ function formatEpoch(ms?: number): string {
   })
 }
 
+// An unused token past its expiry is still reported as status "unused" by the API
+// (isExpired is a separate flag) — surface it as "expired" so it isn't mistaken for
+// still-shareable.
+function getDisplayStatus(link: RsvpToken): RsvpToken['status'] | 'expired' {
+  return link.isExpired && link.status === 'unused' ? 'expired' : link.status
+}
+
+// Human-readable status label. "used" reads as "Registered" here (a token is consumed
+// only by a successful registration), matching the column/stat wording.
+function formatStatusLabel(link: RsvpToken): string {
+  const status = getDisplayStatus(link)
+  if (status === 'used') return 'Registered'
+  return status.charAt(0).toUpperCase() + status.slice(1)
+}
+
 const GUEST_RSVP_LINKS_TABLE_TEST_IDS = {
   root: 'guest-rsvp-links-table',
   emptyState: 'guest-rsvp-links-table-empty-state',
@@ -41,6 +59,7 @@ const GUEST_RSVP_LINKS_TABLE_TEST_IDS = {
 
 interface GuestRsvpUrlsTabProps {
   eventId: string
+  eventTitle?: string
   links: RsvpToken[]
   campaigns: Campaign[]
   onGenerate: () => Promise<void>
@@ -50,6 +69,7 @@ interface GuestRsvpUrlsTabProps {
 
 export const GuestRsvpUrlsTab: React.FC<GuestRsvpUrlsTabProps> = ({
   eventId,
+  eventTitle,
   links,
   campaigns,
   onGenerate,
@@ -58,6 +78,8 @@ export const GuestRsvpUrlsTab: React.FC<GuestRsvpUrlsTabProps> = ({
 }) => {
   const canWriteEvent = useHasPermission('event', 'write')
   const canDeleteEvent = useHasPermission('event', 'delete')
+  const canExport = useHasPermission('user', 'read')
+  const [searchQuery, setSearchQuery] = useState('')
   const [isGenerating, setIsGenerating] = useState(false)
   const [copiedToken, setCopiedToken] = useState<string | null>(null)
   const [linkToRevoke, setLinkToRevoke] = useState<RsvpToken | null>(null)
@@ -71,7 +93,52 @@ export const GuestRsvpUrlsTab: React.FC<GuestRsvpUrlsTabProps> = ({
   // only Active campaigns make sense to attribute a brand-new share to.
   const activeCampaigns = useMemo(() => campaigns.filter((c) => c.status === 'Active'), [campaigns])
 
+  // Stats always reflect the full set, independent of the search filter.
   const stats = useMemo(() => calculateRsvpTokenStats(links), [links])
+
+  // Reset the search when switching events so a stale query never hides a new
+  // event's links (mirrors the sibling registration tabs).
+  useEffect(() => {
+    setSearchQuery('')
+  }, [eventId])
+
+  const filteredLinks = useMemo(() => {
+    const query = searchQuery.trim().toLowerCase()
+    if (!query) return links
+    return links.filter((link) => {
+      const searchable = [
+        link.url,
+        link.token,
+        link.createdBy,
+        link.usedByAttendee,
+        formatStatusLabel(link),
+      ]
+      return searchable.some((value) => value != null && String(value).toLowerCase().includes(query))
+    })
+  }, [links, searchQuery])
+
+  const handleExport = useCallback(() => {
+    const columns: CsvColumn[] = [
+      { key: 'url', label: 'URL' },
+      { key: 'status', label: 'Status' },
+      { key: 'createdBy', label: 'Created By' },
+      { key: 'created', label: 'Created' },
+      { key: 'expires', label: 'Expires' },
+      { key: 'registeredBy', label: 'Registered By' },
+      { key: 'registeredAt', label: 'Registered At' },
+    ]
+    const rows = filteredLinks.map((link) => ({
+      url: link.url || '-',
+      status: formatStatusLabel(link),
+      createdBy: link.createdBy,
+      created: formatEpoch(link.creationTime),
+      expires: formatEpoch(link.expiresAt),
+      registeredBy: link.usedByAttendee || '-',
+      registeredAt: formatEpoch(link.usedAt),
+    }))
+    const stem = sanitizeFilename(eventTitle || eventId)
+    downloadCsv(generateCsv(rows, columns), `guest-rsvp-links_${stem}_${exportDatetime()}.csv`)
+  }, [filteredLinks, eventTitle, eventId])
 
   const handleGenerate = useCallback(async () => {
     setIsGenerating(true)
@@ -171,7 +238,18 @@ export const GuestRsvpUrlsTab: React.FC<GuestRsvpUrlsTabProps> = ({
   }, [linkToExtend, extendDays, onExtend])
 
   const emptyState = useMemo(() => {
-    if (links.length > 0) return undefined
+    if (filteredLinks.length > 0) return undefined
+    if (links.length > 0) {
+      // Links exist but the search filtered them all out.
+      return (
+        <ResourceEmptyState
+          fillContainer
+          illustration={<NoSearchResults aria-hidden />}
+          title="No matching links"
+          description="No guest RSVP links match your search."
+        />
+      )
+    }
     return (
       <ResourceEmptyState
         fillContainer
@@ -180,7 +258,7 @@ export const GuestRsvpUrlsTab: React.FC<GuestRsvpUrlsTabProps> = ({
         description="Generate a one-time-use link to let a guest register without an Adobe ID — for VIP/on-behalf-of registrations or when Adobe ID is blocking someone."
       />
     )
-  }, [links.length])
+  }, [links.length, filteredLinks.length])
 
   const columns: TableColumn<RsvpToken>[] = useMemo(() => [
     {
@@ -211,10 +289,10 @@ export const GuestRsvpUrlsTab: React.FC<GuestRsvpUrlsTabProps> = ({
       name: 'STATUS',
       width: 100,
       sortable: true,
-      // An unused token past its expiry is still reported as status "unused" by the
-      // API (isExpired is a separate flag) — show it as "Expired" here rather than
-      // implying it's still shareable.
-      render: (link) => <StatusBadge status={link.isExpired && link.status === 'unused' ? 'expired' : link.status} />
+      // getDisplayStatus drives the shared badge's variant/colour; formatStatusLabel
+      // is the single source of the visible text (relabelling "used" as "Registered",
+      // shared with search + CSV export).
+      render: (link) => <StatusBadge status={getDisplayStatus(link)} label={formatStatusLabel(link)} />
     },
     {
       key: 'createdBy',
@@ -239,7 +317,7 @@ export const GuestRsvpUrlsTab: React.FC<GuestRsvpUrlsTabProps> = ({
     },
     {
       key: 'usedByAttendee',
-      name: 'USED BY',
+      name: 'REGISTERED BY',
       width: 180,
       render: (link) => <Text>{link.usedByAttendee || '-'}</Text>
     },
@@ -256,7 +334,7 @@ export const GuestRsvpUrlsTab: React.FC<GuestRsvpUrlsTabProps> = ({
             <ActionButton
               isQuiet
               onPress={() => { setLinkToExtend(link); setExtendDays(DEFAULT_EXTEND_DAYS) }}
-              aria-label="Extend link expiration"
+              aria-label="Update link expiration"
             >
               <CalendarEdit />
             </ActionButton>
@@ -292,7 +370,7 @@ export const GuestRsvpUrlsTab: React.FC<GuestRsvpUrlsTabProps> = ({
         <div className={style({ display: 'flex', gap: 48, flexWrap: 'wrap' })}>
           <StatItem label="Total Links" value={stats.totalTokens} />
           <StatItem label="Unused" value={stats.unusedTokens} />
-          <StatItem label="Used" value={stats.usedTokens} />
+          <StatItem label="Registered" value={stats.usedTokens} />
         </div>
       </div>
 
@@ -315,13 +393,30 @@ export const GuestRsvpUrlsTab: React.FC<GuestRsvpUrlsTabProps> = ({
             </Button>
           )}
         </div>
+        <div className={style({ display: 'flex', alignItems: 'end', gap: 12 })}>
+          {canExport && filteredLinks.length > 0 && (
+            <ActionButton aria-label="Export guest RSVP links to CSV" onPress={handleExport}>
+              <Download />
+            </ActionButton>
+          )}
+          <div className={style({ width: 240 })}>
+            <SearchField
+              label="Search guest RSVP links"
+              placeholder="Search"
+              value={searchQuery}
+              onChange={setSearchQuery}
+              onClear={() => setSearchQuery('')}
+              styles={style({ width: '[100%]' })}
+            />
+          </div>
+        </div>
       </div>
 
       {/* Guest RSVP Links Table */}
       <div style={{ minHeight: 480, display: 'flex', flexDirection: 'column' }}>
         <DataTable
           columns={columns}
-          data={links}
+          data={filteredLinks}
           getItemKey={(item) => item.token}
           testIds={GUEST_RSVP_LINKS_TABLE_TEST_IDS}
           emptyState={emptyState}
@@ -334,10 +429,10 @@ export const GuestRsvpUrlsTab: React.FC<GuestRsvpUrlsTabProps> = ({
         <Dialog size="S">
           {() => (
             <>
-              <Heading slot="title">Extend Link Expiration</Heading>
+              <Heading slot="title">Update Link Expiration</Heading>
               <Content>
                 <NumberField
-                  label="Extend by (days)"
+                  label="Expires in (days from now)"
                   value={extendDays}
                   onChange={setExtendDays}
                   minValue={1}
@@ -353,7 +448,7 @@ export const GuestRsvpUrlsTab: React.FC<GuestRsvpUrlsTabProps> = ({
                   onPress={handleExtendSubmit}
                   isDisabled={!extendDays || extendDays < 1 || isSaving}
                 >
-                  {isSaving ? 'Saving...' : 'Extend'}
+                  {isSaving ? 'Saving...' : 'Update'}
                 </Button>
               </ButtonGroup>
             </>
