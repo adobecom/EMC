@@ -496,6 +496,7 @@ const EventFormInner: React.FC<EventFormInnerProps> = ({ ims: _ims }) => {
     setSeriesCustomTagsUrl,
     loadFromStorage,
     persistToStorage,
+    storageKey,
     state,
     scopeLocales,
   } = useEventFormContext()
@@ -1110,6 +1111,7 @@ const EventFormInner: React.FC<EventFormInnerProps> = ({ ims: _ims }) => {
         testIds={EVENT_FORM_WIZARD_TEST_IDS}
         sessionContent={sessionManagementComponent}
         sessionHasOpenForm={sessionHasOpenForm}
+        stepPersistKey={storageKey}
       />
 
       {/* Format Selection Overlay — frosted glass + dialog */}
