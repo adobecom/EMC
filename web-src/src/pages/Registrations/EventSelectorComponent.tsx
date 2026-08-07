@@ -2,10 +2,11 @@
 * <license header>
 */
 
-import React, { useMemo, useState } from 'react'
+import React, { useEffect, useMemo, useState } from 'react'
 import { ComboBox, ComboBoxItem, Text } from "@react-spectrum/s2"
 import { style } from "@react-spectrum/s2/style" with { type: "macro" }
 import type { EventApiResponse } from '../../types/domain'
+import { debounceCancellable } from '../../services/cacheUtils'
 
 interface EventSelectorComponentProps {
   events: EventApiResponse[]
@@ -73,15 +74,25 @@ export const EventSelectorComponent: React.FC<EventSelectorComponentProps> = ({
     )
   }, [eventItems, filterText])
 
+  const debouncedSetFilterText = useMemo(
+    () => debounceCancellable((value: string) => setFilterText(value), 300),
+    []
+  )
+
+  useEffect(() => {
+    return () => debouncedSetFilterText.cancel()
+  }, [debouncedSetFilterText])
+
   const handleSelectionChange = (key: React.Key | null) => {
     if (key) {
       onChange(String(key))
+      debouncedSetFilterText.cancel() // Prevent a pending debounce from clobbering the cleared filter
       setFilterText('') // Clear filter after selection
     }
   }
 
   const handleInputChange = (value: string) => {
-    setFilterText(value)
+    debouncedSetFilterText.call(value)
   }
 
   return (

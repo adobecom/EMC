@@ -10,7 +10,7 @@ import type { Attendee, AttendeeStats, AttendeeColumnConfig } from '../../types/
 import type { Campaign, CampaignFormData, CampaignCreatePayload, CampaignUpdatePayload, CampaignListResponse } from '../../types/campaign'
 import type { RsvpToken } from '../../types/rsvpToken'
 import { calculateAttendeeStats } from '../../types/attendee'
-import { apiService } from '../../services/api'
+import { apiService, cachedApi } from '../../services/api'
 import { useRsvpConfig } from '../../hooks/useRsvpConfig'
 import { useRBACFilter } from '../../hooks'
 import { useGroup } from '../../contexts/GroupContext'
@@ -95,7 +95,7 @@ export const Registrations: React.FC<RegistrationsProps> = ({ ims: _ims }) => {
     const loadEvents = async () => {
       setIsLoadingEvents(true)
       try {
-        const eventsData = await apiService.getEventsList()
+        const eventsData = await cachedApi.getEventsList()
 
         if (Array.isArray(eventsData)) {
           setEvents(filterEvents(eventsData))
