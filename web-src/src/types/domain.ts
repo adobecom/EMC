@@ -83,6 +83,8 @@ export interface SeriesTemplate {
   'template-name': string
   'template-image': string
   'supported-event-type': 'InPerson' | 'Webinar' | 'Hybrid'
+  /** RSVP types this template's rendered page supports. Absent = not yet backfilled (fail-open: treat as supporting both). */
+  'supported-rsvp-types'?: ('ESP' | 'Marketo')[]
 }
 
 export interface SeriesTemplatesConfig {

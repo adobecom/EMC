@@ -182,6 +182,8 @@ export interface EventFormContextValue {
   setSeriesSpeakers: (speakers: SeriesSpeaker[]) => void
   seriesCustomTagsUrl: string
   setSeriesCustomTagsUrl: (url: string) => void
+  seriesTemplateId: string
+  setSeriesTemplateId: (templateId: string) => void
   scopeLocales: Locale[] | null
   setScopeLocales: (locales: Locale[] | null) => void
 }
@@ -427,6 +429,7 @@ export const EventFormProvider: React.FC<EventFormProviderProps> = ({
   const [venueLocations, setVenueLocations] = useState<any[]>([])
   const [seriesSpeakers, setSeriesSpeakers] = useState<SeriesSpeaker[]>([])
   const [seriesCustomTagsUrl, setSeriesCustomTagsUrl] = useState<string>('')
+  const [seriesTemplateId, setSeriesTemplateId] = useState<string>('')
   const [scopeLocales, setScopeLocales] = useState<Locale[] | null>(null)
   
   // ============================================================================
@@ -639,6 +642,8 @@ export const EventFormProvider: React.FC<EventFormProviderProps> = ({
     setSeriesSpeakers,
     seriesCustomTagsUrl,
     setSeriesCustomTagsUrl,
+    seriesTemplateId,
+    setSeriesTemplateId,
     scopeLocales,
     setScopeLocales,
   }), [
@@ -646,6 +651,7 @@ export const EventFormProvider: React.FC<EventFormProviderProps> = ({
     venueLocations,
     seriesSpeakers,
     seriesCustomTagsUrl,
+    seriesTemplateId,
     scopeLocales,
     updateFormData,
     populateFormDataFromResponse,
