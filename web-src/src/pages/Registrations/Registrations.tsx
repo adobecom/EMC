@@ -8,7 +8,7 @@ import { useParams, useNavigate, useSearchParams } from 'react-router-dom'
 import type { EventApiResponse } from '../../types/domain'
 import type { Attendee, AttendeeStats, AttendeeColumnConfig } from '../../types/attendee'
 import type { Campaign, CampaignFormData, CampaignCreatePayload, CampaignUpdatePayload, CampaignListResponse } from '../../types/campaign'
-import type { RsvpToken } from '../../types/rsvpToken'
+import type { RsvpToken, RsvpTokenCreatePayload, RsvpTokenUpdatePayload } from '../../types/rsvpToken'
 import { calculateAttendeeStats } from '../../types/attendee'
 import { apiService, cachedApi } from '../../services/api'
 import { useRsvpConfig } from '../../hooks/useRsvpConfig'
@@ -317,8 +317,9 @@ export const Registrations: React.FC<RegistrationsProps> = ({ ims: _ims }) => {
     await loadCampaigns()
   }, [selectedEventId, loadCampaigns, toast])
 
-  const handleGenerateRsvpToken = useCallback(async () => {
-    const result = await apiService.generateRsvpToken(selectedEventId)
+  const handleGenerateRsvpToken = useCallback(async (label?: string) => {
+    const payload: RsvpTokenCreatePayload = { label: label?.trim() || undefined }
+    const result = await apiService.generateRsvpToken(selectedEventId, payload)
 
     if ('error' in result) {
       toast.error(`Failed to generate guest RSVP link: ${result.error}`)
@@ -329,15 +330,16 @@ export const Registrations: React.FC<RegistrationsProps> = ({ ims: _ims }) => {
     await loadRsvpTokens()
   }, [selectedEventId, loadRsvpTokens, toast])
 
-  const handleExtendRsvpToken = useCallback(async (token: string, expiresInDays: number) => {
-    const result = await apiService.updateRsvpToken(selectedEventId, token, { expiresInDays })
+  const handleExtendRsvpToken = useCallback(async (token: string, expiresInDays: number, label: string) => {
+    const payload: RsvpTokenUpdatePayload = { expiresInDays, label: label.trim() }
+    const result = await apiService.updateRsvpToken(selectedEventId, token, payload)
 
     if ('error' in result) {
-      toast.error(`Failed to update guest RSVP link expiration: ${result.error}`)
+      toast.error(`Failed to update guest RSVP link: ${result.error}`)
       throw new Error(result.error)
     }
 
-    toast.success('Guest RSVP link expiration updated')
+    toast.success('Guest RSVP link updated')
     await loadRsvpTokens()
   }, [selectedEventId, loadRsvpTokens, toast])
 
