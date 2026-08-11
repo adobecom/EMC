@@ -84,12 +84,13 @@ export interface SeriesTemplate {
   'template-image': string
   'supported-event-type': 'InPerson' | 'Webinar' | 'Hybrid'
   /**
-   * RSVP form type this template's rendered page supports — a single sheet-authored
-   * value, matching the 'supported-event-type' column's convention (this externally-hosted
-   * config has no field that's ever a real JSON array; multi-value columns don't exist here).
-   * Absent = not yet backfilled (fail-open: treat as supporting both).
+   * RSVP form type this template's rendered page exclusively supports — a single
+   * sheet-authored value, matching the 'supported-event-type' column's convention
+   * (this externally-hosted config has no field that's ever a real JSON array;
+   * multi-value columns don't exist here). Absent = supports both (fail-open) —
+   * only set this when a template is restricted to one type.
    */
-  'supported-rsvp-types'?: 'ESP' | 'Marketo' | 'Both'
+  'supported-rsvp-types'?: 'ESP' | 'Marketo'
 }
 
 export interface SeriesTemplatesConfig {

@@ -55,8 +55,3 @@ test('templateSupportedRsvpTypes honors an explicit ESP-only restriction', () =>
   const template = makeTemplate({ 'supported-rsvp-types': 'ESP' })
   expect(templateSupportedRsvpTypes(template['template-path'], [template])).toEqual(['ESP'])
 })
-
-test('templateSupportedRsvpTypes treats an explicit "Both" the same as unset', () => {
-  const template = makeTemplate({ 'supported-rsvp-types': 'Both' })
-  expect(templateSupportedRsvpTypes(template['template-path'], [template])).toEqual(['ESP', 'Marketo'])
-})

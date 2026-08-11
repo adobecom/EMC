@@ -44,6 +44,6 @@ export function templateSupportsEventType(templateId: string, currentEventType: 
 export function templateSupportedRsvpTypes(templateId: string, templates: SeriesTemplate[]): ('ESP' | 'Marketo')[] {
   const template = findSeriesTemplate(templateId, templates)
   const value = template?.['supported-rsvp-types']
-  if (!template || value === undefined || value === 'Both') return ['ESP', 'Marketo']
+  if (!template || value === undefined) return ['ESP', 'Marketo']
   return [value]
 }
