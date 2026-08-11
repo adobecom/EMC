@@ -46,12 +46,17 @@ test('templateSupportedRsvpTypes fails open to both types when the field is not 
   expect(templateSupportedRsvpTypes(template['template-path'], [template])).toEqual(['ESP', 'Marketo'])
 })
 
-test('templateSupportedRsvpTypes honors an explicit single-type restriction', () => {
-  const template = makeTemplate({ 'supported-rsvp-types': ['Marketo'] })
+test('templateSupportedRsvpTypes honors an explicit Marketo-only restriction', () => {
+  const template = makeTemplate({ 'supported-rsvp-types': 'Marketo' })
   expect(templateSupportedRsvpTypes(template['template-path'], [template])).toEqual(['Marketo'])
 })
 
-test('templateSupportedRsvpTypes honors an explicit empty restriction rather than failing open', () => {
-  const template = makeTemplate({ 'supported-rsvp-types': [] })
-  expect(templateSupportedRsvpTypes(template['template-path'], [template])).toEqual([])
+test('templateSupportedRsvpTypes honors an explicit ESP-only restriction', () => {
+  const template = makeTemplate({ 'supported-rsvp-types': 'ESP' })
+  expect(templateSupportedRsvpTypes(template['template-path'], [template])).toEqual(['ESP'])
+})
+
+test('templateSupportedRsvpTypes treats an explicit "Both" the same as unset', () => {
+  const template = makeTemplate({ 'supported-rsvp-types': 'Both' })
+  expect(templateSupportedRsvpTypes(template['template-path'], [template])).toEqual(['ESP', 'Marketo'])
 })

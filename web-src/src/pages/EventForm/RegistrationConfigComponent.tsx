@@ -61,9 +61,6 @@ export const RegistrationConfigComponent: React.FC = () => {
     componentId: 'registration-config',
     validate: () => {
       const currentType = formData.registrationType || 'ESP'
-      if (supportedRsvpTypes.length === 0) {
-        return 'This series template does not support any RSVP form type.'
-      }
       if (!supportedRsvpTypes.includes(currentType)) {
         return 'Selected RSVP form type is not supported by this series template.'
       }
