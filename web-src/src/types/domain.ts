@@ -257,6 +257,7 @@ export interface EventApiResponse {
   tags?: string
   topics?: string[]
   detailPagePath?: string
+  pageCreatedBy?: string
   externalEventId?: string
   creationTime?: number
   modificationTime?: number

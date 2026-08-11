@@ -817,6 +817,9 @@ const EventFormInner: React.FC<EventFormInnerProps> = ({ ims: _ims }) => {
         console.error('Failed to save event:', error)
       },
     })
+    if (result.daWarning) {
+      toast.info(`DA page warning: ${result.daWarning}`, { duration: 10000 })
+    }
     if (result.success && result.eventId && !isEditMode) {
       navigate(`/events/edit/${result.eventId}`, { replace: true })
     }
@@ -841,6 +844,10 @@ const EventFormInner: React.FC<EventFormInnerProps> = ({ ims: _ims }) => {
         console.error('Failed to save event:', error)
       }
     })
+
+    if (result.daWarning) {
+      toast.info(`DA page warning: ${result.daWarning}`, { duration: 10000 })
+    }
 
     if (result.success && result.eventId && !isEditMode) {
       navigate(`/events/edit/${result.eventId}`, { replace: true })

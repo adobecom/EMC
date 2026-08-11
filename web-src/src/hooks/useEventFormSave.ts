@@ -11,6 +11,8 @@ import {
   setEventAttribute,
   isValidAttribute,
 } from '../utils/dataFilters'
+import { useDaPageCreation } from './useDaPageCreation'
+import { isDocumentAuthoringEvent } from '../services/da/daPageService'
 
 /**
  * Convert RSVP fields to the `{ required, visible }` shape ESP's RSVPFormFields
@@ -56,6 +58,8 @@ export interface SaveResult {
   eventId?: string
   response?: EventApiResponse
   error?: string
+  /** Non-fatal DA page creation warning (draft only). Event was saved to ESP; only page creation failed. */
+  daWarning?: string
 }
 
 /**
@@ -103,6 +107,10 @@ export function useEventFormSave() {
     setSaveError,
     clearStorage,
   } = context
+
+  // DA page creation — creates event detail pages directly in the browser at runtime.
+  // Only runs when the event's series targets Document Authoring (series.targetCms.code starts with 'da-').
+  const { createPages: createDaPages } = useDaPageCreation()
   
   /**
    * Build the API payload from form data, handling localization
@@ -573,30 +581,91 @@ export function useEventFormSave() {
       
       // 7. Refresh event data to get the complete state
       const refreshedResponse = await cachedApi.getEventFull(savedEventId)
-      if (!('error' in refreshedResponse)) {
-        setEventResponse(refreshedResponse as EventApiResponse)
+      const hydratedEvent = !('error' in refreshedResponse) ? (refreshedResponse as EventApiResponse) : null
+      if (hydratedEvent) {
+        setEventResponse(hydratedEvent)
       }
-      
+
+      // 7a. Inject series data — getEventFull fetches event+speakers+sponsors+venue+images
+      //     but not the series record. DA orchestrator needs series.targetCms and series.templateId.
+      //     The series is already cached from the form load so this is a fast cache hit.
+      if (hydratedEvent && !hydratedEvent.series) {
+        const sid = hydratedEvent.seriesId || seriesId
+        if (sid) {
+          const seriesResp = await cachedApi.getSeriesFull(sid)
+          if (seriesResp && !('error' in seriesResp)) {
+            hydratedEvent.series = seriesResp
+          }
+        }
+      }
+
+      // 7b. DA page creation — runs after getEventFull so the event is fully hydrated
+      //     (image URLs, speakers, sessions, series.templateId are all present).
+      //     Only runs when the series is Document Authoring-targeted.
+      //     On publish failure: throw so the save is marked failed — a published event with
+      //       no live page is the worst outcome.
+      //     On draft failure: warn but continue — the draft was saved to ESP successfully.
+      let daWarning: string | undefined
+      if (hydratedEvent && isDocumentAuthoringEvent(hydratedEvent)) {
+        const daResult = await createDaPages({
+          eventData: hydratedEvent,
+          publish,
+          liveUpdate: publish,
+        })
+
+        if (!daResult.success) {
+          const failedLocales = daResult.results.filter((r) => !r.success).map((r) => r.locale).join(', ')
+          const firstError = daResult.results.find((r) => r.error)?.error ?? 'Unknown error'
+          const daErrorMsg = `DA page creation failed${failedLocales ? ` for locale(s): ${failedLocales}` : ''} — ${firstError}`
+
+          if (publish) {
+            // Blocking: do not mark the publish as successful if the page wasn't created.
+            throw new Error(daErrorMsg)
+          } else {
+            // Non-blocking: draft saved to ESP — surface as a warning, not a save failure.
+            console.warn('[useEventFormSave] DA page creation failed on draft save (non-fatal):', daErrorMsg)
+            daWarning = daErrorMsg
+          }
+        }
+
+        if (daResult.success) {
+          // Best-effort: persist pageCreatedBy:'emc' on the event so the old Kinesis pipeline
+          // can be suppressed once the kinesis-processor is updated to check the flag.
+          // Fire-and-forget — this does not affect save UX success/failure.
+          apiService.updateEventExternal(
+            savedEventId,
+            {
+              ...hydratedEvent,
+              pageCreatedBy: 'emc',
+            },
+            { forceSpWrite: false, liveUpdate: false }
+          ).catch((err: unknown) => {
+            console.warn('[useEventFormSave] pageCreatedBy flag update failed (non-fatal):', err)
+          })
+        }
+      }
+
       // 8. Clear session storage draft
       clearStorage()
-      
+
       // 9. Update status
       setSaveStatus('success')
-      
+
       // 10. Call success callback
       onSuccess?.(savedEventId, response)
-      
+
       return {
         success: true,
         eventId: savedEventId,
         response,
+        ...(daWarning ? { daWarning } : {}),
       }
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Failed to save event'
       setSaveStatus('error')
       setSaveError(errorMessage)
       onError?.(error instanceof Error ? error : new Error(errorMessage))
-      
+
       return {
         success: false,
         error: errorMessage,
@@ -619,6 +688,7 @@ export function useEventFormSave() {
     setSaveStatus,
     setSaveError,
     clearStorage,
+    createDaPages,
   ])
   
   /**
