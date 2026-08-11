@@ -86,3 +86,18 @@ export function validateForPublish({ formData, hasVenue }: PublishGuardInput): P
     missingByStep,
   }
 }
+
+// ── Image warning (soft, non-blocking) ─────────────────────────────────
+// Deliberately kept separate from validateForPublish: a missing hero or
+// thumbnail image should warn the publisher, not block publishing outright.
+export function getMissingImageWarnings(formData: EventFormData): string[] {
+  const images = formData.images ?? []
+  const missing: string[] = []
+  const hasImage = (kind: string) =>
+    images.some(img => img.imageKind === kind && (img.imageUrl || img.imageId))
+
+  if (!hasImage('event-hero-image')) missing.push('Hero Image')
+  if (!hasImage('event-card-image')) missing.push('Thumbnail Image')
+
+  return missing
+}

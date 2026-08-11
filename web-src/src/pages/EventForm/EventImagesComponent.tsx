@@ -77,6 +77,7 @@ export const EventImagesComponent: React.FC = () => {
           recommendedDimensions="1920px x 1080px"
           maxSizeMB={25}
           width={600}
+          isRequired
           onChange={(imageUrl, imageId) => handleImageChange('event-hero-image', imageUrl, imageId)}
           onRemove={() => handleImageRemove('event-hero-image')}
         />
@@ -95,6 +96,7 @@ export const EventImagesComponent: React.FC = () => {
           recommendedDimensions="460px x 460px"
           maxSizeMB={10}
           width={300}
+          isRequired
           onChange={(imageUrl, imageId) => handleImageChange('event-card-image', imageUrl, imageId)}
           onRemove={() => handleImageRemove('event-card-image')}
         />
