@@ -67,12 +67,6 @@
   --emc-form-card-bg: #ffffff;
   --emc-format-dialog-panel-bg: #ffffff;
 
-  /** Speakers dashboard: cascade-to-events callout (readable on light + dark) */
-  --emc-cascade-callout-bg: var(--spectrum-global-color-gray-75);
-  --emc-cascade-callout-border: var(--spectrum-global-color-yellow-400);
-  --emc-cascade-callout-text: var(--spectrum-global-color-gray-900);
-  --emc-cascade-callout-text-muted: var(--spectrum-global-color-gray-700);
-
   /**
    * Native/custom inputs aligned with S2 TextField `FieldGroup` (see `@react-spectrum/s2/dist/Field.css`):
    * dark fill #111, border #444, focus border #131313 / #f2f2f2, ~150ms easing.
@@ -152,11 +146,6 @@
     --emc-form-card-bg: var(--emc-spectrum-s2-gray-75-dark);
     --emc-format-dialog-panel-bg: var(--emc-spectrum-s2-gray-75-dark);
 
-    --emc-cascade-callout-bg: var(--spectrum-global-color-yellow-100);
-    --emc-cascade-callout-border: var(--spectrum-global-color-yellow-400);
-    --emc-cascade-callout-text: var(--spectrum-global-color-gray-900);
-    --emc-cascade-callout-text-muted: var(--spectrum-global-color-gray-600);
-
     --emc-field-bg: #111111;
     --emc-field-border: #444444;
     --emc-field-border-focus: #f2f2f2;
@@ -175,10 +164,6 @@
 }
 
 html[data-color-scheme='light'] {
-  --emc-cascade-callout-bg: var(--spectrum-global-color-gray-75);
-  --emc-cascade-callout-border: var(--spectrum-global-color-yellow-400);
-  --emc-cascade-callout-text: var(--spectrum-global-color-gray-900);
-  --emc-cascade-callout-text-muted: var(--spectrum-global-color-gray-700);
   --emc-field-bg: #ffffff;
   --emc-field-border: #c6c6c6;
   --emc-field-border-focus: #131313;
@@ -204,10 +189,6 @@ html[data-color-scheme='dark'] {
   --emc-event-form-shell-bg: #151515;
   --emc-form-card-bg: var(--emc-spectrum-s2-gray-75-dark);
   --emc-format-dialog-panel-bg: var(--emc-spectrum-s2-gray-75-dark);
-  --emc-cascade-callout-bg: var(--spectrum-global-color-yellow-100);
-  --emc-cascade-callout-border: var(--spectrum-global-color-yellow-400);
-  --emc-cascade-callout-text: var(--spectrum-global-color-gray-900);
-  --emc-cascade-callout-text-muted: var(--spectrum-global-color-gray-600);
   --emc-field-bg: #111111;
   --emc-field-border: #444444;
   --emc-field-border-focus: #f2f2f2;

@@ -10,7 +10,11 @@
  * - Series selector to switch between series
  * - Full CRUD operations for speakers (Create, Read, Update, Delete)
  * - Visual indicators showing speaker connections to events
- * - Cascade dialogs for update/delete operations that affect linked events
+ *
+ * Event rows reference speakers by id only ({speakerId, speakerType, ordinal}) and resolve
+ * the profile from the series record at read time, so series-level edits need no
+ * propagation to events. Deleting a series speaker removes every event association in one
+ * atomic backend transaction, so the delete dialog warns about that rather than offering it.
  */
 
 import React, { useEffect, useState, useMemo, useCallback, useRef } from 'react'
@@ -55,22 +59,21 @@ import { DEFAULT_LOCALE, SUPPORTED_SPEAKER_LOCALES } from '../../config/localeMa
 import { hasLocalesSlice } from '../../types/configApi'
 import type { Locale } from '../../types/configApi'
 import { buildSpeakerPayloadForDashboard } from '../../services/payloadBuilders'
-import {
-  SpeakerFormDialog,
-  SpeakerFormSaveOptions,
-  SpeakerFormSubmitData,
-} from './SpeakerFormDialog'
-import { CascadeConfirmDialog, CascadeAction } from './CascadeConfirmDialog'
+import { SpeakerFormDialog, SpeakerFormSubmitData } from './SpeakerFormDialog'
 import { SpeakerEventConnectionsDialog } from './SpeakerEventConnectionsDialog'
 
 // Extended speaker type for dashboard display
 export interface SpeakerDashboardItem extends SeriesSpeaker {
+  /** `undefined` = linked events not resolved yet; never conflate with 0 */
   eventCount?: number
-  events?: EventApiResponse[]
   seriesName?: string
 }
 
 const SPEAKERS_SEARCH_KEYS = ['firstName', 'lastName', 'title']
+
+// Module-level so the identity is stable: an inline arrow here busts the memos in
+// ResourceDashboardLayout/DataTable and re-fires the visible-items effect every render.
+const getSpeakerKey = (item: SpeakerDashboardItem) => item.speakerId
 
 const SPEAKERS_DASHBOARD_TABLE_TEST_IDS = {
   root: 'speakers-dashboard-table',
@@ -111,90 +114,6 @@ function invalidateSpeakerListCache(seriesId: string, speakerId?: string) {
   }
 }
 
-type EventSpeakerAssignment = {
-  speakerId?: string
-  speakerType?: string
-  ordinal?: number
-}
-
-async function cascadeSpeakerUpdateToEvents(
-  seriesSpeakerId: string,
-  events: EventApiResponse[]
-): Promise<string[]> {
-  const failedEventIds: string[] = []
-
-  await Promise.all(
-    events.map(async (event) => {
-      const eventId = event.eventId
-      if (!eventId) return
-
-      const listResp = await cachedApi.getEventSpeakers(eventId)
-      if ('error' in listResp) {
-        failedEventIds.push(eventId)
-        return
-      }
-
-      const roster = listResp.speakers || listResp || []
-      const speakers: EventSpeakerAssignment[] = Array.isArray(roster) ? roster : []
-      const assignments = speakers.filter((s) => s.speakerId === seriesSpeakerId)
-      if (assignments.length === 0) {
-        return
-      }
-
-      for (const assignment of assignments) {
-        const result = await apiService.updateSpeakerInEvent(
-          {
-            speakerId: seriesSpeakerId,
-            speakerType: assignment.speakerType,
-            ordinal: assignment.ordinal,
-          },
-          seriesSpeakerId,
-          eventId
-        )
-        if (result && 'error' in result) {
-          failedEventIds.push(eventId)
-        }
-      }
-    })
-  )
-
-  return [...new Set(failedEventIds)]
-}
-
-async function cascadeSpeakerRemoveFromEvents(
-  seriesSpeakerId: string,
-  events: EventApiResponse[]
-): Promise<string[]> {
-  const failedEventIds: string[] = []
-
-  await Promise.all(
-    events.map(async (event) => {
-      const eventId = event.eventId
-      if (!eventId) return
-
-      const listResp = await cachedApi.getEventSpeakers(eventId)
-      if ('error' in listResp) {
-        failedEventIds.push(eventId)
-        return
-      }
-
-      const roster = listResp.speakers || listResp || []
-      const speakers: EventSpeakerAssignment[] = Array.isArray(roster) ? roster : []
-      const onRoster = speakers.some((s) => s.speakerId === seriesSpeakerId)
-      if (!onRoster) {
-        return
-      }
-
-      const result = await apiService.removeSpeakerFromEvent(seriesSpeakerId, eventId)
-      if (result && 'error' in result) {
-        failedEventIds.push(eventId)
-      }
-    })
-  )
-
-  return [...new Set(failedEventIds)]
-}
-
 interface SpeakersDashboardProps {
   ims: IMS
 }
@@ -224,12 +143,18 @@ export const SpeakersDashboard: React.FC<SpeakersDashboardProps> = () => {
   const [loadingEventCounts, setLoadingEventCounts] = useSafeState<Set<string>>(new Set())
   const [eventConnections, setEventConnections] = useSafeState<Map<string, EventApiResponse[]>>(new Map())
   
-  // Ref to track which speaker IDs we've already loaded (prevents infinite loop)
-  const loadedSpeakerIdsRef = useRef<Set<string>>(new Set())
-  
+  // Three separate refs so "resolved", "in flight" and "failed" stay distinguishable —
+  // one Set cannot tell a genuine zero from "never fetched". connectionsRef mirrors
+  // eventConnections so stable callbacks can read it without stale closures.
+  const connectionsRef = useRef<Map<string, EventApiResponse[]>>(new Map())
+  const inFlightRef = useRef<Map<string, Promise<EventApiResponse[]>>>(new Map())
+  const failedRef = useRef<Set<string>>(new Set())
+
   // Action states
   const [actionInProgress, setActionInProgress] = useSafeState<string | null>(null)
-  
+  // Separate from actionInProgress: that one disables the delete dialog's confirm button
+  const [isCheckingConnections, setIsCheckingConnections] = useSafeState(false)
+
   // Scope locales for the selected series
   const [scopeLocales, setScopeLocales] = useSafeState<Locale[] | null>(null)
 
@@ -237,8 +162,6 @@ export const SpeakersDashboard: React.FC<SpeakersDashboardProps> = () => {
   const [isFormDialogOpen, setIsFormDialogOpen] = useSafeState(false)
   const [editingSpeaker, setEditingSpeaker] = useSafeState<SpeakerDashboardItem | null>(null)
   const [speakerToDelete, setSpeakerToDelete] = useSafeState<SpeakerDashboardItem | null>(null)
-  const [speakerForCascade, setSpeakerForCascade] = useSafeState<SpeakerDashboardItem | null>(null)
-  const [cascadeAction, setCascadeAction] = useSafeState<CascadeAction | null>(null)
   const [speakerForConnections, setSpeakerForConnections] = useSafeState<SpeakerDashboardItem | null>(null)
   
   // ============================================================================
@@ -278,7 +201,8 @@ export const SpeakersDashboard: React.FC<SpeakersDashboardProps> = () => {
     
     setIsLoadingSpeakers(true)
     setError(null)
-    
+
+
     try {
       const response = await cachedApi.getSpeakers(selectedSeriesId)
       
@@ -307,59 +231,93 @@ export const SpeakersDashboard: React.FC<SpeakersDashboardProps> = () => {
   useEffect(() => {
     loadSpeakers()
   }, [loadSpeakers])
-  
-  // Load event connections for visible speakers
-  // NOTE: Using ref to track loaded IDs to prevent infinite loop 
-  // (callback recreating when eventConnections changes would cause infinite re-renders)
-  const loadEventConnections = useCallback(async (speakerIds: string[]) => {
-    if (!selectedSeriesId) return
-    
-    // Use ref to check which speakers we've already loaded (stable reference)
-    const speakersToLoad = speakerIds.filter(id => !loadedSpeakerIdsRef.current.has(id))
-    if (speakersToLoad.length === 0) return
-    
-    // Mark as loading immediately to prevent duplicate requests
-    speakersToLoad.forEach(id => loadedSpeakerIdsRef.current.add(id))
-    
-    setLoadingEventCounts(prev => new Set([...prev, ...speakersToLoad]))
-    
-    try {
-      // Fetch event connections for each speaker
-      const results = await Promise.all(
-        speakersToLoad.map(async (speakerId) => {
-          try {
-            const response = await cachedApi.getEventsBySpeakerId(speakerId)
-            if (response && !('error' in response)) {
-              const events = response.events || response || []
-              return { speakerId, events: Array.isArray(events) ? events : [] }
-            }
-            return { speakerId, events: [] }
-          } catch (_err) {
-            return { speakerId, events: [] }
-          }
-        })
-      )
-      
-      setEventConnections(prev => {
-        const updated = new Map(prev)
-        results.forEach(({ speakerId, events }) => {
-          updated.set(speakerId, events)
-        })
-        return updated
-      })
-    } catch (err) {
-      console.error('Error loading event connections:', err)
-      // On error, remove from loaded set so it can be retried
-      speakersToLoad.forEach(id => loadedSpeakerIdsRef.current.delete(id))
-    } finally {
-      setLoadingEventCounts(prev => {
-        const updated = new Set(prev)
-        speakersToLoad.forEach(id => updated.delete(id))
-        return updated
-      })
+
+  // Explicit Refresh only — drops resolved counts as well as failed ones so a stale
+  // "3 events" is re-resolved, not just a row stuck on "—". Kept out of loadSpeakers,
+  // which also runs on mount and after every save/delete and would refetch needlessly.
+  // inFlightRef is deliberately left alone: clearing it would both orphan the live
+  // promise's shimmer entry and let the table issue a duplicate request for the same row.
+  const handleRefresh = useCallback(async () => {
+    connectionsRef.current.clear()
+    failedRef.current.clear()
+    setEventConnections(new Map())
+    await loadSpeakers()
+  }, [loadSpeakers, setEventConnections])
+
+  // Single entry point for fetching a speaker's linked events. Dedupes in-flight requests
+  // so an on-demand fetch (edit/delete/view) can't double-request a row the table is
+  // already loading. Only writes connectionsRef on success, so a failure never
+  // masquerades as "zero linked events".
+  const fetchSpeakerConnections = useCallback(async (
+    speakerId: string,
+    options?: { force?: boolean }
+  ): Promise<EventApiResponse[]> => {
+    // force bypasses both caches: callers use it when a stale count would be harmful
+    // (e.g. gating a delete), so joining an older in-flight request is not good enough.
+    if (!options?.force) {
+      const resolved = connectionsRef.current.get(speakerId)
+      if (resolved) return resolved
+
+      const inFlight = inFlightRef.current.get(speakerId)
+      if (inFlight) return inFlight
     }
-  }, [selectedSeriesId]) // Removed eventConnections from deps - using ref instead
-  
+
+    // Declared first so the finally block can identity-check this exact attempt and not
+    // evict a newer request under the same id. `const` fails tsc here (TS2454).
+    let request!: Promise<EventApiResponse[]>
+    request = (async () => {
+      try {
+        const response = await cachedApi.getEventsBySpeakerId(speakerId)
+        if (response && !('error' in response)) {
+          const raw = response.events || response || []
+          const events: EventApiResponse[] = Array.isArray(raw) ? raw : []
+          connectionsRef.current.set(speakerId, events)
+          failedRef.current.delete(speakerId)
+          setEventConnections(new Map(connectionsRef.current))
+          return events
+        }
+        // Leave connectionsRef untouched so the row stays "unknown", not "zero"
+        failedRef.current.add(speakerId)
+        return []
+      } catch (err) {
+        console.error(`Error loading event connections for ${speakerId}:`, err)
+        failedRef.current.add(speakerId)
+        return []
+      } finally {
+        // Only the current attempt clears the shimmer. A superseded request (Refresh or a
+        // forced refetch replaced it) must not, or the row would flash its old value while
+        // the live request is still running.
+        if (inFlightRef.current.get(speakerId) === request) {
+          inFlightRef.current.delete(speakerId)
+          setLoadingEventCounts(prev => {
+            const updated = new Set(prev)
+            updated.delete(speakerId)
+            return updated
+          })
+        }
+      }
+    })()
+
+    inFlightRef.current.set(speakerId, request)
+    setLoadingEventCounts(prev => new Set(prev).add(speakerId))
+    return request
+  }, [setEventConnections, setLoadingEventCounts])
+
+  // Fan out over the currently visible page. failedRef is honoured here (but not on
+  // explicit user actions) because DataTable re-fires onVisibleItemsChange on every
+  // eventConnections change — without it a persistently failing id would retry forever.
+  const loadEventConnections = useCallback((speakerIds: string[]) => {
+    if (!selectedSeriesId) return
+
+    speakerIds
+      .filter(id =>
+        !connectionsRef.current.has(id) &&
+        !inFlightRef.current.has(id) &&
+        !failedRef.current.has(id)
+      )
+      .forEach(id => { void fetchSpeakerConnections(id) })
+  }, [selectedSeriesId, fetchSpeakerConnections])
+
   // ============================================================================
   // COMPUTED DATA
   // ============================================================================
@@ -367,7 +325,6 @@ export const SpeakersDashboard: React.FC<SpeakersDashboardProps> = () => {
   const enrichedSpeakers = useMemo(() => {
     return speakers.map(speaker => ({
       ...speaker,
-      events: eventConnections.get(speaker.speakerId) || [],
       eventCount: eventConnections.get(speaker.speakerId)?.length
     }))
   }, [speakers, eventConnections])
@@ -410,44 +367,40 @@ export const SpeakersDashboard: React.FC<SpeakersDashboardProps> = () => {
     setIsFormDialogOpen(true)
   }, [])
   
+  // Profile edits need no linked-event count: event rows hold only a {speakerId,
+  // speakerType, ordinal} reference and resolve the profile from the series record at
+  // read time, so a series-speaker update is already visible on every linked event.
   const handleEditSpeaker = useCallback((speaker: SpeakerDashboardItem) => {
-    const events = eventConnections.get(speaker.speakerId) || []
-    
-    // If speaker is connected to events, show cascade dialog first
-    if (events.length > 0) {
-      setSpeakerForCascade(speaker)
-      setCascadeAction('update')
-    } else {
-      setEditingSpeaker(speaker)
-      setIsFormDialogOpen(true)
+    setEditingSpeaker(speaker)
+    setIsFormDialogOpen(true)
+  }, [setEditingSpeaker, setIsFormDialogOpen])
+
+  // Always re-resolve before opening: this warning gates an irreversible delete, so a
+  // stale count is worse than a brief overlay. A cached count could say "0 events" while
+  // another user has since added the speaker to one, and we would delete that silently.
+  const handleDeleteSpeaker = useCallback(async (speaker: SpeakerDashboardItem) => {
+    setIsCheckingConnections(true)
+    try {
+      await fetchSpeakerConnections(speaker.speakerId, { force: true })
+    } finally {
+      setIsCheckingConnections(false)
     }
-  }, [eventConnections])
-  
-  const handleDeleteSpeaker = useCallback((speaker: SpeakerDashboardItem) => {
-    const events = eventConnections.get(speaker.speakerId) || []
-    
-    // If speaker is connected to events, show cascade dialog first
-    if (events.length > 0) {
-      setSpeakerForCascade(speaker)
-      setCascadeAction('delete')
-    } else {
-      setSpeakerToDelete(speaker)
-    }
-  }, [eventConnections])
-  
+    setSpeakerToDelete(speaker)
+  }, [fetchSpeakerConnections, setIsCheckingConnections, setSpeakerToDelete])
+
+  // No force: an already-resolved speaker returns its cached array synchronously, so
+  // re-opening the dialog doesn't swap a real count for a spinner.
   const handleViewConnections = useCallback((speaker: SpeakerDashboardItem) => {
+    void fetchSpeakerConnections(speaker.speakerId)
     setSpeakerForConnections(speaker)
-  }, [])
+  }, [fetchSpeakerConnections, setSpeakerForConnections])
   
   const handleFormSubmit = useCallback(async (
     data: SpeakerFormSubmitData,
-    pendingFile?: File,
-    options?: SpeakerFormSaveOptions
+    pendingFile?: File
   ) => {
     if (!selectedSeriesId) return
 
-    const cascadeToEvents = options?.cascadeToEvents ?? false
-    
     setActionInProgress(editingSpeaker?.speakerId || 'new')
     
     try {
@@ -478,13 +431,17 @@ export const SpeakersDashboard: React.FC<SpeakersDashboardProps> = () => {
         }
 
         let imageMutation = false
+        let imageDeleteFailed = false
         if (data.removedImageId) {
           imageMutation = true
-          await apiService.deleteSpeakerImage(
+          const deleted = await apiService.deleteSpeakerImage(
             editingSpeaker.speakerId,
             selectedSeriesId,
             data.removedImageId
           )
+          if (deleted && 'error' in deleted) {
+            imageDeleteFailed = true
+          }
         }
 
         let imageUploadFailed = false
@@ -506,25 +463,14 @@ export const SpeakersDashboard: React.FC<SpeakersDashboardProps> = () => {
           invalidateSpeakerListCache(selectedSeriesId, editingSpeaker.speakerId)
         }
 
-        let cascadeFailedEventIds: string[] = []
-        if (cascadeToEvents) {
-          const events = eventConnections.get(editingSpeaker.speakerId) || []
-          cascadeFailedEventIds = await cascadeSpeakerUpdateToEvents(
-            editingSpeaker.speakerId,
-            events
-          )
-        }
-
-        if (imageUploadFailed && cascadeFailedEventIds.length > 0) {
-          toast.error(
-            'Speaker saved, but the profile image upload failed and some linked events could not be updated.'
-          )
+        // One aggregated toast; the speaker record itself saved successfully in all
+        // these branches, so only the image axis can degrade the outcome.
+        if (imageUploadFailed && imageDeleteFailed) {
+          toast.error('Speaker saved, but the profile image could not be updated.')
         } else if (imageUploadFailed) {
           toast.error('Speaker saved, but profile image upload failed.')
-        } else if (cascadeFailedEventIds.length > 0) {
-          toast.info(
-            'Speaker saved, but some linked events could not be updated. Check event speaker assignments.'
-          )
+        } else if (imageDeleteFailed) {
+          toast.error('Speaker saved, but the previous profile image could not be removed.')
         } else {
           toast.success('Speaker updated successfully!')
         }
@@ -576,76 +522,59 @@ export const SpeakersDashboard: React.FC<SpeakersDashboardProps> = () => {
     } finally {
       setActionInProgress(null)
     }
-  }, [selectedSeriesId, editingSpeaker, eventConnections, loadSpeakers, toast])
-  
-  const handleConfirmDelete = useCallback(async (cascadeToEvents: boolean = false) => {
-    if (!speakerToDelete || !selectedSeriesId) return
-    
-    setActionInProgress(speakerToDelete.speakerId)
-    
-    try {
-      let cascadeRemoveFailedEventIds: string[] = []
-      if (cascadeToEvents) {
-        const events = eventConnections.get(speakerToDelete.speakerId) || []
-        cascadeRemoveFailedEventIds = await cascadeSpeakerRemoveFromEvents(
-          speakerToDelete.speakerId,
-          events
-        )
-      }
+  }, [selectedSeriesId, editingSpeaker, loadSpeakers, toast])
 
-      // Delete the speaker from the series
-      const result = await apiService.deleteSpeaker(speakerToDelete.speakerId, selectedSeriesId)
-      
+  // The backend deletes every event association in the same atomic transaction as the
+  // series speaker (GSI speaker#<id> covers the event#<id> rows), so there is nothing to
+  // cascade here — and no pre-delete mutation that could be orphaned if this call fails.
+  const handleConfirmDelete = useCallback(async () => {
+    if (!speakerToDelete || !selectedSeriesId) return
+
+    setActionInProgress(speakerToDelete.speakerId)
+
+    // Captured before the delete: the backend drops these associations in the same
+    // transaction, so their cached rosters go stale and must be invalidated by eventId
+    // (apiCache keys on funcId + args, so invalidating by operation name would no-op).
+    // handleDeleteSpeaker force-resolves this first, so it is populated unless that fetch
+    // failed — in which case the ids are unknown and those rosters expire on their own TTL.
+    const affectedEventIds = (connectionsRef.current.get(speakerToDelete.speakerId) ?? [])
+      .map(event => event.eventId)
+      .filter((id): id is string => !!id)
+
+    try {
+      const result = await cachedApi.deleteSpeaker(speakerToDelete.speakerId, selectedSeriesId)
+
       if (result && 'error' in result) {
         throw new Error(result.error)
       }
 
-      if (cascadeRemoveFailedEventIds.length > 0) {
-        toast.info(
-          'Speaker deleted from the series, but could not be removed from some linked events.'
-        )
-      } else {
-        toast.success('Speaker deleted successfully!')
-      }
+      affectedEventIds.forEach(id => apiCache.invalidate(id))
+
+      toast.success('Speaker deleted successfully!')
       setSpeakerToDelete(null)
+
+      connectionsRef.current.delete(speakerToDelete.speakerId)
+      inFlightRef.current.delete(speakerToDelete.speakerId)
+      failedRef.current.delete(speakerToDelete.speakerId)
+      setEventConnections(new Map(connectionsRef.current))
+
       await loadSpeakers()
-      
-      // Clear cached event connections for this speaker
-      setEventConnections(prev => {
-        const updated = new Map(prev)
-        updated.delete(speakerToDelete.speakerId)
-        return updated
-      })
-      
+
     } catch (err) {
       console.error('Error deleting speaker:', err)
       toast.error('Failed to delete speaker')
     } finally {
       setActionInProgress(null)
     }
-  }, [speakerToDelete, selectedSeriesId, eventConnections, loadSpeakers, toast])
-  
-  const handleCascadeConfirm = useCallback((cascadeToEvents: boolean) => {
-    if (!speakerForCascade) return
-    
-    if (cascadeAction === 'update') {
-      setEditingSpeaker({ ...speakerForCascade, _cascadeToEvents: cascadeToEvents } as any)
-      setIsFormDialogOpen(true)
-    } else if (cascadeAction === 'delete') {
-      setSpeakerToDelete({ ...speakerForCascade, _cascadeToEvents: cascadeToEvents } as any)
-    }
-    
-    setSpeakerForCascade(null)
-    setCascadeAction(null)
-  }, [speakerForCascade, cascadeAction])
-  
+  }, [speakerToDelete, selectedSeriesId, loadSpeakers, toast, setEventConnections, setActionInProgress, setSpeakerToDelete])
+
   const handleMenuAction = useCallback((action: string, item: SpeakerDashboardItem) => {
     switch (action) {
       case 'edit':
         handleEditSpeaker(item)
         break
       case 'delete':
-        handleDeleteSpeaker(item)
+        void handleDeleteSpeaker(item)
         break
       case 'view-connections':
         handleViewConnections(item)
@@ -736,15 +665,32 @@ export const SpeakersDashboard: React.FC<SpeakersDashboardProps> = () => {
       name: 'LINKED EVENTS',
       width: 140,
       sortable: true,
-      sortFn: (a, b) => (a.eventCount ?? 0) - (b.eventCount ?? 0),
+      // Unloaded rows sort to one end rather than interleaving with genuine zeros
+      sortFn: (a, b) => (a.eventCount ?? -1) - (b.eventCount ?? -1),
       render: (item) => {
-        const isLoading = loadingEventCounts.has(item.speakerId)
-        const eventCount = item.eventCount ?? 0
-        
-        if (isLoading) {
+        if (loadingEventCounts.has(item.speakerId)) {
           return <div style={createShimmerStyle(60, 20)} />
         }
-        
+
+        // Only the first page is loaded eagerly, so an unloaded count must read as
+        // unknown — rendering it as 0 would claim the speaker has no linked events.
+        const eventCount = item.eventCount
+        if (eventCount === undefined) {
+          return (
+            <TooltipTrigger delay={0}>
+              <ActionButton
+                isQuiet
+                onPress={() => handleViewConnections(item)}
+                aria-label="Linked events not loaded — check now"
+              >
+                <Link />
+                <Text>—</Text>
+              </ActionButton>
+              <Tooltip>Linked events not loaded yet — click to check</Tooltip>
+            </TooltipTrigger>
+          )
+        }
+
         return (
           <TooltipTrigger delay={0}>
             <ActionButton
@@ -824,9 +770,14 @@ export const SpeakersDashboard: React.FC<SpeakersDashboardProps> = () => {
       width: 100,
       sortable: false,
       render: (item) => {
-        const eventCount = item.eventCount ?? 0
-        
-        const hasAnyAction = canWriteEvent || canDeleteEvent || eventCount > 0
+        // undefined = not loaded yet; keep the action enabled so the user can find out
+        const eventCount = item.eventCount
+        const canViewConnections = eventCount === undefined || eventCount > 0
+        const viewLabel = eventCount === undefined
+          ? 'View Connections'
+          : `View Connections (${eventCount})`
+
+        const hasAnyAction = canWriteEvent || canDeleteEvent || canViewConnections
         if (!hasAnyAction) return null
 
         return (
@@ -843,11 +794,11 @@ export const SpeakersDashboard: React.FC<SpeakersDashboardProps> = () => {
               )}
               <MenuItem
                 id="view-connections"
-                textValue={`View Connections (${eventCount})`}
-                isDisabled={eventCount === 0}
+                textValue={viewLabel}
+                isDisabled={!canViewConnections}
               >
                 <Link />
-                <Text slot="label">View Connections ({eventCount})</Text>
+                <Text slot="label">{viewLabel}</Text>
               </MenuItem>
               {canDeleteEvent && (
                 <MenuItem id="delete" textValue="Delete Speaker">
@@ -909,9 +860,11 @@ export const SpeakersDashboard: React.FC<SpeakersDashboardProps> = () => {
     if (key) {
       setSelectedSeriesId(String(key))
       setSeriesFilterText('') // Clear filter after selection
-      // Clear event connections cache when switching series
+      // Clear event connections cache when switching series (inFlightRef is left to
+      // settle on its own — see handleRefresh)
       setEventConnections(new Map())
-      loadedSpeakerIdsRef.current.clear()
+      connectionsRef.current.clear()
+      failedRef.current.clear()
     }
   }, [])
 
@@ -919,7 +872,8 @@ export const SpeakersDashboard: React.FC<SpeakersDashboardProps> = () => {
     setSelectedSeriesId(null)
     setSeriesFilterText('')
     setEventConnections(new Map())
-    loadedSpeakerIdsRef.current.clear()
+    connectionsRef.current.clear()
+    failedRef.current.clear()
   }, [])
 
   // Series selector header with searchable ComboBox
@@ -1044,7 +998,37 @@ export const SpeakersDashboard: React.FC<SpeakersDashboardProps> = () => {
       </Button>
     )
   }, [canWriteEvent, handleCreateSpeaker, selectedSeriesId])
-  
+
+  // Delete-dialog line about linked events. Undefined count means unresolved, not zero.
+  // Retains the last non-null speaker: S2's AlertDialog evaluates close() before
+  // onPrimaryAction(), so speakerToDelete is already null while the dialog animates out,
+  // and reading it directly would flip this line to "could not be determined" on the way.
+  const lastSpeakerToDeleteRef = useRef<SpeakerDashboardItem | null>(null)
+  if (speakerToDelete) lastSpeakerToDeleteRef.current = speakerToDelete
+  const deleteSubject = speakerToDelete ?? lastSpeakerToDeleteRef.current
+
+  const deleteLinkedEventsNotice = useMemo(() => {
+    const eventCount = deleteSubject
+      ? eventConnections.get(deleteSubject.speakerId)?.length
+      : undefined
+
+    if (eventCount === undefined) {
+      return (
+        <Text>
+          Linked events could not be determined; any event assignments will also be removed.
+        </Text>
+      )
+    }
+    if (eventCount === 0) return null
+    return (
+      <Text>
+        They are currently linked to <strong>{eventCount}</strong>{' '}
+        {eventCount === 1 ? 'event' : 'events'} and will be removed from{' '}
+        {eventCount === 1 ? 'it' : 'all of them'}.
+      </Text>
+    )
+  }, [deleteSubject, eventConnections])
+
   return (
     <div data-testid="speakers-dashboard">
       {/* Series Selector */}
@@ -1071,9 +1055,9 @@ export const SpeakersDashboard: React.FC<SpeakersDashboardProps> = () => {
             error={error}
             data={enrichedSpeakers}
             columns={columns}
-            getItemKey={(item) => item.speakerId}
+            getItemKey={getSpeakerKey}
             onVisibleIdsChange={handleVisibleIdsChange}
-            onRefresh={loadSpeakers}
+            onRefresh={handleRefresh}
             createButton={createButton}
             emptyStateIllustration={<MicrophoneIllustration aria-hidden />}
             emptyStateTitle="No Speakers Found"
@@ -1102,26 +1086,16 @@ export const SpeakersDashboard: React.FC<SpeakersDashboardProps> = () => {
         speaker={editingSpeaker}
         seriesId={selectedSeriesId || ''}
         isSubmitting={!!actionInProgress}
-        cascadeToEvents={(editingSpeaker as any)?._cascadeToEvents}
         scopeLocales={scopeLocales}
       />
-      
-      {/* Cascade Confirmation Dialog */}
-      <CascadeConfirmDialog
-        isOpen={!!speakerForCascade}
-        onClose={() => {
-          setSpeakerForCascade(null)
-          setCascadeAction(null)
-        }}
-        onConfirm={handleCascadeConfirm}
-        speaker={speakerForCascade}
-        action={cascadeAction || 'update'}
-        events={speakerForCascade ? eventConnections.get(speakerForCascade.speakerId) || [] : []}
-      />
-      
-      {/* Simple Delete Confirmation (no cascade) */}
+
+      {/*
+        Single delete confirmation. Removal from linked events is stated as a consequence,
+        not offered as a choice: the backend deletes the series speaker and every event
+        association in one atomic transaction, so "series only" was never achievable.
+      */}
       <DialogTrigger
-        isOpen={!!speakerToDelete && !(speakerToDelete as any)?._cascadeToEvents}
+        isOpen={!!speakerToDelete}
         onOpenChange={(isOpen) => !isOpen && setSpeakerToDelete(null)}
       >
         <div style={{ display: 'none' }} />
@@ -1131,61 +1105,43 @@ export const SpeakersDashboard: React.FC<SpeakersDashboardProps> = () => {
           primaryActionLabel="Delete"
           cancelLabel="Cancel"
           onPrimaryAction={() => {
-            handleConfirmDelete(false)
-          }}
-          onCancel={() => setSpeakerToDelete(null)}
-          isPrimaryActionDisabled={!!actionInProgress}
-        >
-          Are you sure you want to delete <strong>{speakerToDelete?.firstName} {speakerToDelete?.lastName}</strong>?
-          This action cannot be undone.
-        </AlertDialog>
-      </DialogTrigger>
-      
-      {/* Cascade Delete Confirmation */}
-      <DialogTrigger
-        isOpen={!!speakerToDelete && !!(speakerToDelete as any)?._cascadeToEvents}
-        onOpenChange={(isOpen) => !isOpen && setSpeakerToDelete(null)}
-      >
-        <div style={{ display: 'none' }} />
-        <AlertDialog
-          title="Delete Speaker & Remove from Events"
-          variant="destructive"
-          primaryActionLabel="Delete & Remove from Events"
-          cancelLabel="Cancel"
-          onPrimaryAction={() => {
-            handleConfirmDelete(true)
+            void handleConfirmDelete()
           }}
           onCancel={() => setSpeakerToDelete(null)}
           isPrimaryActionDisabled={!!actionInProgress}
         >
           <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
             <Text>
-              <strong>{speakerToDelete?.firstName} {speakerToDelete?.lastName}</strong> is linked to {
-                eventConnections.get(speakerToDelete?.speakerId || '')?.length || 0
-              } events.
+              Are you sure you want to delete{' '}
+              <strong>{deleteSubject?.firstName} {deleteSubject?.lastName}</strong>?
             </Text>
-            <Text>
-              This will permanently delete the speaker from the series AND remove them from all linked events.
-            </Text>
+            {deleteLinkedEventsNotice}
             <Text UNSAFE_style={{ color: COLORS.RED_600, fontWeight: 'bold' }}>
               This action cannot be undone.
             </Text>
           </div>
         </AlertDialog>
       </DialogTrigger>
-      
+
       {/* Event Connections Dialog */}
       <SpeakerEventConnectionsDialog
         isOpen={!!speakerForConnections}
         onClose={() => setSpeakerForConnections(null)}
         speaker={speakerForConnections}
-        events={speakerForConnections ? eventConnections.get(speakerForConnections.speakerId) || [] : []}
+        events={speakerForConnections ? eventConnections.get(speakerForConnections.speakerId) : undefined}
+        isLoading={!!speakerForConnections && loadingEventCounts.has(speakerForConnections.speakerId)}
       />
       
       <BlurredLoadingOverlay
         visible={isLoadingSeries || isLoadingSpeakers}
         message={isLoadingSeries ? 'Loading series...' : 'Loading speakers...'}
         ariaLabel={isLoadingSeries ? 'Loading series' : 'Loading speakers'}
+      />
+      <BlurredLoadingOverlay
+        visible={isCheckingConnections}
+        message="Checking linked events..."
+        ariaLabel="Checking linked events"
+        zIndex={9999}
       />
       <BlurredLoadingOverlay
         visible={!!actionInProgress}

@@ -12,7 +12,7 @@
  */
 
 import React from 'react'
-import { ActionButton, Text, Button, ButtonGroup, Dialog, DialogTrigger, Content, Heading } from '@react-spectrum/s2'
+import { ActionButton, Text, Button, ButtonGroup, Dialog, DialogTrigger, Content, Heading, ProgressCircle } from '@react-spectrum/s2'
 import { style } from '@react-spectrum/s2/style' with { type: 'macro' }
 import Edit from '@react-spectrum/s2/icons/Edit'
 import Calendar from '@react-spectrum/s2/icons/Calendar'
@@ -25,15 +25,23 @@ interface SpeakerEventConnectionsDialogProps {
   isOpen: boolean
   onClose: () => void
   speaker: SpeakerDashboardItem | null
-  events: EventApiResponse[]
+  /** `undefined` means unresolved (never fetched or fetch failed) — distinct from an empty array */
+  events: EventApiResponse[] | undefined
+  /** Connections still resolving; suppresses the "not linked to any events" empty state */
+  isLoading?: boolean
 }
 
 export const SpeakerEventConnectionsDialog: React.FC<SpeakerEventConnectionsDialogProps> = ({
   isOpen,
   onClose,
   speaker,
-  events
+  events,
+  isLoading = false
 }) => {
+  // Three states: loading, unresolved (fetch failed), resolved. Collapsing the middle one
+  // into "0 events" would assert the speaker has no linked events when we simply don't know.
+  const resolvedEvents = events ?? []
+  const isUnresolved = !isLoading && events === undefined
   const speakerName = speaker ? `${speaker.firstName} ${speaker.lastName}` : ''
   
   const formatDate = (dateString?: string): string => {
@@ -117,14 +125,28 @@ export const SpeakerEventConnectionsDialog: React.FC<SpeakerEventConnectionsDial
                     <div className={style({display: 'flex', alignItems: 'center', gap: 8})}>
                       <Link />
                       <Text UNSAFE_style={{ fontWeight: 'bold' }}>
-                        {events.length} {events.length === 1 ? 'event' : 'events'}
+                        {isLoading
+                          ? 'Loading...'
+                          : isUnresolved
+                            ? 'Unknown'
+                            : `${resolvedEvents.length} ${resolvedEvents.length === 1 ? 'event' : 'events'}`}
                       </Text>
                     </div>
                   </div>
                 </div>
 
                 {/* Events List */}
-                {events.length === 0 ? (
+                {isLoading ? (
+                  <div style={{ padding: 32, display: 'flex', justifyContent: 'center' }}>
+                    <ProgressCircle isIndeterminate aria-label="Loading linked events" />
+                  </div>
+                ) : isUnresolved ? (
+                  <div style={{ padding: 32, textAlign: 'center' }}>
+                    <Text UNSAFE_style={{ color: 'var(--spectrum-global-color-gray-600)' }}>
+                      Linked events could not be loaded. Close this dialog and try again.
+                    </Text>
+                  </div>
+                ) : resolvedEvents.length === 0 ? (
                   <div style={{ padding: 32, textAlign: 'center' }}>
                     <Text UNSAFE_style={{ color: 'var(--spectrum-global-color-gray-600)' }}>
                       This speaker is not linked to any events.
@@ -133,7 +155,7 @@ export const SpeakerEventConnectionsDialog: React.FC<SpeakerEventConnectionsDial
                 ) : (
                   <div style={{ maxHeight: 368, overflowY: 'auto' }}>
                     <div className={style({display: 'flex', flexDirection: 'column', gap: 8})}>
-                      {events.map(event => (
+                      {resolvedEvents.map(event => (
                         <div
                           key={event.eventId}
                           style={{

@@ -125,6 +125,11 @@ export const EVENT_TYPES = {
   HYBRID: 'Hybrid',
 } as const
 
+/**
+ * Maps eventType to the caas:content-type tag applied to the event's CaaS data.
+ * MIRRORS events-platform-hh-webhooks' EVENT_TYPE_CONTENT_TAG_MAP — keep the caasIds
+ * byte-identical. Display only; see config/contentTypeTag.ts.
+ */
 export const CONTENT_TYPE_TAGS = {
   [EVENT_TYPES.WEBINAR]: {
     title: 'Webinar',
@@ -134,6 +139,15 @@ export const CONTENT_TYPE_TAGS = {
     title: 'In-Person Event',
     caasId: 'caas:content-type/in-person-event',
   },
+} as const
+
+/**
+ * Applied when eventType has no entry in CONTENT_TYPE_TAGS (e.g. Hybrid, or unset).
+ * Matches the backend's `|| 'caas:content-type/event'` fallback.
+ */
+export const CONTENT_TYPE_TAG_FALLBACK = {
+  title: 'Event',
+  caasId: 'caas:content-type/event',
 } as const
 
 /**
