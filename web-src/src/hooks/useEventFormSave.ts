@@ -6,7 +6,7 @@ import { useCallback } from 'react'
 import { useEventFormContext } from '../contexts/EventFormContext'
 import { apiService, cachedApi } from '../services/api'
 import { configService } from '../services/configService'
-import { EventFormData, EventApiResponse } from '../types/domain'
+import { EventFormData, EventApiResponse, SeriesTemplate } from '../types/domain'
 import {
   EVENT_DATA_FILTER,
   setEventAttribute,
@@ -470,9 +470,17 @@ export function useEventFormSave() {
       // 3b. Enforce RSVP type is supported by the series template (MWPW-200887).
       // Authoritative regardless of which wizard step was visited before saving —
       // the RSVP step's own auto-correct/validate only run while that step is mounted.
+      // Series templates are an external, best-effort config (like everywhere else this
+      // config is read) — a fetch failure must not block saving events that never touch
+      // registrationType, so this fails open to the current value rather than throwing.
       const currentRegistrationType = additionalPayload.registrationType ?? formData.registrationType ?? 'ESP'
-      const templatesConfig = await configService.getSeriesTemplates()
-      const allowedRsvpTypes = templateSupportedRsvpTypes(seriesTemplateId, templatesConfig.data)
+      let seriesTemplatesData: SeriesTemplate[] = []
+      try {
+        seriesTemplatesData = (await configService.getSeriesTemplates()).data
+      } catch (err) {
+        console.error('Failed to load series templates config; skipping RSVP type enforcement:', err)
+      }
+      const allowedRsvpTypes = templateSupportedRsvpTypes(seriesTemplateId, seriesTemplatesData)
       if (allowedRsvpTypes.length > 0 && !allowedRsvpTypes.includes(currentRegistrationType)) {
         additionalPayload.registrationType = allowedRsvpTypes[0]
       }
