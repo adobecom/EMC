@@ -1,0 +1,596 @@
+/*
+* <license header>
+*/
+
+import React, { useState, useCallback, useMemo, useEffect } from 'react'
+import { Button, ButtonGroup, NumberField, TextField, DialogTrigger, Dialog, Content, Heading, Text, ActionButton, AlertDialog, Picker, PickerItem, TooltipTrigger, Tooltip, SearchField } from '@react-spectrum/s2'
+import { style } from "@react-spectrum/s2/style" with { type: "macro" }
+import Add from '@react-spectrum/s2/icons/Add'
+import CalendarEdit from '@react-spectrum/s2/icons/CalendarEdit'
+import RemoveCircle from '@react-spectrum/s2/icons/RemoveCircle'
+import Copy from '@react-spectrum/s2/icons/Copy'
+import Download from '@react-spectrum/s2/icons/Download'
+import Link from '@react-spectrum/s2/illustrations/linear/Link'
+import NoSearchResults from '@react-spectrum/s2/illustrations/linear/NoSearchResults'
+import type { RsvpToken } from '../../types/rsvpToken'
+import { calculateRsvpTokenStats, DEFAULT_EXTEND_DAYS, getRemainingDays } from '../../types/rsvpToken'
+import type { Campaign } from '../../types/campaign'
+import { DataTable, TableColumn, ResourceEmptyState, StatusBadge } from '../../components/shared'
+import { COLORS } from '../../styles/designSystem'
+import { useHasPermission } from '../../hooks/useHasPermission'
+import { generateCsv, downloadCsv, sanitizeFilename, exportDatetime, type CsvColumn } from '../../utils/csvExport'
+
+const LABEL_MAX_LENGTH = 150
+// Sentinel id for the "No campaign" Picker option — rsvp tokens never carry a
+// campaign of their own, so this just means "copy the plain link."
+const NO_CAMPAIGN_ID = '__none__'
+
+function formatEpoch(ms?: number): string {
+  if (!ms) return '-'
+  return new Date(ms).toLocaleDateString('en-US', {
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric',
+  })
+}
+
+// An unused token past its expiry is still reported as status "unused" by the API
+// (isExpired is a separate flag) — surface it as "expired" so it isn't mistaken for
+// still-shareable.
+function getDisplayStatus(link: RsvpToken): RsvpToken['status'] | 'expired' {
+  return link.isExpired && link.status === 'unused' ? 'expired' : link.status
+}
+
+// Human-readable status label. "used" reads as "Registered" here (a token is consumed
+// only by a successful registration), matching the column/stat wording.
+function formatStatusLabel(link: RsvpToken): string {
+  const status = getDisplayStatus(link)
+  if (status === 'used') return 'Registered'
+  return status.charAt(0).toUpperCase() + status.slice(1)
+}
+
+const GUEST_RSVP_LINKS_TABLE_TEST_IDS = {
+  root: 'guest-rsvp-links-table',
+  emptyState: 'guest-rsvp-links-table-empty-state',
+  pageInput: 'guest-rsvp-links-table-page-input',
+  header: (columnKey: string) => `guest-rsvp-links-table-header-${columnKey}`,
+  row: (itemKey: string) => `guest-rsvp-links-table-row-${itemKey}`,
+}
+
+interface GuestRsvpUrlsTabProps {
+  eventId: string
+  eventTitle?: string
+  links: RsvpToken[]
+  campaigns: Campaign[]
+  onGenerate: (label?: string) => Promise<void>
+  onExtend: (token: string, expiresInDays: number, label: string) => Promise<void>
+  onRevoke: (token: string) => Promise<void>
+}
+
+export const GuestRsvpUrlsTab: React.FC<GuestRsvpUrlsTabProps> = ({
+  eventId,
+  eventTitle,
+  links,
+  campaigns,
+  onGenerate,
+  onExtend,
+  onRevoke,
+}) => {
+  const canWriteEvent = useHasPermission('event', 'write')
+  const canDeleteEvent = useHasPermission('event', 'delete')
+  const canExport = useHasPermission('user', 'read')
+  const [searchQuery, setSearchQuery] = useState('')
+  const [isGenerating, setIsGenerating] = useState(false)
+  const [isGenerateDialogOpen, setIsGenerateDialogOpen] = useState(false)
+  const [generateLabel, setGenerateLabel] = useState('')
+  const [copiedToken, setCopiedToken] = useState<string | null>(null)
+  const [linkToRevoke, setLinkToRevoke] = useState<RsvpToken | null>(null)
+  const [linkToExtend, setLinkToExtend] = useState<RsvpToken | null>(null)
+  const [extendDays, setExtendDays] = useState<number>(DEFAULT_EXTEND_DAYS)
+  const [extendLabel, setExtendLabel] = useState('')
+  const [isSaving, setIsSaving] = useState(false)
+  const [linkToCopy, setLinkToCopy] = useState<RsvpToken | null>(null)
+  const [selectedCampaignId, setSelectedCampaignId] = useState<string | null>(null)
+
+  // Campaign tracking is opted into per-copy, not bound to the token itself —
+  // only Active campaigns make sense to attribute a brand-new share to.
+  const activeCampaigns = useMemo(() => campaigns.filter((c) => c.status === 'Active'), [campaigns])
+
+  // Stats always reflect the full set, independent of the search filter.
+  const stats = useMemo(() => calculateRsvpTokenStats(links), [links])
+
+  // Reset the search when switching events so a stale query never hides a new
+  // event's links (mirrors the sibling registration tabs).
+  useEffect(() => {
+    setSearchQuery('')
+  }, [eventId])
+
+  const filteredLinks = useMemo(() => {
+    const query = searchQuery.trim().toLowerCase()
+    if (!query) return links
+    return links.filter((link) => {
+      const searchable = [
+        link.url,
+        link.token,
+        link.createdBy,
+        link.usedByAttendee,
+        link.label,
+        formatStatusLabel(link),
+      ]
+      return searchable.some((value) => value != null && String(value).toLowerCase().includes(query))
+    })
+  }, [links, searchQuery])
+
+  const handleExport = useCallback(() => {
+    const columns: CsvColumn[] = [
+      { key: 'url', label: 'URL' },
+      { key: 'generatedFor', label: 'Generated For' },
+      { key: 'status', label: 'Status' },
+      { key: 'createdBy', label: 'Created By' },
+      { key: 'created', label: 'Created' },
+      { key: 'expires', label: 'Expires' },
+      { key: 'registeredBy', label: 'Registered By' },
+      { key: 'registeredAt', label: 'Registered At' },
+    ]
+    const rows = filteredLinks.map((link) => ({
+      url: link.url || '-',
+      generatedFor: link.label || '-',
+      status: formatStatusLabel(link),
+      createdBy: link.createdBy,
+      created: formatEpoch(link.creationTime),
+      expires: formatEpoch(link.expiresAt),
+      registeredBy: link.usedByAttendee || '-',
+      registeredAt: formatEpoch(link.usedAt),
+    }))
+    const stem = sanitizeFilename(eventTitle || eventId)
+    downloadCsv(generateCsv(rows, columns), `guest-rsvp-links_${stem}_${exportDatetime()}.csv`)
+  }, [filteredLinks, eventTitle, eventId])
+
+  const handleGenerateSubmit = useCallback(async () => {
+    setIsGenerating(true)
+    try {
+      await onGenerate(generateLabel.trim() || undefined)
+      setIsGenerateDialogOpen(false)
+    } catch (err) {
+      console.error('Failed to generate guest RSVP link:', err)
+    } finally {
+      setIsGenerating(false)
+    }
+  }, [onGenerate, generateLabel])
+
+  const copyToClipboard = useCallback(async (token: string, url: string) => {
+    try {
+      await navigator.clipboard.writeText(url)
+      setCopiedToken(token)
+      setTimeout(() => setCopiedToken(null), 2000)
+    } catch (err) {
+      console.error('Failed to copy guest RSVP URL:', err)
+    }
+  }, [])
+
+  const handleCopyUrl = useCallback((link: RsvpToken) => {
+    if (!link.url) {
+      console.error('Guest RSVP link has no composed URL (event is missing a detail page path)')
+      return
+    }
+    // Only worth asking when there's an active campaign to attribute the share
+    // to — otherwise just copy the plain rsvpToken link, same as before.
+    if (activeCampaigns.length === 0) {
+      copyToClipboard(link.token, link.url)
+      return
+    }
+    setSelectedCampaignId(null)
+    setLinkToCopy(link)
+  }, [activeCampaigns, copyToClipboard])
+
+  const handleCopyConfirm = useCallback(() => {
+    if (!linkToCopy?.url) return
+    if (!selectedCampaignId || selectedCampaignId === NO_CAMPAIGN_ID) {
+      copyToClipboard(linkToCopy.token, linkToCopy.url)
+      setLinkToCopy(null)
+      return
+    }
+    const campaign = activeCampaigns.find((c) => c.campaignId === selectedCampaignId)
+    if (!campaign?.url) {
+      // Campaign has no shareable URL of its own — fall back to the plain link
+      // rather than silently dropping the user's copy action.
+      console.error('Selected campaign has no composed URL; copying the plain rsvp token link instead')
+      copyToClipboard(linkToCopy.token, linkToCopy.url)
+      setLinkToCopy(null)
+      return
+    }
+    try {
+      // Explicitly set both params rather than trusting campaign.url to already
+      // carry the campaign identifier — the two are ingested by separate
+      // pipelines (campaign attribution vs. RSVP token registration) and each
+      // must be able to read its own param independently of the other.
+      const url = new URL(campaign.url)
+      url.searchParams.set('campaign', campaign.campaignId)
+      url.searchParams.set('rsvpToken', linkToCopy.token)
+      copyToClipboard(linkToCopy.token, url.toString())
+    } catch (err) {
+      console.error('Failed to compose campaign-tracked rsvp token URL:', err)
+      copyToClipboard(linkToCopy.token, linkToCopy.url)
+    }
+    setLinkToCopy(null)
+  }, [linkToCopy, selectedCampaignId, activeCampaigns, copyToClipboard])
+
+  const handleRevoke = useCallback(async () => {
+    if (!linkToRevoke) return
+    setIsSaving(true)
+    try {
+      await onRevoke(linkToRevoke.token)
+      setLinkToRevoke(null)
+    } catch (err) {
+      console.error('Failed to revoke guest RSVP link:', err)
+    } finally {
+      setIsSaving(false)
+    }
+  }, [linkToRevoke, onRevoke])
+
+  const handleExtendSubmit = useCallback(async () => {
+    if (!linkToExtend) return
+    // The API takes a relative day count and recomputes expiresAt as now +
+    // expiresInDays server-side (replacing the prior value), so no client-side
+    // epoch math is needed here.
+    setIsSaving(true)
+    try {
+      await onExtend(linkToExtend.token, extendDays, extendLabel.trim())
+      setLinkToExtend(null)
+    } catch (err) {
+      console.error('Failed to extend guest RSVP link:', err)
+    } finally {
+      setIsSaving(false)
+    }
+  }, [linkToExtend, extendDays, extendLabel, onExtend])
+
+  const emptyState = useMemo(() => {
+    if (filteredLinks.length > 0) return undefined
+    if (links.length > 0) {
+      // Links exist but the search filtered them all out.
+      return (
+        <ResourceEmptyState
+          fillContainer
+          illustration={<NoSearchResults aria-hidden />}
+          title="No matching links"
+          description="No guest RSVP links match your search."
+        />
+      )
+    }
+    return (
+      <ResourceEmptyState
+        fillContainer
+        illustration={<Link aria-hidden />}
+        title="No guest RSVP links yet"
+        description="Generate a one-time-use link to let a guest register without an Adobe ID — for VIP/on-behalf-of registrations or when Adobe ID is blocking someone."
+      />
+    )
+  }, [links.length, filteredLinks.length])
+
+  const columns: TableColumn<RsvpToken>[] = useMemo(() => [
+    {
+      key: 'url',
+      name: 'URL',
+      width: 260,
+      render: (link) => (
+        <div className={style({ display: 'flex', alignItems: 'center', gap: 8 })}>
+          <Text UNSAFE_style={{ fontFamily: 'monospace', fontSize: '13px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+            {link.url ?? '-'}
+          </Text>
+          <TooltipTrigger isOpen={copiedToken === link.token}>
+            <ActionButton
+              isQuiet
+              isDisabled={!link.url}
+              onPress={() => handleCopyUrl(link)}
+              aria-label="Copy guest RSVP URL"
+            >
+              <Copy />
+            </ActionButton>
+            <Tooltip>Copied!</Tooltip>
+          </TooltipTrigger>
+        </div>
+      )
+    },
+    {
+      key: 'label',
+      name: 'GENERATED FOR',
+      width: 160,
+      sortable: true,
+      render: (link) => <Text>{link.label || '-'}</Text>
+    },
+    {
+      key: 'status',
+      name: 'STATUS',
+      width: 100,
+      sortable: true,
+      // getDisplayStatus drives the shared badge's variant/colour; formatStatusLabel
+      // is the single source of the visible text (relabelling "used" as "Registered",
+      // shared with search + CSV export).
+      render: (link) => <StatusBadge status={getDisplayStatus(link)} label={formatStatusLabel(link)} />
+    },
+    {
+      key: 'createdBy',
+      name: 'CREATED BY',
+      width: 180,
+      sortable: true,
+      render: (link) => <Text>{link.createdBy}</Text>
+    },
+    {
+      key: 'creationTime',
+      name: 'CREATED',
+      width: 120,
+      sortable: true,
+      render: (link) => <Text>{formatEpoch(link.creationTime)}</Text>
+    },
+    {
+      key: 'expiresAt',
+      name: 'EXPIRES',
+      width: 120,
+      sortable: true,
+      render: (link) => <Text>{formatEpoch(link.expiresAt)}</Text>
+    },
+    {
+      key: 'usedByAttendee',
+      name: 'REGISTERED BY',
+      width: 180,
+      render: (link) => <Text>{link.usedByAttendee || '-'}</Text>
+    },
+    {
+      key: 'actions',
+      name: 'ACTIONS',
+      width: 100,
+      sortable: false,
+      isSticky: true,
+      cellNoWrap: true,
+      render: (link) => (
+        <div className={style({ display: 'flex', gap: 8, justifyContent: 'end' })}>
+          {canWriteEvent && link.status === 'unused' && (
+            <ActionButton
+              isQuiet
+              onPress={() => { setLinkToExtend(link); setExtendDays(getRemainingDays(link)); setExtendLabel(link.label ?? '') }}
+              aria-label="Update link expiration"
+            >
+              <CalendarEdit />
+            </ActionButton>
+          )}
+          {canDeleteEvent && link.status === 'unused' && (
+            <ActionButton
+              isQuiet
+              onPress={() => setLinkToRevoke(link)}
+              aria-label="Revoke link"
+            >
+              <RemoveCircle />
+            </ActionButton>
+          )}
+        </div>
+      )
+    }
+  ], [canWriteEvent, canDeleteEvent, copiedToken, handleCopyUrl])
+
+  if (!eventId) {
+    return (
+      <div style={{ padding: '32px' }}>
+        <Text UNSAFE_style={{ color: COLORS.GRAY_600 }}>
+          Select an event to manage guest RSVP links
+        </Text>
+      </div>
+    )
+  }
+
+  return (
+    <div>
+      {/* Stats Bar */}
+      <div style={{ backgroundColor: 'var(--spectrum-global-color-gray-100)', padding: '24px', borderRadius: '8px', marginBottom: '24px' }}>
+        <div className={style({ display: 'flex', gap: 48, flexWrap: 'wrap' })}>
+          <StatItem label="Total Links" value={stats.totalTokens} />
+          <StatItem label="Unused" value={stats.unusedTokens} />
+          <StatItem label="Registered" value={stats.usedTokens} />
+        </div>
+      </div>
+
+      {/* Generate link */}
+      <div
+        className={style({
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'end',
+          flexWrap: 'wrap',
+          gap: 16,
+          marginBottom: 16,
+        })}
+      >
+        <div>
+          {canWriteEvent && (
+            <Button
+              variant="accent"
+              onPress={() => { setGenerateLabel(''); setIsGenerateDialogOpen(true) }}
+              isPending={isGenerating}
+            >
+              <Add />
+              <Text>Generate guest RSVP link</Text>
+            </Button>
+          )}
+        </div>
+        <div className={style({ display: 'flex', alignItems: 'end', gap: 12 })}>
+          {canExport && filteredLinks.length > 0 && (
+            <ActionButton aria-label="Export guest RSVP links to CSV" onPress={handleExport}>
+              <Download />
+            </ActionButton>
+          )}
+          <div className={style({ width: 240 })}>
+            <SearchField
+              label="Search guest RSVP links"
+              placeholder="Search"
+              value={searchQuery}
+              onChange={setSearchQuery}
+              onClear={() => setSearchQuery('')}
+              styles={style({ width: '[100%]' })}
+            />
+          </div>
+        </div>
+      </div>
+
+      {/* Guest RSVP Links Table */}
+      <div style={{ minHeight: 480, display: 'flex', flexDirection: 'column' }}>
+        <DataTable
+          columns={columns}
+          data={filteredLinks}
+          getItemKey={(item) => item.token}
+          testIds={GUEST_RSVP_LINKS_TABLE_TEST_IDS}
+          emptyState={emptyState}
+        />
+      </div>
+
+      {/* Generate Link Dialog */}
+      <DialogTrigger isOpen={isGenerateDialogOpen} onOpenChange={setIsGenerateDialogOpen}>
+        <div style={{ display: 'none' }} />
+        <Dialog size="S">
+          {() => (
+            <>
+              <Heading slot="title">Generate Guest RSVP Link</Heading>
+              <Content>
+                <TextField
+                  label="Generated for (optional)"
+                  placeholder="e.g. VIP — CEO"
+                  value={generateLabel}
+                  onChange={setGenerateLabel}
+                  maxLength={LABEL_MAX_LENGTH}
+                  styles={style({ width: '[100%]' })}
+                />
+              </Content>
+              <ButtonGroup>
+                <Button variant="secondary" onPress={() => setIsGenerateDialogOpen(false)}>
+                  Cancel
+                </Button>
+                <Button
+                  variant="accent"
+                  onPress={handleGenerateSubmit}
+                  isPending={isGenerating}
+                >
+                  Generate
+                </Button>
+              </ButtonGroup>
+            </>
+          )}
+        </Dialog>
+      </DialogTrigger>
+
+      {/* Update Link Dialog */}
+      <DialogTrigger isOpen={!!linkToExtend} onOpenChange={(isOpen) => !isOpen && setLinkToExtend(null)}>
+        <div style={{ display: 'none' }} />
+        <Dialog size="S">
+          {() => (
+            <>
+              <Heading slot="title">Update Link</Heading>
+              <Content>
+                <div className={style({ display: 'flex', flexDirection: 'column', gap: 16 })}>
+                  <NumberField
+                    label="Expires in (days from now)"
+                    value={extendDays}
+                    onChange={setExtendDays}
+                    minValue={1}
+                    styles={style({ width: '[100%]' })}
+                  />
+                  <TextField
+                    label="Generated for (optional)"
+                    placeholder="e.g. VIP — CEO"
+                    value={extendLabel}
+                    onChange={setExtendLabel}
+                    maxLength={LABEL_MAX_LENGTH}
+                    styles={style({ width: '[100%]' })}
+                  />
+                </div>
+              </Content>
+              <ButtonGroup>
+                <Button variant="secondary" onPress={() => setLinkToExtend(null)}>
+                  Cancel
+                </Button>
+                <Button
+                  variant="accent"
+                  onPress={handleExtendSubmit}
+                  isDisabled={!extendDays || extendDays < 1 || isSaving}
+                >
+                  {isSaving ? 'Saving...' : 'Update'}
+                </Button>
+              </ButtonGroup>
+            </>
+          )}
+        </Dialog>
+      </DialogTrigger>
+
+      {/* Revoke Confirmation Dialog */}
+      <DialogTrigger isOpen={!!linkToRevoke} onOpenChange={(isOpen) => !isOpen && setLinkToRevoke(null)}>
+        <div style={{ display: 'none' }} />
+        <AlertDialog title="Revoke Guest RSVP Link" variant="destructive" primaryActionLabel="Revoke" cancelLabel="Cancel"
+          onPrimaryAction={handleRevoke}
+          onCancel={() => setLinkToRevoke(null)}
+        >
+          Are you sure you want to revoke this guest RSVP link? It can no longer be used to register once revoked.
+        </AlertDialog>
+      </DialogTrigger>
+
+      {/* Track-with-Campaign Dialog — shown on copy only when the event has
+          active campaigns. Campaign attribution is never bound to the token
+          itself; picking one here just adds a second, independent query param
+          (campaign) alongside rsvpToken on the copied URL. */}
+      <DialogTrigger isOpen={!!linkToCopy} onOpenChange={(isOpen) => !isOpen && setLinkToCopy(null)}>
+        <div style={{ display: 'none' }} />
+        <Dialog size="S">
+          {() => (
+            <>
+              <Heading slot="title">Track This Link With a Campaign?</Heading>
+              <Content>
+                <Picker
+                  label="Campaign"
+                  selectedKey={selectedCampaignId ?? NO_CAMPAIGN_ID}
+                  onSelectionChange={(key) => setSelectedCampaignId(key === NO_CAMPAIGN_ID ? null : String(key))}
+                  styles={style({ width: '[100%]' })}
+                >
+                  <PickerItem id={NO_CAMPAIGN_ID}>No campaign</PickerItem>
+                  {activeCampaigns.map((campaign) => (
+                    <PickerItem key={campaign.campaignId} id={campaign.campaignId}>
+                      {campaign.name}
+                    </PickerItem>
+                  ))}
+                </Picker>
+              </Content>
+              <ButtonGroup>
+                <Button variant="secondary" onPress={() => setLinkToCopy(null)}>
+                  Cancel
+                </Button>
+                <Button variant="accent" onPress={handleCopyConfirm}>
+                  Copy
+                </Button>
+              </ButtonGroup>
+            </>
+          )}
+        </Dialog>
+      </DialogTrigger>
+    </div>
+  )
+}
+
+const StatItem: React.FC<{
+  label: string
+  value: number
+}> = ({ label, value }) => (
+  <div className={style({ display: 'flex', flexDirection: 'column', gap: 4 })}>
+    <Text UNSAFE_style={{
+      fontSize: '12px',
+      fontWeight: 600,
+      color: COLORS.GRAY_600,
+      textTransform: 'uppercase'
+    }}>
+      {label}
+    </Text>
+    <Text UNSAFE_style={{
+      fontSize: '24px',
+      fontWeight: 700,
+      color: COLORS.GRAY_800
+    }}>
+      {value}
+    </Text>
+  </div>
+)
+
+export default GuestRsvpUrlsTab

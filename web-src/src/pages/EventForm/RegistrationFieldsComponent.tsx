@@ -49,6 +49,8 @@ interface RegistrationFieldsComponentProps {
   rsvpFormFields: RsvpFieldEntry[]
   registrationType: 'ESP' | 'Marketo'
   marketoFormUrl?: string
+  /** RSVP types the event's series template supports; both are offered when unknown/not yet backfilled */
+  supportedRsvpTypes: ('ESP' | 'Marketo')[]
   onRsvpFormFieldsChange: (fields: RsvpFieldEntry[]) => void
   onRegistrationTypeChange: (type: 'ESP' | 'Marketo') => void
   onMarketoFormUrlChange: (url: string) => void
@@ -61,11 +63,12 @@ export const RegistrationFieldsComponent: React.FC<RegistrationFieldsComponentPr
   rsvpFormFields,
   registrationType,
   marketoFormUrl = '',
+  supportedRsvpTypes,
   onRsvpFormFieldsChange,
   onRegistrationTypeChange,
   onMarketoFormUrlChange,
 }) => {
-  const { eventId } = useEventFormContext()
+  const { eventId, eventDataResp } = useEventFormContext()
   const [fields, setFields] = useState<RsvpFormField[]>([])
   const [fieldSourceMode, setFieldSourceMode] = useState<RsvpFieldSourceMode>('scope')
   const [loading, setLoading] = useState(true)
@@ -99,6 +102,13 @@ export const RegistrationFieldsComponent: React.FC<RegistrationFieldsComponentPr
         let mode: RsvpFieldSourceMode = 'legacy'
 
         if (eventId) {
+          // Wait for the parent event to load successfully before requesting
+          // event-scoped sub-resources, to avoid leaking the event UUID / its
+          // existence when the user lacks access to the event.
+          if (!eventDataResp) {
+            setLoading(false)
+            return
+          }
           const result = await cachedApi.getEventConfigs(eventId)
           if (cancelled) return
           if (!('error' in result)) {
@@ -139,7 +149,7 @@ export const RegistrationFieldsComponent: React.FC<RegistrationFieldsComponentPr
     return () => {
       cancelled = true
     }
-  }, [eventId, cloudType])
+  }, [eventId, eventDataResp, cloudType])
 
   const validFields = useMemo(() => fields.filter(f => f.field), [fields])
   const mandatedFieldNames = useMemo(() => validFields.filter(f => f.required).map(f => f.field), [validFields])
@@ -689,8 +699,8 @@ export const RegistrationFieldsComponent: React.FC<RegistrationFieldsComponentPr
             value={registrationType}
             onChange={(value) => onRegistrationTypeChange(value as 'ESP' | 'Marketo')}
           >
-            <Radio value="ESP">Basic form</Radio>
-            <Radio value="Marketo">Marketo</Radio>
+            {supportedRsvpTypes.includes('ESP') && <Radio value="ESP">Basic form</Radio>}
+            {supportedRsvpTypes.includes('Marketo') && <Radio value="Marketo">Marketo</Radio>}
           </RadioGroup>
         </div>
       )}

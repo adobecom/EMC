@@ -16,7 +16,24 @@
 
 export type ConfigType = 'rsvp' | 'locales' | 'customAttributes' | 'domain'
 
-export type RsvpFieldType = 'text' | 'email' | 'phone' | 'select' | 'checkbox'
+/** Input substrate — the fundamental kind of control a field needs, not its
+ *  concrete widget. `text` covers every single-line/multi-line text flavor;
+ *  `select` is single-choice; `multi-select` is multi-choice. The concrete
+ *  widget within a substrate is chosen via `displayAs`. */
+export type RsvpFieldType = 'text' | 'select' | 'multi-select'
+
+/** Concrete widget/flavor within a field's `type` substrate. ESP's
+ *  ScopeConfigRsvpField already stores this as an enum (openapi.json) — no BE
+ *  change needed here. For type=text: 'text' (default), 'email', 'phone',
+ *  'number', 'date', 'url', 'text-area'. For type=select: 'picker' (default,
+ *  a dropdown) or 'radio' (a radio group). For type=multi-select: 'checkbox'
+ *  (default, a flat checkbox list) or 'combobox' (a compact multi-select
+ *  dropdown). The attendee-facing renderer (event-libs' events-form.js and the
+ *  Spectrum 2 rsvp-form block) remaps its dispatch type based on this value. */
+export type RsvpDisplayAs =
+  | 'text' | 'email' | 'phone' | 'number' | 'date' | 'url' | 'text-area'
+  | 'picker' | 'radio'
+  | 'checkbox' | 'combobox'
 
 export type CustomAttributeInputType = 'text' | 'single-select' | 'multi-select'
 
@@ -39,6 +56,7 @@ export interface RsvpFormField {
   required: boolean
   options: RsvpOption[]
   default: string
+  displayAs?: RsvpDisplayAs
 }
 
 /** Partial RSVP field for localization overrides (only translatable properties).

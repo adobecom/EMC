@@ -2,7 +2,7 @@
 * <license header>
 */
 
-import type { RsvpFormField, RsvpFieldType } from '../types/configApi'
+import type { RsvpFormField, RsvpFieldType, RsvpDisplayAs } from '../types/configApi'
 import type { RsvpConfigField } from '../types/attendee'
 import type { RsvpFieldOptionSelectionState } from '../types/domain'
 import { rsvpConfigUiLabel } from './rsvpConfigLabels'
@@ -12,12 +12,32 @@ const toUpperWords = (input: string): string =>
 
 const LEGACY_EXCLUDED_TYPES = new Set(['submit', 'button', 'hidden'])
 
+/** Maps a legacy per-cloud sheet `Type` string to the current substrate. `type`
+ *  now names only the fundamental control kind — text/select/multi-select —
+ *  never a specific text flavor; `inferDisplayAs` below carries that flavor. */
 function inferFieldType(raw: string | undefined): RsvpFieldType {
   const t = (raw || 'text').toLowerCase().replace(/\s+/g, '')
   if (t === 'select') return 'select'
-  if (t === 'checkbox') return 'checkbox'
+  if (t === 'checkbox' || t === 'multi-select' || t === 'multiselect') return 'multi-select'
+  return 'text'
+}
+
+/** Concrete widget/flavor for a legacy-inferred field. Legacy JSON never
+ *  carried a render hint of its own, except implicitly via the raw `Type`
+ *  string: rows typed `multi-select`/`multiselect` get the compact combobox
+ *  widget (matching their pre-migration rendering); plain `checkbox` rows get
+ *  the flat checkbox-list widget; `select` rows get a picker; text flavors
+ *  (email/phone/number/date/url/text-area) are inferred straight from `Type`. */
+function inferDisplayAs(raw: string | undefined, type: RsvpFieldType): RsvpDisplayAs {
+  const t = (raw || '').toLowerCase().replace(/\s+/g, '')
+  if (type === 'select') return 'picker'
+  if (type === 'multi-select') return (t === 'multi-select' || t === 'multiselect') ? 'combobox' : 'checkbox'
   if (t === 'email') return 'email'
   if (t === 'phone' || t === 'tel') return 'phone'
+  if (t === 'number') return 'number'
+  if (t === 'date') return 'date'
+  if (t === 'url') return 'url'
+  if (t === 'text-area' || t === 'textarea') return 'text-area'
   return 'text'
 }
 
@@ -46,7 +66,7 @@ export function mapLegacyRsvpConfigToFormFields(rows: RsvpConfigField[]): RsvpFo
     })
     .map(r => {
       const type = inferFieldType(r.Type)
-      const options = type === 'select' || type === 'checkbox'
+      const options = type === 'select' || type === 'multi-select'
         ? parseLegacyOptions(r.Options)
         : []
       return {
@@ -57,6 +77,7 @@ export function mapLegacyRsvpConfigToFormFields(rows: RsvpConfigField[]): RsvpFo
         required: r.Required === 'x' || r.Required === 'X',
         options,
         default: '',
+        displayAs: inferDisplayAs(r.Type, type),
       } satisfies RsvpFormField
     })
 }
@@ -90,5 +111,5 @@ export function mergeOptionSelectionWithField(
 export function isSelectableField(
   field: RsvpFormField
 ): field is RsvpFormField & { options: NonNullable<RsvpFormField['options']> } {
-  return (field.type === 'select' || field.type === 'checkbox') && (field.options?.length ?? 0) > 0
+  return (field.type === 'select' || field.type === 'multi-select') && (field.options?.length ?? 0) > 0
 }

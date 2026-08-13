@@ -49,13 +49,14 @@ import {
   CustomAttributesComponent,
 } from './index'
 import { mapApiResponseToFormData } from '../../utils/eventFormMappers'
+import { templateSupportsEventType } from '../../utils/templateCapabilities'
 import { useEventFeatureFlags } from '../../hooks/useEventTypeFeatures'
 import { EventFormProvider, useEventFormContext, useToast, useGroup } from '../../contexts'
 import { useEventFormSave } from '../../hooks/useEventFormSave'
 import { useCustomDetailPagePath } from '../../hooks/useCustomDetailPagePath'
 import { COLORS, Z_INDEX, TYPOGRAPHY, SURFACES } from '../../styles/designSystem'
 import { ENVIRONMENTS, getCurrentEnvironment } from '../../config/constants'
-import { validateForPublish, PublishGuardResult } from '../../utils/publishGuard'
+import { validateForPublish, getMissingImageWarnings, PublishGuardResult } from '../../utils/publishGuard'
 import { getEventPageUrls } from '../../utils/eventPageUrls'
 import { hasDomainSlice, DomainSlice } from '../../types/configApi'
 
@@ -165,35 +166,6 @@ const FormatSelectionOverlay: React.FC<{
   // ============================================================================
   // SERIES FILTERING
   // ============================================================================
-
-  /**
-   * Map form event type to API event type format
-   */
-  const mapEventTypeToApiFormat = (type: string): string => {
-    const mapping: Record<string, string> = {
-      'in-person': 'InPerson',
-      'webinar': 'Webinar',
-      'hybrid': 'Hybrid'
-    }
-    return mapping[type] || type
-  }
-
-  /**
-   * Check if a series template supports the given event type
-   */
-  const templateSupportsEventType = (templateId: string, currentEventType: string, templates: SeriesTemplate[]): boolean => {
-    const apiEventType = mapEventTypeToApiFormat(currentEventType)
-    const template = templates.find(t => t['template-path'] === templateId)
-    
-    if (!template) {
-      // Backward compatibility: allow if template not in config
-      return true
-    }
-    
-    const supportedType = template['supported-event-type']
-    if (supportedType === 'Hybrid') return true
-    return supportedType === apiEventType
-  }
 
   useEffect(() => {
     if (!selectedCloud || allSeries.length === 0) {
@@ -497,6 +469,7 @@ const EventFormInner: React.FC<EventFormInnerProps> = ({ ims: _ims }) => {
     setFormatConfirmed,
     setSeriesId,
     setSeriesCustomTagsUrl,
+    setSeriesTemplateId,
     loadFromStorage,
     persistToStorage,
     state,
@@ -522,6 +495,7 @@ const EventFormInner: React.FC<EventFormInnerProps> = ({ ims: _ims }) => {
   const [prodPublishConfirmOpen, setProdPublishConfirmOpen] = useState(false)
   const [isCheckingUrl, setIsCheckingUrl] = useState(false)
   const [publishGuardResult, setPublishGuardResult] = useState<PublishGuardResult | null>(null)
+  const [imageWarningMissing, setImageWarningMissing] = useState<string[] | null>(null)
   const [sessionHasOpenForm, setSessionHasOpenForm] = useState(false)
 
 
@@ -549,8 +523,9 @@ const EventFormInner: React.FC<EventFormInnerProps> = ({ ims: _ims }) => {
     const seriesData = await cachedApi.getSeriesFull(seriesIdToLoad)
     if (seriesData && !('error' in seriesData)) {
       setSeriesCustomTagsUrl((seriesData as any).caasTaxonomyUrl || '')
+      setSeriesTemplateId((seriesData as any).templateId || '')
     }
-  }, [setSeriesCustomTagsUrl])
+  }, [setSeriesCustomTagsUrl, setSeriesTemplateId])
 
   // Scope's prod/stage domain config, used to build the Preview/View-published
   // page links (see handlePreview/handleViewPublished below). Loaded once per
@@ -905,11 +880,30 @@ const EventFormInner: React.FC<EventFormInnerProps> = ({ ims: _ims }) => {
       return
     }
 
+    // Warn (but don't block) when the hero/thumbnail image is missing
+    const missingImages = getMissingImageWarnings(formData)
+    if (missingImages.length > 0) {
+      setImageWarningMissing(missingImages)
+      return
+    }
+
     const { proceed, extraPayload } = await checkUrlPatternBeforeSave('publish')
     if (!proceed) return
 
     await requestPublishAfterUrlResolved(extraPayload)
   }, [formData, hasVenue, checkUrlPatternBeforeSave, requestPublishAfterUrlResolved])
+
+  /**
+   * Continue publishing after the user dismisses the missing-image warning
+   */
+  const handleImageWarningProceed = useCallback(async () => {
+    setImageWarningMissing(null)
+
+    const { proceed, extraPayload } = await checkUrlPatternBeforeSave('publish')
+    if (!proceed) return
+
+    await requestPublishAfterUrlResolved(extraPayload)
+  }, [checkUrlPatternBeforeSave, requestPublishAfterUrlResolved])
   
   /**
    * Handle max step change from FormWizard
@@ -1301,6 +1295,41 @@ const EventFormInner: React.FC<EventFormInnerProps> = ({ ims: _ims }) => {
           <ButtonGroup>
             <Button variant="accent" onPress={() => setPublishGuardResult(null)}>
               OK
+            </Button>
+          </ButtonGroup>
+        </Dialog>
+      </DialogTrigger>
+
+      {/* Missing hero/thumbnail image — soft warning, publish is still allowed */}
+      <DialogTrigger
+        isOpen={imageWarningMissing !== null}
+        onOpenChange={(open) => { if (!open) setImageWarningMissing(null) }}
+      >
+        <div style={{ display: 'none' }} />
+        <Dialog size="M">
+          <Heading slot="title">Missing Event Images</Heading>
+          <Divider />
+          <Content>
+            <div className={style({display: 'flex', flexDirection: 'column', gap: 16})}>
+              <Text>
+                This event is missing the following image(s). Without them, the published
+                event page and listings may render without imagery.
+              </Text>
+              <ul style={{ margin: 0, paddingLeft: 20 }}>
+                {imageWarningMissing?.map((label) => (
+                  <li key={label}>
+                    <Text>{label}</Text>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </Content>
+          <ButtonGroup>
+            <Button variant="secondary" onPress={() => setImageWarningMissing(null)}>
+              Go Back
+            </Button>
+            <Button variant="accent" onPress={() => { void handleImageWarningProceed() }}>
+              Publish Anyway
             </Button>
           </ButtonGroup>
         </Dialog>

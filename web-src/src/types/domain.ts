@@ -83,6 +83,14 @@ export interface SeriesTemplate {
   'template-name': string
   'template-image': string
   'supported-event-type': 'InPerson' | 'Webinar' | 'Hybrid'
+  /**
+   * RSVP form type this template's rendered page exclusively supports — a single
+   * sheet-authored value, matching the 'supported-event-type' column's convention
+   * (this externally-hosted config has no field that's ever a real JSON array;
+   * multi-value columns don't exist here). Absent = supports both (fail-open) —
+   * only set this when a template is restricted to one type.
+   */
+  'supported-rsvp-types'?: 'ESP' | 'Marketo'
 }
 
 export interface SeriesTemplatesConfig {
@@ -550,9 +558,11 @@ export interface VenueData {
   gmtOffset?: number
   addressComponents?: AddressComponent[] // Required by OpenAPI for venue creation
   additionalInformation?: string // "Instructions for attendees" in UI
-  /** Venue step only — ESP imageKind `venue-additional-image` / `venue-map-image`; not `venue-image` (Additional Content). */
+  /** Venue step only — ESP imageKind `venue-additional-image`; not `venue-image` (Additional Content). */
   venueAdditionalImageUrl?: string
   venueAdditionalImageId?: string
+  /** Read-only. BE-generated map image (imageKind `venue-map-image`). Never editable by the user. */
+  venueMapImageUrl?: string
   showVenuePostEvent?: boolean
   showVenueImagePostEvent?: boolean // Display image and instructions post-event
   showAdditionalInfoPostEvent?: boolean

@@ -5,12 +5,14 @@
 import { useCallback } from 'react'
 import { useEventFormContext } from '../contexts/EventFormContext'
 import { apiService, cachedApi } from '../services/api'
-import { EventFormData, EventApiResponse } from '../types/domain'
+import { configService } from '../services/configService'
+import { EventFormData, EventApiResponse, SeriesTemplate } from '../types/domain'
 import {
   EVENT_DATA_FILTER,
   setEventAttribute,
   isValidAttribute,
 } from '../utils/dataFilters'
+import { templateSupportedRsvpTypes } from '../utils/templateCapabilities'
 
 /**
  * Convert RSVP fields to the `{ required, visible }` shape ESP's RSVPFormFields
@@ -89,6 +91,7 @@ export function useEventFormSave() {
     formData,
     eventId,
     seriesId,
+    seriesTemplateId,
     locale,
     isEditMode,
     saveStatus,
@@ -460,7 +463,25 @@ export function useEventFormSave() {
       
       // 3. Gather payload contributions from components
       const additionalPayload = await gatherComponentPayloads()
-      
+
+      // 3b. Enforce RSVP type is supported by the series template (MWPW-200887).
+      // Authoritative regardless of which wizard step was visited before saving —
+      // the RSVP step's own auto-correct/validate only run while that step is mounted.
+      // Series templates are an external, best-effort config (like everywhere else this
+      // config is read) — a fetch failure must not block saving events that never touch
+      // registrationType, so this fails open to the current value rather than throwing.
+      const currentRegistrationType = additionalPayload.registrationType ?? formData.registrationType ?? 'ESP'
+      let seriesTemplatesData: SeriesTemplate[] = []
+      try {
+        seriesTemplatesData = (await configService.getSeriesTemplates()).data
+      } catch (err) {
+        console.error('Failed to load series templates config; skipping RSVP type enforcement:', err)
+      }
+      const allowedRsvpTypes = templateSupportedRsvpTypes(seriesTemplateId, seriesTemplatesData)
+      if (allowedRsvpTypes.length > 0 && !allowedRsvpTypes.includes(currentRegistrationType)) {
+        additionalPayload.registrationType = allowedRsvpTypes[0]
+      }
+
       // 4. Build the API payload
       const payload = buildEventPayload(formData, additionalPayload)
 
@@ -602,6 +623,7 @@ export function useEventFormSave() {
     formData,
     eventId,
     seriesId,
+    seriesTemplateId,
     locale,
     isEditMode,
     eventDataResp,
