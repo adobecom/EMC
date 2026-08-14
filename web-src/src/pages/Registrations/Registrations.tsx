@@ -57,7 +57,7 @@ export const Registrations: React.FC<RegistrationsProps> = ({ ims: _ims }) => {
     [events, selectedEventId]
   )
 
-  const { columnConfig, isLoading: isLoadingConfig } = useRsvpConfig(selectedEvent?.cloudType)
+  const { columnConfig, isLoading: isLoadingConfig } = useRsvpConfig(selectedEvent?.eventId, selectedEvent?.cloudType)
 
   const hasCampaigns = campaigns.length > 0
 
