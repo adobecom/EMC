@@ -1,11 +1,16 @@
-/* 
+/*
 * <license header>
 */
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { configService } from '../services/configService'
-import type { RsvpConfigField, AttendeeColumnConfig } from '../types/attendee'
-import { rsvpConfigUiLabel } from '../utils/rsvpConfigLabels'
+import { cachedApi } from '../services/api'
+import { apiCache } from '../services/cacheUtils'
+import { hasRsvpConfig } from '../config/externalConfigs'
+import { hasRsvpSlice } from '../types/configApi'
+import type { RsvpFormField } from '../types/configApi'
+import type { AttendeeColumnConfig } from '../types/attendee'
+import { mapLegacyRsvpConfigToFormFields } from '../utils/rsvpFieldDefinitions'
 
 /**
  * Convert camelCase to Sentence Case
@@ -31,30 +36,24 @@ const RESERVED_ATTENDEE_FIELDS = ['creationTime', 'modificationTime']
 const NAME_FIELDS = ['firstName', 'lastName']
 
 /**
- * Fields to exclude from column generation
+ * Transform RSVP form fields (scope config or legacy-JSON-normalized) to column definitions
  */
-const EXCLUDED_FIELD_TYPES = ['submit', 'button', 'hidden']
-
-/**
- * Transform RSVP config fields to column definitions
- */
-function transformConfigToColumns(config: RsvpConfigField[]): AttendeeColumnConfig[] {
+function transformFormFieldsToColumns(fields: RsvpFormField[]): AttendeeColumnConfig[] {
   // Filter out invalid fields
-  const validFields = config.filter(f => 
-    f.Field && 
-    f.Field.trim() !== '' && 
-    !EXCLUDED_FIELD_TYPES.includes(f.Type?.toLowerCase()) &&
-    !NAME_FIELDS.includes(f.Field) &&
-    !RESERVED_ATTENDEE_FIELDS.includes(f.Field) &&
-    !STICKY_COLUMNS.includes(f.Field)
+  const validFields = fields.filter(f =>
+    f.field &&
+    f.field.trim() !== '' &&
+    !NAME_FIELDS.includes(f.field) &&
+    !RESERVED_ATTENDEE_FIELDS.includes(f.field) &&
+    !STICKY_COLUMNS.includes(f.field)
   )
 
   // Start with combined name column
   const columns: AttendeeColumnConfig[] = [
-    { 
-      key: 'name', 
-      label: 'Name', 
-      type: 'text', 
+    {
+      key: 'name',
+      label: 'Name',
+      type: 'text',
       fallback: '-',
       width: 200,
       sortable: true
@@ -64,11 +63,11 @@ function transformConfigToColumns(config: RsvpConfigField[]): AttendeeColumnConf
   // Add configured fields
   validFields.forEach(field => {
     columns.push({
-      key: field.Field,
-      label: rsvpConfigUiLabel(field, camelToSentenceCase),
-      type: field.Type || 'text',
+      key: field.field,
+      label: field.label?.trim() || camelToSentenceCase(field.field),
+      type: field.type || 'text',
       fallback: '-',
-      width: getColumnWidth(field.Field),
+      width: getColumnWidth(field.field),
       sortable: true,
       isSticky: false
     })
@@ -87,12 +86,12 @@ function transformConfigToColumns(config: RsvpConfigField[]): AttendeeColumnConf
 
   // Add sticky columns at the end
   STICKY_COLUMNS.forEach((key) => {
-    const existingField = config.find(f => f.Field === key)
-    
+    const existingField = fields.find(f => f.field === key)
+
     columns.push({
       key,
-      label: existingField?.Label || getDefaultLabel(key),
-      type: existingField?.Type || 'text',
+      label: existingField?.label || getDefaultLabel(key),
+      type: existingField?.type || 'text',
       fallback: key === 'registrationStatus' ? 'registered' : '-',
       width: 130,
       sortable: true,
@@ -128,13 +127,13 @@ function getDefaultLabel(key: string): string {
 function getColumnWidth(fieldKey: string): number {
   // Email fields need more space
   if (fieldKey === 'email') return 250
-  
+
   // Phone numbers
   if (fieldKey.toLowerCase().includes('phone')) return 150
-  
+
   // Company/org names
   if (fieldKey.toLowerCase().includes('company') || fieldKey.toLowerCase().includes('organization')) return 200
-  
+
   // Default width
   return 150
 }
@@ -144,7 +143,7 @@ function getColumnWidth(fieldKey: string): number {
  */
 interface UseRsvpConfigResult {
   columnConfig: AttendeeColumnConfig[]
-  rawConfig: RsvpConfigField[]
+  rawConfig: RsvpFormField[]
   isLoading: boolean
   error: string | null
   refresh: () => Promise<void>
@@ -153,67 +152,98 @@ interface UseRsvpConfigResult {
 /**
  * Hook for fetching and managing RSVP configuration
  * Transforms config into column definitions for the attendee table
- * 
- * @param cloudType - The cloud type to fetch config for (CreativeCloud, ExperienceCloud)
+ *
+ * Resolves the event's own scoped RSVP config first (org/team scope config
+ * via ESP, authored in Config Management), falling back to the legacy
+ * per-cloud static JSON only for events whose scope has no RSVP config yet.
+ *
+ * @param eventId - The event to resolve scoped RSVP config for
+ * @param cloudType - The cloud type to use for the legacy JSON fallback
  * @returns Column config, loading state, error, and refresh function
  */
-export function useRsvpConfig(cloudType: string | undefined): UseRsvpConfigResult {
+export function useRsvpConfig(eventId: string | undefined, cloudType: string | undefined): UseRsvpConfigResult {
   const [columnConfig, setColumnConfig] = useState<AttendeeColumnConfig[]>([])
-  const [rawConfig, setRawConfig] = useState<RsvpConfigField[]>([])
+  const [rawConfig, setRawConfig] = useState<RsvpFormField[]>([])
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
+  // Guards against a slower stale request (e.g. from a fast event switch, or
+  // an in-flight refresh()) overwriting the columns for what's now current.
+  const requestIdRef = useRef(0)
+
   const loadConfig = useCallback(async () => {
-    if (!cloudType) {
+    if (!eventId && !cloudType) {
       setColumnConfig([])
       setRawConfig([])
       return
     }
 
+    const requestId = ++requestIdRef.current
     setIsLoading(true)
     setError(null)
 
     try {
-      const config = await configService.getRsvpConfig(cloudType)
-      
-      if (config.length === 0) {
-        console.warn(`No RSVP config found for cloud type: ${cloudType}`)
-        // Use default columns if no config available
+      let fields: RsvpFormField[] = []
+
+      if (eventId) {
+        const result = await cachedApi.getEventConfigs(eventId)
+        if (requestIdRef.current !== requestId) return
+        if (!('error' in result)) {
+          const scopeConfig = result.find(c => hasRsvpSlice(c)) ?? null
+          if (scopeConfig && hasRsvpSlice(scopeConfig)) {
+            fields = scopeConfig.rsvp.rsvpFormFields
+          }
+        } else {
+          console.warn('Event configs request failed; falling back to legacy JSON if available.', result)
+        }
+      }
+
+      if (fields.length === 0 && cloudType && hasRsvpConfig(cloudType)) {
+        const legacyRows = await configService.getRsvpConfig(cloudType)
+        if (requestIdRef.current !== requestId) return
+        fields = mapLegacyRsvpConfigToFormFields(legacyRows)
+      }
+
+      if (requestIdRef.current !== requestId) return
+
+      if (fields.length === 0) {
+        console.warn(`No RSVP config found for event: ${eventId}, cloud type: ${cloudType}`)
         setColumnConfig(getDefaultColumns())
         setRawConfig([])
       } else {
-        setRawConfig(config)
-        setColumnConfig(transformConfigToColumns(config))
+        setRawConfig(fields)
+        setColumnConfig(transformFormFieldsToColumns(fields))
       }
     } catch (err) {
+      if (requestIdRef.current !== requestId) return
       console.error('Failed to load RSVP config:', err)
       setError('Failed to load field configuration')
       // Fall back to default columns on error
       setColumnConfig(getDefaultColumns())
       setRawConfig([])
     } finally {
-      setIsLoading(false)
+      if (requestIdRef.current === requestId) setIsLoading(false)
     }
-  }, [cloudType])
+  }, [eventId, cloudType])
 
-  // Load config when cloudType changes
+  // Load config when eventId/cloudType changes
   useEffect(() => {
     loadConfig()
   }, [loadConfig])
 
   // Refresh function for manual reload
   const refresh = useCallback(async () => {
-    if (cloudType) {
-      // Clear cache for this config
-      configService.clearCache()
+    configService.clearCache()
+    if (eventId) {
+      apiCache.invalidate(eventId)
     }
     await loadConfig()
-  }, [cloudType, loadConfig])
+  }, [eventId, loadConfig])
 
-  return { 
-    columnConfig, 
+  return {
+    columnConfig,
     rawConfig,
-    isLoading, 
+    isLoading,
     error,
     refresh
   }
@@ -235,4 +265,3 @@ function getDefaultColumns(): AttendeeColumnConfig[] {
 }
 
 export default useRsvpConfig
-
