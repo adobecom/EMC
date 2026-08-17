@@ -109,7 +109,7 @@ export const RegistrationFieldsComponent: React.FC<RegistrationFieldsComponentPr
             setLoading(false)
             return
           }
-          const result = await cachedApi.getEventConfigs(eventId)
+          const result = await cachedApi.getEventConfigs(eventId, undefined, { skipStaleGroupRecovery: true })
           if (cancelled) return
           if (!('error' in result)) {
             const config = result.find(c => hasRsvpSlice(c)) ?? null
