@@ -89,7 +89,7 @@ export const SpeakerPickerDialog: React.FC<SpeakerPickerDialogProps> = ({
     if (!searchQuery.trim()) return availableSpeakers
     const q = searchQuery.toLowerCase().trim()
     return availableSpeakers.filter(s => {
-      const fullName = `${s.firstName} ${s.lastName}`.toLowerCase()
+      const fullName = `${s.firstName || ''} ${s.lastName || ''}`.toLowerCase()
       const title = (s.localizations?.[locale]?.title || s.title || '').toLowerCase()
       return fullName.includes(q) || title.includes(q)
     })
@@ -197,7 +197,7 @@ export const SpeakerPickerDialog: React.FC<SpeakerPickerDialogProps> = ({
   }, [])
 
   const handleCreateSpeaker = useCallback(async () => {
-    if (!createForm.firstName.trim() || !createForm.lastName.trim()) return
+    if (!createForm.firstName.trim()) return
 
     setIsCreating(true)
     try {
@@ -225,7 +225,7 @@ export const SpeakerPickerDialog: React.FC<SpeakerPickerDialogProps> = ({
 
         let photo: SeriesSpeaker['photo'] | undefined
         if (pendingFile) {
-          const altText = `${createForm.firstName} ${createForm.lastName}`
+          const altText = `${createForm.firstName} ${createForm.lastName}`.trim()
           const uploaded = await uploadSpeakerSeriesImage(pendingFile, seriesId, speakerId, altText)
           if (uploaded) {
             photo = { imageUrl: uploaded.imageUrl, imageId: uploaded.imageId }
@@ -259,7 +259,7 @@ export const SpeakerPickerDialog: React.FC<SpeakerPickerDialogProps> = ({
     }
   }, [createForm, pendingFile, seriesId, locale, onSelect, onClose, onSpeakersRefresh])
 
-  const isCreateFormValid = createForm.firstName.trim() && createForm.lastName.trim()
+  const isCreateFormValid = createForm.firstName.trim()
 
   const getLocalizedTitle = (speaker: SeriesSpeaker): string => {
     return speaker.localizations?.[locale]?.title || speaker.title || ''
@@ -344,7 +344,7 @@ export const SpeakerPickerDialog: React.FC<SpeakerPickerDialogProps> = ({
                 {speaker.photo?.imageUrl ? (
                   <img
                     src={speaker.photo.imageUrl}
-                    alt={`${speaker.firstName} ${speaker.lastName}`}
+                    alt={[speaker.firstName, speaker.lastName].filter(Boolean).join(' ')}
                     style={{
                       width: '56px',
                       height: '56px',
@@ -373,7 +373,7 @@ export const SpeakerPickerDialog: React.FC<SpeakerPickerDialogProps> = ({
                 )}
                 <div>
                   <div style={{ fontWeight: 600, fontSize: '13px', lineHeight: '18px' }}>
-                    {speaker.firstName} {speaker.lastName}
+                    {[speaker.firstName, speaker.lastName].filter(Boolean).join(' ')}
                   </div>
                   {missingLocalization ? (
                     <div
@@ -511,7 +511,7 @@ export const SpeakerPickerDialog: React.FC<SpeakerPickerDialogProps> = ({
                   imageUrl={createForm.imageUrl}
                   imageId={createForm.imageId}
                   imageKind="speaker-photo"
-                  altText={`${createForm.firstName} ${createForm.lastName}`}
+                  altText={`${createForm.firstName} ${createForm.lastName}`.trim()}
                   maxSizeMB={25}
                   dropzoneTitle="Add Photo"
                   dropzoneDimensions=""
@@ -544,7 +544,6 @@ export const SpeakerPickerDialog: React.FC<SpeakerPickerDialogProps> = ({
               label="Last Name"
               value={createForm.lastName}
               onChange={(v) => updateCreateField('lastName', v)}
-              isRequired
               styles={style({ width: '[100%]' })}
             />
           </div>
@@ -645,7 +644,7 @@ export const SpeakerPickerDialog: React.FC<SpeakerPickerDialogProps> = ({
   )
 
   const speakerDisplayName = speakerToLocalize
-    ? `${speakerToLocalize.firstName} ${speakerToLocalize.lastName}`
+    ? [speakerToLocalize.firstName, speakerToLocalize.lastName].filter(Boolean).join(' ')
     : ''
 
   return (
