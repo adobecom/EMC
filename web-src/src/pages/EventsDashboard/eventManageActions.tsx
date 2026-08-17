@@ -46,11 +46,11 @@ export function buildEventManageActions({
     )
   }
 
-  actions.push(
-    { key: 'preview-pre', label: 'Preview pre-event', icon: <Preview /> },
-    { key: 'preview-post', label: 'Preview post-event', icon: <Preview /> },
-    { key: 'copy-url', label: 'Copy URL', icon: <Copy /> }
-  )
+  actions.push({ key: 'preview', label: 'Preview page', icon: <Preview /> })
+  if (item.published) {
+    actions.push({ key: 'view-published', label: 'View published page', icon: <Preview /> })
+  }
+  actions.push({ key: 'copy-url', label: 'Copy URL', icon: <Copy /> })
 
   if (canDeleteEvent) {
     actions.push({ key: 'delete', label: 'Delete', icon: <RemoveCircle /> })
