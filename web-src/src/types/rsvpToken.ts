@@ -21,6 +21,10 @@
  * event-libs forwards to the guest submit endpoint's `campaignId` query-param
  * fallback at registration time. Token and campaign are fully independent.
  *
+ * `label` is a free-text marketer note (e.g. "VIP — CEO") to tell links apart
+ * once several exist for the same event — it has no bearing on campaign
+ * attribution or registration behavior.
+ *
  * API base: POST/GET/PATCH/DELETE /v1/events/{eventId}/rsvpTokens[/{token}]
  */
 
@@ -42,6 +46,7 @@ export interface RsvpToken {
   usedByAttendee?: string
   revokedAt?: number
   revokedBy?: string
+  label?: string
   /** Client-composed shareable link (`${event.detailPagePath}?rsvpToken=${token}`); not returned by the API. */
   url?: string
 }
@@ -51,16 +56,18 @@ export interface RsvpToken {
  */
 export interface RsvpTokenCreatePayload {
   expiresInDays?: number
+  label?: string
 }
 
 /**
  * Payload for PATCH /v1/events/{eventId}/rsvpTokens/{token} — extends an
  * unused token's expiry by a relative number of days (server recomputes
- * expiresAt as now + expiresInDays, replacing the prior value). Only unused
- * tokens can be patched.
+ * expiresAt as now + expiresInDays, replacing the prior value), and/or edits
+ * its label. Only unused tokens can be patched.
  */
 export interface RsvpTokenUpdatePayload {
   expiresInDays: number
+  label?: string
 }
 
 /**
@@ -84,4 +91,20 @@ export function calculateRsvpTokenStats(tokens: RsvpToken[]): RsvpTokenStats {
     unusedTokens: unusedTokens.length,
     usedTokens: usedTokens.length,
   }
+}
+
+export const DEFAULT_EXTEND_DAYS = 7
+const MS_PER_DAY = 24 * 60 * 60 * 1000
+
+/**
+ * The Update Link dialog always submits expiresInDays (the BE requires it on
+ * every PATCH and recomputes expiresAt from it), so opening the dialog just to
+ * edit the label must seed the field with the link's *actual* remaining
+ * validity — not a fixed default — or an untouched submit would silently cut
+ * a longer-lived link down to DEFAULT_EXTEND_DAYS.
+ */
+export function getRemainingDays(link: RsvpToken): number {
+  if (!link.expiresAt) return DEFAULT_EXTEND_DAYS
+  const remaining = Math.ceil((link.expiresAt - Date.now()) / MS_PER_DAY)
+  return Math.max(remaining, 1)
 }

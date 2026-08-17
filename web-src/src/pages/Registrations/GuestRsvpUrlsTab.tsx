@@ -3,7 +3,7 @@
 */
 
 import React, { useState, useCallback, useMemo, useEffect } from 'react'
-import { Button, ButtonGroup, NumberField, DialogTrigger, Dialog, Content, Heading, Text, ActionButton, AlertDialog, Picker, PickerItem, TooltipTrigger, Tooltip, SearchField } from '@react-spectrum/s2'
+import { Button, ButtonGroup, NumberField, TextField, DialogTrigger, Dialog, Content, Heading, Text, ActionButton, AlertDialog, Picker, PickerItem, TooltipTrigger, Tooltip, SearchField } from '@react-spectrum/s2'
 import { style } from "@react-spectrum/s2/style" with { type: "macro" }
 import Add from '@react-spectrum/s2/icons/Add'
 import CalendarEdit from '@react-spectrum/s2/icons/CalendarEdit'
@@ -13,14 +13,14 @@ import Download from '@react-spectrum/s2/icons/Download'
 import Link from '@react-spectrum/s2/illustrations/linear/Link'
 import NoSearchResults from '@react-spectrum/s2/illustrations/linear/NoSearchResults'
 import type { RsvpToken } from '../../types/rsvpToken'
-import { calculateRsvpTokenStats } from '../../types/rsvpToken'
+import { calculateRsvpTokenStats, DEFAULT_EXTEND_DAYS, getRemainingDays } from '../../types/rsvpToken'
 import type { Campaign } from '../../types/campaign'
 import { DataTable, TableColumn, ResourceEmptyState, StatusBadge } from '../../components/shared'
 import { COLORS } from '../../styles/designSystem'
 import { useHasPermission } from '../../hooks/useHasPermission'
 import { generateCsv, downloadCsv, sanitizeFilename, exportDatetime, type CsvColumn } from '../../utils/csvExport'
 
-const DEFAULT_EXTEND_DAYS = 7
+const LABEL_MAX_LENGTH = 150
 // Sentinel id for the "No campaign" Picker option — rsvp tokens never carry a
 // campaign of their own, so this just means "copy the plain link."
 const NO_CAMPAIGN_ID = '__none__'
@@ -62,8 +62,8 @@ interface GuestRsvpUrlsTabProps {
   eventTitle?: string
   links: RsvpToken[]
   campaigns: Campaign[]
-  onGenerate: () => Promise<void>
-  onExtend: (token: string, expiresInDays: number) => Promise<void>
+  onGenerate: (label?: string) => Promise<void>
+  onExtend: (token: string, expiresInDays: number, label: string) => Promise<void>
   onRevoke: (token: string) => Promise<void>
 }
 
@@ -81,10 +81,13 @@ export const GuestRsvpUrlsTab: React.FC<GuestRsvpUrlsTabProps> = ({
   const canExport = useHasPermission('user', 'read')
   const [searchQuery, setSearchQuery] = useState('')
   const [isGenerating, setIsGenerating] = useState(false)
+  const [isGenerateDialogOpen, setIsGenerateDialogOpen] = useState(false)
+  const [generateLabel, setGenerateLabel] = useState('')
   const [copiedToken, setCopiedToken] = useState<string | null>(null)
   const [linkToRevoke, setLinkToRevoke] = useState<RsvpToken | null>(null)
   const [linkToExtend, setLinkToExtend] = useState<RsvpToken | null>(null)
   const [extendDays, setExtendDays] = useState<number>(DEFAULT_EXTEND_DAYS)
+  const [extendLabel, setExtendLabel] = useState('')
   const [isSaving, setIsSaving] = useState(false)
   const [linkToCopy, setLinkToCopy] = useState<RsvpToken | null>(null)
   const [selectedCampaignId, setSelectedCampaignId] = useState<string | null>(null)
@@ -111,6 +114,7 @@ export const GuestRsvpUrlsTab: React.FC<GuestRsvpUrlsTabProps> = ({
         link.token,
         link.createdBy,
         link.usedByAttendee,
+        link.label,
         formatStatusLabel(link),
       ]
       return searchable.some((value) => value != null && String(value).toLowerCase().includes(query))
@@ -120,6 +124,7 @@ export const GuestRsvpUrlsTab: React.FC<GuestRsvpUrlsTabProps> = ({
   const handleExport = useCallback(() => {
     const columns: CsvColumn[] = [
       { key: 'url', label: 'URL' },
+      { key: 'generatedFor', label: 'Generated For' },
       { key: 'status', label: 'Status' },
       { key: 'createdBy', label: 'Created By' },
       { key: 'created', label: 'Created' },
@@ -129,6 +134,7 @@ export const GuestRsvpUrlsTab: React.FC<GuestRsvpUrlsTabProps> = ({
     ]
     const rows = filteredLinks.map((link) => ({
       url: link.url || '-',
+      generatedFor: link.label || '-',
       status: formatStatusLabel(link),
       createdBy: link.createdBy,
       created: formatEpoch(link.creationTime),
@@ -140,16 +146,17 @@ export const GuestRsvpUrlsTab: React.FC<GuestRsvpUrlsTabProps> = ({
     downloadCsv(generateCsv(rows, columns), `guest-rsvp-links_${stem}_${exportDatetime()}.csv`)
   }, [filteredLinks, eventTitle, eventId])
 
-  const handleGenerate = useCallback(async () => {
+  const handleGenerateSubmit = useCallback(async () => {
     setIsGenerating(true)
     try {
-      await onGenerate()
+      await onGenerate(generateLabel.trim() || undefined)
+      setIsGenerateDialogOpen(false)
     } catch (err) {
       console.error('Failed to generate guest RSVP link:', err)
     } finally {
       setIsGenerating(false)
     }
-  }, [onGenerate])
+  }, [onGenerate, generateLabel])
 
   const copyToClipboard = useCallback(async (token: string, url: string) => {
     try {
@@ -228,14 +235,14 @@ export const GuestRsvpUrlsTab: React.FC<GuestRsvpUrlsTabProps> = ({
     // epoch math is needed here.
     setIsSaving(true)
     try {
-      await onExtend(linkToExtend.token, extendDays)
+      await onExtend(linkToExtend.token, extendDays, extendLabel.trim())
       setLinkToExtend(null)
     } catch (err) {
       console.error('Failed to extend guest RSVP link:', err)
     } finally {
       setIsSaving(false)
     }
-  }, [linkToExtend, extendDays, onExtend])
+  }, [linkToExtend, extendDays, extendLabel, onExtend])
 
   const emptyState = useMemo(() => {
     if (filteredLinks.length > 0) return undefined
@@ -283,6 +290,13 @@ export const GuestRsvpUrlsTab: React.FC<GuestRsvpUrlsTabProps> = ({
           </TooltipTrigger>
         </div>
       )
+    },
+    {
+      key: 'label',
+      name: 'GENERATED FOR',
+      width: 160,
+      sortable: true,
+      render: (link) => <Text>{link.label || '-'}</Text>
     },
     {
       key: 'status',
@@ -333,7 +347,7 @@ export const GuestRsvpUrlsTab: React.FC<GuestRsvpUrlsTabProps> = ({
           {canWriteEvent && link.status === 'unused' && (
             <ActionButton
               isQuiet
-              onPress={() => { setLinkToExtend(link); setExtendDays(DEFAULT_EXTEND_DAYS) }}
+              onPress={() => { setLinkToExtend(link); setExtendDays(getRemainingDays(link)); setExtendLabel(link.label ?? '') }}
               aria-label="Update link expiration"
             >
               <CalendarEdit />
@@ -387,7 +401,11 @@ export const GuestRsvpUrlsTab: React.FC<GuestRsvpUrlsTabProps> = ({
       >
         <div>
           {canWriteEvent && (
-            <Button variant="accent" onPress={handleGenerate} isPending={isGenerating}>
+            <Button
+              variant="accent"
+              onPress={() => { setGenerateLabel(''); setIsGenerateDialogOpen(true) }}
+              isPending={isGenerating}
+            >
               <Add />
               <Text>Generate guest RSVP link</Text>
             </Button>
@@ -423,21 +441,65 @@ export const GuestRsvpUrlsTab: React.FC<GuestRsvpUrlsTabProps> = ({
         />
       </div>
 
-      {/* Extend Expiration Dialog */}
+      {/* Generate Link Dialog */}
+      <DialogTrigger isOpen={isGenerateDialogOpen} onOpenChange={setIsGenerateDialogOpen}>
+        <div style={{ display: 'none' }} />
+        <Dialog size="S">
+          {() => (
+            <>
+              <Heading slot="title">Generate Guest RSVP Link</Heading>
+              <Content>
+                <TextField
+                  label="Generated for (optional)"
+                  placeholder="e.g. VIP — CEO"
+                  value={generateLabel}
+                  onChange={setGenerateLabel}
+                  maxLength={LABEL_MAX_LENGTH}
+                  styles={style({ width: '[100%]' })}
+                />
+              </Content>
+              <ButtonGroup>
+                <Button variant="secondary" onPress={() => setIsGenerateDialogOpen(false)}>
+                  Cancel
+                </Button>
+                <Button
+                  variant="accent"
+                  onPress={handleGenerateSubmit}
+                  isPending={isGenerating}
+                >
+                  Generate
+                </Button>
+              </ButtonGroup>
+            </>
+          )}
+        </Dialog>
+      </DialogTrigger>
+
+      {/* Update Link Dialog */}
       <DialogTrigger isOpen={!!linkToExtend} onOpenChange={(isOpen) => !isOpen && setLinkToExtend(null)}>
         <div style={{ display: 'none' }} />
         <Dialog size="S">
           {() => (
             <>
-              <Heading slot="title">Update Link Expiration</Heading>
+              <Heading slot="title">Update Link</Heading>
               <Content>
-                <NumberField
-                  label="Expires in (days from now)"
-                  value={extendDays}
-                  onChange={setExtendDays}
-                  minValue={1}
-                  styles={style({ width: '[100%]' })}
-                />
+                <div className={style({ display: 'flex', flexDirection: 'column', gap: 16 })}>
+                  <NumberField
+                    label="Expires in (days from now)"
+                    value={extendDays}
+                    onChange={setExtendDays}
+                    minValue={1}
+                    styles={style({ width: '[100%]' })}
+                  />
+                  <TextField
+                    label="Generated for (optional)"
+                    placeholder="e.g. VIP — CEO"
+                    value={extendLabel}
+                    onChange={setExtendLabel}
+                    maxLength={LABEL_MAX_LENGTH}
+                    styles={style({ width: '[100%]' })}
+                  />
+                </div>
               </Content>
               <ButtonGroup>
                 <Button variant="secondary" onPress={() => setLinkToExtend(null)}>

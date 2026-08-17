@@ -49,6 +49,8 @@ interface RegistrationFieldsComponentProps {
   rsvpFormFields: RsvpFieldEntry[]
   registrationType: 'ESP' | 'Marketo'
   marketoFormUrl?: string
+  /** RSVP types the event's series template supports; both are offered when unknown/not yet backfilled */
+  supportedRsvpTypes: ('ESP' | 'Marketo')[]
   onRsvpFormFieldsChange: (fields: RsvpFieldEntry[]) => void
   onRegistrationTypeChange: (type: 'ESP' | 'Marketo') => void
   onMarketoFormUrlChange: (url: string) => void
@@ -61,6 +63,7 @@ export const RegistrationFieldsComponent: React.FC<RegistrationFieldsComponentPr
   rsvpFormFields,
   registrationType,
   marketoFormUrl = '',
+  supportedRsvpTypes,
   onRsvpFormFieldsChange,
   onRegistrationTypeChange,
   onMarketoFormUrlChange,
@@ -696,8 +699,8 @@ export const RegistrationFieldsComponent: React.FC<RegistrationFieldsComponentPr
             value={registrationType}
             onChange={(value) => onRegistrationTypeChange(value as 'ESP' | 'Marketo')}
           >
-            <Radio value="ESP">Basic form</Radio>
-            <Radio value="Marketo">Marketo</Radio>
+            {supportedRsvpTypes.includes('ESP') && <Radio value="ESP">Basic form</Radio>}
+            {supportedRsvpTypes.includes('Marketo') && <Radio value="Marketo">Marketo</Radio>}
           </RadioGroup>
         </div>
       )}

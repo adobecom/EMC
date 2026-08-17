@@ -47,6 +47,7 @@ import type {
   ScopeConfig,
   ScopeConfigUpsertBody,
 } from '../types/configApi'
+import type { RsvpTokenCreatePayload, RsvpTokenUpdatePayload } from '../types/rsvpToken'
 
 // ============================================================================
 // TYPES
@@ -2182,14 +2183,15 @@ class ApiService {
     )
   }
 
-  async generateRsvpToken(eventId: string, payload: Record<string, unknown> = {}): Promise<any | ErrorResponse> {
+  async generateRsvpToken(eventId: string, payload: RsvpTokenCreatePayload = {}): Promise<any | ErrorResponse> {
     validateString(eventId, 'event ID')
+    validateObject(payload, 'RSVP token payload')
     return this.callExternalApi('esp', `/v1/events/${eventId}/rsvpTokens`, 'POST', payload,
       { operationName: 'generateRsvpToken', shouldReturnFullResponse: true }
     )
   }
 
-  async updateRsvpToken(eventId: string, token: string, payload: Record<string, unknown>): Promise<any | ErrorResponse> {
+  async updateRsvpToken(eventId: string, token: string, payload: RsvpTokenUpdatePayload): Promise<any | ErrorResponse> {
     validateString(eventId, 'event ID')
     validateString(token, 'RSVP token')
     validateObject(payload, 'RSVP token payload')

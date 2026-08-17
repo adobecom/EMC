@@ -2,7 +2,7 @@
 * <license header>
 */
 
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useMemo } from 'react'
 import {
   TextField,
   NumberField,
@@ -18,6 +18,10 @@ import { HeadingWithTooltip, RichTextEditor } from '../../components/shared'
 import InfoCircle from "@react-spectrum/s2/icons/InfoCircle"
 import { RegistrationFieldsComponent } from './RegistrationFieldsComponent'
 import { useEventFormComponent } from '../../hooks/useEventFormComponent'
+import { useEventFormContext, useToast } from '../../contexts'
+import { configService } from '../../services/configService'
+import { templateSupportedRsvpTypes } from '../../utils/templateCapabilities'
+import type { SeriesTemplate } from '../../types/domain'
 
 /**
  * RegistrationConfigComponent - Manages event registration settings
@@ -31,13 +35,39 @@ export const RegistrationConfigComponent: React.FC = () => {
   // CONTEXT INTEGRATION
   // ============================================================================
   
+  const { seriesTemplateId } = useEventFormContext()
+  const toast = useToast()
+
+  // Series-template RSVP capability (MWPW-200887)
+  const [seriesTemplates, setSeriesTemplates] = useState<SeriesTemplate[]>([])
+
+  useEffect(() => {
+    let cancelled = false
+    configService.getSeriesTemplates()
+      .then(cfg => { if (!cancelled) setSeriesTemplates(cfg.data) })
+      .catch(err => console.error('Failed to load series templates config:', err))
+    return () => { cancelled = true }
+  }, [])
+
+  const supportedRsvpTypes = useMemo(
+    () => templateSupportedRsvpTypes(seriesTemplateId, seriesTemplates),
+    [seriesTemplateId, seriesTemplates]
+  )
+
   const {
     formData,
     updateFormData,
   } = useEventFormComponent({
     componentId: 'registration-config',
+    validate: () => {
+      const currentType = formData.registrationType || 'ESP'
+      if (!supportedRsvpTypes.includes(currentType)) {
+        return 'Selected RSVP form type is not supported by this series template.'
+      }
+      return true
+    },
   })
-  
+
   // Destructure form data
   const cloudType = formData.cloudType || 'CreativeCloud'
   const attendeeLimit = formData.attendeeLimit ?? 0
@@ -48,16 +78,26 @@ export const RegistrationConfigComponent: React.FC = () => {
   const registrationType = formData.registrationType || 'ESP'
   const marketoFormUrl = formData.marketoFormUrl || ''
   const rsvpFormFields = formData.rsvpFormFields || []
-  
+
   // ============================================================================
   // LOCAL STATE
   // ============================================================================
-  
+
   const [contactHostEnabled, setContactHostEnabled] = useState(!!hostEmail)
 
   useEffect(() => {
     setContactHostEnabled(!!hostEmail)
   }, [hostEmail])
+
+  // Auto-correct a previously-saved RSVP type that the series template no longer supports
+  useEffect(() => {
+    if (supportedRsvpTypes.length > 0 && !supportedRsvpTypes.includes(registrationType)) {
+      const corrected = supportedRsvpTypes[0]
+      updateFormData({ registrationType: corrected })
+      toast.info(`This series template only supports the ${corrected === 'Marketo' ? 'Marketo' : 'Basic'} form; your RSVP type was updated automatically.`)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- only re-check when the resolved support set or current selection changes
+  }, [supportedRsvpTypes, registrationType])
 
   // ============================================================================
   // COMPUTED VALUES
@@ -253,6 +293,7 @@ export const RegistrationConfigComponent: React.FC = () => {
           rsvpFormFields={rsvpFormFields}
           registrationType={registrationType}
           marketoFormUrl={marketoFormUrl}
+          supportedRsvpTypes={supportedRsvpTypes}
           onRsvpFormFieldsChange={handleRsvpFormFieldsChange}
           onRegistrationTypeChange={handleRegistrationTypeChange}
           onMarketoFormUrlChange={handleMarketoFormUrlChange}
