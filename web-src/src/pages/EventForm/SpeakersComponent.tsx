@@ -105,7 +105,7 @@ export const SpeakersComponent: React.FC = () => {
         return !speaker || !speakerHasLocalization(speaker, locale)
       })
       if (missing.length > 0) {
-        const names = missing.map(p => `${p.firstName} ${p.lastName}`).join(', ')
+        const names = missing.map(p => [p.firstName, p.lastName].filter(Boolean).join(' ')).join(', ')
         return `The following speakers are missing a localized title for ${locale}: ${names}. Please update their title.`
       }
       return true
@@ -442,10 +442,9 @@ export const SpeakersComponent: React.FC = () => {
 
             <div className={style({display: 'flex', flexDirection: 'column', gap: 0})}>
               {groupItems.map(({ profile, globalIndex }, groupIdx) => {
-                const displayName =
-                  profile.firstName && profile.lastName
-                    ? `${profile.firstName} ${profile.lastName}`
-                    : `Speaker ${globalIndex + 1}`
+                const displayName = profile.firstName
+                  ? [profile.firstName, profile.lastName].filter(Boolean).join(' ')
+                  : `Speaker ${globalIndex + 1}`
                 const isDragging = draggedItem?.type === type && draggedItem.idx === groupIdx
                 const isDragOver = dragOverItem?.type === type && dragOverItem.idx === groupIdx
                 const seriesSpeaker = profile.speakerId

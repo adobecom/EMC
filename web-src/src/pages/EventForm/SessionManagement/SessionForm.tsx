@@ -544,7 +544,7 @@ export const SessionForm: React.FC<SessionFormProps> = ({
               {speaker.photo?.imageUrl ? (
                 <img
                   src={speaker.photo.imageUrl}
-                  alt={`${speaker.firstName} ${speaker.lastName}`}
+                  alt={[speaker.firstName, speaker.lastName].filter(Boolean).join(' ')}
                   style={{
                     width: "28px",
                     height: "28px",
@@ -572,12 +572,12 @@ export const SessionForm: React.FC<SessionFormProps> = ({
                 </div>
               )}
               <span>
-                {speaker.firstName} {speaker.lastName}
+                {[speaker.firstName, speaker.lastName].filter(Boolean).join(' ')}
               </span>
               <button
                 type="button"
                 onClick={() => handleRemoveSpeaker(speaker.speakerId)}
-                aria-label={`Remove ${speaker.firstName} ${speaker.lastName}`}
+                aria-label={`Remove ${[speaker.firstName, speaker.lastName].filter(Boolean).join(' ')}`}
                 style={{
                   background: "none",
                   border: "none",

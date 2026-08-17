@@ -434,7 +434,7 @@ export interface ProfileData {
   type: SpeakerType
   speakerId?: string // Series-level speaker ID
   firstName: string
-  lastName: string
+  lastName?: string
   title: string // Localizable
   bio?: string // Localizable
   imageUrl?: string
@@ -461,7 +461,7 @@ export interface SpeakerLocalization {
 export interface SeriesSpeaker {
   speakerId: string
   firstName: string
-  lastName: string
+  lastName?: string
   title?: string // Localizable
   bio?: string // Localizable
   socialLinks?: SocialLink[] // API format: { serviceName, link }
