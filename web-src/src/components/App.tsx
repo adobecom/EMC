@@ -48,6 +48,8 @@ import {
   ScopeGroupManagement,
   RoleManagement,
   ConfigManagement,
+  IntegrationsDashboard,
+  DeliveriesDashboard,
 } from '../pages'
 
 interface AppProps {
@@ -138,6 +140,8 @@ const AppContent: React.FC<{ runtime: Runtime, colorScheme: ColorScheme }> = ({ 
                             <Route path='/access' element={<ScopeGroupManagement ims={ims} />} />
                             <Route path='/roles' element={<RoleManagement ims={ims} />} />
                             <Route path='/configs' element={<ConfigManagement ims={ims} />} />
+                            <Route path='/integrations' element={<ProtectedRoute resource="integration" access="read" redirectTo="/"><IntegrationsDashboard ims={ims} /></ProtectedRoute>} />
+                            <Route path='/integrations/:id/deliveries' element={<ProtectedRoute resource="integration" access="read" redirectTo="/integrations"><DeliveriesDashboard ims={ims} /></ProtectedRoute>} />
                             <Route path='/about' element={<About />}/>
                           </Routes>
                         </RBACGate>
