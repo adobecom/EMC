@@ -2,9 +2,18 @@
  * CSV export utilities (attendees, campaigns, etc.).
  */
 
+// Leading characters that spreadsheet apps (Excel, Sheets) interpret as the
+// start of a formula — a free-text export column (campaign name, RSVP label,
+// etc.) can carry these from user input, so they must be neutralized to
+// prevent CSV/formula injection when the file is opened.
+const CSV_FORMULA_PREFIXES = ['=', '+', '-', '@', '\t', '\r']
+
 export function escapeCsvValue(value: unknown): string {
   if (value === null || value === undefined) return ''
-  const str = String(value)
+  let str = String(value)
+  if (CSV_FORMULA_PREFIXES.some((prefix) => str.startsWith(prefix))) {
+    str = `'${str}`
+  }
   // Wrap in quotes if the value contains commas, quotes, or newlines
   if (str.includes(',') || str.includes('"') || str.includes('\n') || str.includes('\r')) {
     return `"${str.replace(/"/g, '""')}"`

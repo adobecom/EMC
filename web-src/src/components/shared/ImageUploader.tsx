@@ -104,6 +104,7 @@ interface ImageUploaderProps {
   recommendedDimensions?: string
   width?: string | number
   isDisabled?: boolean
+  isRequired?: boolean
   onChange: (imageUrl: string, imageId: string) => void
   onRemove?: () => void
   /** Custom dropzone text - line 1 (e.g., "Add profile image") */
@@ -133,6 +134,7 @@ export const ImageUploader: React.FC<ImageUploaderProps> = ({
   recommendedDimensions,
   width,
   isDisabled = false,
+  isRequired = false,
   onChange,
   onRemove,
   dropzoneTitle,
@@ -339,6 +341,7 @@ export const ImageUploader: React.FC<ImageUploaderProps> = ({
     <div style={{ width: typeof containerWidth === 'number' ? `${containerWidth}px` : containerWidth }}>
       <Text UNSAFE_style={{ fontWeight: 'bold', marginBottom: '8px', display: 'block' }}>
         {label}
+        {isRequired && <span style={{ color: COLORS.RED_600 }}> *</span>}
       </Text>
 
       {description && (
