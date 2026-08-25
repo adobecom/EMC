@@ -2,7 +2,7 @@
 * <license header>
 */
 
-import React, { useState, useCallback } from 'react'
+import React, { useState, useCallback, useEffect } from 'react'
 import { AlertDialog, Badge, Button, DialogTrigger, Heading, ProgressBar, StatusLight, Text } from '@react-spectrum/s2'
 import { style, iconStyle } from '@react-spectrum/s2/style' with { type: 'macro' }
 import { useNavigate } from 'react-router-dom'
@@ -19,6 +19,7 @@ import {
   TYPOGRAPHY
 } from '../../styles/designSystem'
 import { formatEventFormStatusLabel, getEventFormStatusLightVariant } from './eventFormStatusBadge'
+import { loadFormStep, saveFormStep } from '../../utils/formPersistence'
 
 export interface WizardStep {
   id: string
@@ -80,6 +81,8 @@ interface FormWizardProps {
   sessionContent?: React.ReactNode
   /** True when an inline session form (add or edit) is currently open */
   sessionHasOpenForm?: boolean
+  /** Key to persist the current step under (sessionStorage) so it survives a remount. Omit to disable persistence. */
+  stepPersistKey?: string
 }
 
 /** Side nav: Dashboard row hover */
@@ -112,8 +115,18 @@ export const FormWizard: React.FC<FormWizardProps> = ({
   testIds,
   sessionContent,
   sessionHasOpenForm = false,
+  stepPersistKey,
 }) => {
-  const [currentStepIndex, setCurrentStepIndex] = useState(0)
+  const [currentStepIndex, setCurrentStepIndex] = useState(() => {
+    if (!stepPersistKey) return 0
+    const persisted = loadFormStep(stepPersistKey)
+    if (persisted === null) return 0
+    // Never restore past a step the user has actually unlocked — a stale
+    // persisted step (e.g. from an abandoned draft under a shared "new
+    // event" key) must not open an inaccessible step with no data.
+    const highestUnlocked = hasEventId ? maxStepReached : 0
+    return Math.min(persisted, highestUnlocked, steps.length - 1)
+  })
   const [isNavigating, setIsNavigating] = useState(false)
   const [showSessionView, setShowSessionView] = useState(false)
   const [pendingAction, setPendingAction] = useState<'save' | 'publish' | 'next' | null>(null)
@@ -126,6 +139,14 @@ export const FormWizard: React.FC<FormWizardProps> = ({
   const currentStep = steps[currentStepIndex]
   const isFirstStep = currentStepIndex === 0
   const progress = ((currentStepIndex + 1) / steps.length) * 100
+
+  // Persist the current step so it survives a remount of the wizard
+  // (e.g. a background auth/group refresh) instead of resetting to step 1.
+  useEffect(() => {
+    if (stepPersistKey) {
+      saveFormStep(stepPersistKey, currentStepIndex)
+    }
+  }, [stepPersistKey, currentStepIndex])
 
   // Determine if a step is accessible
   const isStepAccessible = useCallback((stepIndex: number): boolean => {
