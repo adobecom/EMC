@@ -262,6 +262,7 @@ export interface EventApiResponse {
   inviteOnly?: boolean
   allowWaitlisting?: boolean
   allowGuestRegistration?: boolean
+  closeRegistration?: boolean
   tags?: string
   topics?: string[]
   detailPagePath?: string
@@ -622,6 +623,7 @@ export interface EventFormData {
   allowWaitlist?: boolean
   allowWaitlisting?: boolean // Alias
   allowGuestRegistration?: boolean
+  closeRegistration?: boolean
   hostEmail?: string
   rsvpDescription?: string // Localizable
   // Registration fields configuration
