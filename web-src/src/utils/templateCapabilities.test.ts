@@ -46,6 +46,16 @@ test('templateSupportedRsvpTypes fails open to both types when the field is not 
   expect(templateSupportedRsvpTypes(template['template-path'], [template])).toEqual(['ESP', 'Marketo'])
 })
 
+test('templateSupportedRsvpTypes fails open to both types when the field is an empty string (unfilled sheet cell)', () => {
+  const template = makeTemplate({ 'supported-rsvp-types': '' as SeriesTemplate['supported-rsvp-types'] })
+  expect(templateSupportedRsvpTypes(template['template-path'], [template])).toEqual(['ESP', 'Marketo'])
+})
+
+test('templateSupportedRsvpTypes fails open to both types when the field is null', () => {
+  const template = makeTemplate({ 'supported-rsvp-types': null as unknown as SeriesTemplate['supported-rsvp-types'] })
+  expect(templateSupportedRsvpTypes(template['template-path'], [template])).toEqual(['ESP', 'Marketo'])
+})
+
 test('templateSupportedRsvpTypes honors an explicit Marketo-only restriction', () => {
   const template = makeTemplate({ 'supported-rsvp-types': 'Marketo' })
   expect(templateSupportedRsvpTypes(template['template-path'], [template])).toEqual(['Marketo'])

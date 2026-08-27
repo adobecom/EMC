@@ -434,7 +434,7 @@ export const SponsorsComponent: React.FC = () => {
       // We must fetch the current event sponsors from the API
       let savedSponsors: any[] = []
       try {
-        const sponsorsResponse = await cachedApi.getEventSponsors(savedEventId)
+        const sponsorsResponse = await cachedApi.getEventSponsors(savedEventId, { skipStaleGroupRecovery: true })
         if (sponsorsResponse && !('error' in sponsorsResponse)) {
           savedSponsors = sponsorsResponse.sponsors || sponsorsResponse || []
           if (!Array.isArray(savedSponsors)) {
@@ -593,7 +593,7 @@ export const SponsorsComponent: React.FC = () => {
       
       setIsLoadingSponsors(true)
       try {
-        const response = await cachedApi.getSponsors(seriesId)
+        const response = await cachedApi.getSponsors(seriesId, { skipStaleGroupRecovery: true })
         if (isMounted && response && !('error' in response)) {
           const sponsorsList = response.sponsors || response || []
           setAvailableSponsors(sponsorsList)
@@ -641,7 +641,7 @@ export const SponsorsComponent: React.FC = () => {
   const refreshSeriesSponsors = useCallback(async () => {
     if (!seriesId) return
     try {
-      const response = await cachedApi.getSponsors(seriesId)
+      const response = await cachedApi.getSponsors(seriesId, { skipStaleGroupRecovery: true })
       if (response && !('error' in response)) {
         setAvailableSponsors(response.sponsors || response || [])
       }
@@ -854,7 +854,7 @@ export const SponsorsComponent: React.FC = () => {
         }
 
         // Refresh the available sponsors list
-        const updatedResponse = await cachedApi.getSponsors(seriesId)
+        const updatedResponse = await cachedApi.getSponsors(seriesId, { skipStaleGroupRecovery: true })
         if (updatedResponse && !('error' in updatedResponse)) {
           setAvailableSponsors(updatedResponse.sponsors || updatedResponse || [])
         }

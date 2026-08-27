@@ -147,7 +147,7 @@ export const PageMetadataComponent: React.FC = () => {
       if (!eventResponse?.eventId) return
       
       try {
-        const profileResponse = await cachedApi.getEventPublishingProfile(eventResponse.eventId)
+        const profileResponse = await cachedApi.getEventPublishingProfile(eventResponse.eventId, { skipStaleGroupRecovery: true })
         
         // Response could be an array or single object
         const profiles = Array.isArray(profileResponse) ? profileResponse : [profileResponse]
@@ -268,7 +268,7 @@ export const PageMetadataComponent: React.FC = () => {
     if (!targetEventId) return
     
     try {
-      const profileResponse = await cachedApi.getEventPublishingProfile(targetEventId)
+      const profileResponse = await cachedApi.getEventPublishingProfile(targetEventId, { skipStaleGroupRecovery: true })
       
       // Response could be an array or single object
       const profiles = Array.isArray(profileResponse) ? profileResponse : [profileResponse]

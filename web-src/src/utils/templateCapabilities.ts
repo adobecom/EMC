@@ -38,12 +38,13 @@ export function templateSupportsEventType(templateId: string, currentEventType: 
 }
 
 /**
- * RSVP types a template supports. Missing template/field fails open to both,
- * so un-backfilled rows in the externally-hosted JSON keep today's behavior.
+ * RSVP types a template supports. Missing template, missing field, or a blank
+ * (un-backfilled) cell all fail open to both, so partially-filled sheet rows
+ * keep today's behavior until a template explicitly opts into one type.
  */
 export function templateSupportedRsvpTypes(templateId: string, templates: SeriesTemplate[]): ('ESP' | 'Marketo')[] {
   const template = findSeriesTemplate(templateId, templates)
   const value = template?.['supported-rsvp-types']
-  if (!template || value === undefined) return ['ESP', 'Marketo']
+  if (!template || !value) return ['ESP', 'Marketo']
   return [value]
 }

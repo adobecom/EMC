@@ -170,7 +170,7 @@ export const EventInfoComponent: React.FC = () => {
           // event-scoped sub-resources, to avoid leaking the event UUID / its
           // existence when the user lacks access to the event.
           if (!eventDataResp) return
-          const result = await cachedApi.getEventConfigs(eventId)
+          const result = await cachedApi.getEventConfigs(eventId, undefined, { skipStaleGroupRecovery: true })
           if (cancelled) return
           if ('error' in result) {
             setLocaleOptions(DEFAULT_LOCALE_PICKER_OPTIONS)
@@ -179,7 +179,7 @@ export const EventInfoComponent: React.FC = () => {
           }
           applyLocales(result.find((c) => hasLocalesSlice(c)) ?? null)
         } else if (scopeId) {
-          const result = await cachedApi.getConfig(scopeId)
+          const result = await cachedApi.getConfig(scopeId, { skipStaleGroupRecovery: true })
           if (cancelled) return
           if (result === null || 'error' in result) {
             setLocaleOptions(DEFAULT_LOCALE_PICKER_OPTIONS)
