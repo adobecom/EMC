@@ -30,3 +30,6 @@ export { UserManagement } from './UserManagement'
 export { ScopeGroupManagement } from './ScopeGroupManagement'
 export { RoleManagement } from './RoleManagement'
 export { ConfigManagement } from './ConfigManagement'
+
+// ENCORE
+export { Encore } from './Encore'

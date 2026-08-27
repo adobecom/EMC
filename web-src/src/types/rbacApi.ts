@@ -27,6 +27,9 @@ export type RBACPermission =
   | 'event:*' | 'event:read' | 'event:write' | 'event:delete'
   | 'session:*' | 'session:read' | 'session:write' | 'session:delete'
   | 'cloud:*' | 'cloud:read' | 'cloud:write' | 'cloud:delete'
+  // ENCORE is FE-gated only via this literal union — the ESP permissions-list endpoint (RoleManagement's
+  // apiService.getPermissionsList()) must separately publish `encore:*` before it's assignable in Role UI.
+  | 'encore:*' | 'encore:read' | 'encore:write' | 'encore:delete'
 
 // ============================================================================
 // Core Models

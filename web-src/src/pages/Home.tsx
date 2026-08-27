@@ -15,6 +15,7 @@ import MicrophoneIllustration from '@react-spectrum/s2/illustrations/gradient/ge
 import LayersIllustration from '@react-spectrum/s2/illustrations/gradient/generic1/Layers'
 import GearSettingIllustration from '@react-spectrum/s2/illustrations/gradient/generic1/GearSetting'
 import DocumentIllustration from '@react-spectrum/s2/illustrations/gradient/generic1/Document'
+import SparklesIllustration from '@react-spectrum/s2/illustrations/gradient/generic1/Sparkles'
 import { GRADIENT_BACKGROUND, LAYOUT_DIMENSIONS, SPACING } from '../styles/designSystem'
 import { checkPermission } from '../hooks/useHasPermission'
 import { useGroup } from '../contexts/GroupContext'
@@ -78,6 +79,14 @@ const destinations: NavDestination[] = [
     title: 'Configs',
     description: 'Manage RSVP fields, locale mappings, and custom attributes for your organization.',
     permission: { resource: 'config', access: 'read' }
+  },
+  {
+    id: 'encore',
+    path: '/encore',
+    icon: <SparklesIllustration aria-hidden />,
+    title: 'ENCORE',
+    description: 'AI-driven speaker scouting, slate optimization, and audit-ready outreach.',
+    permission: { resource: 'encore', access: 'read' }
   },
   {
     id: 'about',

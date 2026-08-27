@@ -24,6 +24,7 @@ const TopNav: React.FC<TopNavProps> = ({ ims }) => {
   const canReadEvents = useHasPermission('event', 'read')
   const canReadSeries = useHasPermission('series', 'read')
   const canReadConfig = useHasPermission('config', 'read')
+  const canReadEncore = useHasPermission('encore', 'read')
 
   // Hide all tabs until a group is selected (loading done and activeGroup set)
   const showNav = !isGroupLoading && activeGroup !== null
@@ -138,6 +139,14 @@ const TopNav: React.FC<TopNavProps> = ({ ims }) => {
                 to="/configs"
               >
                 <Text>Configs</Text>
+              </NavLink>
+            )}
+            {canReadEncore && (
+              <NavLink
+                className={({ isActive }) => `nav-link ${isActive ? 'is-selected' : ''}`}
+                to="/encore"
+              >
+                <Text>ENCORE</Text>
               </NavLink>
             )}
             <NavLink

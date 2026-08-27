@@ -91,6 +91,9 @@
   --emc-rte-picker-popover-shadow:
     0 -2px 8px rgba(0, 0, 0, 0.12),
     0 0 0 1px var(--spectrum-global-color-gray-300);
+
+  /** ENCORE property-graph "persona cluster" node color — no indigo/purple scale exists elsewhere */
+  --emc-encore-persona: #2f3c7e;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -160,6 +163,8 @@
     --emc-rte-picker-popover-shadow:
       0 -4px 12px rgba(0, 0, 0, 0.4),
       0 0 0 1px var(--spectrum-global-color-gray-300);
+
+    --emc-encore-persona: #8888ff;
   }
 }
 
