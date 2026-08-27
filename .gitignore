@@ -34,6 +34,9 @@ coverage
 # OSX
 .DS_Store
 
+# git worktrees
+.worktrees
+
 # yeoman
 .yo-repository
 
