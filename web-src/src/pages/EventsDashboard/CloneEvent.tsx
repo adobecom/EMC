@@ -79,10 +79,10 @@ export const CloneEvent: React.FC<CloneEventProps> = ({ item, existingNames, onC
       const cloneableData = filterEventData(eventResponse, 'clone')
       const locale = eventResponse.defaultLocale || 'en-US'
 
+      // `published` is read-only server-side (always defaults to false on create) — not set here.
       const clonedEventData: Record<string, any> = {
         ...cloneableData,
         enTitle: title.trim(),
-        published: false,
         liveUpdate: false,
       }
 

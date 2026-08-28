@@ -14,7 +14,7 @@
 // Enums & Primitives
 // ============================================================================
 
-export type ConfigType = 'rsvp' | 'locales' | 'customAttributes'
+export type ConfigType = 'rsvp' | 'locales' | 'customAttributes' | 'domain'
 
 /** Input substrate — the fundamental kind of control a field needs, not its
  *  concrete widget. `text` covers every single-line/multi-line text flavor;
@@ -89,6 +89,16 @@ export interface RsvpSlice {
   localizations?: Record<string, { rsvpFormFields: RsvpFormFieldLocaleOverride[] }>
 }
 
+/** Prod/stage domain pair used to build event detail-page URLs for a scope.
+ *  Replaces the legacy per-series `relatedDomain` field. `prodDomain` is the
+ *  canonical domain baked into the stored `detailPagePath`; `stageDomain` is
+ *  only swapped in client-side for preview links. Either may be absent while
+ *  a scope migrates — consumers must fall back to `series.relatedDomain`. */
+export interface DomainSlice {
+  prodDomain?: string
+  stageDomain?: string
+}
+
 /** Unified scope config — ESP stores at most one config per scope, with any
  *  combination of slice fields. Each tab in the UI edits one slice. */
 export interface ScopeConfig {
@@ -101,6 +111,7 @@ export interface ScopeConfig {
   label?: string
   rsvp?: RsvpSlice
   locales?: LocalesSlice
+  domain?: DomainSlice
   customAttributes?: CustomAttributeConfig[]
 }
 
@@ -118,6 +129,10 @@ export type CustomAttributesScopeConfig = ScopeConfig & {
   customAttributes: CustomAttributeConfig[]
 }
 
+export type DomainScopeConfig = ScopeConfig & {
+  domain: DomainSlice
+}
+
 export const hasRsvpSlice = (c: ScopeConfig | null | undefined): c is RsvpScopeConfig =>
   !!c && Array.isArray(c.rsvp?.rsvpFormFields)
 
@@ -126,6 +141,9 @@ export const hasLocalesSlice = (c: ScopeConfig | null | undefined): c is Locales
 
 export const hasAttributesSlice = (c: ScopeConfig | null | undefined): c is CustomAttributesScopeConfig =>
   !!c && Array.isArray(c.customAttributes)
+
+export const hasDomainSlice = (c: ScopeConfig | null | undefined): c is DomainScopeConfig =>
+  !!c && c.domain != null && (!!c.domain.prodDomain || !!c.domain.stageDomain)
 
 // ============================================================================
 // Custom Attribute Models

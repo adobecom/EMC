@@ -26,11 +26,12 @@ import { IMS } from '../../types'
 import { useToast, useGroup } from '../../contexts'
 import { useSafeState, useRBACFilter, usePersistentState } from '../../hooks'
 import { useHasPermission } from '../../hooks/useHasPermission'
-import { getEspEnvParam } from '../../config/constants'
 import { SPEAKER_LOCALE_LABELS } from '../../config/localeMapping'
 import { buildEventManageActions } from './eventManageActions'
 import { EventCalendar } from './calendar/EventCalendar'
 import { EventPopoverContent } from './calendar/EventPopoverContent'
+import { getEventPageUrls } from '../../utils/eventPageUrls'
+import { hasDomainSlice } from '../../types/configApi'
 
 const EVENTS_SEARCH_KEYS = ['eventName', 'eventType', 'cloudType', 'hostEmail', 'seriesId']
 
@@ -385,30 +386,35 @@ export const EventsDashboard: React.FC<EventsDashboardProps> = () => {
         setItemToPublish(item)
         break
 
-      case 'preview-pre':
-      case 'preview-post': {
-        // Use data we already have from the events list - no fetch needed!
+      case 'preview':
+      case 'view-published': {
         if (!item.detailPagePath) {
           toast.error('Event does not have a detail page URL')
           break
         }
 
-        const previewType = action === 'preview-pre' ? 'pre-event' : 'post-event'
-        const localStartTimeMillis = item.localStartTimeMillis || 0
-        
-        // Pre-event: timing before event start, Post-event: timing after event start
-        const timing = previewType === 'pre-event' 
-          ? localStartTimeMillis - 10 
-          : localStartTimeMillis + 10
-
-        const previewUrl = new URL(item.detailPagePath)
-        previewUrl.searchParams.set('timing', String(timing))
-        const espenv = getEspEnvParam()
-        if (espenv) {
-          previewUrl.searchParams.set('espenv', espenv)
+        // Open the tab synchronously (before the await below) so browsers don't
+        // treat the async-resolved navigation as a blocked popup.
+        const newTab = window.open('', '_blank')
+        if (!newTab) {
+          toast.error('Popup blocked — allow popups for this site to preview or view the page')
+          break
         }
 
-        window.open(previewUrl.toString(), '_blank')
+        let domain = null
+        if (item.seriesId) {
+          try {
+            const seriesConfigs = await cachedApi.getSeriesConfigs(item.seriesId)
+            domain = 'error' in seriesConfigs ? null : (seriesConfigs.find(hasDomainSlice)?.domain ?? null)
+          } catch (err) {
+            console.warn(`Failed to load domain config for series ${item.seriesId}:`, err)
+          }
+        }
+
+        const { previewUrl, publishedUrl } = getEventPageUrls(item.detailPagePath, domain)
+        const url = action === 'preview' ? previewUrl : publishedUrl
+        if (url) newTab.location.href = url
+        else newTab.close()
         break
       }
 
@@ -809,18 +815,11 @@ export const EventsDashboard: React.FC<EventsDashboardProps> = () => {
     setActionInProgress(event.eventId)
 
     try {
-      // Fetch full event data (needed for complete payload with all localizations)
-      const eventResponse = await cachedApi.getEventFull(event.eventId)
-
-      if ('error' in eventResponse) {
-        toast.error(`Failed to load event data: ${eventResponse.error}`)
-        return
-      }
-
-      // ApiService.publishEvent / unpublishEvent run prepareEslEventPutPayload (submission filter + ESL excludes)
+      // Publish/unpublish are dedicated on-demand actions — no payload needed, the
+      // action endpoint flips `published` and triggers page generation server-side.
       const result = isPublish
-        ? await apiService.publishEvent(event.eventId, eventResponse)
-        : await apiService.unpublishEvent(event.eventId, eventResponse)
+        ? await cachedApi.publishEventPage(event.eventId)
+        : await cachedApi.unpublishEventPage(event.eventId)
 
       if ('error' in result) {
         toast.error(`Failed to ${isPublish ? 'publish' : 'unpublish'} event: ${result.error}`)
