@@ -589,6 +589,7 @@ export interface EventFormData {
   name: string // Title (localizable)
   enTitle?: string // English title for URL/reference
   urlTitle?: string // English title for page URL
+  confirmEnTitleEnglish?: boolean // UI-only gate; not submitted to the API (see dataFilters.ts)
   description?: string // Rich text description for event page (localizable)
   eventDetails?: string // Additional event details (localizable)
   shortDescription?: string // Plain text for Events Hub/SEO (160 chars max)

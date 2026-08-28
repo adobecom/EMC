@@ -297,3 +297,21 @@ test('buildLocaleSwitchFormData remaps edit-mode content from the API response',
   expect(nextFormData.cloudType).toBe('ExperienceCloud')
   expect(nextFormData.timezone).toBe('Europe/Madrid')
 })
+
+test('buildLocaleSwitchFormData clears a prior English-URL-title confirmation on locale switch (MWPW-204657)', () => {
+  const formData = createBaseFormData()
+  formData.confirmEnTitleEnglish = true
+
+  const nextFormData = buildLocaleSwitchFormData(formData, 'es-ES', createEventResponse())
+
+  expect(nextFormData.confirmEnTitleEnglish).toBe(false)
+})
+
+test('buildCreateModeLocaleSwitchFormData clears a prior English-URL-title confirmation on locale switch (MWPW-204657)', () => {
+  const formData = createBaseFormData()
+  formData.confirmEnTitleEnglish = true
+
+  const nextFormData = buildCreateModeLocaleSwitchFormData(formData, 'es-ES')
+
+  expect(nextFormData.confirmEnTitleEnglish).toBe(false)
+})
