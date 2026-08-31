@@ -2,7 +2,7 @@
 * <license header>
 */
 
-import React, { useState, useEffect, useMemo } from 'react'
+import React, { useState, useEffect, useMemo, useRef } from 'react'
 import {
   ComboBox,
   ComboBoxItem,
@@ -35,6 +35,8 @@ import { hasLocalesSlice } from '../../types/configApi'
 import type { ScopeConfig } from '../../types/configApi'
 import { SUPPORTED_SPEAKER_LOCALES, SPEAKER_LOCALE_LABELS } from '../../config/localeMapping'
 import { requiresEnTitleConfirmation } from '../../utils/enTitleConfirmation'
+import type { FocusableRefValue } from '@react-types/shared'
+import { setInteractionModality } from '@react-aria/interactions'
 
 /**
  * Safely parse ISO 8601 datetime string for DatePicker
@@ -95,6 +97,7 @@ const EVENT_TITLE_MAX_LENGTH = 150
 export const EventInfoComponent: React.FC = () => {
   const { setScopeLocales } = useEventFormContext()
   const { activeGroup } = useGroup()
+  const enTitleCheckboxRef = useRef<FocusableRefValue<HTMLLabelElement, HTMLLabelElement>>(null)
 
   // ============================================================================
   // CONTEXT INTEGRATION
@@ -124,6 +127,10 @@ export const EventInfoComponent: React.FC = () => {
         requiresEnTitleConfirmation(locale, formData.name || '', formData.enTitle || '') &&
         !formData.confirmEnTitleEnglish
       ) {
+        // Save is a mouse/pointer interaction, so react-aria's focus-ring tracking
+        // would otherwise suppress the visible ring on this programmatic focus.
+        setInteractionModality('keyboard')
+        enTitleCheckboxRef.current?.focus()
         return 'Confirm this page URL title is in English before saving.'
       }
       return true
@@ -412,6 +419,7 @@ export const EventInfoComponent: React.FC = () => {
         {enTitleNeedsConfirmation && (
           <div className={style({marginTop: 8})}>
             <Checkbox
+              ref={enTitleCheckboxRef}
               data-testid="confirm-en-title-checkbox"
               isSelected={confirmEnTitleEnglish}
               onChange={(value) => updateFormData({ confirmEnTitleEnglish: value })}
