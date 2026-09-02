@@ -128,7 +128,7 @@ export const VenueComponent: React.FC = () => {
       // --- Fetch existing venue (authoritative; don't rely on eventResponse) ---
       let existingVenue: any = null
       try {
-        const venueResult = await apiService.getEventVenue(savedEventId)
+        const venueResult = await apiService.getEventVenue(savedEventId, { skipStaleGroupRecovery: true })
         if (venueResult && !('error' in venueResult)) {
           existingVenue = venueResult
         }
@@ -336,12 +336,12 @@ export const VenueComponent: React.FC = () => {
   // Skip if venueApiId is already set (e.g. after a save via onAfterSave).
   useEffect(() => {
     if (!eventId || venueApiId) return
-    apiService.getEventVenue(eventId).then(async (res) => {
+    apiService.getEventVenue(eventId, { skipStaleGroupRecovery: true }).then(async (res) => {
       if (res && !('error' in res) && res?.venueId) {
         const vid = res.venueId
         // Fetch locations before setting venueApiId so both update together
         try {
-          const locRes = await apiService.listVenueLocations(vid)
+          const locRes = await apiService.listVenueLocations(vid, { skipStaleGroupRecovery: true })
           if (locRes && !('error' in locRes)) {
             const list = (locRes as any).locations ?? locRes ?? []
             const locations = Array.isArray(list) ? list : []

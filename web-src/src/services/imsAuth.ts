@@ -114,6 +114,12 @@ declare global {
 const IMS_LIB_CDN_URL = 'https://auth.services.adobe.com/imslib/imslib.min.js'
 const IMS_SCRIPT_ID = 'adobe-imslib-script'
 
+/** Leave headroom under the ~8192-byte request header limit that triggers RequestHeaderSectionTooLarge */
+const COOKIE_RESET_THRESHOLD_BYTES = 4096
+
+/** Only individually-large cookie values are reset, so small unrelated cookies (analytics, consent, feature flags) are left alone */
+const OVERSIZED_COOKIE_VALUE_BYTES = 512
+
 // ============================================================================
 // IMS Auth Service
 // ============================================================================
@@ -260,6 +266,7 @@ class ImsAuthService {
 
           // Called when initialization finishes (always fires, even without a session)
           onReady: () => {
+            this.resetOversizedCookies()
             this.checkExistingSession(onAccessToken)
             resolve()
           },
@@ -408,6 +415,62 @@ class ImsAuthService {
   // ============================================================================
   // Private helpers
   // ============================================================================
+
+  /**
+   * imjs caches its own token in localStorage (see `useLocalStorage` above) — verified by
+   * downloading and inspecting the actual imslib.min.js source, which never touches
+   * `document.cookie`. The oversized cookies behind RequestHeaderSectionTooLarge are set by
+   * Adobe's IMS/SSO servers, which can grow large for enterprise users with many product
+   * entitlements. Reset them here on every fresh page load, before they cross the ~8192-byte
+   * request header limit.
+   *
+   * Scoping notes (each is a deliberate trade-off, not an oversight):
+   *  - Only cookies whose *value* is individually oversized are touched, to avoid wiping small,
+   *    unrelated cookies (analytics/consent/feature-flag cookies) that happen to share this host.
+   *  - Only host-scoped clears are attempted (no `.adobe.com` parent-domain clear), to avoid
+   *    signing the user out of other Adobe products sharing SSO in this browser. Both the
+   *    default host-only form and an explicit `domain=<host>` form are cleared, since a cookie
+   *    set with an explicit same-host `Domain=` attribute is a distinct cookie-jar entry from a
+   *    host-only one and needs a matching attribute to actually delete (RFC 6265 identity is
+   *    name+domain+path).
+   *  - `document.cookie` never exposes `HttpOnly` cookies, so if the real culprit is `HttpOnly`
+   *    or scoped to a non-root path, this can't see or clear it — that needs a server-side fix
+   *    from the IMS/identity platform team. The before/after size check below at least makes
+   *    that failure visible instead of silently no-op-ing.
+   */
+  private resetOversizedCookies(): void {
+    if (typeof document === 'undefined' || !document.cookie) return
+
+    const beforeSize = document.cookie.length
+    if (beforeSize < COOKIE_RESET_THRESHOLD_BYTES) return
+
+    try {
+      const host = window.location.hostname
+      document.cookie
+        .split(';')
+        .map(pair => pair.trim())
+        .filter(Boolean)
+        .forEach(pair => {
+          const eqIndex = pair.indexOf('=')
+          const name = eqIndex === -1 ? pair : pair.slice(0, eqIndex)
+          const value = eqIndex === -1 ? '' : pair.slice(eqIndex + 1)
+          if (!name || value.length < OVERSIZED_COOKIE_VALUE_BYTES) return
+
+          document.cookie = `${name}=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/`
+          document.cookie = `${name}=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/; domain=${host}`
+        })
+
+      const afterSize = document.cookie.length
+      if (afterSize >= beforeSize) {
+        console.warn(
+          `IMS: attempted to reset oversized cookies (${beforeSize} bytes) but size did not shrink ` +
+          `(${afterSize} bytes) — the offending cookie is likely HttpOnly or scoped to a parent domain/path.`
+        )
+      }
+    } catch (err) {
+      console.error('IMS: failed to reset oversized cookies', err)
+    }
+  }
 
   private async handleTokenReceived(
     tokenObj: AdobeIMSTokenObject,
