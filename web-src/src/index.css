@@ -32,6 +32,19 @@
   --spectrum-global-color-red-600: #e34850;
   --spectrum-global-color-yellow-100: #fff1cc;
   --spectrum-global-color-yellow-400: #dfbf02;
+
+  /**
+   * Categorical chart series colors (dashboard builder). Validated as a set
+   * (adjacent CVD ΔE + normal-vision floor) — see dataviz skill palette.
+   * Not part of the Spectrum global palette; keep this order when adding slots.
+   */
+  --emc-chart-color-1: #2a78d6;
+  --emc-chart-color-2: #eb6834;
+  --emc-chart-color-3: #1baf7a;
+  --emc-chart-color-4: #eda100;
+  --emc-chart-color-5: #e87ba4;
+  --emc-chart-color-6: #008300;
+
   --spectrum-global-dimension-font-size-400: 14px;
   --spectrum-global-dimension-font-size-500: 17px;
   --spectrum-global-dimension-size-150: 12px;
@@ -117,6 +130,13 @@
     --spectrum-global-color-red-600: #f75b62;
     --spectrum-global-color-yellow-100: #3d3000;
     --spectrum-global-color-yellow-400: #e6c200;
+
+    --emc-chart-color-1: #3987e5;
+    --emc-chart-color-2: #d95926;
+    --emc-chart-color-3: #199e70;
+    --emc-chart-color-4: #c98500;
+    --emc-chart-color-5: #d55181;
+    --emc-chart-color-6: #008300;
 
     --emc-surface-raised: #2c2c2c;
     --emc-nav-selected-border: var(--spectrum-global-color-gray-900);
@@ -918,4 +938,16 @@ select {
 
 .pac-icon {
   filter: none;
+}
+
+/* Dashboards: "Print dashboard" hides chrome/controls, keeps only widget content */
+@media print {
+  .no-print {
+    display: none !important;
+  }
+
+  .dashboard-widget {
+    break-inside: avoid;
+    box-shadow: none !important;
+  }
 }

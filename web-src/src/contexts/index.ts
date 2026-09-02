@@ -34,4 +34,6 @@ export type {
 export { RBACProvider, useRBAC } from './RBACContext'
 export { GroupProvider, useGroup } from './GroupContext'
 export type { GroupContextValue } from './GroupContext'
+export { DashboardProvider, useDashboard } from './DashboardContext'
+export type { DashboardContextValue } from './DashboardContext'
 

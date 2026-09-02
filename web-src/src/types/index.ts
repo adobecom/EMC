@@ -32,3 +32,6 @@ export * from './rbacApi'
 
 // Config API types (scope configs, custom attributes)
 export * from './configApi'
+
+// Dashboard types (custom dashboards feature)
+export * from './dashboard'

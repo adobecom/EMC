@@ -186,6 +186,36 @@ export const COLORS = {
 } as const
 
 /**
+ * Categorical series colors for dashboard charts (recharts stroke/fill props).
+ * Plain CSS var strings, not S2 style() macro literals — the macro's
+ * literal-only requirement doesn't apply here since recharts renders raw SVG.
+ */
+export const CHART_COLORS = [
+  'var(--emc-chart-color-1)',
+  'var(--emc-chart-color-2)',
+  'var(--emc-chart-color-3)',
+  'var(--emc-chart-color-4)',
+  'var(--emc-chart-color-5)',
+  'var(--emc-chart-color-6)',
+] as const
+
+/**
+ * recharts <Tooltip> style overrides. The library default leaves the label
+ * (date) line's color unset — it inherits the page's dark-mode text color and
+ * is illegible against the tooltip's hardcoded white content box.
+ */
+export const CHART_TOOLTIP_CONTENT_STYLE = {
+  backgroundColor: 'var(--s2-container-bg)',
+  border: '1px solid var(--spectrum-global-color-gray-300)',
+  borderRadius: 4,
+} as const
+
+export const CHART_TOOLTIP_LABEL_STYLE = {
+  color: 'var(--spectrum-global-color-gray-900)',
+  fontWeight: 600,
+} as const
+
+/**
  * Surfaces and borders for inline `UNSAFE_style` — backed by CSS variables (theme-aware).
  */
 export const SURFACES = {

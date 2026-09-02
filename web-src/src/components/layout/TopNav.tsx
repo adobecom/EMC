@@ -24,6 +24,11 @@ const TopNav: React.FC<TopNavProps> = ({ ims }) => {
   const canReadEvents = useHasPermission('event', 'read')
   const canReadSeries = useHasPermission('series', 'read')
   const canReadConfig = useHasPermission('config', 'read')
+  // Deliberately '*'/'*' (not 'scope-platform'/'read'): the scope-prefix
+  // qualification in useHasPermission means any role with plain 'scope:read'
+  // would also pass a 'scope-platform:read' check, which is far broader than
+  // "platform admin" — this feature is gated to true full-access roles only.
+  const canReadDashboards = useHasPermission('*', '*')
 
   // Hide all tabs until a group is selected (loading done and activeGroup set)
   const showNav = !isGroupLoading && activeGroup !== null
@@ -44,7 +49,7 @@ const TopNav: React.FC<TopNavProps> = ({ ims }) => {
 
   return (
     <div
-      className={`${barClass} top-nav`}
+      className={`${barClass} top-nav no-print`}
       style={STICKY_GNAV_STYLES}
     >
       <div
@@ -138,6 +143,14 @@ const TopNav: React.FC<TopNavProps> = ({ ims }) => {
                 to="/configs"
               >
                 <Text>Configs</Text>
+              </NavLink>
+            )}
+            {canReadDashboards && (
+              <NavLink
+                className={({ isActive }) => `nav-link ${isActive ? 'is-selected' : ''}`}
+                to="/dashboards"
+              >
+                <Text>Dashboards</Text>
               </NavLink>
             )}
             <NavLink
