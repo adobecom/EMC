@@ -7,7 +7,7 @@
 */
 
 import type { NormalizedRecord, DashboardDataSource } from '../config/dashboardDataSources'
-import type { ChartType, DateRangeSpec, FilterClause, QuerySpec, TimeBucket } from '../types/dashboard'
+import type { ChartType, DateRangeSpec, FilterClause, FilterGroup, QuerySpec, TimeBucket } from '../types/dashboard'
 
 export interface AggregatedPoint {
   label: string
@@ -99,9 +99,19 @@ function matchesFilter(record: NormalizedRecord, filter: FilterClause): boolean 
   }
 }
 
-export function applyFilters(records: NormalizedRecord[], filters: FilterClause[]): NormalizedRecord[] {
-  if (!filters.length) return records
-  return records.filter((record) => filters.every((filter) => matchesFilter(record, filter)))
+/** Bare `FilterClause[]` (persisted by dashboards created before FilterGroup existed) is treated as an implicit AND. */
+export function normalizeFilters(filters: FilterClause[] | FilterGroup | undefined): FilterGroup {
+  if (!filters) return { combinator: 'AND', clauses: [] }
+  if (Array.isArray(filters)) return { combinator: 'AND', clauses: filters }
+  return filters
+}
+
+export function applyFilters(records: NormalizedRecord[], filters: FilterClause[] | FilterGroup): NormalizedRecord[] {
+  const { combinator, clauses } = normalizeFilters(filters)
+  if (!clauses.length) return records
+  return records.filter((record) =>
+    combinator === 'OR' ? clauses.some((filter) => matchesFilter(record, filter)) : clauses.every((filter) => matchesFilter(record, filter))
+  )
 }
 
 function bucketKey(ts: number, bucket: TimeBucket): string {
@@ -141,12 +151,28 @@ export function groupByDimension(records: NormalizedRecord[], field: string): Ma
   return groups
 }
 
+/**
+ * Percentile and ratio-of-two-metrics aggregations were considered and intentionally deferred —
+ * a generic ratio/percentile UI is disproportionate scope, and per-entity `compute()` metrics
+ * (e.g. events' `attendeeRate`) already cover the common ratio case. Not an oversight.
+ */
 export function computeAggregation(
   records: NormalizedRecord[],
   metric: QuerySpec['metric'],
   dataSource: DashboardDataSource
 ): number {
   if (metric.aggregation === 'count') return records.length
+
+  if (metric.aggregation === 'distinct') {
+    // Distinct counts the raw field value, not a metric's compute() — compute() is for
+    // numeric derivation only (e.g. attendeeRate), and distinct values are often non-numeric.
+    const seen = new Set<unknown>()
+    for (const record of records) {
+      const value = record[metric.field]
+      if (value !== undefined && value !== null && value !== '') seen.add(value)
+    }
+    return seen.size
+  }
 
   const metricDef = dataSource.metrics.find((m) => m.field === metric.field)
   const values: number[] = []

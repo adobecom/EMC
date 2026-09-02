@@ -7,6 +7,7 @@ import {
   bucketByTime,
   computeAggregation,
   groupByDimension,
+  normalizeFilters,
   resolveDateRange,
   runQuery,
 } from './dashboardAggregation'
@@ -122,6 +123,52 @@ describe('applyFilters', () => {
     expect(applyFilters(booleanRecords, [{ field: 'published', operator: 'neq', value: 'true' }])).toEqual([booleanRecords[1]])
     expect(applyFilters(booleanRecords, [{ field: 'published', operator: 'in', value: ['false'] }])).toEqual([booleanRecords[1]])
   })
+
+  it('treats a bare FilterClause[] as an implicit AND (backward compatibility)', () => {
+    const clauses: FilterClause[] = [
+      { field: 'eventType', operator: 'eq', value: 'webinar' },
+      { field: 'attendeeCount', operator: 'gt', value: 5 },
+    ]
+    expect(applyFilters(records, clauses)).toEqual([])
+  })
+
+  it('AND combinator requires every clause to match', () => {
+    const group = {
+      combinator: 'AND' as const,
+      clauses: [
+        { field: 'eventType', operator: 'eq' as const, value: 'webinar' },
+        { field: 'attendeeCount', operator: 'gt' as const, value: 5 },
+      ],
+    }
+    expect(applyFilters(records, group)).toEqual([])
+  })
+
+  it('OR combinator matches if any clause matches', () => {
+    const group = {
+      combinator: 'OR' as const,
+      clauses: [
+        { field: 'eventType', operator: 'eq' as const, value: 'webinar' },
+        { field: 'attendeeCount', operator: 'gt' as const, value: 5 },
+      ],
+    }
+    expect(applyFilters(records, group)).toEqual([records[0], records[2]])
+  })
+})
+
+describe('normalizeFilters', () => {
+  it('wraps a bare FilterClause[] as an implicit AND group', () => {
+    const clauses: FilterClause[] = [{ field: 'eventType', operator: 'eq', value: 'webinar' }]
+    expect(normalizeFilters(clauses)).toEqual({ combinator: 'AND', clauses })
+  })
+
+  it('wraps undefined as an empty AND group', () => {
+    expect(normalizeFilters(undefined)).toEqual({ combinator: 'AND', clauses: [] })
+  })
+
+  it('passes a FilterGroup through unchanged', () => {
+    const group = { combinator: 'OR' as const, clauses: [{ field: 'eventType', operator: 'eq' as const, value: 'webinar' }] }
+    expect(normalizeFilters(group)).toEqual(group)
+  })
 })
 
 describe('bucketByTime', () => {
@@ -200,6 +247,23 @@ describe('computeAggregation', () => {
   it('returns 0 when no records have a usable value', () => {
     expect(computeAggregation([record({ __ts: 1 })], { field: 'attendeeCount', aggregation: 'sum' }, testDataSource)).toBe(0)
   })
+
+  it('counts distinct non-empty values of a field', () => {
+    const withDupes = [
+      record({ __ts: 1, eventType: 'webinar' }),
+      record({ __ts: 2, eventType: 'webinar' }),
+      record({ __ts: 3, eventType: 'in-person' }),
+      record({ __ts: 4, eventType: '' }),
+      record({ __ts: 5 }),
+    ]
+    expect(computeAggregation(withDupes, { field: 'eventType', aggregation: 'distinct' }, testDataSource)).toBe(2)
+  })
+
+  it('distinct does not use a metric compute() function', () => {
+    // attendeeRate has a compute() that would throw/return null for these records if invoked as numeric;
+    // distinct should count the raw field's unique values instead, which are all undefined -> 0 distinct.
+    expect(computeAggregation(records, { field: 'attendeeRate', aggregation: 'distinct' }, testDataSource)).toBe(0)
+  })
 })
 
 describe('runQuery', () => {
@@ -238,6 +302,13 @@ describe('runQuery', () => {
     const query: QuerySpec = { ...baseQuery, timeBucket: 'month' }
     const result = runQuery(rawRecords, query, testDataSource, 'line', NOW)
     expect(result.points).toEqual([{ label: '2026-08', value: 2 }])
+  })
+
+  it('produces the same grouped points for a pie chart as an equivalent bar chart', () => {
+    const query: QuerySpec = { ...baseQuery, groupBy: 'eventType' }
+    const barResult = runQuery(rawRecords, query, testDataSource, 'bar', NOW)
+    const pieResult = runQuery(rawRecords, query, testDataSource, 'pie', NOW)
+    expect(pieResult.points).toEqual(barResult.points)
   })
 
   describe('cumulative time series', () => {

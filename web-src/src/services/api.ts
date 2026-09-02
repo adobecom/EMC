@@ -1320,6 +1320,59 @@ class ApiService {
   }
 
   /**
+   * Batch fetch event sessions for enrichment. Many events simply have no sessions,
+   * which ESP represents as a 404 rather than a 200 with an empty list — treat that
+   * as valid/empty here (same convention as `getEventVenuesBatch`) rather than routing
+   * through `callExternalApi`, which would log a console error for every such event.
+   */
+  async getAllEventSessionsBatch(eventIds: string[]): Promise<Map<string, any[]>> {
+    const token = this.getAuthToken()
+    const results = new Map<string, any[]>()
+
+    if (!token) return results
+
+    try {
+      const env = getCurrentEnvironment()
+      const headers = constructRequestHeaders(token, 'GET')
+      if (this.activeGroupId) {
+        (headers as any)['x-adobe-esp-group-id'] = this.activeGroupId
+      }
+      const host = getApiHost('esp', env)
+
+      const promises = eventIds.map(async (eventId) => {
+        try {
+          const url = `${host}/v1/sessions?eventId=${encodeURIComponent(eventId)}`
+          const response = await safeFetch(url, { method: 'GET', headers: headers as any })
+
+          if (response.ok) {
+            const data = await response.json()
+            return { eventId, sessions: data.sessions || data.data || [] }
+          }
+          // 404 means no sessions for this event, which is valid
+          if (response.status === 404) {
+            return { eventId, sessions: [] }
+          }
+          return null
+        } catch (error) {
+          console.error(`Error fetching sessions for event ${eventId}:`, error)
+          return null
+        }
+      })
+
+      const responses = await Promise.all(promises)
+      responses.forEach((result) => {
+        if (result) {
+          results.set(result.eventId, result.sessions)
+        }
+      })
+    } catch (error) {
+      console.error('Error fetching event sessions batch:', error)
+    }
+
+    return results
+  }
+
+  /**
    * Batch fetch event history for enrichment
    */
   async getEventHistoryBatch(eventIds: string[]): Promise<Map<string, EventHistoryResponse>> {
@@ -2671,6 +2724,13 @@ export const cachedApi = {
     if (result.sponsors && Array.isArray(result.sponsors)) {
       result.sponsors = deduplicateBy(result.sponsors, (s: any) => s.sponsorId, { warnOnDuplicates: true })
     }
+    return result
+  },
+
+  // === SESSIONS (GET Operations - Cached) ===
+  getAllEventSessionsBatch: async (ids: string[]) => {
+    const result = await apiCache.get((eventIds: string[]) => apiService.getAllEventSessionsBatch(eventIds), ids)
+    // Result is a Map, return as-is (sessions are already keyed by eventId)
     return result
   },
 

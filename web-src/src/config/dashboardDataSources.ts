@@ -186,12 +186,169 @@ const platformUsersDataSource: DashboardDataSource = {
 }
 
 // ============================================================================
+// Speakers
+//
+// No global "all speakers" endpoint exists — speakers are series-scoped. This
+// fans out one `getSpeakers(seriesId)` call per series (reusing the cached,
+// deduplicated `cachedApi.getSpeakers`). For orgs with many series this means
+// many concurrent requests on every dashboard load — an accepted limitation,
+// the same tradeoff `platformUsers` already makes.
+// ============================================================================
+
+async function fetchSpeakers(): Promise<Record<string, unknown>[]> {
+  const seriesList = await cachedApi.getSeriesList()
+
+  const results = await Promise.all(
+    seriesList.map(async (series) => {
+      const result = await cachedApi.getSpeakers(series.seriesId)
+      if ('error' in result || !Array.isArray(result.speakers)) return []
+      return result.speakers.map((speaker: Record<string, unknown>) => ({ ...speaker, seriesId: series.seriesId }))
+    })
+  )
+
+  return results.flat()
+}
+
+const speakersDataSource: DashboardDataSource = {
+  id: 'speakers',
+  label: 'Speakers',
+  timeField: '__ts',
+  dimensions: [{ field: 'seriesId', label: 'Series' }],
+  metrics: [COUNT_METRIC, { field: 'speakerId', label: 'Unique speakers', aggregations: ['distinct'] }],
+  fetch: fetchSpeakers,
+  normalize: (raw) => ({
+    ...raw,
+    __ts: toEpochMs(raw.creationTime),
+  }),
+}
+
+// ============================================================================
+// Sponsors
+//
+// Same series-scoped fan-out as speakers. Note: `sponsorType` (Diamond/Gold/
+// etc.) only exists on the event-sponsor *association*, not on the series-level
+// sponsor record returned here — so it isn't offered as a dimension.
+// ============================================================================
+
+async function fetchSponsors(): Promise<Record<string, unknown>[]> {
+  const seriesList = await cachedApi.getSeriesList()
+
+  const results = await Promise.all(
+    seriesList.map(async (series) => {
+      const result = await cachedApi.getSponsors(series.seriesId)
+      if ('error' in result || !Array.isArray(result.sponsors)) return []
+      return result.sponsors.map((sponsor: Record<string, unknown>) => ({ ...sponsor, seriesId: series.seriesId }))
+    })
+  )
+
+  return results.flat()
+}
+
+const sponsorsDataSource: DashboardDataSource = {
+  id: 'sponsors',
+  label: 'Sponsors',
+  timeField: '__ts',
+  dimensions: [{ field: 'seriesId', label: 'Series' }],
+  metrics: [COUNT_METRIC, { field: 'sponsorId', label: 'Unique sponsors', aggregations: ['distinct'] }],
+  fetch: fetchSponsors,
+  normalize: (raw) => ({
+    ...raw,
+    __ts: toEpochMs(raw.creationTime),
+  }),
+}
+
+// ============================================================================
+// Venues
+//
+// No global or series-scoped venue list exists — venues are 1-per-event. Fans
+// out via the existing batch call (already cached) over every event's ID.
+// ============================================================================
+
+async function fetchVenues(): Promise<Record<string, unknown>[]> {
+  const events = await cachedApi.getEventsList()
+  const venuesByEvent = await cachedApi.getEventVenuesBatch(events.map((event) => event.eventId))
+
+  const rows: Record<string, unknown>[] = []
+  for (const [eventId, venues] of venuesByEvent) {
+    for (const venue of venues) rows.push({ ...venue, eventId })
+  }
+  return rows
+}
+
+const venuesDataSource: DashboardDataSource = {
+  id: 'venues',
+  label: 'Venues',
+  timeField: '__ts',
+  dimensions: [
+    { field: 'countryCode', label: 'Country' },
+    { field: 'stateCode', label: 'State' },
+    { field: 'city', label: 'City' },
+  ],
+  metrics: [COUNT_METRIC],
+  fetch: fetchVenues,
+  normalize: (raw) => ({
+    ...raw,
+    __ts: toEpochMs(raw.creationTime),
+  }),
+}
+
+// ============================================================================
+// Sessions
+//
+// No global or series-scoped session list exists — fans out one
+// `/v1/sessions?eventId=...` call per event via `cachedApi.getAllEventSessionsBatch`
+// (mirrors `getEventVenuesBatch`'s convention of treating a 404 — "no sessions for
+// this event" — as valid/empty instead of a logged error). For orgs with many
+// events this still means many concurrent requests on every dashboard load — an
+// accepted limitation, same tradeoff as `platformUsers`.
+//
+// Only fields confirmed present on the real ESP response (via existing
+// consumers in Sessions.tsx/SessionsTab.tsx) are exposed here. Fields like
+// sessionType/status/published are NOT exposed — unverified against a live
+// environment, left as a documented follow-up.
+// ============================================================================
+
+async function fetchSessions(): Promise<Record<string, unknown>[]> {
+  const events = await cachedApi.getEventsList()
+  const sessionsByEvent = await cachedApi.getAllEventSessionsBatch(events.map((event) => event.eventId))
+
+  const seriesIdByEvent = new Map(events.map((event) => [event.eventId, event.seriesId]))
+  const rows: Record<string, unknown>[] = []
+  for (const [eventId, sessions] of sessionsByEvent) {
+    for (const session of sessions) {
+      rows.push({ ...session, eventId, seriesId: seriesIdByEvent.get(eventId) })
+    }
+  }
+  return rows
+}
+
+const sessionsDataSource: DashboardDataSource = {
+  id: 'sessions',
+  label: 'Sessions',
+  timeField: '__ts',
+  dimensions: [
+    { field: 'eventId', label: 'Event' },
+    { field: 'locationId', label: 'Location' },
+  ],
+  metrics: [COUNT_METRIC, { field: 'capacity', label: 'Capacity', aggregations: ['sum', 'avg', 'min', 'max'] }],
+  fetch: fetchSessions,
+  normalize: (raw) => ({
+    ...raw,
+    __ts: toEpochMs(raw.creationTime),
+  }),
+}
+
+// ============================================================================
 // Registry
 // ============================================================================
 
 export const DASHBOARD_DATA_SOURCES: Record<string, DashboardDataSource> = {
   series: seriesDataSource,
   events: eventsDataSource,
+  speakers: speakersDataSource,
+  sponsors: sponsorsDataSource,
+  venues: venuesDataSource,
+  sessions: sessionsDataSource,
   platformUsers: platformUsersDataSource,
 }
 

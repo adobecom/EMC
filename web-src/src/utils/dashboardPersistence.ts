@@ -2,7 +2,7 @@
 * <license header>
 */
 
-import { ChartType, Dashboard, FilterClause, FilterOperator, Widget } from '../types/dashboard'
+import { ChartType, Dashboard, FilterClause, FilterCombinator, FilterGroup, FilterOperator, Widget } from '../types/dashboard'
 
 /**
  * localStorage utilities for persisting custom dashboards.
@@ -29,8 +29,9 @@ function getStorageKey(email: string): string {
   return `${STORAGE_KEY_PREFIX}${normalizeEmail(email)}`
 }
 
-const CHART_TYPES: ChartType[] = ['line', 'bar', 'stat', 'table']
+const CHART_TYPES: ChartType[] = ['line', 'bar', 'pie', 'stat', 'table']
 const FILTER_OPERATORS: FilterOperator[] = ['eq', 'neq', 'gt', 'lt', 'in']
+const FILTER_COMBINATORS: FilterCombinator[] = ['AND', 'OR']
 
 function isValidFilterClause(value: unknown): value is FilterClause {
   if (!value || typeof value !== 'object') return false
@@ -41,6 +42,17 @@ function isValidFilterClause(value: unknown): value is FilterClause {
     typeof filter.value === 'string' ||
     typeof filter.value === 'number' ||
     (Array.isArray(filter.value) && filter.value.every((entry) => typeof entry === 'string'))
+  )
+}
+
+function isValidFilterGroup(value: unknown): value is FilterGroup {
+  if (!value || typeof value !== 'object') return false
+  const group = value as Partial<FilterGroup>
+  return (
+    typeof group.combinator === 'string' &&
+    FILTER_COMBINATORS.includes(group.combinator as FilterCombinator) &&
+    Array.isArray(group.clauses) &&
+    group.clauses.every(isValidFilterClause)
   )
 }
 
@@ -60,7 +72,8 @@ function isValidWidget(value: unknown): value is Widget {
     typeof widget.query.metric.aggregation === 'string' &&
     !!widget.query.dateRange &&
     (widget.query.filters === undefined ||
-      (Array.isArray(widget.query.filters) && widget.query.filters.every(isValidFilterClause)))
+      (Array.isArray(widget.query.filters) && widget.query.filters.every(isValidFilterClause)) ||
+      isValidFilterGroup(widget.query.filters))
   )
 }
 

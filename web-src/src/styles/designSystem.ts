@@ -216,6 +216,17 @@ export const CHART_TOOLTIP_LABEL_STYLE = {
 } as const
 
 /**
+ * recharts <Tooltip> item-line style override. Left unset, each item's text
+ * color defaults to its series/slice color (e.g. a pie tooltip's single item
+ * inherits that slice's fill) — some of the categorical CHART_COLORS aren't
+ * legible as text against the tooltip's own background in dark theme, so pin
+ * item text to the same theme-aware color used for the label line.
+ */
+export const CHART_TOOLTIP_ITEM_STYLE = {
+  color: 'var(--spectrum-global-color-gray-900)',
+} as const
+
+/**
  * Surfaces and borders for inline `UNSAFE_style` — backed by CSS variables (theme-aware).
  */
 export const SURFACES = {

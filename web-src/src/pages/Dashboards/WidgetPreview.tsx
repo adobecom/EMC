@@ -6,7 +6,7 @@ import React, { useEffect, useMemo } from 'react'
 import { ActionButton, Text, Tooltip, TooltipTrigger } from '@react-spectrum/s2'
 import { style } from '@react-spectrum/s2/style' with { type: 'macro' }
 import Download from '@react-spectrum/s2/icons/Download'
-import { DataTable, LoadingSpinner, StatTile, TrendBarChart, TrendLineChart } from '../../components/shared'
+import { DataTable, LoadingSpinner, StatTile, TrendBarChart, TrendLineChart, TrendPieChart } from '../../components/shared'
 import type { TableColumn } from '../../components/shared'
 import { Widget } from '../../types/dashboard'
 import { getDashboardDataSource } from '../../config/dashboardDataSources'
@@ -69,9 +69,15 @@ export const WidgetPreview: React.FC<WidgetPreviewProps> = ({ widget, color }) =
         if (cancelled) return
         // Defense-in-depth: event:read/series:read are permission axes independent
         // of the page-level admin gate that gets a user onto this page at all.
-        if (dataSource.id === 'events') setRecords(filterEvents(raw))
-        else if (dataSource.id === 'series') setRecords(filterSeries(raw))
-        else setRecords(raw)
+        // speakers/sponsors are fanned out from all series, venues/sessions from all
+        // events, regardless of the viewer's RBAC scope — gate them the same way.
+        if (dataSource.id === 'events' || dataSource.id === 'venues' || dataSource.id === 'sessions') {
+          setRecords(filterEvents(raw))
+        } else if (dataSource.id === 'series' || dataSource.id === 'speakers' || dataSource.id === 'sponsors') {
+          setRecords(filterSeries(raw))
+        } else {
+          setRecords(raw)
+        }
       })
       .catch(() => {
         if (!cancelled) setError('Failed to load data for this widget.')
@@ -143,6 +149,8 @@ export const WidgetPreview: React.FC<WidgetPreviewProps> = ({ widget, color }) =
       <div role="img" aria-label={chartLabel}>
         {widget.chartType === 'line' ? (
           <TrendLineChart data={result.points} color={color} />
+        ) : widget.chartType === 'pie' ? (
+          <TrendPieChart data={result.points} />
         ) : (
           <TrendBarChart data={result.points} color={color} />
         )}

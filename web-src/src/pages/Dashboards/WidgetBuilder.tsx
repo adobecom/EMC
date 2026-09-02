@@ -31,18 +31,26 @@ import {
   Aggregation,
   ChartType,
   FilterClause,
+  FilterCombinator,
   FilterOperator,
   RelativeDateRangeKey,
   TimeBucket,
   Widget,
 } from '../../types/dashboard'
+import { normalizeFilters } from '../../utils/dashboardAggregation'
 import { WidgetPreview } from './WidgetPreview'
 
 const CHART_TYPES: { id: ChartType; label: string }[] = [
   { id: 'stat', label: 'Single stat' },
   { id: 'line', label: 'Line chart' },
   { id: 'bar', label: 'Bar chart' },
+  { id: 'pie', label: 'Pie chart' },
   { id: 'table', label: 'Table' },
+]
+
+const FILTER_COMBINATORS: { id: FilterCombinator; label: string }[] = [
+  { id: 'AND', label: 'All (AND)' },
+  { id: 'OR', label: 'Any (OR)' },
 ]
 
 const DATE_RANGES: { id: RelativeDateRangeKey; label: string }[] = [
@@ -103,9 +111,11 @@ interface WidgetFormState {
   cumulative: boolean
   dateRange: RelativeDateRangeKey
   filters: FilterRow[]
+  filterCombinator: FilterCombinator
 }
 
 function computeInitialFormState(widget?: Widget): WidgetFormState {
+  const { combinator, clauses } = normalizeFilters(widget?.query.filters)
   return {
     title: widget?.title ?? 'Untitled widget',
     dataSourceId: widget?.query.dataSource ?? 'events',
@@ -119,7 +129,8 @@ function computeInitialFormState(widget?: Widget): WidgetFormState {
       widget?.query.dateRange && 'relative' in widget.query.dateRange
         ? widget.query.dateRange.relative
         : 'last3Months',
-    filters: toFilterRows(widget?.query.filters ?? []),
+    filters: toFilterRows(clauses),
+    filterCombinator: combinator,
   }
 }
 
@@ -143,6 +154,9 @@ export const WidgetBuilder: React.FC<WidgetBuilderProps> = ({ dashboardId, widge
   const [cumulative, setCumulative] = useState(() => computeInitialFormState(widget).cumulative)
   const [dateRange, setDateRange] = useState<RelativeDateRangeKey>(() => computeInitialFormState(widget).dateRange)
   const [filters, setFilters] = useState<FilterRow[]>(() => computeInitialFormState(widget).filters)
+  const [filterCombinator, setFilterCombinator] = useState<FilterCombinator>(
+    () => computeInitialFormState(widget).filterCombinator
+  )
 
   // WidgetBuilder is mounted unconditionally by DashboardCanvas so the Dialog's open/close
   // animation plays correctly. Since it no longer remounts on open, reset every field from
@@ -161,6 +175,7 @@ export const WidgetBuilder: React.FC<WidgetBuilderProps> = ({ dashboardId, widge
     setCumulative(initial.cumulative)
     setDateRange(initial.dateRange)
     setFilters(initial.filters)
+    setFilterCombinator(initial.filterCombinator)
   }, [isOpen, widget])
 
   const dataSource = getDashboardDataSource(dataSourceId)
@@ -178,10 +193,26 @@ export const WidgetBuilder: React.FC<WidgetBuilderProps> = ({ dashboardId, widge
         timeBucket: timeBucket === NONE ? undefined : timeBucket,
         cumulative: timeBucket !== NONE && cumulative,
         dateRange: { relative: dateRange },
-        filters: filters.map((filter) => ({ field: filter.field, operator: filter.operator, value: filter.value })),
+        filters: {
+          combinator: filterCombinator,
+          clauses: filters.map((filter) => ({ field: filter.field, operator: filter.operator, value: filter.value })),
+        },
       },
     }),
-    [widget?.id, title, chartType, dataSourceId, selectedMetric?.field, aggregation, groupBy, timeBucket, cumulative, dateRange, filters]
+    [
+      widget?.id,
+      title,
+      chartType,
+      dataSourceId,
+      selectedMetric?.field,
+      aggregation,
+      groupBy,
+      timeBucket,
+      cumulative,
+      dateRange,
+      filters,
+      filterCombinator,
+    ]
   )
 
   const handleDataSourceChange = (id: string) => {
@@ -191,6 +222,7 @@ export const WidgetBuilder: React.FC<WidgetBuilderProps> = ({ dashboardId, widge
     setAggregation(nextSource?.metrics[0]?.aggregations[0] ?? 'count')
     setGroupBy(NONE)
     setFilters([])
+    setFilterCombinator('AND')
   }
 
   const handleMetricChange = (field: string) => {
@@ -223,7 +255,7 @@ export const WidgetBuilder: React.FC<WidgetBuilderProps> = ({ dashboardId, widge
     close()
   }
 
-  const showGroupingControls = chartType === 'line' || chartType === 'bar'
+  const showGroupingControls = chartType === 'line' || chartType === 'bar' || chartType === 'pie'
   // Tables need real horizontal room for their columns — stack the preview full-width
   // below the form instead of squeezing it into a half-width column like the other chart types.
   const isTablePreview = chartType === 'table'
@@ -324,7 +356,7 @@ export const WidgetBuilder: React.FC<WidgetBuilderProps> = ({ dashboardId, widge
               </div>
             )}
 
-            {showGroupingControls && timeBucket !== NONE && (
+            {(chartType === 'line' || chartType === 'bar') && timeBucket !== NONE && (
               <div className={style({ display: 'flex', flexDirection: 'column', gap: 4 })}>
                 <Switch isSelected={cumulative} onChange={setCumulative}>
                   Show running total (cumulative)
@@ -355,6 +387,18 @@ export const WidgetBuilder: React.FC<WidgetBuilderProps> = ({ dashboardId, widge
                   <Add />
                 </ActionButton>
               </div>
+              {filters.length > 1 && (
+                <Picker
+                  label="Match"
+                  selectedKey={filterCombinator}
+                  onSelectionChange={(key) => setFilterCombinator(key as FilterCombinator)}
+                  styles={style({ width: '[100%]' })}
+                >
+                  {FILTER_COMBINATORS.map((combinator) => (
+                    <PickerItem key={combinator.id} id={combinator.id}>{combinator.label}</PickerItem>
+                  ))}
+                </Picker>
+              )}
               {filters.map((filter) => (
                 <div key={filter.rowId} className={style({ display: 'flex', flexDirection: 'column', gap: 8 })}>
                   <div className={style({ display: 'flex', gap: 8 })}>
