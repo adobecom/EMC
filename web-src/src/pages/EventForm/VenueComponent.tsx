@@ -850,7 +850,7 @@ export const VenueComponent: React.FC = () => {
                   <Text UNSAFE_style={{ fontWeight: 600, fontSize: '14px' }}>{loc.name}</Text>
                   <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
                     <span style={{ fontSize: '11px', padding: '2px 8px', borderRadius: '10px', backgroundColor: SURFACES.PILL_BG, color: COLORS.GRAY_700, fontWeight: 500 }}>
-                      {loc.locationType.charAt(0).toUpperCase() + loc.locationType.slice(1)}
+                      {(loc.locationType?.charAt(0).toUpperCase() + loc.locationType?.slice(1)) || ''}
                     </span>
                     {loc.locationCode && (
                       <Text UNSAFE_style={{ fontSize: '12px', color: COLORS.GRAY_600 }}>
