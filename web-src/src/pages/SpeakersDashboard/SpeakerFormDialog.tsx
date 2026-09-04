@@ -231,7 +231,7 @@ export const SpeakerFormDialog: React.FC<SpeakerFormDialogProps> = ({
   }, [updateField, formState.imageId])
 
   const handleSubmit = useCallback(async () => {
-    if (!formState.firstName.trim() || !formState.lastName.trim()) {
+    if (!formState.firstName.trim()) {
       return
     }
 
@@ -256,7 +256,7 @@ export const SpeakerFormDialog: React.FC<SpeakerFormDialogProps> = ({
     await onSubmit(data, pendingFile ?? undefined)
   }, [formState, localizationDrafts, pendingFile, removedImageId, isEditing, onSubmit])
 
-  const isFormValid = formState.firstName.trim() && formState.lastName.trim()
+  const isFormValid = formState.firstName.trim()
 
   return (
     <DialogTrigger isOpen={isOpen} onOpenChange={(open) => !open && onClose()}>
@@ -280,7 +280,6 @@ export const SpeakerFormDialog: React.FC<SpeakerFormDialogProps> = ({
                       label="Last Name"
                       value={formState.lastName}
                       onChange={(value) => updateField('lastName', value)}
-                      isRequired
                       styles={style({ width: '[100%]' })}
                     />
                   </div>
@@ -291,7 +290,7 @@ export const SpeakerFormDialog: React.FC<SpeakerFormDialogProps> = ({
                       imageUrl={formState.imageUrl}
                       imageId={formState.imageId}
                       imageKind="speaker-photo"
-                      altText={`${formState.firstName} ${formState.lastName}`}
+                      altText={`${formState.firstName} ${formState.lastName}`.trim()}
                       maxSizeMB={25}
                       width={300}
                       dropzoneTitle="Add profile image"
