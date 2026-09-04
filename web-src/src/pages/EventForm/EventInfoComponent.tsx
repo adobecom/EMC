@@ -2,7 +2,7 @@
 * <license header>
 */
 
-import React, { useState, useEffect, useMemo } from 'react'
+import React, { useState, useEffect, useMemo, useRef } from 'react'
 import {
   ComboBox,
   ComboBoxItem,
@@ -13,6 +13,7 @@ import {
   Text,
   DatePicker,
   Switch,
+  Checkbox,
   TooltipTrigger,
   Tooltip,
   DialogTrigger,
@@ -33,6 +34,9 @@ import { useGroup } from '../../contexts/GroupContext'
 import { hasLocalesSlice } from '../../types/configApi'
 import type { ScopeConfig } from '../../types/configApi'
 import { SUPPORTED_SPEAKER_LOCALES, SPEAKER_LOCALE_LABELS } from '../../config/localeMapping'
+import { requiresEnTitleConfirmation } from '../../utils/enTitleConfirmation'
+import type { FocusableRefValue } from '@react-types/shared'
+import { setInteractionModality } from '@react-aria/interactions'
 
 /**
  * Safely parse ISO 8601 datetime string for DatePicker
@@ -93,6 +97,7 @@ const EVENT_TITLE_MAX_LENGTH = 150
 export const EventInfoComponent: React.FC = () => {
   const { setScopeLocales } = useEventFormContext()
   const { activeGroup } = useGroup()
+  const enTitleCheckboxRef = useRef<FocusableRefValue<HTMLLabelElement, HTMLLabelElement>>(null)
 
   // ============================================================================
   // CONTEXT INTEGRATION
@@ -118,6 +123,16 @@ export const EventInfoComponent: React.FC = () => {
       if (s && e && e.compare(s) <= 0) {
         return 'End date & time must be after the start date & time.'
       }
+      if (
+        requiresEnTitleConfirmation(locale, formData.name || '', formData.enTitle || '') &&
+        !formData.confirmEnTitleEnglish
+      ) {
+        // Save is a mouse/pointer interaction, so react-aria's focus-ring tracking
+        // would otherwise suppress the visible ring on this programmatic focus.
+        setInteractionModality('keyboard')
+        enTitleCheckboxRef.current?.focus()
+        return 'Confirm this page URL title is in English before saving.'
+      }
       return true
     },
   })
@@ -135,7 +150,10 @@ export const EventInfoComponent: React.FC = () => {
     secondaryLinkTitle = '',
     isPrivate = false,
     inviteOnly = false,
+    confirmEnTitleEnglish = false,
   } = formData
+
+  const enTitleNeedsConfirmation = requiresEnTitleConfirmation(locale, name, enTitle)
   
   // ============================================================================
   // LOCAL STATE
@@ -239,16 +257,18 @@ export const EventInfoComponent: React.FC = () => {
     const shouldSyncEnTitle = name === enTitle || !enTitle
     const shouldSyncUrlTitle = name === (formData.urlTitle || '') || !formData.urlTitle
     
-    const updates: Partial<typeof formData> = { name: value }
-    
+    // The confirmation attests to this specific name/enTitle pairing, so any edit
+    // to the name that changes that pairing must invalidate a prior confirmation.
+    const updates: Partial<typeof formData> = { name: value, confirmEnTitleEnglish: false }
+
     if (shouldSyncEnTitle) {
       updates.enTitle = value
     }
-    
+
     if (shouldSyncUrlTitle) {
       updates.urlTitle = value
     }
-    
+
     updateFormData(updates)
   }
   
@@ -392,13 +412,25 @@ export const EventInfoComponent: React.FC = () => {
           aria-label="English title for page URL"
           maxLength={EVENT_TITLE_MAX_LENGTH}
           value={enTitle || ''}
-          onChange={(value) => updateFormData({ enTitle: value })}
+          onChange={(value) => updateFormData({ enTitle: value, confirmEnTitleEnglish: false })}
           description={`${EVENT_TITLE_MAX_LENGTH} characters max`}
           styles={style({ width: '[100%]' })}
         />
+        {enTitleNeedsConfirmation && (
+          <div className={style({marginTop: 8})}>
+            <Checkbox
+              ref={enTitleCheckboxRef}
+              data-testid="confirm-en-title-checkbox"
+              isSelected={confirmEnTitleEnglish}
+              onChange={(value) => updateFormData({ confirmEnTitleEnglish: value })}
+            >
+              Confirm this page URL title is in English.
+            </Checkbox>
+          </div>
+        )}
       </div>
       <div style={{ width: '100%' }}>
-        <HeadingWithTooltip 
+        <HeadingWithTooltip
           level={4}
           tooltip="Add rich text to your event description. This will be the copy displayed on the event page."
           marginBottomPx={8}
