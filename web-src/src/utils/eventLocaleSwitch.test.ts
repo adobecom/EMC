@@ -136,7 +136,7 @@ function createEventResponse(): EventApiResponse {
       type: 'ESP',
       formData: 'v1',
     },
-    rsvpFormFields: { fields: [{ field: 'email', required: true }] },
+    rsvpFormFields: { required: ['email'], visible: ['email'] },
     venue: {
       venueId: 'venue-1',
       venueName: 'Madrid Creative Center',
