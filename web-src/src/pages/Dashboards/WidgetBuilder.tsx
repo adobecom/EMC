@@ -23,6 +23,7 @@ import RemoveCircle from '@react-spectrum/s2/icons/RemoveCircle'
 // @ts-ignore - uuid types not installed
 import { v4 as uuidv4 } from 'uuid'
 import { useDashboard } from '../../contexts'
+import { useHasPermission } from '../../hooks'
 import {
   DASHBOARD_DATA_SOURCES,
   getDashboardDataSource,
@@ -143,6 +144,13 @@ interface WidgetBuilderProps {
 
 export const WidgetBuilder: React.FC<WidgetBuilderProps> = ({ dashboardId, widget, isOpen, onOpenChange }) => {
   const { addWidget, updateWidget } = useDashboard()
+  // platformUsers isn't scoped by the active group like every other data source —
+  // keep it out of the picker for anyone who isn't a true platform admin.
+  const isPlatformAdmin = useHasPermission('*', '*')
+  const visibleDataSources = useMemo(
+    () => Object.values(DASHBOARD_DATA_SOURCES).filter((source) => source.id !== 'platformUsers' || isPlatformAdmin),
+    [isPlatformAdmin]
+  )
 
   const [title, setTitle] = useState(() => computeInitialFormState(widget).title)
   const [dataSourceId, setDataSourceId] = useState(() => computeInitialFormState(widget).dataSourceId)
@@ -180,6 +188,10 @@ export const WidgetBuilder: React.FC<WidgetBuilderProps> = ({ dashboardId, widge
 
   const dataSource = getDashboardDataSource(dataSourceId)
   const selectedMetric = dataSource?.metrics.find((m) => m.field === metricField) ?? dataSource?.metrics[0]
+  // A widget saved while the viewer had platform-admin access can still reference
+  // platformUsers after their role/active group changes — don't let them silently
+  // resave a definition against a data source they can no longer see.
+  const isDataSourceHidden = !visibleDataSources.some((source) => source.id === dataSourceId)
 
   const draft: Widget = useMemo(
     () => ({
@@ -290,10 +302,15 @@ export const WidgetBuilder: React.FC<WidgetBuilderProps> = ({ dashboardId, widge
               onSelectionChange={(key) => handleDataSourceChange(key as string)}
               styles={style({ width: '[100%]' })}
             >
-              {Object.values(DASHBOARD_DATA_SOURCES).map((source) => (
+              {visibleDataSources.map((source) => (
                 <PickerItem key={source.id} id={source.id}>{source.label}</PickerItem>
               ))}
             </Picker>
+            {isDataSourceHidden && (
+              <Text UNSAFE_style={{ fontSize: 12, color: 'var(--spectrum-global-color-gray-600)' }}>
+                This widget's data source isn't available to your current role. Choose a different one to continue editing.
+              </Text>
+            )}
 
             <Picker
               label="Chart type"
@@ -457,7 +474,7 @@ export const WidgetBuilder: React.FC<WidgetBuilderProps> = ({ dashboardId, widge
             </Content>
             <ButtonGroup>
               <Button variant="secondary" onPress={close}>Cancel</Button>
-              <Button variant="accent" onPress={() => handleSave(close)}>
+              <Button variant="accent" onPress={() => handleSave(close)} isDisabled={isDataSourceHidden}>
                 {widget ? 'Update' : 'Add widget'}
               </Button>
             </ButtonGroup>

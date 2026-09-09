@@ -11,6 +11,7 @@
 */
 
 import { apiService, cachedApi } from '../services/api'
+import { INTERNAL_TEAM_EMAILS } from './constants'
 import type { Aggregation } from '../types/dashboard'
 
 export interface NormalizedRecord {
@@ -59,6 +60,13 @@ const COUNT_METRIC: DashboardMetric = {
 
 // ============================================================================
 // Series
+//
+// Deliberately not filtered client-side by RBAC scope. `cachedApi.getSeriesList()`
+// carries the active group's `x-adobe-esp-group-id` header (see `apiService.
+// setGroupId`/`callExternalApi`), so ESP already returns only the series a
+// series-scoped admin has access to — don't "fix" this by adding a redundant
+// (and, since there's no client-side per-ID scope data, actually incorrect)
+// client-side filter here.
 // ============================================================================
 
 const seriesDataSource: DashboardDataSource = {
@@ -82,6 +90,9 @@ const seriesDataSource: DashboardDataSource = {
 
 // ============================================================================
 // Events
+//
+// Same server-side scoping note as Series above — `cachedApi.getEventsList()`
+// is already scoped per the active group's header, so no client-side filter.
 // ============================================================================
 
 const eventsDataSource: DashboardDataSource = {
@@ -129,6 +140,12 @@ const eventsDataSource: DashboardDataSource = {
 // platform-scope groups/users expected, but not cached like the other
 // sources. `fetchAllPages` truncates at 100 pages per call; for very large
 // orgs this could silently omit users, which is an accepted limitation.
+//
+// Unlike every other data source above, this one is NOT scoped by the active
+// group's header — it walks every platform-type scope regardless of who's
+// asking. It must stay restricted to platform admins (see the `isPlatformAdmin`
+// gating in WidgetBuilder.tsx/WidgetPreview.tsx) rather than opened up the way
+// Dashboards access itself was.
 // ============================================================================
 
 interface StampedScopeUser extends Record<string, unknown> {
@@ -136,6 +153,7 @@ interface StampedScopeUser extends Record<string, unknown> {
   groupId: string
   groupName: string
   roleId: string | null
+  isInternal: boolean
 }
 
 async function fetchPlatformUsers(): Promise<Record<string, unknown>[]> {
@@ -161,6 +179,7 @@ async function fetchPlatformUsers(): Promise<Record<string, unknown>[]> {
         groupId: group.groupId,
         groupName: group.name,
         roleId: group.roleId,
+        isInternal: INTERNAL_TEAM_EMAILS.has(user.email.toLowerCase()),
       }))
     })
   )
@@ -176,6 +195,7 @@ const platformUsersDataSource: DashboardDataSource = {
     { field: 'groupName', label: 'Group' },
     { field: 'roleId', label: 'Role' },
     { field: 'scopeId', label: 'Scope' },
+    { field: 'isInternal', label: 'Internal account' },
   ],
   metrics: [COUNT_METRIC],
   fetch: fetchPlatformUsers,

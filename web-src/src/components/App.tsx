@@ -17,18 +17,22 @@ import { RBACGate } from './RBACGate'
 import { useAuth } from '../contexts/AuthContext'
 import { Runtime, IMS } from '../types'
 import type { AuthMode } from '../contexts/AuthContext'
-import { useHasPermission, usePreferredColorScheme } from '../hooks'
+import { useHasPermission, useHasAnyPermission, usePreferredColorScheme } from '../hooks'
 import type { ColorScheme } from '@react-types/provider'
 
 interface ProtectedRouteProps {
-  resource: string
-  access: string
+  resource?: string
+  access?: string
+  /** Multiple permission checks (OR logic). Each entry is [resource, access]. */
+  anyOf?: Array<[string, string]>
   redirectTo: string
   children: React.ReactNode
 }
 
-const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ resource, access, redirectTo, children }) => {
-  const allowed = useHasPermission(resource, access)
+const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ resource, access, anyOf, redirectTo, children }) => {
+  const singleCheck = useHasPermission(resource || '', access || '')
+  const anyCheck = useHasAnyPermission(anyOf || [])
+  const allowed = anyOf && anyOf.length > 0 ? anyCheck : singleCheck
   return allowed ? <>{children}</> : <Navigate to={redirectTo} replace />
 }
 
@@ -136,8 +140,8 @@ const AppContent: React.FC<{ runtime: Runtime, colorScheme: ColorScheme }> = ({ 
                               <Route path='/registrations' element={<Registrations ims={ims} />} />
                               <Route path='/registrations/:eventId' element={<Registrations ims={ims} />} />
                               <Route path='/speakers' element={<SpeakersDashboard ims={ims} />} />
-                              {/* '*'/'*' on purpose — see TopNav.tsx's canReadDashboards comment */}
-                              <Route path='/dashboards' element={<ProtectedRoute resource="*" access="*" redirectTo="/"><Dashboards ims={ims} /></ProtectedRoute>} />
+                              {/* Open to any content-scoped admin — see TopNav.tsx's canReadDashboards comment */}
+                              <Route path='/dashboards' element={<ProtectedRoute anyOf={[['event', 'read'], ['series', 'read']]} redirectTo="/"><Dashboards ims={ims} /></ProtectedRoute>} />
                               <Route path='/users' element={<UserManagement ims={ims} />} />
                               <Route path='/access' element={<ScopeGroupManagement ims={ims} />} />
                               <Route path='/roles' element={<RoleManagement ims={ims} />} />

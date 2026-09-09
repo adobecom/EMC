@@ -6,12 +6,13 @@ import React, { useEffect, useMemo } from 'react'
 import { ActionButton, Text, Tooltip, TooltipTrigger } from '@react-spectrum/s2'
 import { style } from '@react-spectrum/s2/style' with { type: 'macro' }
 import Download from '@react-spectrum/s2/icons/Download'
-import { DataTable, LoadingSpinner, StatTile, TrendBarChart, TrendLineChart, TrendPieChart } from '../../components/shared'
+import LockCloseIllustration from '@react-spectrum/s2/illustrations/linear/LockClose'
+import { DataTable, LoadingSpinner, ResourceEmptyState, StatTile, TrendBarChart, TrendLineChart, TrendPieChart } from '../../components/shared'
 import type { TableColumn } from '../../components/shared'
 import { Widget } from '../../types/dashboard'
 import { getDashboardDataSource } from '../../config/dashboardDataSources'
 import { AggregatedResult, runQuery } from '../../utils/dashboardAggregation'
-import { useSafeState, useRBACFilter } from '../../hooks'
+import { useSafeState, useRBACFilter, useHasPermission } from '../../hooks'
 import { downloadCsv, exportDatetime, generateCsv, sanitizeFilename, CsvColumn } from '../../utils/csvExport'
 
 interface WidgetPreviewProps {
@@ -54,11 +55,16 @@ function getExportData(
 export const WidgetPreview: React.FC<WidgetPreviewProps> = ({ widget, color }) => {
   const dataSource = getDashboardDataSource(widget.query.dataSource)
   const { filterEvents, filterSeries } = useRBACFilter()
+  const isPlatformAdmin = useHasPermission('*', '*')
+  // platformUsers isn't scoped server-side by the active group — block it here too,
+  // not just in the WidgetBuilder picker, since a saved widget can still reference it
+  // (e.g. built before a role change, or on a dashboard shared across users).
+  const isRestrictedDataSource = widget.query.dataSource === 'platformUsers' && !isPlatformAdmin
   const [records, setRecords] = useSafeState<Record<string, unknown>[] | null>(null)
   const [error, setError] = useSafeState<string | null>(null)
 
   useEffect(() => {
-    if (!dataSource) return
+    if (!dataSource || isRestrictedDataSource) return
     let cancelled = false
     setRecords(null)
     setError(null)
@@ -86,7 +92,7 @@ export const WidgetPreview: React.FC<WidgetPreviewProps> = ({ widget, color }) =
     return () => {
       cancelled = true
     }
-  }, [dataSource, filterEvents, filterSeries, setRecords, setError])
+  }, [dataSource, isRestrictedDataSource, filterEvents, filterSeries, setRecords, setError])
 
   const result = useMemo(() => {
     if (!dataSource || !records) return null
@@ -94,6 +100,16 @@ export const WidgetPreview: React.FC<WidgetPreviewProps> = ({ widget, color }) =
   }, [dataSource, records, widget.query, widget.chartType])
 
   if (!dataSource) return <Text>Unknown data source.</Text>
+  if (isRestrictedDataSource) {
+    return (
+      <ResourceEmptyState
+        illustration={<LockCloseIllustration aria-hidden />}
+        title="Restricted data source"
+        description="Platform Users is only visible to platform admins."
+        minHeightPx={240}
+      />
+    )
+  }
   if (error) return <Text>{error}</Text>
   if (!result) return <LoadingSpinner />
 
