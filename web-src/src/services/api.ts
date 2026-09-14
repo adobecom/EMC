@@ -1175,7 +1175,7 @@ class ApiService {
             return eventSponsor
           })
         )
-        data.sponsors = hydratedSponsors
+        data.sponsors = hydratedSponsors.sort((a: any, b: any) => (a.ordinal || 0) - (b.ordinal || 0))
       } else {
         data.sponsors = eventSponsors
       }
