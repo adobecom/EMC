@@ -10,7 +10,7 @@ import { style } from '@react-spectrum/s2/style' with { type: 'macro' }
 import { HeadingWithTooltip, TAG_CHIP_STYLE } from '../../components/shared'
 import { SPACING, COLORS } from '../../styles/designSystem'
 import { useSeriesFormComponent } from '../../hooks/useSeriesFormComponent'
-import { normalizeRelatedDomain, normalizeContentRoot } from '../../utils/seriesFormAutoCorrect'
+import { normalizeRelatedDomain, normalizeContentRoot, normalizeTagId, isValidTagId } from '../../utils/seriesFormAutoCorrect'
 import { cachedApi } from '../../services/api'
 import { CaasTagsResponse, CaasTag } from '../../types/domain'
 
@@ -58,6 +58,7 @@ export const SeriesAdditionalInfoComponent: React.FC = () => {
   } = formData
 
   const [newExcludeTag, setNewExcludeTag] = useState('')
+  const [excludeTagError, setExcludeTagError] = useState<string | null>(null)
   const [previewTags, setPreviewTags] = useState<string[]>([])
   const [previewLoading, setPreviewLoading] = useState(false)
   const [previewError, setPreviewError] = useState<string | null>(null)
@@ -90,10 +91,17 @@ export const SeriesAdditionalInfoComponent: React.FC = () => {
   }, [customTagsUrl])
 
   function addExcludeTag() {
-    const tag = newExcludeTag.trim()
-    if (!tag || excludeTags.includes(tag)) return
-    updateFormData({ excludeTags: [...excludeTags, tag] })
+    const tag = normalizeTagId(newExcludeTag)
+    if (!tag) return
+    if (!isValidTagId(tag)) {
+      setExcludeTagError('Must be a caas: tag, e.g. caas:cta/view-event')
+      return
+    }
+    if (!excludeTags.includes(tag)) {
+      updateFormData({ excludeTags: [...excludeTags, tag] })
+    }
     setNewExcludeTag('')
+    setExcludeTagError(null)
   }
 
   function removeExcludeTag(tagToRemove: string) {
@@ -205,18 +213,7 @@ export const SeriesAdditionalInfoComponent: React.FC = () => {
                 </Text>
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, maxHeight: 180, overflowY: 'auto' }}>
                   {previewTags.map((name) => (
-                    <div
-                      key={name}
-                      style={{
-                        backgroundColor: 'var(--emc-tag-chip-bg)',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '8px',
-                        cursor: 'default',
-                        borderRadius: '4px',
-                        padding: '8px',
-                      }}
-                    >
+                    <div key={name} style={{ ...TAG_CHIP_STYLE, cursor: 'default' }}>
                       <Text UNSAFE_style={{ color: 'white', fontSize: '14px' }}>{name}</Text>
                     </div>
                   ))}
@@ -241,7 +238,10 @@ export const SeriesAdditionalInfoComponent: React.FC = () => {
                 aria-label="Add auto-tagging exclusion"
                 placeholder="caas:cta/view-event"
                 value={newExcludeTag}
-                onChange={setNewExcludeTag}
+                onChange={(value) => {
+                  setNewExcludeTag(value)
+                  setExcludeTagError(null)
+                }}
                 onKeyDown={(e) => {
                   if (e.key === 'Enter') {
                     e.preventDefault()
@@ -260,6 +260,9 @@ export const SeriesAdditionalInfoComponent: React.FC = () => {
                 <Text>Add</Text>
               </Button>
             </div>
+            {excludeTagError && (
+              <Text UNSAFE_style={{ fontSize: 12, color: COLORS.RED_600 }}>{excludeTagError}</Text>
+            )}
             {excludeTags.length > 0 && (
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
                 {excludeTags.map((tag) => (
@@ -267,6 +270,12 @@ export const SeriesAdditionalInfoComponent: React.FC = () => {
                     key={tag}
                     style={TAG_CHIP_STYLE}
                     onClick={() => removeExcludeTag(tag)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault()
+                        removeExcludeTag(tag)
+                      }
+                    }}
                     role="button"
                     tabIndex={0}
                     aria-label={`Remove ${tag}`}
