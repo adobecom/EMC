@@ -36,6 +36,7 @@ export interface SeriesFormData {
   relatedDomain: string
   contentRoot: string
   customTagsUrl: string
+  excludeTags: string[]
 }
 
 /**
@@ -158,6 +159,7 @@ export const createDefaultSeriesFormData = (): SeriesFormData => ({
   relatedDomain: '',
   contentRoot: '',
   customTagsUrl: '',
+  excludeTags: [],
 })
 
 const createInitialState = (initialData?: Partial<SeriesFormData>): SeriesFormState => ({

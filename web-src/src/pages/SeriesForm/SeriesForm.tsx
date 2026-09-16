@@ -60,6 +60,7 @@ function mapApiResponseToFormData(series: SeriesApiResponse): SeriesFormData {
     relatedDomain: series.relatedDomain || '',
     contentRoot: series.contentRoot || '',
     customTagsUrl: series.caasTaxonomyUrl || '',
+    excludeTags: series.autoTagging?.excludeTags || [],
   }
 }
 
@@ -84,6 +85,7 @@ function buildApiPayload(
     relatedDomain: formData.relatedDomain,
     contentRoot: formData.contentRoot,
     caasTaxonomyUrl: formData.customTagsUrl,
+    autoTagging: { excludeTags: formData.excludeTags },
   }
 
   if (modificationTime !== undefined) {
