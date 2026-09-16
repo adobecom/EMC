@@ -17,6 +17,10 @@ function syncFormDataLocaleMetadata(formData: EventFormData, locale: string): Ev
     ...formData,
     language: getLanguageKeyFromLocale(locale),
     defaultLocale: locale,
+    // The English-URL-title confirmation (MWPW-204657) attests to the name/enTitle
+    // pairing for the locale it was checked under — a locale switch can change that
+    // pairing (or land on a different locale entirely), so it must be re-confirmed.
+    confirmEnTitleEnglish: false,
   }
 }
 

@@ -42,7 +42,7 @@ export const SpeakerEventConnectionsDialog: React.FC<SpeakerEventConnectionsDial
   // into "0 events" would assert the speaker has no linked events when we simply don't know.
   const resolvedEvents = events ?? []
   const isUnresolved = !isLoading && events === undefined
-  const speakerName = speaker ? `${speaker.firstName} ${speaker.lastName}` : ''
+  const speakerName = speaker ? [speaker.firstName, speaker.lastName].filter(Boolean).join(' ') : ''
   
   const formatDate = (dateString?: string): string => {
     if (!dateString) return 'No date'

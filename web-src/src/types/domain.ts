@@ -70,6 +70,7 @@ export interface SeriesApiResponse {
   relatedDomain?: string // Related domain for the series
   contentRoot?: string // Content root path
   caasTaxonomyUrl?: string // Custom CaaS taxonomy URL for scoping event/session tags
+  autoTagging?: { excludeTags: string[] } // Default auto-generated tags to suppress for this series
   scopeId?: string
   createdBy?: string
   modifiedBy?: string
@@ -442,7 +443,7 @@ export interface ProfileData {
   type: SpeakerType
   speakerId?: string // Series-level speaker ID
   firstName: string
-  lastName: string
+  lastName?: string
   title: string // Localizable
   bio?: string // Localizable
   imageUrl?: string
@@ -469,7 +470,7 @@ export interface SpeakerLocalization {
 export interface SeriesSpeaker {
   speakerId: string
   firstName: string
-  lastName: string
+  lastName?: string
   title?: string // Localizable
   bio?: string // Localizable
   socialLinks?: SocialLink[] // API format: { serviceName, link }
@@ -589,6 +590,7 @@ export interface EventFormData {
   name: string // Title (localizable)
   enTitle?: string // English title for URL/reference
   urlTitle?: string // English title for page URL
+  confirmEnTitleEnglish?: boolean // UI-only gate; not submitted to the API (see dataFilters.ts)
   description?: string // Rich text description for event page (localizable)
   eventDetails?: string // Additional event details (localizable)
   shortDescription?: string // Plain text for Events Hub/SEO (160 chars max)

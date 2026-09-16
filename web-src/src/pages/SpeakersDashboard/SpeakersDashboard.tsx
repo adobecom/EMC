@@ -614,7 +614,7 @@ export const SpeakersDashboard: React.FC<SpeakersDashboardProps> = () => {
             {photoUrl ? (
               <img
                 src={photoUrl}
-                alt={`${item.firstName} ${item.lastName}`}
+                alt={[item.firstName, item.lastName].filter(Boolean).join(' ')}
                 style={{
                   width: '100%',
                   height: '100%',
@@ -640,8 +640,8 @@ export const SpeakersDashboard: React.FC<SpeakersDashboardProps> = () => {
       width: 200,
       sortable: true,
       sortFn: (a, b) => {
-        const aName = `${a.firstName} ${a.lastName}`
-        const bName = `${b.firstName} ${b.lastName}`
+        const aName = `${a.firstName || ''} ${a.lastName || ''}`
+        const bName = `${b.firstName || ''} ${b.lastName || ''}`
         return aName.localeCompare(bName)
       },
       render: (item) => {
@@ -649,7 +649,7 @@ export const SpeakersDashboard: React.FC<SpeakersDashboardProps> = () => {
         return (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
             <Text UNSAFE_style={{ fontWeight: 'bold' }}>
-              {item.firstName} {item.lastName}
+              {[item.firstName, item.lastName].filter(Boolean).join(' ')}
             </Text>
             {displayTitle ? (
               <Text UNSAFE_style={{ fontSize: '12px', color: 'var(--spectrum-global-color-gray-600)' }}>
@@ -1113,7 +1113,7 @@ export const SpeakersDashboard: React.FC<SpeakersDashboardProps> = () => {
           <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
             <Text>
               Are you sure you want to delete{' '}
-              <strong>{deleteSubject?.firstName} {deleteSubject?.lastName}</strong>?
+              <strong>{[deleteSubject?.firstName, deleteSubject?.lastName].filter(Boolean).join(' ')}</strong>?
             </Text>
             {deleteLinkedEventsNotice}
             <Text UNSAFE_style={{ color: COLORS.RED_600, fontWeight: 'bold' }}>

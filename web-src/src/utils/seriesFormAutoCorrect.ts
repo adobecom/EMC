@@ -29,3 +29,24 @@ export function normalizeContentRoot(value: string): string {
   }
   return result.replace(/\/+$/, '')
 }
+
+// Mirrors ESP's TagId schema pattern (src/api/openapi.json) and the
+// lowercasing/hyphenation Utils.formatTags applies server-side, so a tag
+// entered here matches an ESP default tag byte-for-byte after normalization.
+const TAG_ID_PATTERN = /^(?:caas:[0-9a-zA-Z\-_/&()]+)+[^/,-]$/
+
+/**
+ * Normalizes an auto-tagging exclusion entry: trims, lowercases, and
+ * replaces spaces with hyphens, matching ESP's Utils.formatTags.
+ */
+export function normalizeTagId(value: string): string {
+  return value.trim().toLowerCase().replace(/ /g, '-')
+}
+
+/**
+ * Whether a normalized value matches ESP's TagId pattern: must start with
+ * `caas:`, restricted charset, cannot end in `/`, `,`, or `-`.
+ */
+export function isValidTagId(value: string): boolean {
+  return TAG_ID_PATTERN.test(value)
+}

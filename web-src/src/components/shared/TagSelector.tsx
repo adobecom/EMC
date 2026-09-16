@@ -9,7 +9,7 @@ import { COLORS } from '../../styles/designSystem'
 import { LoadingSpinner } from './LoadingSpinner'
 
 /** S2 icons (Add, Close) use fill: var(--iconPrimary); chip bg from index.css for light/dark */
-const TAG_CHIP_STYLE: React.CSSProperties = {
+export const TAG_CHIP_STYLE: React.CSSProperties = {
   backgroundColor: 'var(--emc-tag-chip-bg)',
   display: 'flex',
   alignItems: 'center',
