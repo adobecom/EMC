@@ -73,6 +73,14 @@ export const MARKETO_INTEGRATION_DATA_REF_FILTER: DataFilter = {
 }
 
 // ============================================================================
+// AUTO-TAGGING DATA FILTER
+// ============================================================================
+
+export const AUTO_TAGGING_DATA_REF_FILTER: DataFilter = {
+  excludeTags: { type: 'array', submittable: true },
+}
+
+// ============================================================================
 // SERIES DATA FILTER
 // ============================================================================
 
@@ -88,6 +96,7 @@ export const SERIES_DATA_FILTER: DataFilter = {
   relatedDomain: { type: 'string', submittable: true, cloneable: true, updatable: true },
   contentRoot: { type: 'string', submittable: true, cloneable: true, updatable: true },
   caasTaxonomyUrl: { type: 'string', submittable: true, cloneable: true, updatable: true },
+  autoTagging: { type: 'object', submittable: true, cloneable: true, updatable: true, ref: AUTO_TAGGING_DATA_REF_FILTER },
   scopeId: { type: 'string', submittable: true, cloneable: false, updatable: true },
   modificationTime: { type: 'string', submittable: true, cloneable: false, updatable: true },
   createdBy: { type: 'string', submittable: false, cloneable: false, updatable: false },
