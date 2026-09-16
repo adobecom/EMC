@@ -3,9 +3,11 @@
 */
 
 import React, { useState, useEffect } from 'react'
-import { TextField, Text } from '@react-spectrum/s2'
+import { TextField, Text, Button } from '@react-spectrum/s2'
+import Close from '@react-spectrum/s2/icons/Close'
+import Add from '@react-spectrum/s2/icons/Add'
 import { style } from '@react-spectrum/s2/style' with { type: 'macro' }
-import { HeadingWithTooltip } from '../../components/shared'
+import { HeadingWithTooltip, TAG_CHIP_STYLE } from '../../components/shared'
 import { SPACING, COLORS } from '../../styles/designSystem'
 import { useSeriesFormComponent } from '../../hooks/useSeriesFormComponent'
 import { normalizeRelatedDomain, normalizeContentRoot } from '../../utils/seriesFormAutoCorrect'
@@ -52,8 +54,10 @@ export const SeriesAdditionalInfoComponent: React.FC = () => {
     contentRoot = '',
     externalThemeId = '',
     customTagsUrl = '',
+    excludeTags = [],
   } = formData
 
+  const [newExcludeTag, setNewExcludeTag] = useState('')
   const [previewTags, setPreviewTags] = useState<string[]>([])
   const [previewLoading, setPreviewLoading] = useState(false)
   const [previewError, setPreviewError] = useState<string | null>(null)
@@ -84,6 +88,17 @@ export const SeriesAdditionalInfoComponent: React.FC = () => {
 
     return () => clearTimeout(timer)
   }, [customTagsUrl])
+
+  function addExcludeTag() {
+    const tag = newExcludeTag.trim()
+    if (!tag || excludeTags.includes(tag)) return
+    updateFormData({ excludeTags: [...excludeTags, tag] })
+    setNewExcludeTag('')
+  }
+
+  function removeExcludeTag(tagToRemove: string) {
+    updateFormData({ excludeTags: excludeTags.filter((tag) => tag !== tagToRemove) })
+  }
 
   // ============================================================================
   // RENDER
@@ -206,6 +221,62 @@ export const SeriesAdditionalInfoComponent: React.FC = () => {
                     </div>
                   ))}
                 </div>
+              </div>
+            )}
+          </div>
+        </div>
+
+        <div style={{ display: 'flex', flexDirection: 'row', gap: 32, alignItems: 'flex-start' }}>
+          <Text UNSAFE_style={{ width: '150px', flexShrink: 0, fontWeight: 600 }}>
+            Auto-tagging exclusions:
+          </Text>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8, flex: 1 }}>
+            <Text UNSAFE_style={{ fontSize: 12, color: COLORS.GRAY_500 }}>
+              Default auto-generated tags (e.g. caas:cta/view-event) listed here will not be
+              applied to events created under this series. Manually added event tags are
+              unaffected.
+            </Text>
+            <div style={{ display: 'flex', gap: 8, alignItems: 'end' }}>
+              <TextField
+                aria-label="Add auto-tagging exclusion"
+                placeholder="caas:cta/view-event"
+                value={newExcludeTag}
+                onChange={setNewExcludeTag}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault()
+                    addExcludeTag()
+                  }
+                }}
+                styles={style({ width: '[100%]' })}
+              />
+              <Button
+                variant="secondary"
+                size="S"
+                onPress={addExcludeTag}
+                isDisabled={!newExcludeTag.trim()}
+              >
+                <Add />
+                <Text>Add</Text>
+              </Button>
+            </div>
+            {excludeTags.length > 0 && (
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                {excludeTags.map((tag) => (
+                  <div
+                    key={tag}
+                    style={TAG_CHIP_STYLE}
+                    onClick={() => removeExcludeTag(tag)}
+                    role="button"
+                    tabIndex={0}
+                    aria-label={`Remove ${tag}`}
+                  >
+                    <Text UNSAFE_style={{ color: 'white', fontSize: '14px', fontFamily: 'monospace' }}>
+                      {tag}
+                    </Text>
+                    <Close />
+                  </div>
+                ))}
               </div>
             )}
           </div>

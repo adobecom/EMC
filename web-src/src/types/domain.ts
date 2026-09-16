@@ -70,6 +70,7 @@ export interface SeriesApiResponse {
   relatedDomain?: string // Related domain for the series
   contentRoot?: string // Content root path
   caasTaxonomyUrl?: string // Custom CaaS taxonomy URL for scoping event/session tags
+  autoTagging?: { excludeTags: string[] } // Default auto-generated tags to suppress for this series
   scopeId?: string
   createdBy?: string
   modifiedBy?: string
