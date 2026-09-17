@@ -16,7 +16,7 @@ import ZoomOut from '@react-spectrum/s2/icons/ZoomOut'
 import ChevronRight from '@react-spectrum/s2/icons/ChevronRight'
 import ChevronLeft from '@react-spectrum/s2/icons/ChevronLeft'
 import Image from '@react-spectrum/s2/icons/Image'
-import { COLORS } from '../../styles/designSystem'
+import { COLORS, SURFACES } from '../../styles/designSystem'
 
 /**
  * Placeholder component for templates without images
@@ -241,7 +241,7 @@ export const TemplatePicker: React.FC<TemplatePickerProps> = ({
           maxWidth: '1000px',
           maxHeight: '85vh',
           padding: '40px 56px',
-          backgroundColor: COLORS.WHITE,
+          backgroundColor: SURFACES.CANVAS,
           borderRadius: '24px',
           overflow: 'hidden auto',
           margin: '20px'
@@ -299,8 +299,9 @@ export const TemplatePicker: React.FC<TemplatePickerProps> = ({
                 isQuiet
                 onPress={handleZoomIn}
                 aria-label="Zoom in"
-                UNSAFE_style={{ 
-                  backgroundColor: 'rgba(255,255,255,0.8)',
+                UNSAFE_style={{
+                  backgroundColor: SURFACES.CANVAS,
+                  border: `1px solid ${SURFACES.BORDER}`,
                   borderRadius: '4px'
                 }}
               >
@@ -311,8 +312,9 @@ export const TemplatePicker: React.FC<TemplatePickerProps> = ({
                 onPress={handleZoomOut}
                 aria-label="Zoom out"
                 isDisabled={scale <= 0.5}
-                UNSAFE_style={{ 
-                  backgroundColor: 'rgba(255,255,255,0.8)',
+                UNSAFE_style={{
+                  backgroundColor: SURFACES.CANVAS,
+                  border: `1px solid ${SURFACES.BORDER}`,
                   borderRadius: '4px'
                 }}
               >
@@ -478,10 +480,7 @@ export const TemplatePicker: React.FC<TemplatePickerProps> = ({
             variant="accent"
             onPress={handleSave}
             isDisabled={!previewTemplateId}
-            UNSAFE_style={{
-              backgroundColor: previewTemplateId ? COLORS.BLACK : undefined,
-              borderColor: previewTemplateId ? COLORS.BLACK : undefined
-            }}
+            UNSAFE_className={previewTemplateId ? 'accent-btn-black' : undefined}
           >
             Save
           </Button>

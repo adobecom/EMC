@@ -743,10 +743,7 @@ const CampaignFormDialogContent: React.FC<CampaignFormDialogContentProps> = ({
         variant="accent"
         onPress={onSubmitForm}
         isDisabled={!isValid || isSaving}
-        UNSAFE_style={{
-          backgroundColor: COLORS.BLACK,
-          borderColor: COLORS.BLACK
-        }}
+        UNSAFE_className={!isValid || isSaving ? undefined : 'accent-btn-black'}
       >
         {isSaving ? 'Saving...' : 'Save'}
       </Button>
