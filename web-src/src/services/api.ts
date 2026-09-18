@@ -1148,7 +1148,7 @@ class ApiService {
             return eventSpeaker
           })
         )
-        data.speakers = hydratedSpeakers.sort((a: any, b: any) => (a.ordinal || 0) - (b.ordinal || 0))
+        data.speakers = hydratedSpeakers.sort((a: any, b: any) => (a.ordinal ?? 0) - (b.ordinal ?? 0))
       } else {
         data.speakers = eventSpeakers
       }
@@ -1175,7 +1175,7 @@ class ApiService {
             return eventSponsor
           })
         )
-        data.sponsors = hydratedSponsors.sort((a: any, b: any) => (a.ordinal || 0) - (b.ordinal || 0))
+        data.sponsors = hydratedSponsors.sort((a: any, b: any) => (a.ordinal ?? 0) - (b.ordinal ?? 0))
       } else {
         data.sponsors = eventSponsors
       }
