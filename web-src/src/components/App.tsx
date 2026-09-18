@@ -11,24 +11,28 @@ import { HashRouter as Router, Routes, Route, Navigate } from 'react-router-dom'
 import { TopNav } from './layout'
 import { ToastContainer } from './shared'
 import { AuthGate } from './AuthGate'
-import { ToastProvider, ApiProvider, AuthProvider, GroupProvider } from '../contexts'
+import { ToastProvider, ApiProvider, AuthProvider, GroupProvider, DashboardProvider } from '../contexts'
 import { RBACProvider } from '../contexts/RBACContext'
 import { RBACGate } from './RBACGate'
 import { useAuth } from '../contexts/AuthContext'
 import { Runtime, IMS } from '../types'
 import type { AuthMode } from '../contexts/AuthContext'
-import { useHasPermission, usePreferredColorScheme } from '../hooks'
+import { useHasPermission, useHasAnyPermission, usePreferredColorScheme } from '../hooks'
 import type { ColorScheme } from '@react-types/provider'
 
 interface ProtectedRouteProps {
-  resource: string
-  access: string
+  resource?: string
+  access?: string
+  /** Multiple permission checks (OR logic). Each entry is [resource, access]. */
+  anyOf?: Array<[string, string]>
   redirectTo: string
   children: React.ReactNode
 }
 
-const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ resource, access, redirectTo, children }) => {
-  const allowed = useHasPermission(resource, access)
+const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ resource, access, anyOf, redirectTo, children }) => {
+  const singleCheck = useHasPermission(resource || '', access || '')
+  const anyCheck = useHasAnyPermission(anyOf || [])
+  const allowed = anyOf && anyOf.length > 0 ? anyCheck : singleCheck
   return allowed ? <>{children}</> : <Navigate to={redirectTo} replace />
 }
 
@@ -44,6 +48,7 @@ import {
   Registrations,
   SpeakersDashboard,
   OverviewDashboard,
+  Dashboards,
   UserManagement,
   ScopeGroupManagement,
   RoleManagement,
@@ -99,51 +104,55 @@ const AppContent: React.FC<{ runtime: Runtime, colorScheme: ColorScheme }> = ({ 
               <RBACProvider>
                 <GroupProvider>
                   <ToastProvider>
-                    <div
-                      style={{
-                        display: 'grid',
-                        gridTemplateAreas: '"header" "content"',
-                        gridTemplateColumns: '1fr',
-                        gridTemplateRows: 'auto 1fr',
-                        gap: 0,
-                        minHeight: '100vh',
-                      }}
-                    >
+                    <DashboardProvider>
                       <div
                         style={{
-                          gridArea: 'header',
-                          position: 'sticky',
-                          top: 0,
-                          zIndex: 1000,
+                          display: 'grid',
+                          gridTemplateAreas: '"header" "content"',
+                          gridTemplateColumns: '1fr',
+                          gridTemplateRows: 'auto 1fr',
+                          gap: 0,
+                          minHeight: '100vh',
                         }}
                       >
-                        <TopNav ims={ims} />
+                        <div
+                          style={{
+                            gridArea: 'header',
+                            position: 'sticky',
+                            top: 0,
+                            zIndex: 1000,
+                          }}
+                        >
+                          <TopNav ims={ims} />
+                        </div>
+                        <div className="content-area" style={{ gridArea: 'content', minHeight: 0 }}>
+                          <RBACGate>
+                            <Routes>
+                              <Route path='/' element={<Home />} />
+                              <Route path='/overview' element={<OverviewDashboard ims={ims} />} />
+                              <Route path='/profile' element={<UserProfile ims={ims} />} />
+                              <Route path='/series' element={<SeriesDashboard ims={ims} />} />
+                              <Route path='/series/new' element={<ProtectedRoute resource="series" access="write" redirectTo="/series"><SeriesForm ims={ims} /></ProtectedRoute>} />
+                              <Route path='/series/edit/:id' element={<ProtectedRoute resource="series" access="write" redirectTo="/series"><SeriesForm ims={ims} /></ProtectedRoute>} />
+                              <Route path='/events' element={<EventsDashboard ims={ims} />} />
+                              <Route path='/events/new/:eventType' element={<ProtectedRoute resource="event" access="write" redirectTo="/events"><EventForm ims={ims} /></ProtectedRoute>} />
+                              <Route path='/events/edit/:id' element={<ProtectedRoute resource="event" access="write" redirectTo="/events"><EventForm ims={ims} /></ProtectedRoute>} />
+                              <Route path='/registrations' element={<Registrations ims={ims} />} />
+                              <Route path='/registrations/:eventId' element={<Registrations ims={ims} />} />
+                              <Route path='/speakers' element={<SpeakersDashboard ims={ims} />} />
+                              {/* Open to any content-scoped admin — see TopNav.tsx's canReadDashboards comment */}
+                              <Route path='/dashboards' element={<ProtectedRoute anyOf={[['event', 'read'], ['series', 'read']]} redirectTo="/"><Dashboards ims={ims} /></ProtectedRoute>} />
+                              <Route path='/users' element={<UserManagement ims={ims} />} />
+                              <Route path='/access' element={<ScopeGroupManagement ims={ims} />} />
+                              <Route path='/roles' element={<RoleManagement ims={ims} />} />
+                              <Route path='/configs' element={<ConfigManagement ims={ims} />} />
+                              <Route path='/about' element={<About />}/>
+                            </Routes>
+                          </RBACGate>
+                        </div>
                       </div>
-                      <div className="content-area" style={{ gridArea: 'content', minHeight: 0 }}>
-                        <RBACGate>
-                          <Routes>
-                            <Route path='/' element={<Home />} />
-                            <Route path='/overview' element={<OverviewDashboard ims={ims} />} />
-                            <Route path='/profile' element={<UserProfile ims={ims} />} />
-                            <Route path='/series' element={<SeriesDashboard ims={ims} />} />
-                            <Route path='/series/new' element={<ProtectedRoute resource="series" access="write" redirectTo="/series"><SeriesForm ims={ims} /></ProtectedRoute>} />
-                            <Route path='/series/edit/:id' element={<ProtectedRoute resource="series" access="write" redirectTo="/series"><SeriesForm ims={ims} /></ProtectedRoute>} />
-                            <Route path='/events' element={<EventsDashboard ims={ims} />} />
-                            <Route path='/events/new/:eventType' element={<ProtectedRoute resource="event" access="write" redirectTo="/events"><EventForm ims={ims} /></ProtectedRoute>} />
-                            <Route path='/events/edit/:id' element={<ProtectedRoute resource="event" access="write" redirectTo="/events"><EventForm ims={ims} /></ProtectedRoute>} />
-                            <Route path='/registrations' element={<Registrations ims={ims} />} />
-                            <Route path='/registrations/:eventId' element={<Registrations ims={ims} />} />
-                            <Route path='/speakers' element={<SpeakersDashboard ims={ims} />} />
-                            <Route path='/users' element={<UserManagement ims={ims} />} />
-                            <Route path='/access' element={<ScopeGroupManagement ims={ims} />} />
-                            <Route path='/roles' element={<RoleManagement ims={ims} />} />
-                            <Route path='/configs' element={<ConfigManagement ims={ims} />} />
-                            <Route path='/about' element={<About />}/>
-                          </Routes>
-                        </RBACGate>
-                      </div>
-                    </div>
-                    <ToastContainer />
+                      <ToastContainer />
+                    </DashboardProvider>
                   </ToastProvider>
                 </GroupProvider>
               </RBACProvider>
