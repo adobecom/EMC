@@ -391,7 +391,8 @@ export const ImageUploader: React.FC<ImageUploaderProps> = ({
                 position: 'absolute',
                 top: '8px',
                 right: '8px',
-                backgroundColor: 'rgba(255, 255, 255, 0.9)',
+                backgroundColor: SURFACES.CANVAS,
+                border: `1px solid ${SURFACES.BORDER}`,
                 borderRadius: '4px'
               }}
             >

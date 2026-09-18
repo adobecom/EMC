@@ -170,10 +170,7 @@ export const SeriesTemplateComponent: React.FC = () => {
           <Button
             variant="accent"
             onPress={handleOpenPicker}
-            UNSAFE_style={{
-              backgroundColor: COLORS.BLACK,
-              borderColor: COLORS.BLACK,
-            }}
+            UNSAFE_className="accent-btn-black"
           >
             Select
           </Button>

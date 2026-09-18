@@ -334,7 +334,7 @@ const PartnerCard: React.FC<PartnerCardProps> = ({
                 padding: `0 ${SPACING.XS}px`,
                 border: '1px solid var(--spectrum-global-color-gray-300)',
                 borderRadius: '2px',
-                backgroundColor: 'white',
+                backgroundColor: SURFACES.INPUT,
                 cursor: 'pointer',
               }}
             >
