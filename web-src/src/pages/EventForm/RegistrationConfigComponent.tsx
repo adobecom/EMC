@@ -103,7 +103,6 @@ export const RegistrationConfigComponent: React.FC = () => {
   // COMPUTED VALUES
   // ============================================================================
   
-  const isCreativeCloud = cloudType === 'CreativeCloud'
   const isExperienceCloud = cloudType === 'ExperienceCloud'
   const isWebinar = formData.eventType === 'webinar'
 
@@ -158,11 +157,7 @@ export const RegistrationConfigComponent: React.FC = () => {
     <div className={style({display: 'flex', flexDirection: 'column', gap: 24})}>
       <HeadingWithTooltip
         level={3}
-        tooltip={
-          isCreativeCloud
-            ? 'Optionally enable email links to the host or add a description to the RSVP process for your attendees.'
-            : 'DX events are waitlist only. Call-to-action buttons will only allow waitlisting.'
-        }
+        tooltip="Set an attendee limit, add a contact email, and write a description for your RSVP."
       >
         RSVP Configuration
       </HeadingWithTooltip>
@@ -177,7 +172,7 @@ export const RegistrationConfigComponent: React.FC = () => {
               >
                 <InfoCircle />
               </ActionButton>
-              <Tooltip>When no limit is set, all users will be admitted into event.</Tooltip>
+              <Tooltip>If you leave this blank, anyone can register for the event.</Tooltip>
             </TooltipTrigger>
           </div>
           <NumberField
@@ -199,7 +194,7 @@ export const RegistrationConfigComponent: React.FC = () => {
               isSelected={!allowWaitlist}
               onChange={(value) => handleAllowWaitlistChange(!value)}
             >
-              When limit is reached, disable registration button
+              When limit is reached, hide registration button
             </Switch>
             <TooltipTrigger delay={0}>
               <ActionButton
@@ -208,7 +203,7 @@ export const RegistrationConfigComponent: React.FC = () => {
                 <InfoCircle />
               </ActionButton>
               <Tooltip>
-                When selected, disable registration button when limit is reached.
+                Turn this on to hide the registration button once the attendee limit is reached. Turn it off to keep the registration button available and start a waitlist after the limit is reached.
               </Tooltip>
             </TooltipTrigger>
           </div>
@@ -256,7 +251,7 @@ export const RegistrationConfigComponent: React.FC = () => {
                     <InfoCircle />
                   </ActionButton>
                   <Tooltip>
-                    Contact host is optional.
+                    Turn this on to show attendees a contact email for the event host.
                   </Tooltip>
                 </TooltipTrigger>
               </div>
