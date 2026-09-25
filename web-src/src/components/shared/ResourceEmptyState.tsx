@@ -7,6 +7,7 @@ import {
   IllustratedMessage,
   Heading,
   Content,
+  ButtonGroup,
   Text,
 } from '@react-spectrum/s2'
 import { style } from '@react-spectrum/s2/style' with { type: 'macro' }
@@ -80,20 +81,7 @@ export const ResourceEmptyState: React.FC<ResourceEmptyStateProps> = ({
             {description}
           </Text>
         </Content>
-        {actions ? (
-          <div
-            className={style({
-              display: 'flex',
-              flexDirection: 'row',
-              gap: 12,
-              justifyContent: 'center',
-              flexWrap: 'wrap',
-              marginTop: 16,
-            })}
-          >
-            {actions}
-          </div>
-        ) : null}
+        {actions ? <ButtonGroup align="center">{actions}</ButtonGroup> : null}
       </IllustratedMessage>
     </div>
   )

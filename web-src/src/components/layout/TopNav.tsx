@@ -24,6 +24,12 @@ const TopNav: React.FC<TopNavProps> = ({ ims }) => {
   const canReadEvents = useHasPermission('event', 'read')
   const canReadSeries = useHasPermission('series', 'read')
   const canReadConfig = useHasPermission('config', 'read')
+  // Dashboards is open to any admin with read access to events or series —
+  // content within it is already scoped server-side per the active group
+  // (x-adobe-esp-group-id), so series-scoped admins see only their own data.
+  // A separate '*'/'*' check inside the feature still gates platform-wide-only
+  // data sources (e.g. platformUsers) that aren't scoped by the server.
+  const canReadDashboards = canReadEvents || canReadSeries
 
   // Hide all tabs until a group is selected (loading done and activeGroup set)
   const showNav = !isGroupLoading && activeGroup !== null
@@ -44,7 +50,7 @@ const TopNav: React.FC<TopNavProps> = ({ ims }) => {
 
   return (
     <div
-      className={`${barClass} top-nav`}
+      className={`${barClass} top-nav no-print`}
       style={STICKY_GNAV_STYLES}
     >
       <div
@@ -138,6 +144,14 @@ const TopNav: React.FC<TopNavProps> = ({ ims }) => {
                 to="/configs"
               >
                 <Text>Configs</Text>
+              </NavLink>
+            )}
+            {canReadDashboards && (
+              <NavLink
+                className={({ isActive }) => `nav-link ${isActive ? 'is-selected' : ''}`}
+                to="/dashboards"
+              >
+                <Text>Dashboards</Text>
               </NavLink>
             )}
             <NavLink

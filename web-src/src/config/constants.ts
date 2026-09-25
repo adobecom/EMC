@@ -119,6 +119,16 @@ export const SUPPORTED_CLOUDS = [
 
 export const TARGET_CMS_ENDPOINT = '/ecc/system/target-cms-map.json'
 
+/**
+ * EMC platform/engineering team roster, maintained by hand.
+ * Used only to exclude internal accounts from the platform-usage dashboard's
+ * user-growth metric — there's no RBAC signal that distinguishes "platform
+ * team member" from a real series/event admin (both are @adobe.com), so this
+ * has to be an explicit allowlist rather than something derived.
+ * Populate with lowercase emails as the team grows.
+ */
+export const INTERNAL_TEAM_EMAILS: ReadonlySet<string> = new Set([])
+
 export const EVENT_TYPES = {
   IN_PERSON: 'InPerson',
   WEBINAR: 'Webinar',
