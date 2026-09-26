@@ -328,6 +328,7 @@ export interface EventDashboardItem {
   localStartDate?: string
   localStartTime?: string
   localStartTimeMillis?: number
+  localEndTimeMillis?: number
   timezone?: string
   attendeeLimit?: number
   attendeeCount?: number
