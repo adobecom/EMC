@@ -10,6 +10,12 @@ describe('requiresEnTitleConfirmation', () => {
     expect(requiresEnTitleConfirmation(undefined, 'Titre', '')).toBe(false)
   })
 
+  it('never requires confirmation for other English locale variants', () => {
+    expect(requiresEnTitleConfirmation('en-GB', 'Creative Cloud Design Summit', 'Creative Cloud Design Summit')).toBe(false)
+    expect(requiresEnTitleConfirmation('en-AU', 'Title', '')).toBe(false)
+    expect(requiresEnTitleConfirmation('EN-CA', 'Title', 'Title')).toBe(false)
+  })
+
   it('requires confirmation for a non-English locale with an empty enTitle', () => {
     expect(requiresEnTitleConfirmation('fr-FR', 'Titre de l’événement', '')).toBe(true)
   })
