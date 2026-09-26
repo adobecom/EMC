@@ -884,10 +884,11 @@ const EventFormInner: React.FC<EventFormInnerProps> = ({ ims: _ims }) => {
     }
     
     const localStartTimeMillis = eventResponse.localStartTimeMillis || 0
-    // Pre-event: timing before event start, Post-event: timing after event start
+    const localEndTimeMillis = eventResponse.localEndTimeMillis || 0
+    // Pre-event: timing before event start, Post-event: timing after event end
     const timing = previewType === 'pre-event' 
       ? localStartTimeMillis - 10 
-      : localStartTimeMillis + 10
+      : localEndTimeMillis + 10
     
     const previewUrl = new URL(eventResponse.detailPagePath)
     previewUrl.searchParams.set('timing', String(timing))
