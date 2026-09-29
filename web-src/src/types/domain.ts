@@ -571,6 +571,9 @@ export interface VenueData {
   // Alternative venue name feature
   googlePlaceName?: string // Original name from Google Places
   useAlternativeVenueName?: boolean // Whether to show/use alternative name field
+  // Address override feature (client-only; never submitted to the venue API)
+  googleFormattedAddress?: string // Original formatted_address from Google Places
+  googleAddressComponents?: AddressComponent[] // Original address_components from Google Places
 }
 
 /** Per-field RSVP option UI state (scope-config select / multi-select). */

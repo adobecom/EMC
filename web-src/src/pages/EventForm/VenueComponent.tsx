@@ -8,17 +8,20 @@ import { Switch } from '@react-spectrum/s2'
 import { style } from "@react-spectrum/s2/style" with { type: "macro" }
 import Add from '@react-spectrum/s2/icons/Add'
 import RemoveCircle from '@react-spectrum/s2/icons/RemoveCircle'
+import Edit from '@react-spectrum/s2/icons/Edit'
 import { ImageUploader, RichTextEditor } from '../../components/shared'
 import { TYPOGRAPHY, COLORS, SURFACES } from '../../styles/designSystem'
-import { VenueData, EventApiResponse } from '../../types/domain'
+import { VenueData, EventApiResponse, AddressComponent, Venue } from '../../types/domain'
 import { loadGooglePlacesAPI } from '../../utils/loadGooglePlaces'
+import { areAddressComponentsEqual, getAddressOverrideError } from '../../utils/venueAddress'
 import { useEventFormComponent } from '../../hooks/useEventFormComponent'
-import { useEventFormContext } from '../../contexts'
+import { useEventFormContext, useToast } from '../../contexts'
 import { apiService } from '../../services/api'
 import { getVenuePayload } from '../../utils/dataFilters'
 import { uploadImage } from '../../services/requestHelpers'
 import { getCurrentEnvironment, getApiHost } from '../../config/constants'
 import { LocationDialog, VenueLocation } from './LocationDialog'
+import { VenueAddressEditor, AddressComponentField } from './VenueAddressEditor'
 import '../../../src/types/google-places.d.ts'
 
 // ============================================================================
@@ -37,6 +40,7 @@ const VENUE_NAME_MAX_LENGTH = 80
  * Features:
  * - Google Places autocomplete for venue search
  * - Alternative venue name override
+ * - Address override (formatted address + address components)
  * - Venue image upload
  * - Instructions for attendees
  * - Post-event visibility toggles
@@ -55,8 +59,18 @@ const VENUE_NAME_MAX_LENGTH = 80
  *   Set only by place selection; never touched by manual typing or alternative name.
  * - venue.placeId (context): Set only by place selection.
  *   Cleared when user edits the main input (signals "needs re-selection").
+ * - venue.formattedAddress / venue.addressComponents (context): Sent to the API.
+ *   Seeded from Google Places; the user may override them via the address editor.
+ * - venue.googleFormattedAddress / venue.googleAddressComponents (context):
+ *   Immutable record of the Google Places address, used for "Reset". Only known
+ *   when a place was picked in this session (not reconstructed in edit mode).
  */
 export const VenueComponent: React.FC = () => {
+  const toast = useToast()
+  // Set when the user edits the address so the save runs even if the GET
+  // venue response does not round-trip addressComponents.
+  const addressEditedRef = useRef(false)
+
   // ============================================================================
   // CONTEXT INTEGRATION
   // ============================================================================
@@ -145,8 +159,19 @@ export const VenueComponent: React.FC = () => {
         const additionalInfoSame =
           (venueData.additionalInformation || '') ===
           (existingLocalized.additionalInformation ?? existingVenue.additionalInformation ?? '')
+        const formattedAddressSame =
+          (venueData.formattedAddress || '') ===
+          (existingVenue.formattedAddress || existingVenue.address || '')
+        // Only compare components when both sides have them (GET may omit them)
+        const addressComponentsSame =
+          !venueData.addressComponents || !Array.isArray(existingVenue.addressComponents)
+            ? true
+            : areAddressComponentsEqual(venueData.addressComponents, existingVenue.addressComponents)
         
-        if (placeIdSame && venueNameSame && additionalInfoSame) {
+        if (
+          placeIdSame && venueNameSame && additionalInfoSame &&
+          formattedAddressSame && addressComponentsSame && !addressEditedRef.current
+        ) {
           // Nothing relevant changed — skip the API call entirely
           return
         }
@@ -186,6 +211,14 @@ export const VenueComponent: React.FC = () => {
       }
       
       let savedVenueId: string | null = existingVenue?.venueId ?? null
+      // Did the user override the Google address? Used to verify the API kept it.
+      const hasAddressOverride = addressEditedRef.current || (
+        venueData.googleFormattedAddress !== undefined && (
+          venueData.formattedAddress !== venueData.googleFormattedAddress ||
+          !areAddressComponentsEqual(venueData.addressComponents, venueData.googleAddressComponents)
+        )
+      )
+      let saveResult: Partial<Venue> | null = null
       try {
         if (!existingVenue) {
           // ---- CREATE (POST) ----
@@ -195,6 +228,7 @@ export const VenueComponent: React.FC = () => {
             return
           }
           savedVenueId = result?.venueId ?? null
+          saveResult = result
         } else {
           // ---- UPDATE (PUT) — include venueId + timestamps as required by API ----
           const putPayload = {
@@ -214,10 +248,48 @@ export const VenueComponent: React.FC = () => {
             console.error('Failed to update venue:', result)
             return
           }
+          saveResult = result
         }
       } catch (error) {
         console.error('Error saving venue:', error)
         return
+      }
+      addressEditedRef.current = false
+
+      // The venue API may re-derive the address from placeId. If it didn't keep
+      // the user's override, sync the form to what was saved (so later saves
+      // don't re-send it) and tell the user instead of silently dropping it.
+      if (hasAddressOverride && saveResult && typeof saveResult === 'object') {
+        const returnedAddress = saveResult.formattedAddress
+        const returnedComponents = saveResult.addressComponents
+        const addressDropped =
+          typeof returnedAddress === 'string' && returnedAddress !== (basePayload.formattedAddress || '')
+        const componentsDropped =
+          Array.isArray(returnedComponents) &&
+          Array.isArray(basePayload.addressComponents) &&
+          !areAddressComponentsEqual(basePayload.addressComponents, returnedComponents)
+        if (addressDropped || componentsDropped) {
+          console.warn('Venue API did not persist the address override', {
+            sent: { formattedAddress: basePayload.formattedAddress, addressComponents: basePayload.addressComponents },
+            returned: { formattedAddress: returnedAddress, addressComponents: returnedComponents },
+          })
+          const savedAddress: Partial<VenueData> = {}
+          if (addressDropped && typeof returnedAddress === 'string') {
+            savedAddress.formattedAddress = returnedAddress
+          }
+          if (componentsDropped && Array.isArray(returnedComponents)) {
+            savedAddress.addressComponents = returnedComponents.map(({ longName, shortName, types }) => ({
+              longName,
+              shortName,
+              types: [...(types || [])],
+            }))
+          }
+          updateVenueStable(savedAddress)
+          toast.info(
+            `The venue service did not keep your edited address. Saved address: ${returnedAddress ?? venueData.formattedAddress ?? ''}`,
+            { duration: 10000 }
+          )
+        }
       }
 
       // ========================================================================
@@ -267,6 +339,11 @@ export const VenueComponent: React.FC = () => {
       if (venueData?.venueName?.trim() && !venueData?.placeId) {
         return 'Please select a valid venue from the autocomplete suggestions'
       }
+
+      if (venueData?.placeId && addressEditedRef.current) {
+        const addressError = getAddressOverrideError(venueData.formattedAddress, venueData.addressComponents)
+        if (addressError) return addressError
+      }
       
       return true
     }
@@ -306,6 +383,8 @@ export const VenueComponent: React.FC = () => {
     // If alt name was active, the current venueName IS the alternative name
     venue.useAlternativeVenueName ? (venue.venueName || '') : ''
   )
+
+  const [isAddressEditorOpen, setIsAddressEditorOpen] = useState(false)
   
   // Deferred image upload state - used when creating new events (no eventId yet)
   const [pendingImageFile, setPendingImageFile] = useState<File | null>(null)
@@ -450,11 +529,18 @@ export const VenueComponent: React.FC = () => {
               }))
             }
 
+            // Keep an immutable copy of the Google address for "Reset"
+            updates.googleFormattedAddress = updates.formattedAddress
+            updates.googleAddressComponents = updates.addressComponents?.map(c => ({ ...c, types: [...c.types] }))
+
             // Update local input to show the selected place name
             setVenueNameValue(place.name || '')
             // Reset alternative name
             setAlternativeVenueName('')
             setShowAlternativeNameField(false)
+            // Reset address override
+            setIsAddressEditorOpen(false)
+            addressEditedRef.current = false
             // Persist to form context (uses ref — always latest venue)
             updateVenueStable(updates)
           }
@@ -528,6 +614,8 @@ export const VenueComponent: React.FC = () => {
   const handleVenueNameChange = (value: string) => {
     setVenueNameValue(value)
     setPlaceSelected(false)
+    setIsAddressEditorOpen(false)
+    addressEditedRef.current = false
 
     // Clear place-specific data — the user is searching for a new venue.
     // Keep non-place fields (images, instructions, post-event toggles).
@@ -539,7 +627,9 @@ export const VenueComponent: React.FC = () => {
       coordinates: undefined,
       formattedAddress: '',
       gmtOffset: undefined,
-      addressComponents: undefined
+      addressComponents: undefined,
+      googleFormattedAddress: undefined,
+      googleAddressComponents: undefined
     })
   }
   
@@ -580,6 +670,41 @@ export const VenueComponent: React.FC = () => {
   const handleAlternativeNameChange = (value: string) => {
     setAlternativeVenueName(value)
     updateVenueStable({ venueName: value })
+  }
+
+  // --- Address override -------------------------------------------------------
+  // Only formattedAddress / addressComponents change; placeId, coordinates and
+  // gmtOffset stay as returned by Google Places.
+
+  const handleFormattedAddressChange = (value: string) => {
+    addressEditedRef.current = true
+    updateVenueStable({ formattedAddress: value })
+  }
+
+  const handleAddressComponentChange = (index: number, field: AddressComponentField, value: string) => {
+    const components = [...(formDataRef.current.venue?.addressComponents || [])]
+    if (!components[index]) return
+    components[index] = { ...components[index], [field]: value }
+    addressEditedRef.current = true
+    updateVenueStable({ addressComponents: components })
+  }
+
+  const handleAddressComponentRemove = (index: number) => {
+    const components = (formDataRef.current.venue?.addressComponents || []).filter((_, i) => i !== index)
+    addressEditedRef.current = true
+    updateVenueStable({ addressComponents: components })
+  }
+
+  const handleAddressReset = () => {
+    const current = formDataRef.current.venue
+    if (current?.googleFormattedAddress === undefined) return
+    const googleComponents: AddressComponent[] | undefined =
+      current.googleAddressComponents?.map(c => ({ ...c, types: [...c.types] }))
+    addressEditedRef.current = true
+    updateVenueStable({
+      formattedAddress: current.googleFormattedAddress,
+      addressComponents: googleComponents
+    })
   }
   
   const handleShowVenuePostEventChange = (checked: boolean) => {
@@ -731,6 +856,48 @@ export const VenueComponent: React.FC = () => {
           </Text>
         )}
       </div>
+
+      {/* Venue Address (read-only summary or override editor) */}
+      {venue.placeId && (
+        <div className={style({display: 'flex', flexDirection: 'column', gap: 8})}>
+          {isAddressEditorOpen ? (
+            <VenueAddressEditor
+              formattedAddress={venue.formattedAddress || ''}
+              addressComponents={venue.addressComponents || []}
+              googleFormattedAddress={venue.googleFormattedAddress}
+              googleAddressComponents={venue.googleAddressComponents}
+              onFormattedAddressChange={handleFormattedAddressChange}
+              onComponentChange={handleAddressComponentChange}
+              onComponentRemove={handleAddressComponentRemove}
+              onReset={handleAddressReset}
+            />
+          ) : (
+            <Text
+              data-testid="venue-formatted-address"
+              UNSAFE_style={TYPOGRAPHY.SECTION_DESCRIPTION}
+            >
+              {venue.formattedAddress || 'No address available for this venue.'}
+            </Text>
+          )}
+          <div>
+            <ActionButton
+              isQuiet
+              data-testid="venue-edit-address-button"
+              onPress={() => setIsAddressEditorOpen(open => !open)}
+              UNSAFE_style={{
+                color: COLORS.GRAY_800,
+                padding: '0 12px',
+                marginLeft: '-8px'
+              }}
+            >
+              <Edit />
+              <Text UNSAFE_style={{ marginLeft: '4px', color: COLORS.GRAY_800 }}>
+                {isAddressEditorOpen ? 'Done editing address' : 'Edit address'}
+              </Text>
+            </ActionButton>
+          </div>
+        </div>
+      )}
 
       {/* Alternative Venue Name Toggle */}
       <div>

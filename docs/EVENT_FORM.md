@@ -350,13 +350,16 @@ interface EventTag {
 
 interface VenueData {
   venueName: string
-  formattedAddress?: string
+  formattedAddress?: string          // Sent to the API; user can override the Google value
+  addressComponents?: AddressComponent[] // Sent to the API; user can override/remove components
   placeId?: string
   coordinates?: { lat: number; lon: number }
   gmtOffset?: number
   additionalInformation?: string
   showVenuePostEvent?: boolean
   showAdditionalInfoPostEvent?: boolean
+  googleFormattedAddress?: string    // Client-only copy of the Google address (for "Reset")
+  googleAddressComponents?: AddressComponent[] // Client-only copy of Google components
 }
 
 interface EventImageData {
