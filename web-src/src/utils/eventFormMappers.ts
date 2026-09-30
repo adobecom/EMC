@@ -165,7 +165,8 @@ export function mapApiResponseToFormData(event: EventApiResponse, locale: string
     venueMapImageUrl: (venueMapImageRow as { imageUrl?: string } | undefined)?.imageUrl,
     showVenuePostEvent: event.showVenuePostEvent ?? true,
     showAdditionalInfoPostEvent: event.showVenueAdditionalInfoPostEvent ?? true,
-    googlePlaceName: event.venue.venueName || ''
+    googlePlaceName: event.venue.venueName || '',
+    googleFormattedAddress: event.venue.formattedAddress || event.venue.address || ''
   } : undefined
 
   // Collapses non-webinar types (incl. Hybrid) to 'in-person'. If Hybrid events ever load
