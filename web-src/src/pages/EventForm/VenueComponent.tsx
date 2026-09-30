@@ -37,7 +37,7 @@ const VENUE_NAME_MAX_LENGTH = 80
  * Features:
  * - Google Places autocomplete for venue search
  * - Alternative venue name override
- * - Alternative address override (formatted address only)
+ * - Formatted address preview + alternative address override (formatted address only)
  * - Venue image upload
  * - Instructions for attendees
  * - Post-event visibility toggles
@@ -841,6 +841,17 @@ export const VenueComponent: React.FC = () => {
           </Text>
         )}
       </div>
+
+      {/* Venue address preview — the formatted address sent to the API
+          (the alternative address when one is set) */}
+      {venue.placeId && (
+        <Text
+          data-testid="venue-formatted-address"
+          UNSAFE_style={TYPOGRAPHY.SECTION_DESCRIPTION}
+        >
+          {venue.formattedAddress || 'No address available for this venue.'}
+        </Text>
+      )}
 
       {/* Alternative Venue Name Toggle */}
       <div>
