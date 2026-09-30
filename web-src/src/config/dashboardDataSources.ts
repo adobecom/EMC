@@ -11,6 +11,8 @@
 */
 
 import { apiService, cachedApi } from '../services/api'
+import { apiCache } from '../services/cacheUtils'
+import { mapWithConcurrency } from '../utils/concurrency'
 import { INTERNAL_TEAM_EMAILS } from './constants'
 import type { Aggregation } from '../types/dashboard'
 
@@ -359,6 +361,68 @@ const sessionsDataSource: DashboardDataSource = {
 }
 
 // ============================================================================
+// Attendees
+//
+// The heaviest fan-out here: `apiService.getAllEventAttendees` already issues 3
+// HTTP calls per event to hydrate `registrationStatus`, which the list endpoint
+// omits. An unbounded Promise.all (like speakers/sponsors use per-series) would
+// mean ~3N concurrent requests, so this caps concurrency via `mapWithConcurrency`.
+// It also bypasses `cachedApi`'s per-event cache key — which would add one entry
+// per event to the shared, app-wide 100-entry LRU cache and evict unrelated
+// cached data for large orgs — and instead caches the whole aggregate under one
+// `apiCache` entry.
+// ============================================================================
+
+// ~Chrome's per-origin connection limit; each event's own 3-way fan-out means
+// this caps worst-case simultaneous requests at ~18 regardless of org size.
+const ATTENDEE_FETCH_CONCURRENCY = 6
+
+async function fetchAttendeesRaw(): Promise<Record<string, unknown>[]> {
+  const events = await cachedApi.getEventsList()
+  const seriesIdByEvent = new Map(events.map((event) => [event.eventId, event.seriesId]))
+
+  const perEventResults = await mapWithConcurrency(events, ATTENDEE_FETCH_CONCURRENCY, async (event) => {
+    const result = await apiService.getAllEventAttendees(event.eventId)
+    if ('error' in result) return [] as Record<string, unknown>[]
+    return result.map((attendee: Record<string, unknown>) => ({
+      ...attendee,
+      eventId: event.eventId,
+      seriesId: seriesIdByEvent.get(event.eventId),
+    }))
+  })
+
+  return perEventResults.flat()
+}
+
+const fetchAttendees = () => apiCache.get(fetchAttendeesRaw)
+
+const attendeesDataSource: DashboardDataSource = {
+  id: 'attendees',
+  label: 'Attendees',
+  timeField: '__ts',
+  dimensions: [
+    { field: 'registrationStatus', label: 'Registration status' },
+    { field: 'checkedIn', label: 'Checked in' },
+    { field: 'eventId', label: 'Event' },
+    { field: 'seriesId', label: 'Series' },
+  ],
+  metrics: [
+    COUNT_METRIC,
+    {
+      field: 'checkedInRate',
+      label: 'Checked-in rate',
+      aggregations: ['avg'],
+      compute: (record) => (typeof record.checkedIn === 'boolean' ? (record.checkedIn ? 1 : 0) : null),
+    },
+  ],
+  fetch: fetchAttendees,
+  normalize: (raw) => ({
+    ...raw,
+    __ts: toEpochMs(raw.creationTime),
+  }),
+}
+
+// ============================================================================
 // Registry
 // ============================================================================
 
@@ -369,6 +433,7 @@ export const DASHBOARD_DATA_SOURCES: Record<string, DashboardDataSource> = {
   sponsors: sponsorsDataSource,
   venues: venuesDataSource,
   sessions: sessionsDataSource,
+  attendees: attendeesDataSource,
   platformUsers: platformUsersDataSource,
 }
 

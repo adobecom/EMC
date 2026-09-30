@@ -77,7 +77,7 @@ export const WidgetPreview: React.FC<WidgetPreviewProps> = ({ widget, color }) =
         // of the page-level admin gate that gets a user onto this page at all.
         // speakers/sponsors are fanned out from all series, venues/sessions from all
         // events, regardless of the viewer's RBAC scope — gate them the same way.
-        if (dataSource.id === 'events' || dataSource.id === 'venues' || dataSource.id === 'sessions') {
+        if (dataSource.id === 'events' || dataSource.id === 'venues' || dataSource.id === 'sessions' || dataSource.id === 'attendees') {
           setRecords(filterEvents(raw))
         } else if (dataSource.id === 'series' || dataSource.id === 'speakers' || dataSource.id === 'sponsors') {
           setRecords(filterSeries(raw))
