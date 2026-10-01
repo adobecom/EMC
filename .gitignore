@@ -44,3 +44,6 @@ logs
 # PIM local state
 .pim/
 .pim.json
+
+# git worktrees
+.worktrees/

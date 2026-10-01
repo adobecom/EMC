@@ -350,13 +350,16 @@ interface EventTag {
 
 interface VenueData {
   venueName: string
-  formattedAddress?: string
+  formattedAddress?: string          // Sent to the API; the alternative address when one is set
+  addressComponents?: AddressComponent[] // Sent to the API as returned by Google Places
   placeId?: string
   coordinates?: { lat: number; lon: number }
   gmtOffset?: number
   additionalInformation?: string
   showVenuePostEvent?: boolean
   showAdditionalInfoPostEvent?: boolean
+  googleFormattedAddress?: string    // Client-only copy of the Google address (restored when the alternative is removed)
+  useAlternativeAddress?: boolean    // Client-only; whether the alternative address field is shown/used
 }
 
 interface EventImageData {

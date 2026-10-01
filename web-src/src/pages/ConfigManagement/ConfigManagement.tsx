@@ -62,6 +62,7 @@ import { hasRsvpSlice, hasLocalesSlice, hasAttributesSlice } from '../../types/c
 import { BlurredLoadingOverlay } from '../../components/shared'
 import { useHasPermission } from '../../hooks/useHasPermission'
 import { SUPPORTED_SPEAKER_LOCALES, SPEAKER_LOCALE_LABELS } from '../../config/localeMapping'
+import { KNOWN_CUSTOM_ATTRIBUTES } from '../../config/knownCustomAttributes'
 
 interface ConfigManagementProps {
   ims: IMS
@@ -116,6 +117,9 @@ export const ATTRIBUTE_INPUT_TYPES: { key: CustomAttributeInputType; label: stri
   { key: 'single-select', label: 'Single Select' },
   { key: 'multi-select', label: 'Multi Select' },
 ]
+
+/** Sentinel for the "Known Integration" picker meaning "not a known integration". */
+const CUSTOM_ATTRIBUTE_SENTINEL = 'custom'
 
 /** Build a PUT body that preserves all existing slices and merges in updates.
  *  Drops the legacy `type` discriminator — slices are detected by field presence. */
@@ -220,6 +224,7 @@ export const ConfigManagement: React.FC<ConfigManagementProps> = () => {
 
   const [isAttrFormOpen, setIsAttrFormOpen] = useState(false)
   const [editingAttr, setEditingAttr] = useState<CustomAttributeConfig | null>(null)
+  const [attrFormKnownKey, setAttrFormKnownKey] = useState<string>(CUSTOM_ATTRIBUTE_SENTINEL)
   const [attrFormName, setAttrFormName] = useState('')
   const [attrFormLabel, setAttrFormLabel] = useState('')
   const [attrFormInputType, setAttrFormInputType] = useState<CustomAttributeInputType>('text')
@@ -681,6 +686,7 @@ export const ConfigManagement: React.FC<ConfigManagementProps> = () => {
 
   const openAttrCreate = useCallback(() => {
     setEditingAttr(null)
+    setAttrFormKnownKey(CUSTOM_ATTRIBUTE_SENTINEL)
     setAttrFormName('')
     setAttrFormLabel('')
     setAttrFormInputType('text')
@@ -691,12 +697,31 @@ export const ConfigManagement: React.FC<ConfigManagementProps> = () => {
 
   const openAttrEdit = useCallback((attr: CustomAttributeConfig) => {
     setEditingAttr(attr)
+    setAttrFormKnownKey(CUSTOM_ATTRIBUTE_SENTINEL)
     setAttrFormName(attr.name)
     setAttrFormLabel(attr.label ?? '')
     setAttrFormInputType(attr.inputType)
     setAttrFormValues(attr.values.map(v => ({ ...v, label: v.label ?? '' })))
     setAttrFormEnabled(attr.enabled)
     setIsAttrFormOpen(true)
+  }, [])
+
+  /** Applies a KNOWN_CUSTOM_ATTRIBUTES preset's name/label/inputType/values,
+   *  or reverts to a fully-manual attribute when the sentinel is picked. */
+  const handleKnownAttributeSelect = useCallback((key: string) => {
+    setAttrFormKnownKey(key)
+    if (key === CUSTOM_ATTRIBUTE_SENTINEL) return
+    const known = KNOWN_CUSTOM_ATTRIBUTES.find(k => k.name === key)
+    if (!known) return
+    setAttrFormName(known.name)
+    setAttrFormLabel(known.label)
+    setAttrFormInputType(known.inputType)
+    setAttrFormValues((known.suggestedValues ?? []).map((v, i) => ({
+      valueId: '',
+      value: v.value,
+      label: v.label,
+      ordinal: i,
+    })))
   }, [])
 
   const handleSaveAttr = useCallback(async () => {
@@ -1820,12 +1845,31 @@ export const ConfigManagement: React.FC<ConfigManagementProps> = () => {
               <Heading slot="title">{editingAttr ? 'Edit Custom Attribute' : 'Create Custom Attribute'}</Heading>
               <Content>
                 <div className={style({ display: 'flex', flexDirection: 'column', gap: 16 })}>
+                  {!editingAttr && (
+                    <Picker
+                      label="Known Integration"
+                      description={
+                        attrFormKnownKey === CUSTOM_ATTRIBUTE_SENTINEL
+                          ? 'Pick an event-libs integration this attribute is known to power, or leave as Custom Attribute for anything else.'
+                          : KNOWN_CUSTOM_ATTRIBUTES.find(k => k.name === attrFormKnownKey)?.description
+                      }
+                      selectedKey={attrFormKnownKey}
+                      onSelectionChange={(key) => handleKnownAttributeSelect(key as string)}
+                      styles={style({ width: '[100%]' })}
+                    >
+                      <PickerItem key={CUSTOM_ATTRIBUTE_SENTINEL} id={CUSTOM_ATTRIBUTE_SENTINEL}>Custom Attribute</PickerItem>
+                      {KNOWN_CUSTOM_ATTRIBUTES.map(k => (
+                        <PickerItem key={k.name} id={k.name}>{k.label}</PickerItem>
+                      ))}
+                    </Picker>
+                  )}
                   <TextField
                     label="Name"
                     value={attrFormName}
                     onChange={setAttrFormName}
                     styles={style({ width: '[100%]' })}
                     isRequired
+                    isDisabled={attrFormKnownKey !== CUSTOM_ATTRIBUTE_SENTINEL}
                     autoFocus
                   />
                   <TextField
@@ -1848,6 +1892,7 @@ export const ConfigManagement: React.FC<ConfigManagementProps> = () => {
                       }
                     }}
                     styles={style({ width: '[100%]' })}
+                    isDisabled={attrFormKnownKey !== CUSTOM_ATTRIBUTE_SENTINEL}
                   >
                     {ATTRIBUTE_INPUT_TYPES.map(t => (
                       <PickerItem key={t.key} id={t.key}>{t.label}</PickerItem>

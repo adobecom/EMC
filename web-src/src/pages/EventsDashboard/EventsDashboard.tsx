@@ -125,6 +125,7 @@ export const EventsDashboard: React.FC<EventsDashboardProps> = () => {
         localStartDate: item.localStartDate,
         localStartTime: item.localStartTime,
         localStartTimeMillis: item.localStartTimeMillis,
+        localEndTimeMillis: item.localEndTimeMillis,
         detailPagePath: item.detailPagePath,
         timezone: item.timezone,
         attendeeLimit: item.attendeeLimit,
@@ -395,11 +396,12 @@ export const EventsDashboard: React.FC<EventsDashboardProps> = () => {
 
         const previewType = action === 'preview-pre' ? 'pre-event' : 'post-event'
         const localStartTimeMillis = item.localStartTimeMillis || 0
+        const localEndTimeMillis = item.localEndTimeMillis || 0
         
-        // Pre-event: timing before event start, Post-event: timing after event start
+        // Pre-event: timing before event start, Post-event: timing after event end
         const timing = previewType === 'pre-event' 
           ? localStartTimeMillis - 10 
-          : localStartTimeMillis + 10
+          : localEndTimeMillis + 10
 
         const previewUrl = new URL(item.detailPagePath)
         previewUrl.searchParams.set('timing', String(timing))

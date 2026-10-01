@@ -10,10 +10,10 @@ import Add from '@react-spectrum/s2/icons/Add'
 import RemoveCircle from '@react-spectrum/s2/icons/RemoveCircle'
 import { ImageUploader, RichTextEditor } from '../../components/shared'
 import { TYPOGRAPHY, COLORS, SURFACES } from '../../styles/designSystem'
-import { VenueData, EventApiResponse } from '../../types/domain'
+import { VenueData, EventApiResponse, Venue } from '../../types/domain'
 import { loadGooglePlacesAPI } from '../../utils/loadGooglePlaces'
 import { useEventFormComponent } from '../../hooks/useEventFormComponent'
-import { useEventFormContext } from '../../contexts'
+import { useEventFormContext, useToast } from '../../contexts'
 import { apiService } from '../../services/api'
 import { getVenuePayload } from '../../utils/dataFilters'
 import { uploadImage } from '../../services/requestHelpers'
@@ -37,6 +37,7 @@ const VENUE_NAME_MAX_LENGTH = 80
  * Features:
  * - Google Places autocomplete for venue search
  * - Alternative venue name override
+ * - Formatted address preview + alternative address override (formatted address only)
  * - Venue image upload
  * - Instructions for attendees
  * - Post-event visibility toggles
@@ -55,8 +56,18 @@ const VENUE_NAME_MAX_LENGTH = 80
  *   Set only by place selection; never touched by manual typing or alternative name.
  * - venue.placeId (context): Set only by place selection.
  *   Cleared when user edits the main input (signals "needs re-selection").
+ * - alternativeAddress (local): The user-provided alternative address.
+ * - venue.formattedAddress (context): The address sent to the API.
+ *   Equals googleFormattedAddress when no alternative is active, or the alternative address.
+ * - venue.googleFormattedAddress (context): Record of the Google Places formatted
+ *   address, restored when the alternative address is removed. In edit mode it is
+ *   seeded from the saved address (same as googlePlaceName).
+ * - venue.addressComponents (context): Sent to the API as returned by Google
+ *   Places; never edited by the user.
  */
 export const VenueComponent: React.FC = () => {
+  const toast = useToast()
+
   // ============================================================================
   // CONTEXT INTEGRATION
   // ============================================================================
@@ -145,8 +156,11 @@ export const VenueComponent: React.FC = () => {
         const additionalInfoSame =
           (venueData.additionalInformation || '') ===
           (existingLocalized.additionalInformation ?? existingVenue.additionalInformation ?? '')
+        const formattedAddressSame =
+          (venueData.formattedAddress || '') ===
+          (existingVenue.formattedAddress || existingVenue.address || '')
         
-        if (placeIdSame && venueNameSame && additionalInfoSame) {
+        if (placeIdSame && venueNameSame && additionalInfoSame && formattedAddressSame) {
           // Nothing relevant changed — skip the API call entirely
           return
         }
@@ -186,6 +200,9 @@ export const VenueComponent: React.FC = () => {
       }
       
       let savedVenueId: string | null = existingVenue?.venueId ?? null
+      // Did the user set an alternative address? Used to verify the API kept it.
+      const hasAddressOverride = Boolean(venueData.useAlternativeAddress)
+      let saveResult: Partial<Venue> | null = null
       try {
         if (!existingVenue) {
           // ---- CREATE (POST) ----
@@ -195,6 +212,7 @@ export const VenueComponent: React.FC = () => {
             return
           }
           savedVenueId = result?.venueId ?? null
+          saveResult = result
         } else {
           // ---- UPDATE (PUT) — include venueId + timestamps as required by API ----
           const putPayload = {
@@ -214,10 +232,35 @@ export const VenueComponent: React.FC = () => {
             console.error('Failed to update venue:', result)
             return
           }
+          saveResult = result
         }
       } catch (error) {
         console.error('Error saving venue:', error)
         return
+      }
+
+      // The venue API may re-derive the address from placeId. If it didn't keep
+      // the user's override, sync the form to what was saved (so later saves
+      // don't re-send it) and tell the user instead of silently dropping it.
+      if (hasAddressOverride && saveResult && typeof saveResult === 'object') {
+        const returnedAddress = saveResult.formattedAddress
+        if (typeof returnedAddress === 'string' && returnedAddress !== (basePayload.formattedAddress || '')) {
+          console.warn('Venue API did not persist the address override', {
+            sent: basePayload.formattedAddress,
+            returned: returnedAddress,
+          })
+          setShowAlternativeAddressField(false)
+          setAlternativeAddress('')
+          updateVenueStable({
+            formattedAddress: returnedAddress,
+            googleFormattedAddress: returnedAddress,
+            useAlternativeAddress: false
+          })
+          toast.info(
+            `The venue service did not keep your edited address. Saved address: ${returnedAddress}`,
+            { duration: 10000 }
+          )
+        }
       }
 
       // ========================================================================
@@ -267,6 +310,10 @@ export const VenueComponent: React.FC = () => {
       if (venueData?.venueName?.trim() && !venueData?.placeId) {
         return 'Please select a valid venue from the autocomplete suggestions'
       }
+
+      if (venueData?.placeId && venueData.useAlternativeAddress && !venueData.formattedAddress?.trim()) {
+        return 'Add the alternative address or remove it.'
+      }
       
       return true
     }
@@ -281,7 +328,8 @@ export const VenueComponent: React.FC = () => {
     showVenueImagePostEvent: false,
     showAdditionalInfoPostEvent: false,
     useAlternativeVenueName: false,
-    googlePlaceName: ''
+    googlePlaceName: '',
+    useAlternativeAddress: false
   }
   
   // ============================================================================
@@ -305,6 +353,14 @@ export const VenueComponent: React.FC = () => {
   const [alternativeVenueName, setAlternativeVenueName] = useState(
     // If alt name was active, the current venueName IS the alternative name
     venue.useAlternativeVenueName ? (venue.venueName || '') : ''
+  )
+
+  // Alternative address state (mirrors the alternative venue name)
+  const [showAlternativeAddressField, setShowAlternativeAddressField] = useState(
+    venue.useAlternativeAddress || false
+  )
+  const [alternativeAddress, setAlternativeAddress] = useState(
+    venue.useAlternativeAddress ? (venue.formattedAddress || '') : ''
   )
   
   // Deferred image upload state - used when creating new events (no eventId yet)
@@ -428,7 +484,8 @@ export const VenueComponent: React.FC = () => {
               googlePlaceName: place.name || '',
               formattedAddress: place.formatted_address || '',
               placeId: place.place_id,
-              useAlternativeVenueName: false
+              useAlternativeVenueName: false,
+              useAlternativeAddress: false
             }
 
             if (place.geometry?.location) {
@@ -450,11 +507,17 @@ export const VenueComponent: React.FC = () => {
               }))
             }
 
+            // Keep a copy of the Google address to restore when the alternative is removed
+            updates.googleFormattedAddress = updates.formattedAddress
+
             // Update local input to show the selected place name
             setVenueNameValue(place.name || '')
             // Reset alternative name
             setAlternativeVenueName('')
             setShowAlternativeNameField(false)
+            // Reset alternative address
+            setAlternativeAddress('')
+            setShowAlternativeAddressField(false)
             // Persist to form context (uses ref — always latest venue)
             updateVenueStable(updates)
           }
@@ -489,6 +552,7 @@ export const VenueComponent: React.FC = () => {
   // ============================================================================
   
   const isInitialSyncDone = useRef(false)
+  const isInitialAddressSyncDone = useRef(false)
   
   useEffect(() => {
     // Don't overwrite the Google Places input when the alternative field
@@ -505,6 +569,13 @@ export const VenueComponent: React.FC = () => {
       setPlaceSelected(true)
     }
     
+    // On first load (edit mode), sync alternative address state too
+    if (!isInitialAddressSyncDone.current && venue.useAlternativeAddress) {
+      setShowAlternativeAddressField(true)
+      setAlternativeAddress(venue.formattedAddress || '')
+      isInitialAddressSyncDone.current = true
+    }
+    
     // On first load (edit mode), sync alternative name state too
     if (!isInitialSyncDone.current && venue.useAlternativeVenueName) {
       setShowAlternativeNameField(true)
@@ -512,7 +583,7 @@ export const VenueComponent: React.FC = () => {
       isInitialSyncDone.current = true
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [venue.venueName, venue.googlePlaceName, venue.useAlternativeVenueName, venue.placeId])
+  }, [venue.venueName, venue.googlePlaceName, venue.useAlternativeVenueName, venue.useAlternativeAddress, venue.placeId])
 
   // ============================================================================
   // EVENT HANDLERS
@@ -528,6 +599,9 @@ export const VenueComponent: React.FC = () => {
   const handleVenueNameChange = (value: string) => {
     setVenueNameValue(value)
     setPlaceSelected(false)
+    // The address belongs to the previous place — drop any alternative address
+    setShowAlternativeAddressField(false)
+    setAlternativeAddress('')
 
     // Clear place-specific data — the user is searching for a new venue.
     // Keep non-place fields (images, instructions, post-event toggles).
@@ -539,7 +613,9 @@ export const VenueComponent: React.FC = () => {
       coordinates: undefined,
       formattedAddress: '',
       gmtOffset: undefined,
-      addressComponents: undefined
+      addressComponents: undefined,
+      googleFormattedAddress: undefined,
+      useAlternativeAddress: false
     })
   }
   
@@ -580,6 +656,40 @@ export const VenueComponent: React.FC = () => {
   const handleAlternativeNameChange = (value: string) => {
     setAlternativeVenueName(value)
     updateVenueStable({ venueName: value })
+  }
+
+  /**
+   * Toggle the alternative address field.
+   * Only formattedAddress changes; addressComponents, placeId, coordinates and
+   * gmtOffset stay as returned by Google Places.
+   *
+   * On enable: pre-populate with the current Google address.
+   * On disable: revert venue.formattedAddress to the Google Places address.
+   */
+  const handleAlternativeAddressToggle = () => {
+    const enabling = !showAlternativeAddressField
+    setShowAlternativeAddressField(enabling)
+    const googleAddress = venue.googleFormattedAddress ?? venue.formattedAddress ?? ''
+
+    if (enabling) {
+      setAlternativeAddress(googleAddress)
+      updateVenueStable({ useAlternativeAddress: true })
+    } else {
+      setAlternativeAddress('')
+      updateVenueStable({
+        formattedAddress: googleAddress,
+        useAlternativeAddress: false
+      })
+    }
+  }
+
+  /**
+   * User is editing the alternative address.
+   * Updates venue.formattedAddress (the API submission address) only.
+   */
+  const handleAlternativeAddressChange = (value: string) => {
+    setAlternativeAddress(value)
+    updateVenueStable({ formattedAddress: value })
   }
   
   const handleShowVenuePostEventChange = (checked: boolean) => {
@@ -732,6 +842,17 @@ export const VenueComponent: React.FC = () => {
         )}
       </div>
 
+      {/* Venue address preview — the formatted address sent to the API
+          (the alternative address when one is set) */}
+      {venue.placeId && (
+        <Text
+          data-testid="venue-formatted-address"
+          UNSAFE_style={TYPOGRAPHY.SECTION_DESCRIPTION}
+        >
+          {venue.formattedAddress || 'No address available for this venue.'}
+        </Text>
+      )}
+
       {/* Alternative Venue Name Toggle */}
       <div>
         <ActionButton
@@ -765,6 +886,44 @@ export const VenueComponent: React.FC = () => {
           </div>
         )}
       </div>
+
+      {/* Alternative Address Toggle (only once a place is selected) */}
+      {venue.placeId && (
+        <div>
+          <ActionButton
+            isQuiet
+            data-testid="venue-alt-address-toggle"
+            onPress={handleAlternativeAddressToggle}
+            UNSAFE_style={{
+              color: COLORS.GRAY_800,
+              padding: '0 12px',
+              marginLeft: '-8px'
+            }}
+          >
+            {showAlternativeAddressField ? <RemoveCircle /> : <Add />}
+            <Text UNSAFE_style={{ marginLeft: '4px', color: COLORS.GRAY_800 }}>
+              {showAlternativeAddressField
+                ? 'Remove alternative address'
+                : 'Add alternative address (optional)'}
+            </Text>
+          </ActionButton>
+
+          {showAlternativeAddressField && (
+            <div style={{ marginTop: '16px' }}>
+              <TextField
+                data-testid="venue-alt-address-input"
+                label="Alternative address"
+                styles={style({ width: '[100%]' })}
+                value={alternativeAddress}
+                onChange={handleAlternativeAddressChange}
+                isInvalid={!alternativeAddress.trim()}
+                errorMessage="Add the alternative address or remove it."
+                description="This address will be displayed instead of the Google Places address"
+              />
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Venue Image Section */}
       <div className={style({display: 'flex', flexDirection: 'column', gap: 16})}>
