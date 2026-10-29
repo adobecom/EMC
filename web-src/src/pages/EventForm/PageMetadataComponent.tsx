@@ -9,6 +9,7 @@ import { TYPOGRAPHY, COLORS } from '../../styles/designSystem'
 import { useEventFormContext } from '../../contexts/EventFormContext'
 import { useEventFormComponent } from '../../hooks/useEventFormComponent'
 import { apiService, cachedApi } from '../../services/api'
+import { apiCache } from '../../services/cacheUtils'
 import { PublishingProfile } from '../../types/domain'
 
 interface MetadataField {
@@ -54,14 +55,16 @@ function publishingProfileFromAssociation(profileAssociation: {
 }
 
 /**
- * PageMetadataComponent - Manages page metadata for webinar events
- * 
- * Uses EventFormContext for state management.
- * Fetches metadata catalogue from external URL.
- * Loads/saves metadata via PublishingProfile API.
+ * usePageMetadata - Page metadata state and publishing-profile lifecycle for webinar events
+ *
+ * Call once from EventForm (always mounted) so edits survive wizard step switches and the
+ * profile is saved on Save from any step. Fetches the catalogue and loads/saves metadata
+ * via the PublishingProfile API. No-ops while `enabled` is false.
  */
-export const PageMetadataComponent: React.FC = () => {
+export function usePageMetadata(enabled: boolean) {
   const { isEditMode } = useEventFormContext()
+  const enabledRef = useRef(enabled)
+  enabledRef.current = enabled
 
   // ============================================================================
   // LOCAL STATE
@@ -164,6 +167,7 @@ export const PageMetadataComponent: React.FC = () => {
       }
     },
     onAfterSave: async (eventId: string) => {
+      if (!enabledRef.current) return
       // Save/update the publishing profile after the event is saved
       const savedMetadata = formDataRef.current?.metadata ?? {}
       const hasMetadataKeys = Object.keys(savedMetadata).length > 0
@@ -188,6 +192,7 @@ export const PageMetadataComponent: React.FC = () => {
             !('error' in updateResult) &&
             (updateResult as PublishingProfile).profileId
           ) {
+            apiCache.invalidate('getEventPublishingProfile')
             publishingProfileRef.current = {
               ...existingProfile,
               ...(updateResult as PublishingProfile),
@@ -204,6 +209,8 @@ export const PageMetadataComponent: React.FC = () => {
           if (createResult && !('error' in createResult) && createResult.profileId) {
             // Assign the new profile to the event
             await apiService.assignPublishingProfileToEvent(eventId, createResult.profileId)
+            // Drop the cached "no profile" lookup so a later reload finds this profile
+            apiCache.invalidate('getEventPublishingProfile')
             publishingProfileRef.current = createResult as PublishingProfile
             syncAcknowledgmentsAfterProfileSave()
           }
@@ -214,6 +221,7 @@ export const PageMetadataComponent: React.FC = () => {
       }
     },
     validate: () => {
+      if (!enabledRef.current) return true
       const cat = catalogueRef.current
       const fieldsList = cat?.data?.data
       if (!fieldsList?.length) return true
@@ -292,16 +300,17 @@ export const PageMetadataComponent: React.FC = () => {
 
   useEffect(() => {
     // If we're in edit mode and have an eventId, load the publishing profile
-    if (isEditMode && eventId && !publishingProfileRef.current) {
+    if (enabled && isEditMode && eventId && !publishingProfileRef.current) {
       loadPublishingProfile(eventId)
     }
-  }, [isEditMode, eventId, loadPublishingProfile])
+  }, [enabled, isEditMode, eventId, loadPublishingProfile])
 
   // ============================================================================
   // DATA LOADING (Catalogue)
   // ============================================================================
 
   useEffect(() => {
+    if (!enabled || catalogueRef.current) return
     let isMounted = true
 
     const fetchCatalogue = async () => {
@@ -330,7 +339,7 @@ export const PageMetadataComponent: React.FC = () => {
     return () => {
       isMounted = false
     }
-  }, [])
+  }, [enabled])
 
   // ============================================================================
   // EVENT HANDLERS
@@ -356,6 +365,25 @@ export const PageMetadataComponent: React.FC = () => {
       },
     })
   }
+
+  return {
+    catalogue,
+    isLoading,
+    error,
+    metadata,
+    metadataFieldAcknowledged,
+    handleFieldChange,
+  }
+}
+
+export type PageMetadataState = ReturnType<typeof usePageMetadata>
+
+/**
+ * PageMetadataComponent - Renders page metadata pickers for webinar events.
+ * State and save lifecycle come from usePageMetadata, owned by EventForm.
+ */
+export const PageMetadataComponent: React.FC<{ state: PageMetadataState }> = ({ state }) => {
+  const { catalogue, isLoading, error, metadata, metadataFieldAcknowledged, handleFieldChange } = state
 
   // ============================================================================
   // RENDER
