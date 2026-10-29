@@ -42,6 +42,7 @@ import {
   EventImagesComponent,
   RegistrationConfigComponent,
   PageMetadataComponent,
+  usePageMetadata,
   PromotionalContentComponent,
   MarketoIntegrationComponent,
   SessionManagementComponent,
@@ -511,6 +512,8 @@ const EventFormInner: React.FC<EventFormInnerProps> = ({ ims: _ims }) => {
   
   // Get feature flags based on event type + cloud type
   const { hasVenue, hasPageMetadata, hasMarketoIntegration } = useEventFeatureFlags(formData.eventType, formData.cloudType)
+  // Owned here (not in the Basic Info step) so edits persist across step switches and save from any step
+  const pageMetadata = usePageMetadata(hasPageMetadata)
   
   // ============================================================================
   // LOAD EVENT DATA
@@ -941,7 +944,7 @@ const EventFormInner: React.FC<EventFormInnerProps> = ({ ims: _ims }) => {
 
       {hasPageMetadata && (
         <FormCard>
-          <PageMetadataComponent />
+          <PageMetadataComponent state={pageMetadata} />
         </FormCard>
       )}
 
