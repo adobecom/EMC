@@ -48,6 +48,7 @@ import type {
 } from '../types/rbacApi'
 import type {
   ConfigType,
+  CustomAttributeConfig,
   ScopeConfig,
   ScopeConfigUpsertBody,
 } from '../types/configApi'
@@ -151,6 +152,10 @@ class ApiService {
   private activeGroupId: string | null = null
   private onStaleGroup: (() => void) | null = null
   private staleGroupCooldown = false
+  // Cache promises so concurrent hydration calls share in-flight requests.
+  private hydrationSeriesById = new Map<string, Promise<SeriesApiResponse | ErrorResponse>>()
+  private hydrationCustomAttributesBySeriesId = new Map<string, Promise<CustomAttributeConfig[] | ErrorResponse>>()
+  private hydrationCustomAttributesByScopeId = new Map<string, Promise<CustomAttributeConfig[] | ErrorResponse>>()
 
   /**
    * Dry-run mode: when enabled, POST/PUT/DELETE calls are logged but not executed
@@ -214,6 +219,7 @@ class ApiService {
    * Set authentication headers
    */
   setAuthHeaders(token?: string, org?: string): void {
+    this.clearCustomAttributeHydrationStore()
     this.config.headers = {
       ...this.config.headers,
       ...(token && { authorization: `Bearer ${token}` }),
@@ -226,6 +232,9 @@ class ApiService {
    * include the x-adobe-esp-group-id header (unless skipGroupHeader is used).
    */
   setGroupId(groupId: string | null): void {
+    if (this.activeGroupId !== groupId) {
+      this.clearCustomAttributeHydrationStore()
+    }
     this.activeGroupId = groupId
     // Keep requestHelpers in sync for XHR-based uploads
     setUploadGroupId(groupId)
@@ -836,15 +845,36 @@ class ApiService {
     const seriesIds = Array.from(new Set(
       resourcesToHydrate.map(resource => resource.seriesId!)
     ))
-    const seriesResults = await Promise.all(
+    const customAttributeResults = await Promise.all(
       seriesIds.map(async seriesId => ({
         seriesId,
-        result: await this.getSeriesByIdExternal(seriesId),
+        result: await this.getCustomAttributesForSeries(seriesId),
       }))
     )
-    const scopeIdBySeriesId = new Map<string, string | undefined>()
+    const customAttributesBySeriesId = new Map<string, CustomAttributeConfig[]>()
 
-    for (const { seriesId, result } of seriesResults) {
+    for (const { seriesId, result } of customAttributeResults) {
+      if (isErrorResponse(result)) return result
+      customAttributesBySeriesId.set(seriesId, result)
+    }
+
+    return resources.map(resource => {
+      if (!hasStoredCustomAttributes(resource.customAttributes)) return resource
+
+      const configAttributes = customAttributesBySeriesId.get(resource.seriesId!) ?? []
+
+      return {
+        ...resource,
+        customAttributes: hydrateCustomAttributes(resource.customAttributes, configAttributes),
+      } as T
+    })
+  }
+
+  private getSeriesForCustomAttributeHydration(
+    seriesId: string
+  ): Promise<SeriesApiResponse | ErrorResponse> {
+    return this.getStoredHydrationValue(this.hydrationSeriesById, seriesId, async () => {
+      const result = await this.getSeriesByIdExternal(seriesId)
       if (isErrorResponse(result)) return result
       if (!result || typeof result !== 'object') {
         return {
@@ -852,38 +882,69 @@ class ApiService {
           error: { message: `Series ${seriesId} returned an invalid response` },
         }
       }
-      scopeIdBySeriesId.set(seriesId, (result as SeriesApiResponse).scopeId)
-    }
-
-    const scopeIds = Array.from(new Set(
-      Array.from(scopeIdBySeriesId.values()).filter((scopeId): scopeId is string => !!scopeId)
-    ))
-    const configResults = await Promise.all(
-      scopeIds.map(async scopeId => ({
-        scopeId,
-        result: await this.getConfig(scopeId, { skipStaleGroupRecovery: true }),
-      }))
-    )
-    const configByScopeId = new Map<string, ScopeConfig | null>()
-
-    for (const { scopeId, result } of configResults) {
-      if (isErrorResponse(result)) return result
-      configByScopeId.set(scopeId, result)
-    }
-
-    return resources.map(resource => {
-      if (!hasStoredCustomAttributes(resource.customAttributes)) return resource
-
-      const scopeId = scopeIdBySeriesId.get(resource.seriesId!)
-      const configAttributes = scopeId
-        ? configByScopeId.get(scopeId)?.customAttributes ?? []
-        : []
-
-      return {
-        ...resource,
-        customAttributes: hydrateCustomAttributes(resource.customAttributes, configAttributes),
-      } as T
+      return result as SeriesApiResponse
     })
+  }
+
+  private getCustomAttributesForScope(
+    scopeId: string
+  ): Promise<CustomAttributeConfig[] | ErrorResponse> {
+    return this.getStoredHydrationValue(this.hydrationCustomAttributesByScopeId, scopeId, async () => {
+      const result = await this.getConfig(scopeId, { skipStaleGroupRecovery: true })
+      if (isErrorResponse(result)) return result
+      return result?.customAttributes ?? []
+    })
+  }
+
+  private getCustomAttributesForSeries(
+    seriesId: string
+  ): Promise<CustomAttributeConfig[] | ErrorResponse> {
+    return this.getStoredHydrationValue(this.hydrationCustomAttributesBySeriesId, seriesId, async () => {
+      const series = await this.getSeriesForCustomAttributeHydration(seriesId)
+      if (isErrorResponse(series)) return series
+      if (!series.scopeId) return []
+      return this.getCustomAttributesForScope(series.scopeId)
+    })
+  }
+
+  private getStoredHydrationValue<T>(
+    store: Map<string, Promise<T | ErrorResponse>>,
+    key: string,
+    load: () => Promise<T | ErrorResponse>
+  ): Promise<T | ErrorResponse> {
+    const storedValue = store.get(key)
+    if (storedValue) return storedValue
+
+    const request = load()
+    store.set(key, request)
+    request.then(
+      result => {
+        if (isErrorResponse(result) && store.get(key) === request) {
+          store.delete(key)
+        }
+      },
+      () => {
+        if (store.get(key) === request) {
+          store.delete(key)
+        }
+      }
+    )
+    return request
+  }
+
+  /**
+   * Clear series and Config metadata stored for custom attribute hydration.
+   */
+  clearCustomAttributeHydrationStore(seriesId?: string): void {
+    if (seriesId) {
+      this.hydrationSeriesById.delete(seriesId)
+      this.hydrationCustomAttributesBySeriesId.delete(seriesId)
+      return
+    }
+
+    this.hydrationSeriesById.clear()
+    this.hydrationCustomAttributesBySeriesId.clear()
+    this.hydrationCustomAttributesByScopeId.clear()
   }
 
   // ============================================================================
@@ -934,47 +995,57 @@ class ApiService {
     validateString(seriesId, 'series ID')
     validateObject(seriesData, 'series data')
     const payload = prepareEspSeriesPutPayload(seriesData)
-    return this.callExternalApi('esp', `/v1/series/${seriesId}`, 'PUT',
+    const result = await this.callExternalApi('esp', `/v1/series/${seriesId}`, 'PUT',
       { ...payload, seriesId },
       { operationName: `updateSeries(${seriesId})`, shouldReturnFullResponse: true }
     )
+    if (!isErrorResponse(result)) this.clearCustomAttributeHydrationStore(seriesId)
+    return result
   }
 
   async publishSeries(seriesId: string, seriesData: any): Promise<any | ErrorResponse> {
     validateString(seriesId, 'series ID')
     validateObject(seriesData, 'series data')
     const payload = prepareEspSeriesPutPayload(seriesData)
-    return this.callExternalApi('esp', `/v1/series/${seriesId}`, 'PUT',
+    const result = await this.callExternalApi('esp', `/v1/series/${seriesId}`, 'PUT',
       { ...payload, seriesId, seriesStatus: 'published' },
       { operationName: `publishSeries(${seriesId})`, shouldReturnFullResponse: true }
     )
+    if (!isErrorResponse(result)) this.clearCustomAttributeHydrationStore(seriesId)
+    return result
   }
 
   async unpublishSeries(seriesId: string, seriesData: any): Promise<any | ErrorResponse> {
     validateString(seriesId, 'series ID')
     validateObject(seriesData, 'series data')
     const payload = prepareEspSeriesPutPayload(seriesData)
-    return this.callExternalApi('esp', `/v1/series/${seriesId}`, 'PUT',
+    const result = await this.callExternalApi('esp', `/v1/series/${seriesId}`, 'PUT',
       { ...payload, seriesId, seriesStatus: 'draft' },
       { operationName: `unpublishSeries(${seriesId})`, shouldReturnFullResponse: true }
     )
+    if (!isErrorResponse(result)) this.clearCustomAttributeHydrationStore(seriesId)
+    return result
   }
 
   async archiveSeries(seriesId: string, seriesData: any): Promise<any | ErrorResponse> {
     validateString(seriesId, 'series ID')
     validateObject(seriesData, 'series data')
     const payload = prepareEspSeriesPutPayload(seriesData)
-    return this.callExternalApi('esp', `/v1/series/${seriesId}`, 'PUT',
+    const result = await this.callExternalApi('esp', `/v1/series/${seriesId}`, 'PUT',
       { ...payload, seriesId, seriesStatus: 'archived' },
       { operationName: `archiveSeries(${seriesId})`, shouldReturnFullResponse: true }
     )
+    if (!isErrorResponse(result)) this.clearCustomAttributeHydrationStore(seriesId)
+    return result
   }
 
   async deleteSeriesExternal(seriesId: string): Promise<SuccessResponse | ErrorResponse> {
     validateString(seriesId, 'series ID')
-    return this.callExternalApi('esp', `/v1/series/${seriesId}`, 'DELETE', undefined,
+    const result = await this.callExternalApi<SuccessResponse>('esp', `/v1/series/${seriesId}`, 'DELETE', undefined,
       { operationName: `deleteSeries(${seriesId})` }
     )
+    if (!isErrorResponse(result)) this.clearCustomAttributeHydrationStore(seriesId)
+    return result
   }
 
   async getSeriesHistory(seriesId: string): Promise<any | ErrorResponse> {
@@ -2684,10 +2755,15 @@ class ApiService {
   async upsertConfig(scopeId: string, data: ScopeConfigUpsertBody): Promise<ScopeConfig | ErrorResponse> {
     validateString(scopeId, 'scope ID')
     validateObject(data, 'config upsert body')
-    return this.callExternalApi<ScopeConfig>('esp', `/v1/scopes/${encodeURIComponent(scopeId)}/config`, 'PUT', { ...data, scopeId }, {
+    const result = await this.callExternalApi<ScopeConfig>('esp', `/v1/scopes/${encodeURIComponent(scopeId)}/config`, 'PUT', { ...data, scopeId }, {
       operationName: 'upsertConfig',
       shouldReturnFullResponse: true
     })
+    if (!isErrorResponse(result)) {
+      this.hydrationCustomAttributesBySeriesId.clear()
+      this.hydrationCustomAttributesByScopeId.clear()
+    }
+    return result
   }
 
   // --- Convenience Endpoints (resolved configs for events/series) ---
@@ -3021,7 +3097,10 @@ export const cachedApi = {
   /**
    * Clear all cached data - use on logout or major state change
    */
-  clearCache: () => apiCache.clear(),
+  clearCache: () => {
+    apiCache.clear()
+    apiService.clearCustomAttributeHydrationStore()
+  },
   
   /**
    * Invalidate specific cache entries by pattern
@@ -3061,7 +3140,7 @@ if (typeof window !== 'undefined') {
   (window as any).isDryRunEnabled = () => apiService.isDryRunEnabled();
   
   (window as any).clearApiCache = () => {
-    apiCache.clear()
+    cachedApi.clearCache()
   }
   
   (window as any).getApiCacheStats = () => {
