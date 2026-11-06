@@ -2,6 +2,8 @@
 * <license header>
 */
 
+import type { HydratedCustomAttributeGroup } from './customAttributes'
+
 /**
  * Domain model type definitions
  */
@@ -297,7 +299,7 @@ export interface EventApiResponse {
   images?: EventImage[]
   speakers?: any[]
   sponsors?: any[]
-  customAttributes?: EventCustomAttributeGroup[]
+  customAttributes?: HydratedCustomAttributeGroup[]
   enabledAttributeIds?: { event: string[]; session: string[] }
   // Add any other fields as optional
   [key: string]: any
@@ -685,12 +687,7 @@ export interface EventCustomAttributeValue {
   label?: string
 }
 
-// Shape returned by GET /events — BE resolves IDs to labels
-export interface EventCustomAttributeGroup {
-  attributeId: string
-  attribute: string
-  values: { valueId: string; value: string }[]
-}
+export type EventCustomAttributeGroup = HydratedCustomAttributeGroup
 
 // Agenda Item
 export interface AgendaItem {
@@ -791,4 +788,3 @@ export interface UrlPatternsSheetData {
 export interface UrlPatternsConfig {
   [sheetKey: string]: UrlPatternsSheetData | number | string[] | string
 }
-
