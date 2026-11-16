@@ -1,3 +1,5 @@
+import type { ResourceCustomAttribute } from './customAttributes'
+
 export interface SessionLocalization {
   title?: string
   description?: string
@@ -52,4 +54,6 @@ export interface Session {
   localizations?: Record<string, SessionLocalization>
   /** Human-authored overrides, parallel to localizations — round-tripped as-is */
   localizationOverrides?: Record<string, SessionLocalization>
+  /** Config-backed attributes returned by ESP — preserved on session updates */
+  customAttributes?: ResourceCustomAttribute[]
 }

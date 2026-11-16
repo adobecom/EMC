@@ -106,3 +106,40 @@ export function hydrateCustomAttributes(
 
   return Array.from(hydratedById.values())
 }
+
+/** Converts raw or hydrated custom attributes into the shape accepted by ESP writes. */
+export function serializeCustomAttributes(
+  customAttributes: readonly ResourceCustomAttribute[] | undefined
+): StoredCustomAttribute[] {
+  const storedAttributes: StoredCustomAttribute[] = []
+
+  for (const attribute of customAttributes ?? []) {
+    if (isHydratedCustomAttribute(attribute)) {
+      for (const value of attribute.values) {
+        if (value.valueId?.trim()) {
+          storedAttributes.push({
+            attributeId: attribute.attributeId,
+            valueId: value.valueId,
+          })
+        } else if (value.value?.trim()) {
+          storedAttributes.push({
+            attributeId: attribute.attributeId,
+            value: value.value,
+          })
+        }
+      }
+    } else if (attribute.valueId?.trim()) {
+      storedAttributes.push({
+        attributeId: attribute.attributeId,
+        valueId: attribute.valueId,
+      })
+    } else if (attribute.value?.trim()) {
+      storedAttributes.push({
+        attributeId: attribute.attributeId,
+        value: attribute.value,
+      })
+    }
+  }
+
+  return storedAttributes
+}

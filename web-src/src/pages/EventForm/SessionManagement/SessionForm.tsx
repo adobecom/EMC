@@ -24,6 +24,7 @@ import {
 } from "@internationalized/date";
 import { Session, SessionLocalization } from "../../../types/sessions";
 import { EventTag, SeriesSpeaker } from "../../../types/domain";
+import type { ResourceCustomAttribute } from "../../../types/customAttributes";
 import { apiService } from "../../../services/api";
 import { useEventFormContext, useToast } from "../../../contexts";
 import { RichTextEditor, TagSelector } from "../../../components/shared";
@@ -72,6 +73,8 @@ export interface SessionFormData {
   localizations?: Record<string, SessionLocalization>;
   /** Round-tripped as-is from the API response — never modified by EMC */
   localizationOverrides?: Record<string, SessionLocalization>;
+  /** Config-backed attributes preserved unchanged until API serialization */
+  customAttributes?: ResourceCustomAttribute[];
 }
 
 /** Returned by onSave so the form can distinguish a real write from a no-op save */
@@ -109,6 +112,9 @@ export function mapApiToSession(item: Record<string, unknown>, locale = "en-US")
     tags: parseTagsFromApi(item.tags),
     localizations: allLocalizations,
     localizationOverrides: allLocalizationOverrides,
+    customAttributes: Array.isArray(item.customAttributes)
+      ? item.customAttributes as ResourceCustomAttribute[]
+      : undefined,
   }
 }
 
@@ -163,6 +169,9 @@ export const SessionForm: React.FC<SessionFormProps> = ({
   );
   const localizationOverridesRef = React.useRef<Record<string, SessionLocalization> | undefined>(
     session?.localizationOverrides,
+  );
+  const customAttributesRef = React.useRef<ResourceCustomAttribute[] | undefined>(
+    session?.customAttributes,
   );
   const toast = useToast();
   const seriesId = contextSeriesId || formData.seriesId || "";
@@ -317,6 +326,7 @@ export const SessionForm: React.FC<SessionFormProps> = ({
       const mapped = mapApiToSession(raw, locale);
       localizationsRef.current = mapped.localizations;
       localizationOverridesRef.current = mapped.localizationOverrides;
+      customAttributesRef.current = mapped.customAttributes;
       const sessionTime = session.sessionTime ?? null;
 
       setName(mapped.name);
@@ -427,6 +437,7 @@ export const SessionForm: React.FC<SessionFormProps> = ({
         locationId: selectedLocationId ?? undefined,
         localizations: localizationsRef.current,
         localizationOverrides: localizationOverridesRef.current,
+        customAttributes: customAttributesRef.current,
       });
       if (changed) {
         toast.success(isEditMode ? "Session updated successfully" : "Session created successfully");

@@ -28,6 +28,7 @@ import { prepareEslEventPutPayload, prepareEspSeriesPutPayload } from '../utils/
 import {
   hasStoredCustomAttributes,
   hydrateCustomAttributes,
+  serializeCustomAttributes,
 } from '../utils/customAttributeHydration'
 import type {
   RBACApiScope,
@@ -455,6 +456,11 @@ class ApiService {
     }
     if (data.localizationOverrides != null) {
       body.localizationOverrides = data.localizationOverrides
+    }
+    if (Array.isArray(data.customAttributes)) {
+      body.customAttributes = serializeCustomAttributes(
+        data.customAttributes as ResourceCustomAttribute[]
+      )
     }
     if (tagsStr.length > 0) {
       body.tags = tagsStr

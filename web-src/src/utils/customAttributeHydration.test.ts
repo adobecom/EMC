@@ -7,6 +7,7 @@ import type { HydratedCustomAttributeGroup } from '../types/customAttributes'
 import {
   hasStoredCustomAttributes,
   hydrateCustomAttributes,
+  serializeCustomAttributes,
 } from './customAttributeHydration'
 
 const CONFIG_ATTRIBUTES: CustomAttributeConfig[] = [
@@ -115,5 +116,51 @@ describe('hydrateCustomAttributes', () => {
     expect(hasStoredCustomAttributes([
       { attributeId: 'audience', valueId: 'developer' },
     ])).toBe(true)
+  })
+})
+
+describe('serializeCustomAttributes', () => {
+  it('flattens hydrated select and free-form values for ESP writes', () => {
+    const hydrated: HydratedCustomAttributeGroup[] = [
+      {
+        attributeId: 'audience',
+        attribute: 'Audience',
+        name: 'Audience',
+        inputType: 'multi-select',
+        enabled: true,
+        values: [
+          { valueId: 'developer', value: 'developer' },
+          { valueId: 'designer', value: 'designer' },
+        ],
+      },
+      {
+        attributeId: 'notes',
+        attribute: 'Notes',
+        name: 'Notes',
+        inputType: 'text',
+        enabled: true,
+        values: [
+          { valueId: '', value: 'Bring a laptop' },
+        ],
+      },
+    ]
+
+    expect(serializeCustomAttributes(hydrated)).toEqual([
+      { attributeId: 'audience', valueId: 'developer' },
+      { attributeId: 'audience', valueId: 'designer' },
+      { attributeId: 'notes', value: 'Bring a laptop' },
+    ])
+  })
+
+  it('preserves stored values and removes empty entries', () => {
+    expect(serializeCustomAttributes([
+      { attributeId: 'audience', valueId: 'developer' },
+      { attributeId: 'notes', value: 'Bring a laptop' },
+      { attributeId: 'empty-select', valueId: '' },
+      { attributeId: 'empty-text', value: '   ' },
+    ])).toEqual([
+      { attributeId: 'audience', valueId: 'developer' },
+      { attributeId: 'notes', value: 'Bring a laptop' },
+    ])
   })
 })
