@@ -29,6 +29,11 @@ describe('EVENT_DATA_FILTER field configurations', () => {
   it('marks inviteOnly as non-localizable', () => {
     expect(EVENT_DATA_FILTER.inviteOnly.localizable).toBe(false)
   })
+
+  it('marks customAttributes as submittable', () => {
+    expect(EVENT_DATA_FILTER.customAttributes).toBeDefined()
+    expect(EVENT_DATA_FILTER.customAttributes.submittable).toBe(true)
+  })
 })
 
 describe('filterEventData submission mode', () => {
@@ -104,6 +109,20 @@ describe('prepareEslEventPutPayload (ESL PUT egress)', () => {
     expect(
       prepareEslEventPutPayload({ cloudType: 'CreativeCloud', seriesId: 's1', detailPagePath: '' })
     ).not.toHaveProperty('detailPagePath')
+  })
+
+  it('preserves serialized custom attributes on PUT', () => {
+    const customAttributes = [
+      { attributeId: 'audience', valueId: 'developer' },
+      { attributeId: 'notes', value: 'Bring a laptop' },
+    ]
+    const result = prepareEslEventPutPayload({
+      cloudType: 'CreativeCloud',
+      seriesId: 's1',
+      customAttributes,
+    })
+
+    expect(result.customAttributes).toEqual(customAttributes)
   })
 })
 

@@ -6,6 +6,7 @@ import { SessionsList } from "./SessionList";
 import type { SessionFormData, SessionSaveResult } from "./SessionForm";
 import { useEventFormContext, useToast } from "../../../contexts";
 import { EventApiResponse } from "../../../types/domain";
+import type { ResourceCustomAttribute } from "../../../types/customAttributes";
 import { apiService, cachedApi } from "../../../services/api";
 import { COLORS, SURFACES } from "../../../styles/designSystem";
 import { millisToNaiveDateTimeString, naiveDateTimeToUTCMillis } from "../../../utils/dateTime";
@@ -37,6 +38,9 @@ function mapApiSessionToSession(item: Record<string, unknown>, locale: string): 
     tags: parseTagsFromApi(item.tags),
     localizations: allLocalizations,
     localizationOverrides: allLocalizationOverrides,
+    customAttributes: Array.isArray(item.customAttributes)
+      ? item.customAttributes as ResourceCustomAttribute[]
+      : undefined,
   }
 }
 
@@ -393,6 +397,7 @@ export const Sessions: React.FC<SessionsProps> = ({ onOpenFormChange }) => {
         creationTime: data.creationTime,
         modificationTime: data.modificationTime,
         ...(data.localizationOverrides != null ? { localizationOverrides: data.localizationOverrides } : {}),
+        ...(data.customAttributes != null ? { customAttributes: data.customAttributes } : {}),
       };
       const res = await apiService.updateSession(sessionId, eventId, payload);
       if ("error" in res) {
