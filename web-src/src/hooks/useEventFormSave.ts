@@ -12,6 +12,7 @@ import {
   setEventAttribute,
   isValidAttribute,
 } from '../utils/dataFilters'
+import { serializeCustomAttributes } from '../utils/customAttributeHydration'
 import { templateSupportedRsvpTypes } from '../utils/templateCapabilities'
 
 /**
@@ -346,11 +347,7 @@ export function useEventFormSave() {
     // Custom attributes — select/multi-select send { attributeId, valueId };
     // text types have no valueId and send { attributeId, value } instead.
     if (mergedData.customAttributes?.length) {
-      payload.customAttributes = mergedData.customAttributes
-        .filter((v: any) => v.valueId || v.value?.trim())
-        .map((v: any) => v.valueId
-          ? { attributeId: v.attributeId, valueId: v.valueId }
-          : { attributeId: v.attributeId, value: v.value })
+      payload.customAttributes = serializeCustomAttributes(mergedData.customAttributes)
     }
     // enabledAttributeIds — only set when the active scope has configs.
     // An empty _customAttributeConfigs means the current scope has no configs (e.g. the user
@@ -666,4 +663,3 @@ export function useEventFormSave() {
     saveError: context.state.saveError,
   }
 }
-
